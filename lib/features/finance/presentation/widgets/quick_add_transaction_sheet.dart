@@ -1,0 +1,149 @@
+import 'package:flutter/material.dart';
+
+import '../../../../core/database/app_database.dart';
+
+class QuickAddTransactionResult {
+  const QuickAddTransactionResult({
+    required this.accountId,
+    this.categoryId,
+    required this.merchant,
+    required this.amountMinor,
+  });
+
+  final String accountId;
+  final String? categoryId;
+  final String merchant;
+
+  /// Already signed: negative for expense, positive for income.
+  final int amountMinor;
+}
+
+Future<QuickAddTransactionResult?> showQuickAddTransactionSheet(
+  BuildContext context, {
+  required List<Account> accounts,
+  required List<Category> categories,
+}) {
+  return showModalBottomSheet<QuickAddTransactionResult>(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => _QuickAddTransactionSheet(accounts: accounts, categories: categories),
+  );
+}
+
+class _QuickAddTransactionSheet extends StatefulWidget {
+  const _QuickAddTransactionSheet({required this.accounts, required this.categories});
+
+  final List<Account> accounts;
+  final List<Category> categories;
+
+  @override
+  State<_QuickAddTransactionSheet> createState() => _QuickAddTransactionSheetState();
+}
+
+class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
+  final _merchantController = TextEditingController();
+  final _amountController = TextEditingController();
+  late String _accountId = widget.accounts.first.id;
+  String? _categoryId;
+  bool _isExpense = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _merchantController.addListener(() => setState(() {}));
+    _amountController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _merchantController.dispose();
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canSubmit =
+        _merchantController.text.trim().isNotEmpty &&
+        (double.tryParse(_amountController.text.trim()) ?? 0) > 0;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('New transaction', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 16),
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(value: true, label: Text('Expense')),
+              ButtonSegment(value: false, label: Text('Income')),
+            ],
+            selected: {_isExpense},
+            onSelectionChanged: (s) => setState(() => _isExpense = s.first),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _merchantController,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(hintText: 'Merchant / description'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _amountController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(hintText: 'Amount (₹)'),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _accountId,
+            decoration: const InputDecoration(labelText: 'Account'),
+            items: [
+              for (final a in widget.accounts)
+                DropdownMenuItem(value: a.id, child: Text(a.name)),
+            ],
+            onChanged: (value) => setState(() => _accountId = value!),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _categoryId,
+            decoration: const InputDecoration(labelText: 'Category'),
+            items: [
+              for (final c in widget.categories)
+                DropdownMenuItem(value: c.id, child: Text(c.name)),
+            ],
+            onChanged: (value) => setState(() => _categoryId = value),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: canSubmit
+                  ? () {
+                      final rupees = double.parse(_amountController.text.trim());
+                      final minor = (rupees * 100).round();
+                      Navigator.of(context).pop(
+                        QuickAddTransactionResult(
+                          accountId: _accountId,
+                          categoryId: _categoryId,
+                          merchant: _merchantController.text.trim(),
+                          amountMinor: _isExpense ? -minor : minor,
+                        ),
+                      );
+                    }
+                  : null,
+              child: const Text('Add transaction'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
