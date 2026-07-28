@@ -18,6 +18,9 @@ class Accounts extends Table {
       dateTime().clientDefault(() => DateTime.now())();
   DateTimeColumn get updatedAt =>
       dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
 
 class Transactions extends Table {
@@ -34,6 +37,9 @@ class Transactions extends Table {
 
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
 
 class Budgets extends Table {
@@ -47,4 +53,7 @@ class Budgets extends Table {
 
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }

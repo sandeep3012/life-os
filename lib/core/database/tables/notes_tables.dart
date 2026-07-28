@@ -13,4 +13,7 @@ class Notes extends Table {
       dateTime().clientDefault(() => DateTime.now())();
   DateTimeColumn get updatedAt =>
       dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }

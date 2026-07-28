@@ -48,7 +48,24 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) => m.createAll(),
+    // v1 -> v2: every table gained an explicit `PRIMARY KEY` on `id` (it was
+    // previously just a plain unique-by-convention text column, which is why
+    // `insertOnConflictUpdate` — used by the backup/restore feature — failed
+    // with "Table has no primary key"). No app has shipped with v1 data yet,
+    // so the simplest correct migration is a full recreate rather than a
+    // per-table `CREATE TABLE ... AS SELECT` rebuild.
+    onUpgrade: (m, from, to) async {
+      for (final table in allTables) {
+        await m.deleteTable(table.actualTableName);
+      }
+      await m.createAll();
+    },
+  );
 }
 
 QueryExecutor _openConnection() {

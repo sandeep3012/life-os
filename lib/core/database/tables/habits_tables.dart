@@ -15,6 +15,9 @@ class Habits extends Table {
 
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
 
 class HabitLogs extends Table {
@@ -24,6 +27,9 @@ class HabitLogs extends Table {
   /// Date-only (time truncated to midnight) — one log per habit per day.
   DateTimeColumn get date => dateTime()();
   BoolColumn get completed => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
 
   @override
   List<Set<Column>> get uniqueKeys => [

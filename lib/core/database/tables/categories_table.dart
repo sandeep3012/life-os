@@ -15,6 +15,9 @@ class Categories extends Table {
 
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
 
 /// Freeform tags, many-to-many via [EntityTags] so notes, documents, tasks,
@@ -24,6 +27,9 @@ class Tags extends Table {
   TextColumn get name => text()();
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
 
 class EntityTags extends Table {

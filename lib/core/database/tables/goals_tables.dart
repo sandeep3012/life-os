@@ -19,6 +19,9 @@ class Goals extends Table {
 
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
 
 /// Generic many-to-many linking a goal to whatever it tracks progress
@@ -31,6 +34,9 @@ class GoalLinks extends Table {
   /// habit | account | task
   TextColumn get linkedType => text()();
   TextColumn get linkedId => text()();
+
+  @override
+  Set<Column> get primaryKey => {id};
 
   @override
   List<Set<Column>> get uniqueKeys => [

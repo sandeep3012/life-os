@@ -8,14 +8,14 @@ import '../features/settings/application/settings_providers.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
-class LifeManagerApp extends ConsumerStatefulWidget {
-  const LifeManagerApp({super.key});
+class LifeOSApp extends ConsumerStatefulWidget {
+  const LifeOSApp({super.key});
 
   @override
-  ConsumerState<LifeManagerApp> createState() => _LifeManagerAppState();
+  ConsumerState<LifeOSApp> createState() => _LifeOSAppState();
 }
 
-class _LifeManagerAppState extends ConsumerState<LifeManagerApp> {
+class _LifeOSAppState extends ConsumerState<LifeOSApp> {
   bool? _habitReminderScheduled;
 
   @override
