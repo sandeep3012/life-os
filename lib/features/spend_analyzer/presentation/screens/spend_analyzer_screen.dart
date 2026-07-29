@@ -7,6 +7,7 @@ import '../../../../core/utils/currency_utils.dart';
 import '../../application/spend_analyzer_providers.dart';
 import '../widgets/budget_bar.dart';
 import '../widgets/category_donut_chart.dart';
+import '../widgets/payment_mode_breakdown.dart';
 import '../widgets/weekly_trend_chart.dart';
 
 class SpendAnalyzerScreen extends ConsumerWidget {
@@ -22,6 +23,7 @@ class SpendAnalyzerScreen extends ConsumerWidget {
     final breakdown = ref.watch(categoryBreakdownProvider);
     final weeklyTrend = ref.watch(weeklyTrendProvider);
     final budgetsProgress = ref.watch(monthBudgetsWithProgressProvider);
+    final paymentModeBreakdown = ref.watch(paymentModeBreakdownProvider);
 
     final delta = previousTotal == 0 ? 0.0 : (total - previousTotal) / previousTotal;
 
@@ -109,6 +111,20 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                       child: Text('No spending logged for this month yet.'),
                     )
                   : CategoryDonutChart(breakdown: breakdown, totalMinor: total),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text('By payment mode', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 10),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: paymentModeBreakdown.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Text('No payment mode tagged for this month yet.'),
+                    )
+                  : PaymentModeBreakdown(breakdown: paymentModeBreakdown),
             ),
           ),
           const SizedBox(height: 20),

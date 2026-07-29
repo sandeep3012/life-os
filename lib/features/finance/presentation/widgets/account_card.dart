@@ -1,29 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/utils/icon_lookup.dart';
+import '../../application/finance_providers.dart';
+import '../../data/finance_repository.dart';
 
-IconData accountIcon(String type) => switch (type) {
-  'checking' => Icons.account_balance_wallet_rounded,
-  'savings' => Icons.savings_rounded,
-  'credit_card' => Icons.credit_card_rounded,
-  'investment' => Icons.trending_up_rounded,
-  _ => Icons.payments_rounded,
-};
+/// Resolves an account's icon from the user-manageable `AccountTypes` list
+/// (matched case/underscore-insensitively via [normalizeAccountTypeKey], so
+/// legacy accounts created before that table existed still resolve), falling
+/// back to a generic wallet icon for a type that's since been deleted.
+IconData accountIconFor(String type, List<AccountType> types) {
+  final key = normalizeAccountTypeKey(type);
+  for (final t in types) {
+    if (normalizeAccountTypeKey(t.name) == key) return resolveIcon(t.icon);
+  }
+  return Icons.account_balance_wallet_rounded;
+}
 
-class AccountCard extends StatelessWidget {
+class AccountCard extends ConsumerWidget {
   const AccountCard({super.key, required this.account, this.onTap});
 
   final Account account;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.appColors;
     final negative = account.balanceMinor < 0;
     final dotColor = negative ? colors.critical : colors.finance;
     final theme = Theme.of(context);
+    final types = ref.watch(accountTypesProvider).value ?? const [];
+    final icon = accountIconFor(account.type, types);
 
     return Material(
       color: theme.colorScheme.surface,
@@ -47,12 +58,16 @@ class AccountCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    Icon(icon, size: 16, color: dotColor),
                     Expanded(
-                      child: Text(
-                        account.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: Text(
+                          account.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ),
@@ -78,7 +93,7 @@ class AccountCard extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ).animate().fadeIn(duration: 220.ms).slideY(begin: 0.08, end: 0, duration: 220.ms);
   }
 }
 

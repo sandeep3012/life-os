@@ -27,6 +27,20 @@ final archivedAccountsProvider = Provider<List<Account>>((ref) {
   return (ref.watch(accountsProvider).value ?? const []).where((a) => !a.isActive).toList();
 });
 
+/// Active accounts a transaction can be recorded against — investment
+/// accounts are excluded because their balance is meant to move via
+/// valuation changes, not everyday transactions.
+final transactableAccountsProvider = Provider<List<Account>>((ref) {
+  return ref
+      .watch(activeAccountsProvider)
+      .where((a) => normalizeAccountTypeKey(a.type) != 'investment')
+      .toList();
+});
+
+final accountTypesProvider = StreamProvider<List<AccountType>>((ref) {
+  return ref.watch(financeRepositoryProvider).watchAccountTypes();
+});
+
 final transactionsProvider = StreamProvider<List<Transaction>>((ref) {
   return ref.watch(financeRepositoryProvider).watchTransactions();
 });
@@ -64,9 +78,20 @@ List<Budget> budgetsEffectiveFor(List<Budget> allVersions, DateTime month) {
     for (final v in versions) {
       final effective = v.effectiveMonth ?? v.startDate;
       if (effective.isAfter(monthStart)) continue;
-      if (latest == null || effective.isAfter(latest.effectiveMonth ?? latest.startDate)) {
+      if (latest == null) {
         latest = v;
+        continue;
       }
+      final latestEffective = latest.effectiveMonth ?? latest.startDate;
+      // Strictly later month always wins. A tie (two versions both
+      // resolving to the same calendar month — possible if an edit landed
+      // as a fresh row instead of updating one in place) falls back to
+      // whichever was written most recently, so the intended latest edit
+      // is never shadowed by iteration order.
+      final isLater = effective.year != latestEffective.year || effective.month != latestEffective.month
+          ? effective.isAfter(latestEffective)
+          : v.createdAt.isAfter(latest.createdAt);
+      if (isLater) latest = v;
     }
     if (latest != null && latest.active) result.add(latest);
   }
@@ -146,6 +171,7 @@ class FinanceController {
     required int amountMinor,
     DateTime? date,
     String? note,
+    String? paymentMode,
   }) {
     return _repo.createTransaction(
       accountId: accountId,
@@ -154,6 +180,7 @@ class FinanceController {
       amountMinor: amountMinor,
       date: date ?? DateTime.now(),
       note: note,
+      paymentMode: paymentMode,
     );
   }
 
@@ -165,6 +192,7 @@ class FinanceController {
     required int amountMinor,
     DateTime? date,
     String? note,
+    String? paymentMode,
   }) {
     return _repo.updateTransaction(
       id: id,
@@ -174,10 +202,48 @@ class FinanceController {
       amountMinor: amountMinor,
       date: date ?? DateTime.now(),
       note: note,
+      paymentMode: paymentMode,
     );
   }
 
   Future<void> deleteTransaction(String id) => _repo.deleteTransaction(id);
+
+  Future<void> addCategory({
+    required String name,
+    required String icon,
+    required String colorHex,
+    String kind = 'expense',
+  }) {
+    return _repo.createCategory(name: name, icon: icon, colorHex: colorHex, kind: kind);
+  }
+
+  Future<void> updateCategory({
+    required String id,
+    required String name,
+    required String icon,
+    required String colorHex,
+    required String kind,
+  }) {
+    return _repo.updateCategory(id: id, name: name, icon: icon, colorHex: colorHex, kind: kind);
+  }
+
+  Future<int> categoryUsageCount(String categoryId) => _repo.categoryUsageCount(categoryId);
+
+  /// Callers must call [categoryUsageCount] first and confirm it's zero.
+  Future<void> deleteCategory(String id) => _repo.deleteCategory(id);
+
+  Future<void> addAccountType({required String name, required String icon}) {
+    return _repo.createAccountType(name: name, icon: icon);
+  }
+
+  Future<void> updateAccountType({required String id, required String name, required String icon}) {
+    return _repo.updateAccountType(id: id, name: name, icon: icon);
+  }
+
+  Future<int> accountTypeUsageCount(String typeName) => _repo.accountTypeUsageCount(typeName);
+
+  /// Callers must call [accountTypeUsageCount] first and confirm it's zero.
+  Future<void> deleteAccountType(String id) => _repo.deleteAccountType(id);
 
   Future<void> addBudget({
     required String categoryId,

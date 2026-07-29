@@ -3,7 +3,24 @@ import 'package:uuid/uuid.dart';
 
 import 'categories_table.dart';
 
-/// checking | savings | credit_card | cash | investment
+/// User-manageable account kinds (checking, savings, credit card, ...) —
+/// seeded with the app's original fixed set on first launch, but rows can be
+/// added/edited/deleted afterward. [Accounts.type] stores the matching
+/// [name] (not this row's id) so pre-existing accounts keep working without
+/// a data migration.
+class AccountTypes extends Table {
+  TextColumn get id => text().clientDefault(() => const Uuid().v4())();
+  TextColumn get name => text()();
+  TextColumn get icon => text().withDefault(const Constant('account_balance_wallet'))();
+
+  DateTimeColumn get createdAt =>
+      dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// checking | savings | credit_card | cash | investment | any [AccountTypes.name]
 class Accounts extends Table {
   TextColumn get id => text().clientDefault(() => const Uuid().v4())();
   TextColumn get name => text()();
@@ -40,6 +57,11 @@ class Transactions extends Table {
   IntColumn get amountMinor => integer()();
   DateTimeColumn get date => dateTime()();
   TextColumn get note => text().nullable()();
+
+  /// upi | cash | card | net_banking | other — a small fixed set (see
+  /// `PaymentModes` in payment_mode.dart), not user-manageable like
+  /// categories/account types, so no backing table.
+  TextColumn get paymentMode => text().nullable()();
 
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();

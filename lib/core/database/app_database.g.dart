@@ -920,6 +920,306 @@ class EntityTagsCompanion extends UpdateCompanion<EntityTag> {
   }
 }
 
+class $AccountTypesTable extends AccountTypes
+    with TableInfo<$AccountTypesTable, AccountType> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AccountTypesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: () => const Uuid().v4(),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+    'icon',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('account_balance_wallet'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now(),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, icon, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'account_types';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AccountType> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('icon')) {
+      context.handle(
+        _iconMeta,
+        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AccountType map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AccountType(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      icon: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AccountTypesTable createAlias(String alias) {
+    return $AccountTypesTable(attachedDatabase, alias);
+  }
+}
+
+class AccountType extends DataClass implements Insertable<AccountType> {
+  final String id;
+  final String name;
+  final String icon;
+  final DateTime createdAt;
+  const AccountType({
+    required this.id,
+    required this.name,
+    required this.icon,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['icon'] = Variable<String>(icon);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  AccountTypesCompanion toCompanion(bool nullToAbsent) {
+    return AccountTypesCompanion(
+      id: Value(id),
+      name: Value(name),
+      icon: Value(icon),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory AccountType.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AccountType(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      icon: serializer.fromJson<String>(json['icon']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'icon': serializer.toJson<String>(icon),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  AccountType copyWith({
+    String? id,
+    String? name,
+    String? icon,
+    DateTime? createdAt,
+  }) => AccountType(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    icon: icon ?? this.icon,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  AccountType copyWithCompanion(AccountTypesCompanion data) {
+    return AccountType(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      icon: data.icon.present ? data.icon.value : this.icon,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountType(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('icon: $icon, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, icon, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AccountType &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.icon == this.icon &&
+          other.createdAt == this.createdAt);
+}
+
+class AccountTypesCompanion extends UpdateCompanion<AccountType> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> icon;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const AccountTypesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AccountTypesCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    this.icon = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : name = Value(name);
+  static Insertable<AccountType> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? icon,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (icon != null) 'icon': icon,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AccountTypesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? icon,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return AccountTypesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountTypesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('icon: $icon, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -1520,6 +1820,17 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _paymentModeMeta = const VerificationMeta(
+    'paymentMode',
+  );
+  @override
+  late final GeneratedColumn<String> paymentMode = GeneratedColumn<String>(
+    'payment_mode',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1541,6 +1852,7 @@ class $TransactionsTable extends Transactions
     amountMinor,
     date,
     note,
+    paymentMode,
     createdAt,
   ];
   @override
@@ -1605,6 +1917,15 @@ class $TransactionsTable extends Transactions
         note.isAcceptableOrUnknown(data['note']!, _noteMeta),
       );
     }
+    if (data.containsKey('payment_mode')) {
+      context.handle(
+        _paymentModeMeta,
+        paymentMode.isAcceptableOrUnknown(
+          data['payment_mode']!,
+          _paymentModeMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1648,6 +1969,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}note'],
       ),
+      paymentMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payment_mode'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1672,6 +1997,11 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final int amountMinor;
   final DateTime date;
   final String? note;
+
+  /// upi | cash | card | net_banking | other — a small fixed set (see
+  /// `PaymentModes` in payment_mode.dart), not user-manageable like
+  /// categories/account types, so no backing table.
+  final String? paymentMode;
   final DateTime createdAt;
   const Transaction({
     required this.id,
@@ -1681,6 +2011,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     required this.amountMinor,
     required this.date,
     this.note,
+    this.paymentMode,
     required this.createdAt,
   });
   @override
@@ -1697,6 +2028,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
     }
+    if (!nullToAbsent || paymentMode != null) {
+      map['payment_mode'] = Variable<String>(paymentMode);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1712,6 +2046,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       amountMinor: Value(amountMinor),
       date: Value(date),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      paymentMode: paymentMode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paymentMode),
       createdAt: Value(createdAt),
     );
   }
@@ -1729,6 +2066,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       amountMinor: serializer.fromJson<int>(json['amountMinor']),
       date: serializer.fromJson<DateTime>(json['date']),
       note: serializer.fromJson<String?>(json['note']),
+      paymentMode: serializer.fromJson<String?>(json['paymentMode']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1743,6 +2081,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'amountMinor': serializer.toJson<int>(amountMinor),
       'date': serializer.toJson<DateTime>(date),
       'note': serializer.toJson<String?>(note),
+      'paymentMode': serializer.toJson<String?>(paymentMode),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1755,6 +2094,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     int? amountMinor,
     DateTime? date,
     Value<String?> note = const Value.absent(),
+    Value<String?> paymentMode = const Value.absent(),
     DateTime? createdAt,
   }) => Transaction(
     id: id ?? this.id,
@@ -1764,6 +2104,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     amountMinor: amountMinor ?? this.amountMinor,
     date: date ?? this.date,
     note: note.present ? note.value : this.note,
+    paymentMode: paymentMode.present ? paymentMode.value : this.paymentMode,
     createdAt: createdAt ?? this.createdAt,
   );
   Transaction copyWithCompanion(TransactionsCompanion data) {
@@ -1779,6 +2120,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           : this.amountMinor,
       date: data.date.present ? data.date.value : this.date,
       note: data.note.present ? data.note.value : this.note,
+      paymentMode: data.paymentMode.present
+          ? data.paymentMode.value
+          : this.paymentMode,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1793,6 +2137,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('amountMinor: $amountMinor, ')
           ..write('date: $date, ')
           ..write('note: $note, ')
+          ..write('paymentMode: $paymentMode, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1807,6 +2152,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     amountMinor,
     date,
     note,
+    paymentMode,
     createdAt,
   );
   @override
@@ -1820,6 +2166,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.amountMinor == this.amountMinor &&
           other.date == this.date &&
           other.note == this.note &&
+          other.paymentMode == this.paymentMode &&
           other.createdAt == this.createdAt);
 }
 
@@ -1831,6 +2178,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<int> amountMinor;
   final Value<DateTime> date;
   final Value<String?> note;
+  final Value<String?> paymentMode;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const TransactionsCompanion({
@@ -1841,6 +2189,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.amountMinor = const Value.absent(),
     this.date = const Value.absent(),
     this.note = const Value.absent(),
+    this.paymentMode = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1852,6 +2201,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required int amountMinor,
     required DateTime date,
     this.note = const Value.absent(),
+    this.paymentMode = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : accountId = Value(accountId),
@@ -1866,6 +2216,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<int>? amountMinor,
     Expression<DateTime>? date,
     Expression<String>? note,
+    Expression<String>? paymentMode,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -1877,6 +2228,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (amountMinor != null) 'amount_minor': amountMinor,
       if (date != null) 'date': date,
       if (note != null) 'note': note,
+      if (paymentMode != null) 'payment_mode': paymentMode,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1890,6 +2242,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<int>? amountMinor,
     Value<DateTime>? date,
     Value<String?>? note,
+    Value<String?>? paymentMode,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -1901,6 +2254,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       amountMinor: amountMinor ?? this.amountMinor,
       date: date ?? this.date,
       note: note ?? this.note,
+      paymentMode: paymentMode ?? this.paymentMode,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1930,6 +2284,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
+    if (paymentMode.present) {
+      map['payment_mode'] = Variable<String>(paymentMode.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1949,6 +2306,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('amountMinor: $amountMinor, ')
           ..write('date: $date, ')
           ..write('note: $note, ')
+          ..write('paymentMode: $paymentMode, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -7615,6 +7973,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $TagsTable tags = $TagsTable(this);
   late final $EntityTagsTable entityTags = $EntityTagsTable(this);
+  late final $AccountTypesTable accountTypes = $AccountTypesTable(this);
   late final $AccountsTable accounts = $AccountsTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $BudgetsTable budgets = $BudgetsTable(this);
@@ -7638,6 +7997,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     categories,
     tags,
     entityTags,
+    accountTypes,
     accounts,
     transactions,
     budgets,
@@ -8707,6 +9067,187 @@ typedef $$EntityTagsTableProcessedTableManager =
       EntityTag,
       PrefetchHooks Function({bool tagId})
     >;
+typedef $$AccountTypesTableCreateCompanionBuilder =
+    AccountTypesCompanion Function({
+      Value<String> id,
+      required String name,
+      Value<String> icon,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$AccountTypesTableUpdateCompanionBuilder =
+    AccountTypesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> icon,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$AccountTypesTableFilterComposer
+    extends Composer<_$AppDatabase, $AccountTypesTable> {
+  $$AccountTypesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AccountTypesTableOrderingComposer
+    extends Composer<_$AppDatabase, $AccountTypesTable> {
+  $$AccountTypesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AccountTypesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AccountTypesTable> {
+  $$AccountTypesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$AccountTypesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AccountTypesTable,
+          AccountType,
+          $$AccountTypesTableFilterComposer,
+          $$AccountTypesTableOrderingComposer,
+          $$AccountTypesTableAnnotationComposer,
+          $$AccountTypesTableCreateCompanionBuilder,
+          $$AccountTypesTableUpdateCompanionBuilder,
+          (
+            AccountType,
+            BaseReferences<_$AppDatabase, $AccountTypesTable, AccountType>,
+          ),
+          AccountType,
+          PrefetchHooks Function()
+        > {
+  $$AccountTypesTableTableManager(_$AppDatabase db, $AccountTypesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AccountTypesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AccountTypesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AccountTypesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> icon = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AccountTypesCompanion(
+                id: id,
+                name: name,
+                icon: icon,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                required String name,
+                Value<String> icon = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AccountTypesCompanion.insert(
+                id: id,
+                name: name,
+                icon: icon,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AccountTypesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AccountTypesTable,
+      AccountType,
+      $$AccountTypesTableFilterComposer,
+      $$AccountTypesTableOrderingComposer,
+      $$AccountTypesTableAnnotationComposer,
+      $$AccountTypesTableCreateCompanionBuilder,
+      $$AccountTypesTableUpdateCompanionBuilder,
+      (
+        AccountType,
+        BaseReferences<_$AppDatabase, $AccountTypesTable, AccountType>,
+      ),
+      AccountType,
+      PrefetchHooks Function()
+    >;
 typedef $$AccountsTableCreateCompanionBuilder =
     AccountsCompanion Function({
       Value<String> id,
@@ -9077,6 +9618,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       required int amountMinor,
       required DateTime date,
       Value<String?> note,
+      Value<String?> paymentMode,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -9089,6 +9631,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<int> amountMinor,
       Value<DateTime> date,
       Value<String?> note,
+      Value<String?> paymentMode,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -9163,6 +9706,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get note => $composableBuilder(
     column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paymentMode => $composableBuilder(
+    column: $table.paymentMode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9252,6 +9800,11 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get paymentMode => $composableBuilder(
+    column: $table.paymentMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -9329,6 +9882,11 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get paymentMode => $composableBuilder(
+    column: $table.paymentMode,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -9415,6 +9973,7 @@ class $$TransactionsTableTableManager
                 Value<int> amountMinor = const Value.absent(),
                 Value<DateTime> date = const Value.absent(),
                 Value<String?> note = const Value.absent(),
+                Value<String?> paymentMode = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion(
@@ -9425,6 +9984,7 @@ class $$TransactionsTableTableManager
                 amountMinor: amountMinor,
                 date: date,
                 note: note,
+                paymentMode: paymentMode,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -9437,6 +9997,7 @@ class $$TransactionsTableTableManager
                 required int amountMinor,
                 required DateTime date,
                 Value<String?> note = const Value.absent(),
+                Value<String?> paymentMode = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion.insert(
@@ -9447,6 +10008,7 @@ class $$TransactionsTableTableManager
                 amountMinor: amountMinor,
                 date: date,
                 note: note,
+                paymentMode: paymentMode,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -13879,6 +14441,8 @@ class $AppDatabaseManager {
   $$TagsTableTableManager get tags => $$TagsTableTableManager(_db, _db.tags);
   $$EntityTagsTableTableManager get entityTags =>
       $$EntityTagsTableTableManager(_db, _db.entityTags);
+  $$AccountTypesTableTableManager get accountTypes =>
+      $$AccountTypesTableTableManager(_db, _db.accountTypes);
   $$AccountsTableTableManager get accounts =>
       $$AccountsTableTableManager(_db, _db.accounts);
   $$TransactionsTableTableManager get transactions =>

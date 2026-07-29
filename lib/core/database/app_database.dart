@@ -25,6 +25,7 @@ part 'app_database.g.dart';
     Categories,
     Tags,
     EntityTags,
+    AccountTypes,
     Accounts,
     Transactions,
     Budgets,
@@ -48,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -84,6 +85,16 @@ class AppDatabase extends _$AppDatabase {
         await m.database.customStatement(
           "UPDATE budgets SET effective_month = date(start_date, 'start of month')",
         );
+      }
+      if (from < 5) {
+        // v4 -> v5: account "type" and transaction "category" become
+        // user-manageable (`AccountTypes` table) plus a payment-mode tag on
+        // transactions. `AccountTypes` is seeded lazily on next app start
+        // (`ensureDefaultAccountTypes`), same as `Categories` always has
+        // been — no data to backfill here since `Accounts.type` already
+        // stores the matching name string and needs no rewrite.
+        await m.createTable(accountTypes);
+        await m.addColumn(transactions, transactions.paymentMode);
       }
     },
   );

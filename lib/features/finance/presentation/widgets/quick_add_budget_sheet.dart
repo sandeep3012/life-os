@@ -85,7 +85,8 @@ class _QuickAddBudgetSheetState extends State<_QuickAddBudgetSheet> {
     final canSubmit =
         _categoryId != null && (double.tryParse(_limitController.text.trim()) ?? 0) > 0;
 
-    return Padding(
+    return SingleChildScrollView(
+      child: Padding(
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
@@ -168,6 +169,7 @@ class _QuickAddBudgetSheetState extends State<_QuickAddBudgetSheet> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

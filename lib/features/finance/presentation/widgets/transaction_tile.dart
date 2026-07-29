@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/utils/icon_lookup.dart';
+import '../../domain/payment_mode.dart';
 
 class TransactionTile extends StatelessWidget {
   const TransactionTile({super.key, required this.transaction, this.category, this.onEdit});
@@ -21,6 +24,7 @@ class TransactionTile extends StatelessWidget {
     final color = category != null
         ? Color(int.parse(category!.colorHex.replaceFirst('#', '0xFF')))
         : (isIncome ? colors.good : colors.spend);
+    final mode = paymentModeById(transaction.paymentMode);
 
     return InkWell(
       onTap: onEdit,
@@ -33,7 +37,7 @@ class TransactionTile extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(color: color.withValues(alpha: 0.16), shape: BoxShape.circle),
               child: Icon(
-                isIncome ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                category != null ? resolveIcon(category!.icon) : Icons.swap_horiz_rounded,
                 size: 18,
                 color: color,
               ),
@@ -47,11 +51,22 @@ class TransactionTile extends StatelessWidget {
                     transaction.merchant,
                     style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                   ),
-                  Text(
-                    '${category?.name ?? 'Uncategorized'} · ${_relativeDate(transaction.date)}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          '${category?.name ?? 'Uncategorized'} · ${_relativeDate(transaction.date)}',
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      if (mode != null) ...[
+                        const SizedBox(width: 6),
+                        Icon(mode.icon, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -68,7 +83,7 @@ class TransactionTile extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ).animate().fadeIn(duration: 200.ms).slideX(begin: 0.03, end: 0, duration: 200.ms);
   }
 
   static String _relativeDate(DateTime date) {

@@ -16,6 +16,7 @@ void main() {
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     await FinanceRepository(db).ensureDefaultCategories();
+    await FinanceRepository(db).ensureDefaultAccountTypes();
   });
 
   tearDown(() => db.close());
@@ -57,6 +58,8 @@ void main() {
       await tester.pump();
       await tester.enterText(find.byType(TextField).at(1), '1000');
       await tester.pump();
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Add account'));
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Add account'));
       await tester.pumpAndSettle();
 
@@ -69,6 +72,8 @@ void main() {
       await tester.pump();
       await tester.enterText(find.byType(TextField).at(1), '250');
       await tester.pump();
+      await tester.ensureVisible(find.text('Add transaction'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Add transaction'));
       await tester.pumpAndSettle();
 

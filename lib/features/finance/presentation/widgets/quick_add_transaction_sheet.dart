@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/icon_lookup.dart';
+import '../../domain/payment_mode.dart';
 
 class QuickAddTransactionResult {
   const QuickAddTransactionResult({
@@ -10,6 +12,7 @@ class QuickAddTransactionResult {
     required this.merchant,
     required this.amountMinor,
     required this.date,
+    this.paymentMode,
   });
 
   final String accountId;
@@ -19,6 +22,7 @@ class QuickAddTransactionResult {
   /// Already signed: negative for expense, positive for income.
   final int amountMinor;
   final DateTime date;
+  final String? paymentMode;
 }
 
 Future<QuickAddTransactionResult?> showQuickAddTransactionSheet(
@@ -64,6 +68,7 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
   late String? _categoryId = widget.initial?.categoryId;
   late bool _isExpense = (widget.initial?.amountMinor ?? -1) < 0;
   late DateTime _date = widget.initial?.date ?? DateTime.now();
+  late String? _paymentMode = widget.initial?.paymentMode;
 
   bool get _isEditing => widget.initial != null;
 
@@ -97,7 +102,8 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
         _merchantController.text.trim().isNotEmpty &&
         (double.tryParse(_amountController.text.trim()) ?? 0) > 0;
 
-    return Padding(
+    return SingleChildScrollView(
+      child: Padding(
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
@@ -150,9 +156,37 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
             decoration: const InputDecoration(labelText: 'Category'),
             items: [
               for (final c in widget.categories)
-                DropdownMenuItem(value: c.id, child: Text(c.name)),
+                DropdownMenuItem(
+                  value: c.id,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(resolveIcon(c.icon), size: 16),
+                      const SizedBox(width: 8),
+                      Text(c.name),
+                    ],
+                  ),
+                ),
             ],
             onChanged: (value) => setState(() => _categoryId = value),
+          ),
+          const SizedBox(height: 12),
+          Text('Payment mode', style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final m in paymentModes)
+                ChoiceChip(
+                  avatar: Icon(m.icon, size: 16),
+                  label: Text(m.label),
+                  selected: _paymentMode == m.id,
+                  onSelected: (_) => setState(
+                    () => _paymentMode = _paymentMode == m.id ? null : m.id,
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 12),
           InkWell(
@@ -184,6 +218,7 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
                           merchant: _merchantController.text.trim(),
                           amountMinor: _isExpense ? -minor : minor,
                           date: _date,
+                          paymentMode: _paymentMode,
                         ),
                       );
                     }
@@ -192,6 +227,7 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

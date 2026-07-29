@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/services/backup_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../finance/presentation/screens/account_type_management_screen.dart';
+import '../../../finance/presentation/screens/category_management_screen.dart';
 import '../../application/settings_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -109,6 +111,31 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: 'Notify when new insights appear',
                   value: settings.aiInsightAlerts,
                   onChanged: controller.setAiInsightAlerts,
+                ),
+              ],
+            ),
+          ),
+
+          const _SectionTitle('Finance'),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text('Categories'),
+                  subtitle: const Text('Add, edit, or remove transaction/budget categories'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CategoryManagementScreen()),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  title: const Text('Account types'),
+                  subtitle: const Text('Add, edit, or remove account types'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AccountTypeManagementScreen()),
+                  ),
                 ),
               ],
             ),

@@ -17,6 +17,27 @@ const _defaultCategories = [
   ('Income', 'payments', '#1E8F5E', 'income'),
 ];
 
+/// The app's original fixed account kinds, now just the seed data for the
+/// user-manageable `AccountTypes` table. Names are Title Case because — like
+/// `Categories.name` — this is both the identifier stored on
+/// `Accounts.type` for accounts created from now on *and* the display text;
+/// [normalizeAccountTypeKey] bridges the old lowercase/underscored values
+/// (`checking`, `credit_card`, ...) already on pre-existing accounts so
+/// icon/label lookup still matches them.
+const _defaultAccountTypes = [
+  ('Checking', 'account_balance_wallet'),
+  ('Savings', 'savings'),
+  ('Credit Card', 'credit_card'),
+  ('Cash', 'payments'),
+  ('Investment', 'trending_up'),
+];
+
+/// Matches an `Accounts.type`/`AccountTypes.name` value regardless of case
+/// or whether it uses spaces or underscores, so pre-existing accounts
+/// (stored as `checking`, `credit_card`, ...) still resolve against the
+/// newly-seeded Title Case `AccountTypes` rows (`Checking`, `Credit Card`).
+String normalizeAccountTypeKey(String s) => s.toLowerCase().replaceAll('_', ' ').trim();
+
 class FinanceRepository {
   FinanceRepository(this._db);
 
@@ -38,7 +59,100 @@ class FinanceRepository {
     });
   }
 
+  Future<void> ensureDefaultAccountTypes() async {
+    final existing = await _db.select(_db.accountTypes).get();
+    if (existing.isNotEmpty) return;
+    await _db.batch((batch) {
+      batch.insertAll(_db.accountTypes, [
+        for (final (name, icon) in _defaultAccountTypes)
+          AccountTypesCompanion.insert(name: name, icon: Value(icon)),
+      ]);
+    });
+  }
+
   Stream<List<Category>> watchCategories() => _db.select(_db.categories).watch();
+
+  Stream<List<AccountType>> watchAccountTypes() => _db.select(_db.accountTypes).watch();
+
+  Future<void> createCategory({
+    required String name,
+    required String icon,
+    required String colorHex,
+    String kind = 'expense',
+  }) {
+    return _db.into(_db.categories).insert(
+      CategoriesCompanion.insert(
+        name: name,
+        icon: Value(icon),
+        colorHex: colorHex,
+        kind: Value(kind),
+      ),
+    );
+  }
+
+  Future<void> updateCategory({
+    required String id,
+    required String name,
+    required String icon,
+    required String colorHex,
+    required String kind,
+  }) {
+    return (_db.update(_db.categories)..where((c) => c.id.equals(id))).write(
+      CategoriesCompanion(
+        name: Value(name),
+        icon: Value(icon),
+        colorHex: Value(colorHex),
+        kind: Value(kind),
+      ),
+    );
+  }
+
+  /// Rows referencing this category (transactions, budget versions) — the
+  /// gate for whether it can be deleted.
+  Future<int> categoryUsageCount(String categoryId) async {
+    final txnCount = await (_db.select(
+      _db.transactions,
+    )..where((t) => t.categoryId.equals(categoryId))).get().then((r) => r.length);
+    final budgetCount = await (_db.select(
+      _db.budgets,
+    )..where((b) => b.categoryId.equals(categoryId))).get().then((r) => r.length);
+    return txnCount + budgetCount;
+  }
+
+  /// Only safe once [categoryUsageCount] is confirmed zero.
+  Future<void> deleteCategory(String id) {
+    return (_db.delete(_db.categories)..where((c) => c.id.equals(id))).go();
+  }
+
+  Future<void> createAccountType({required String name, required String icon}) {
+    return _db.into(_db.accountTypes).insert(
+      AccountTypesCompanion.insert(name: name, icon: Value(icon)),
+    );
+  }
+
+  Future<void> updateAccountType({
+    required String id,
+    required String name,
+    required String icon,
+  }) {
+    return (_db.update(_db.accountTypes)..where((t) => t.id.equals(id))).write(
+      AccountTypesCompanion(name: Value(name), icon: Value(icon)),
+    );
+  }
+
+  /// Accounts currently using this type's name (case/underscore-insensitive,
+  /// since older accounts may still hold the old lowercase key) — the gate
+  /// for whether it can be deleted.
+  Future<int> accountTypeUsageCount(String typeName) async {
+    final accounts = await _db.select(_db.accounts).get();
+    final key = normalizeAccountTypeKey(typeName);
+    return accounts.where((a) => normalizeAccountTypeKey(a.type) == key).length;
+  }
+
+  /// Only safe once [accountTypeUsageCount] is confirmed zero.
+  Future<void> deleteAccountType(String id) {
+    return (_db.delete(_db.accountTypes)..where((t) => t.id.equals(id))).go();
+  }
 
   Stream<List<Account>> watchAccounts() => _db.select(_db.accounts).watch();
 
@@ -100,6 +214,7 @@ class FinanceRepository {
     required int amountMinor,
     required DateTime date,
     String? note,
+    String? paymentMode,
   }) {
     return _db.transaction(() async {
       await _db.into(_db.transactions).insert(
@@ -110,6 +225,7 @@ class FinanceRepository {
           amountMinor: amountMinor,
           date: date,
           note: Value(note),
+          paymentMode: Value(paymentMode),
         ),
       );
       final account = await (_db.select(
@@ -135,6 +251,7 @@ class FinanceRepository {
     required int amountMinor,
     required DateTime date,
     String? note,
+    String? paymentMode,
   }) {
     return _db.transaction(() async {
       final old = await (_db.select(
@@ -159,6 +276,7 @@ class FinanceRepository {
           amountMinor: Value(amountMinor),
           date: Value(date),
           note: Value(note),
+          paymentMode: Value(paymentMode),
         ),
       );
 
@@ -225,10 +343,19 @@ class FinanceRepository {
     required bool active,
   }) async {
     final month = _startOfMonth(targetMonth);
-    final existing = await (_db.select(_db.budgets)..where(
-          (b) => b.categoryId.equals(categoryId) & b.effectiveMonth.equals(month),
-        ))
-        .getSingleOrNull();
+    // Compared in Dart rather than via a SQL `.equals(month)` filter: SQLite
+    // stores DateTime as an epoch value, and a round-trip comparison there
+    // is one more place a timezone/precision mismatch could make two
+    // "same month" values compare unequal — matching on year+month here
+    // keeps this genuinely upsert (never duplicates a version for a month
+    // that already has one).
+    final candidates = await (_db.select(
+      _db.budgets,
+    )..where((b) => b.categoryId.equals(categoryId))).get();
+    final existing = candidates.cast<Budget?>().firstWhere((b) {
+      final effective = b!.effectiveMonth ?? b.startDate;
+      return effective.year == month.year && effective.month == month.month;
+    }, orElse: () => null);
 
     if (existing != null) {
       await (_db.update(_db.budgets)..where((b) => b.id.equals(existing.id))).write(
@@ -299,14 +426,14 @@ class FinanceRepository {
       _db.budgets,
     )..where((b) => b.id.equals(id))).getSingle();
 
-    final hasEarlierHistory =
-        await (_db.select(_db.budgets)..where(
-              (b) =>
-                  b.categoryId.equals(budget.categoryId) &
-                  b.effectiveMonth.isSmallerThanValue(budget.effectiveMonth!),
-            ))
-            .get()
-            .then((rows) => rows.isNotEmpty);
+    final siblings = await (_db.select(
+      _db.budgets,
+    )..where((b) => b.categoryId.equals(budget.categoryId))).get();
+    final thisMonth = budget.effectiveMonth ?? budget.startDate;
+    final hasEarlierHistory = siblings.any((b) {
+      final effective = b.effectiveMonth ?? b.startDate;
+      return effective.isBefore(thisMonth);
+    });
 
     if (!hasEarlierHistory) {
       await (_db.delete(

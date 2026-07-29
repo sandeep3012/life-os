@@ -26,6 +26,7 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp> {
     // restart, or the app closing) while they're still in flight.
     ref.read(notificationServiceProvider).init();
     ref.read(financeRepositoryProvider).ensureDefaultCategories();
+    ref.read(financeRepositoryProvider).ensureDefaultAccountTypes();
     ref.read(aiAnalyserControllerProvider).refresh().catchError((_) {});
   }
 

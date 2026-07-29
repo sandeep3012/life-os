@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/utils/icon_lookup.dart';
 import '../../../finance/domain/budget_progress.dart';
 
 class BudgetBar extends StatelessWidget {
@@ -26,11 +28,18 @@ class BudgetBar extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  progress.category.name,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(resolveIcon(progress.category.icon), size: 16, color: color),
+                    const SizedBox(width: 6),
+                    Text(
+                      progress.category.name,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
                 Text(
                   '${formatMinor(progress.spentMinor, showDecimals: false)} / ${formatMinor(progress.limitMinor, showDecimals: false)}',
@@ -81,6 +90,6 @@ class BudgetBar extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ).animate().fadeIn(duration: 200.ms).slideX(begin: 0.03, end: 0, duration: 200.ms);
   }
 }

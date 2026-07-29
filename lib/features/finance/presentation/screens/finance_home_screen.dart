@@ -36,6 +36,12 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     final accountsAsync = ref.watch(accountsProvider);
     final activeAccounts = ref.watch(activeAccountsProvider);
     final archivedCount = ref.watch(archivedAccountsProvider).length;
+    // Keeps the account-types stream subscribed (and its `.value` populated)
+    // for the whole time this screen is up, so `_addAccount`'s `ref.read`
+    // never races an unstarted stream and hands the sheet an empty list —
+    // same class of bug as the unwatched-StreamProvider gotcha documented
+    // for AiAnalyserController.refresh() in CLAUDE.md.
+    ref.watch(accountTypesProvider);
     final totalBalance = ref.watch(totalBalanceMinorProvider);
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final categoryById = {for (final c in categories) c.id: c};
@@ -170,7 +176,8 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
   }
 
   Future<void> _addAccount(BuildContext context, WidgetRef ref) async {
-    final result = await showQuickAddAccountSheet(context);
+    final accountTypes = ref.read(accountTypesProvider).value ?? const [];
+    final result = await showQuickAddAccountSheet(context, accountTypes: accountTypes);
     if (result == null) return;
     await ref.read(financeControllerProvider).addAccount(
       name: result.name,
@@ -187,10 +194,19 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     }
 
     if (_section == _FinanceSection.transactions) {
+      final transactableAccounts = ref.read(transactableAccountsProvider);
+      if (transactableAccounts.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Add a non-investment account first to record transactions.'),
+          ),
+        );
+        return;
+      }
       final categories = ref.read(categoriesProvider).value ?? const [];
       final result = await showQuickAddTransactionSheet(
         context,
-        accounts: accounts,
+        accounts: transactableAccounts,
         categories: categories,
       );
       if (result == null) return;
@@ -200,6 +216,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         merchant: result.merchant,
         amountMinor: result.amountMinor,
         date: result.date,
+        paymentMode: result.paymentMode,
       );
     } else {
       final categories = ref.read(categoriesProvider).value ?? const [];
@@ -280,7 +297,21 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
   }
 
   Future<void> _editTransaction(Transaction t) async {
-    final accounts = ref.read(activeAccountsProvider);
+    final transactableAccounts = ref.read(transactableAccountsProvider);
+    // Keep the transaction's current account selectable even if it's an
+    // investment account (or otherwise no longer transactable) — it was
+    // valid when the transaction was recorded, and dropping it from the
+    // list here would silently reassign the transaction on save.
+    final currentAccount = ref
+        .read(accountsProvider)
+        .value
+        ?.where((a) => a.id == t.accountId)
+        .firstOrNull;
+    final accounts = [
+      ...transactableAccounts,
+      if (currentAccount != null && !transactableAccounts.any((a) => a.id == currentAccount.id))
+        currentAccount,
+    ];
     final categories = ref.read(categoriesProvider).value ?? const [];
     final result = await showQuickAddTransactionSheet(
       context,
@@ -296,30 +327,42 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
       merchant: result.merchant,
       amountMinor: result.amountMinor,
       date: result.date,
+      paymentMode: result.paymentMode,
     );
   }
 
   void _scheduleDelete(Transaction t) {
     setState(() => _pendingDeleteIds.add(t.id));
+    final messenger = ScaffoldMessenger.of(context);
     _timers[t.id] = Timer(_undoWindow, () async {
       _timers.remove(t.id);
+      // Dismissed explicitly here rather than left to the SnackBar's own
+      // `duration` timer: that timer is Ticker-driven, so it silently stalls
+      // if this route is offstage (e.g. the user switched bottom-nav tabs)
+      // — leaving the bar stuck on screen well past the undo window. Our
+      // own wall-clock Timer isn't affected, so tying dismissal to it keeps
+      // "hidden" and "actually deleted" in sync regardless of tab state.
+      messenger.hideCurrentSnackBar();
       await ref.read(financeControllerProvider).deleteTransaction(t.id);
       if (mounted) setState(() => _pendingDeleteIds.remove(t.id));
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Deleted "${t.merchant}"'),
-        duration: _undoWindow,
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            _timers.remove(t.id)?.cancel();
-            if (mounted) setState(() => _pendingDeleteIds.remove(t.id));
-          },
+    messenger
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('Deleted "${t.merchant}"'),
+          duration: _undoWindow,
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () {
+              _timers.remove(t.id)?.cancel();
+              if (mounted) setState(() => _pendingDeleteIds.remove(t.id));
+            },
+          ),
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -389,16 +432,20 @@ class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
 
   void _scheduleDelete(BudgetProgress p) {
     setState(() => _pendingDeleteIds.add(p.budget.id));
+    final messenger = ScaffoldMessenger.of(context);
     _timers[p.budget.id] = Timer(_undoWindow, () async {
       _timers.remove(p.budget.id);
+      messenger.hideCurrentSnackBar();
       await ref.read(financeControllerProvider).deleteBudget(p.budget.id);
       if (mounted) setState(() => _pendingDeleteIds.remove(p.budget.id));
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
       SnackBar(
         content: Text('Deleted "${p.category.name}" budget'),
         duration: _undoWindow,
+        behavior: SnackBarBehavior.floating,
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {

@@ -27,6 +27,7 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
         .value
         ?.where((a) => a.id == widget.accountId)
         .firstOrNull;
+    final accountTypes = ref.watch(accountTypesProvider).value ?? const [];
 
     if (account == null) {
       return const Scaffold(body: Center(child: Text('Account not found')));
@@ -55,7 +56,7 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
                           color: colors.finance.withValues(alpha: 0.16),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(accountIcon(account.type), color: colors.finance),
+                        child: Icon(accountIconFor(account.type, accountTypes), color: colors.finance),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
