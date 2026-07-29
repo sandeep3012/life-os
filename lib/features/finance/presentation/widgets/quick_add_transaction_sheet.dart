@@ -22,30 +22,46 @@ Future<QuickAddTransactionResult?> showQuickAddTransactionSheet(
   BuildContext context, {
   required List<Account> accounts,
   required List<Category> categories,
+  Transaction? initial,
 }) {
   return showModalBottomSheet<QuickAddTransactionResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _QuickAddTransactionSheet(accounts: accounts, categories: categories),
+    builder: (context) => _QuickAddTransactionSheet(
+      accounts: accounts,
+      categories: categories,
+      initial: initial,
+    ),
   );
 }
 
 class _QuickAddTransactionSheet extends StatefulWidget {
-  const _QuickAddTransactionSheet({required this.accounts, required this.categories});
+  const _QuickAddTransactionSheet({
+    required this.accounts,
+    required this.categories,
+    this.initial,
+  });
 
   final List<Account> accounts;
   final List<Category> categories;
+  final Transaction? initial;
 
   @override
   State<_QuickAddTransactionSheet> createState() => _QuickAddTransactionSheetState();
 }
 
 class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
-  final _merchantController = TextEditingController();
-  final _amountController = TextEditingController();
-  late String _accountId = widget.accounts.first.id;
-  String? _categoryId;
-  bool _isExpense = true;
+  late final _merchantController = TextEditingController(text: widget.initial?.merchant);
+  late final _amountController = TextEditingController(
+    text: widget.initial == null
+        ? null
+        : (widget.initial!.amountMinor.abs() / 100).toStringAsFixed(2),
+  );
+  late String _accountId = widget.initial?.accountId ?? widget.accounts.first.id;
+  late String? _categoryId = widget.initial?.categoryId;
+  late bool _isExpense = (widget.initial?.amountMinor ?? -1) < 0;
+
+  bool get _isEditing => widget.initial != null;
 
   @override
   void initState() {
@@ -78,7 +94,10 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('New transaction', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            _isEditing ? 'Edit transaction' : 'New transaction',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
           SegmentedButton<bool>(
             segments: const [
@@ -139,7 +158,7 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
                       );
                     }
                   : null,
-              child: const Text('Add transaction'),
+              child: Text(_isEditing ? 'Save changes' : 'Add transaction'),
             ),
           ),
         ],

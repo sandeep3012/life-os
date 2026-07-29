@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../finance/application/finance_providers.dart';
+import '../../finance/domain/budget_progress.dart';
 import '../domain/category_spend.dart';
 
 class SelectedAnalyzerMonth extends Notifier<DateTime> {
@@ -107,5 +108,40 @@ final weeklyTrendProvider = Provider<List<int>>((ref) {
                 t.date.isBefore(weekStart.add(const Duration(days: 7))),
           )
           .fold<int>(0, (sum, t) => sum + t.amountMinor.abs()),
+  ];
+});
+
+/// Same shape as finance's `budgetsWithProgressProvider`, but spend is
+/// computed against the analyzer's selected month/week rather than
+/// `DateTime.now()` — otherwise navigating to a past or future month left
+/// this card showing the current period's spend regardless of which month
+/// was on screen.
+final monthBudgetsWithProgressProvider = Provider<List<BudgetProgress>>((ref) {
+  final budgets = ref.watch(budgetsProvider).value ?? const [];
+  final categories = ref.watch(categoriesProvider).value ?? const [];
+  final transactions = ref.watch(transactionsProvider).value ?? const [];
+  final categoryById = {for (final c in categories) c.id: c};
+
+  final month = ref.watch(selectedAnalyzerMonthProvider);
+  final monthStart = DateTime(month.year, month.month);
+  final monthEnd = DateTime(month.year, month.month + 1);
+  final weekStart = startOfWeek(monthEnd.subtract(const Duration(days: 1)));
+
+  return [
+    for (final budget in budgets)
+      if (categoryById[budget.categoryId] case final category?)
+        BudgetProgress(
+          budget: budget,
+          category: category,
+          spentMinor: transactions
+              .where((t) => t.categoryId == budget.categoryId)
+              .where((t) => t.amountMinor < 0)
+              .where(
+                (t) => budget.period == 'weekly'
+                    ? !t.date.isBefore(weekStart) && t.date.isBefore(monthEnd)
+                    : !t.date.isBefore(monthStart) && t.date.isBefore(monthEnd),
+              )
+              .fold<int>(0, (sum, t) => sum + t.amountMinor.abs()),
+        ),
   ];
 });

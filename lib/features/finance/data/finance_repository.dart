@@ -64,6 +64,35 @@ class FinanceRepository {
     );
   }
 
+  /// How many other rows reference this account — the gate for whether it
+  /// can be hard-deleted (only when both are zero) or must be deactivated
+  /// instead.
+  Future<({int transactionCount, int goalLinkCount})> checkAccountUsage(
+    String accountId,
+  ) async {
+    final transactionCount = await (_db.select(
+      _db.transactions,
+    )..where((t) => t.accountId.equals(accountId))).get().then((r) => r.length);
+    final goalLinkCount = await (_db.select(_db.goalLinks)..where(
+          (l) => l.linkedType.equals('account') & l.linkedId.equals(accountId),
+        ))
+        .get()
+        .then((r) => r.length);
+    return (transactionCount: transactionCount, goalLinkCount: goalLinkCount);
+  }
+
+  /// Only safe to call once [checkAccountUsage] confirms nothing references
+  /// this account — callers must check first, this doesn't re-verify.
+  Future<void> deleteAccount(String accountId) {
+    return (_db.delete(_db.accounts)..where((a) => a.id.equals(accountId))).go();
+  }
+
+  Future<void> setAccountActive(String accountId, bool active) {
+    return (_db.update(_db.accounts)..where((a) => a.id.equals(accountId))).write(
+      AccountsCompanion(isActive: Value(active), updatedAt: Value(DateTime.now())),
+    );
+  }
+
   Future<void> createTransaction({
     required String accountId,
     String? categoryId,
@@ -95,6 +124,74 @@ class FinanceRepository {
     });
   }
 
+  /// Reverts the transaction's effect on its old account, applies the new
+  /// values (including a possible account switch), then re-applies to the
+  /// (possibly different) account — keeps both balances correct in one go.
+  Future<void> updateTransaction({
+    required String id,
+    required String accountId,
+    String? categoryId,
+    required String merchant,
+    required int amountMinor,
+    required DateTime date,
+    String? note,
+  }) {
+    return _db.transaction(() async {
+      final old = await (_db.select(
+        _db.transactions,
+      )..where((t) => t.id.equals(id))).getSingle();
+
+      final oldAccount = await (_db.select(
+        _db.accounts,
+      )..where((a) => a.id.equals(old.accountId))).getSingle();
+      await (_db.update(_db.accounts)..where((a) => a.id.equals(old.accountId))).write(
+        AccountsCompanion(
+          balanceMinor: Value(oldAccount.balanceMinor - old.amountMinor),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+      await (_db.update(_db.transactions)..where((t) => t.id.equals(id))).write(
+        TransactionsCompanion(
+          accountId: Value(accountId),
+          categoryId: Value(categoryId),
+          merchant: Value(merchant),
+          amountMinor: Value(amountMinor),
+          date: Value(date),
+          note: Value(note),
+        ),
+      );
+
+      final newAccount = await (_db.select(
+        _db.accounts,
+      )..where((a) => a.id.equals(accountId))).getSingle();
+      await (_db.update(_db.accounts)..where((a) => a.id.equals(accountId))).write(
+        AccountsCompanion(
+          balanceMinor: Value(newAccount.balanceMinor + amountMinor),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    });
+  }
+
+  Future<void> deleteTransaction(String id) {
+    return _db.transaction(() async {
+      final txn = await (_db.select(
+        _db.transactions,
+      )..where((t) => t.id.equals(id))).getSingle();
+      final account = await (_db.select(
+        _db.accounts,
+      )..where((a) => a.id.equals(txn.accountId))).getSingle();
+      await (_db.update(_db.accounts)..where((a) => a.id.equals(txn.accountId))).write(
+        AccountsCompanion(
+          balanceMinor: Value(account.balanceMinor - txn.amountMinor),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+      await (_db.delete(_db.transactions)..where((t) => t.id.equals(id))).go();
+    });
+  }
+
   Future<void> createBudget({
     required String categoryId,
     required int limitMinor,
@@ -109,5 +206,24 @@ class FinanceRepository {
         startDate: startDate ?? DateTime.now(),
       ),
     );
+  }
+
+  Future<void> updateBudget({
+    required String id,
+    required String categoryId,
+    required int limitMinor,
+    required String period,
+  }) {
+    return (_db.update(_db.budgets)..where((b) => b.id.equals(id))).write(
+      BudgetsCompanion(
+        categoryId: Value(categoryId),
+        limitMinor: Value(limitMinor),
+        period: Value(period),
+      ),
+    );
+  }
+
+  Future<void> deleteBudget(String id) {
+    return (_db.delete(_db.budgets)..where((b) => b.id.equals(id))).go();
   }
 }

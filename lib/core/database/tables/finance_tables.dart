@@ -14,6 +14,12 @@ class Accounts extends Table {
   IntColumn get balanceMinor => integer().withDefault(const Constant(0))();
   TextColumn get currencyCode => text().withDefault(const Constant('INR'))();
 
+  /// Deactivated (not deleted) accounts drop out of balance totals and
+  /// picker lists but keep their transaction/goal-link history intact —
+  /// the fallback for accounts that can't be hard-deleted because they're
+  /// still referenced elsewhere.
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
   DateTimeColumn get updatedAt =>

@@ -13,9 +13,10 @@ IconData accountIcon(String type) => switch (type) {
 };
 
 class AccountCard extends StatelessWidget {
-  const AccountCard({super.key, required this.account});
+  const AccountCard({super.key, required this.account, this.onTap});
 
   final Account account;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -24,48 +25,104 @@ class AccountCard extends StatelessWidget {
     final dotColor = negative ? colors.critical : colors.finance;
     final theme = Theme.of(context);
 
-    return Container(
-      width: 160,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border.all(color: theme.colorScheme.outlineVariant),
+    return Material(
+      color: theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  account.name,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+        child: Container(
+          width: 160,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Opacity(
+            opacity: account.isActive ? 1 : 0.55,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        account.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  formatMinor(account.balanceMinor, showDecimals: false),
+                  style: TextStyle(
+                    fontFamily: 'PlexMono',
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    color: negative ? colors.critical : theme.colorScheme.onSurface,
                   ),
                 ),
-              ),
-              Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The outlined "add another account" tile appended to the account row —
+/// always present, unlike the old FAB-only entry point that disappeared
+/// after the first account was created.
+class AddAccountCard extends StatelessWidget {
+  const AddAccountCard({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: 160,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border.all(color: theme.colorScheme.primary, width: 1.5),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_circle_outline_rounded, color: theme.colorScheme.primary, size: 20),
+              const SizedBox(height: 4),
+              Text(
+                'Add account',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            formatMinor(account.balanceMinor, showDecimals: false),
-            style: TextStyle(
-              fontFamily: 'PlexMono',
-              fontSize: 19,
-              fontWeight: FontWeight.w700,
-              color: negative ? colors.critical : theme.colorScheme.onSurface,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

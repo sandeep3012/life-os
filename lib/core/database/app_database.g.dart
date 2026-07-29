@@ -977,6 +977,21 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     requiredDuringInsert: false,
     defaultValue: const Constant('INR'),
   );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1008,6 +1023,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     type,
     balanceMinor,
     currencyCode,
+    isActive,
     createdAt,
     updatedAt,
   ];
@@ -1060,6 +1076,12 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         ),
       );
     }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1101,6 +1123,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.string,
         data['${effectivePrefix}currency_code'],
       )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1127,6 +1153,12 @@ class Account extends DataClass implements Insertable<Account> {
   /// drift in balances — matches the Finance screen's ₹ totals exactly.
   final int balanceMinor;
   final String currencyCode;
+
+  /// Deactivated (not deleted) accounts drop out of balance totals and
+  /// picker lists but keep their transaction/goal-link history intact —
+  /// the fallback for accounts that can't be hard-deleted because they're
+  /// still referenced elsewhere.
+  final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Account({
@@ -1135,6 +1167,7 @@ class Account extends DataClass implements Insertable<Account> {
     required this.type,
     required this.balanceMinor,
     required this.currencyCode,
+    required this.isActive,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -1146,6 +1179,7 @@ class Account extends DataClass implements Insertable<Account> {
     map['type'] = Variable<String>(type);
     map['balance_minor'] = Variable<int>(balanceMinor);
     map['currency_code'] = Variable<String>(currencyCode);
+    map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -1158,6 +1192,7 @@ class Account extends DataClass implements Insertable<Account> {
       type: Value(type),
       balanceMinor: Value(balanceMinor),
       currencyCode: Value(currencyCode),
+      isActive: Value(isActive),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -1174,6 +1209,7 @@ class Account extends DataClass implements Insertable<Account> {
       type: serializer.fromJson<String>(json['type']),
       balanceMinor: serializer.fromJson<int>(json['balanceMinor']),
       currencyCode: serializer.fromJson<String>(json['currencyCode']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -1187,6 +1223,7 @@ class Account extends DataClass implements Insertable<Account> {
       'type': serializer.toJson<String>(type),
       'balanceMinor': serializer.toJson<int>(balanceMinor),
       'currencyCode': serializer.toJson<String>(currencyCode),
+      'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -1198,6 +1235,7 @@ class Account extends DataClass implements Insertable<Account> {
     String? type,
     int? balanceMinor,
     String? currencyCode,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Account(
@@ -1206,6 +1244,7 @@ class Account extends DataClass implements Insertable<Account> {
     type: type ?? this.type,
     balanceMinor: balanceMinor ?? this.balanceMinor,
     currencyCode: currencyCode ?? this.currencyCode,
+    isActive: isActive ?? this.isActive,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -1220,6 +1259,7 @@ class Account extends DataClass implements Insertable<Account> {
       currencyCode: data.currencyCode.present
           ? data.currencyCode.value
           : this.currencyCode,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -1233,6 +1273,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('type: $type, ')
           ..write('balanceMinor: $balanceMinor, ')
           ..write('currencyCode: $currencyCode, ')
+          ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1246,6 +1287,7 @@ class Account extends DataClass implements Insertable<Account> {
     type,
     balanceMinor,
     currencyCode,
+    isActive,
     createdAt,
     updatedAt,
   );
@@ -1258,6 +1300,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.type == this.type &&
           other.balanceMinor == this.balanceMinor &&
           other.currencyCode == this.currencyCode &&
+          other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -1268,6 +1311,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String> type;
   final Value<int> balanceMinor;
   final Value<String> currencyCode;
+  final Value<bool> isActive;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -1277,6 +1321,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.type = const Value.absent(),
     this.balanceMinor = const Value.absent(),
     this.currencyCode = const Value.absent(),
+    this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1287,6 +1332,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     required String type,
     this.balanceMinor = const Value.absent(),
     this.currencyCode = const Value.absent(),
+    this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1298,6 +1344,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? type,
     Expression<int>? balanceMinor,
     Expression<String>? currencyCode,
+    Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -1308,6 +1355,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (type != null) 'type': type,
       if (balanceMinor != null) 'balance_minor': balanceMinor,
       if (currencyCode != null) 'currency_code': currencyCode,
+      if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1320,6 +1368,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<String>? type,
     Value<int>? balanceMinor,
     Value<String>? currencyCode,
+    Value<bool>? isActive,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -1330,6 +1379,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       type: type ?? this.type,
       balanceMinor: balanceMinor ?? this.balanceMinor,
       currencyCode: currencyCode ?? this.currencyCode,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -1354,6 +1404,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (currencyCode.present) {
       map['currency_code'] = Variable<String>(currencyCode.value);
     }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1374,6 +1427,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('type: $type, ')
           ..write('balanceMinor: $balanceMinor, ')
           ..write('currencyCode: $currencyCode, ')
+          ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -8545,6 +8599,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
       required String type,
       Value<int> balanceMinor,
       Value<String> currencyCode,
+      Value<bool> isActive,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -8556,6 +8611,7 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<String> type,
       Value<int> balanceMinor,
       Value<String> currencyCode,
+      Value<bool> isActive,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -8615,6 +8671,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<String> get currencyCode => $composableBuilder(
     column: $table.currencyCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8688,6 +8749,11 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -8726,6 +8792,9 @@ class $$AccountsTableAnnotationComposer
     column: $table.currencyCode,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -8792,6 +8861,7 @@ class $$AccountsTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<int> balanceMinor = const Value.absent(),
                 Value<String> currencyCode = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -8801,6 +8871,7 @@ class $$AccountsTableTableManager
                 type: type,
                 balanceMinor: balanceMinor,
                 currencyCode: currencyCode,
+                isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -8812,6 +8883,7 @@ class $$AccountsTableTableManager
                 required String type,
                 Value<int> balanceMinor = const Value.absent(),
                 Value<String> currencyCode = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -8821,6 +8893,7 @@ class $$AccountsTableTableManager
                 type: type,
                 balanceMinor: balanceMinor,
                 currencyCode: currencyCode,
+                isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

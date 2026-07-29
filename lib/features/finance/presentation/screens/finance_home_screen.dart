@@ -7,11 +7,14 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../spend_analyzer/presentation/widgets/budget_bar.dart';
 import '../../application/finance_providers.dart';
+import '../../domain/budget_progress.dart';
 import '../widgets/account_card.dart';
 import '../widgets/quick_add_account_sheet.dart';
 import '../widgets/quick_add_budget_sheet.dart';
 import '../widgets/quick_add_transaction_sheet.dart';
 import '../widgets/transaction_tile.dart';
+import 'account_detail_screen.dart';
+import 'archived_accounts_screen.dart';
 
 enum _FinanceSection { transactions, budgets }
 
@@ -29,6 +32,8 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accountsAsync = ref.watch(accountsProvider);
+    final activeAccounts = ref.watch(activeAccountsProvider);
+    final archivedCount = ref.watch(archivedAccountsProvider).length;
     final totalBalance = ref.watch(totalBalanceMinorProvider);
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final categoryById = {for (final c in categories) c.id: c};
@@ -44,36 +49,65 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                    child: Column(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          accounts.isEmpty ? 'No accounts yet' : 'Across ${accounts.length} account${accounts.length == 1 ? '' : 's'}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                activeAccounts.isEmpty
+                                    ? 'No accounts yet'
+                                    : 'Across ${activeAccounts.length} account${activeAccounts.length == 1 ? '' : 's'}',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              Text(
+                                formatMinor(totalBalance),
+                                style: theme.textTheme.headlineMedium?.copyWith(fontFamily: 'Fraunces'),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          formatMinor(totalBalance),
-                          style: theme.textTheme.headlineMedium?.copyWith(fontFamily: 'Fraunces'),
-                        ),
+                        if (archivedCount > 0)
+                          TextButton.icon(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const ArchivedAccountsScreen()),
+                            ),
+                            icon: const Icon(Icons.archive_outlined, size: 18),
+                            label: Text('Archived ($archivedCount)'),
+                          ),
                       ],
                     ),
                   ),
                 ),
-                if (accounts.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 100,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        itemCount: accounts.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 12),
-                        itemBuilder: (context, index) => AccountCard(account: accounts[index]),
-                      ),
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 100,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      itemCount: activeAccounts.length + 1,
+                      separatorBuilder: (_, _) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        if (index == activeAccounts.length) {
+                          return AddAccountCard(onTap: () => _addAccount(context, ref));
+                        }
+                        final account = activeAccounts[index];
+                        return AccountCard(
+                          account: account,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => AccountDetailScreen(accountId: account.id),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
+                ),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
@@ -128,21 +162,25 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
   }
 
   String _fabLabel(WidgetRef ref) {
-    final accounts = ref.read(accountsProvider).value ?? const [];
+    final accounts = ref.read(activeAccountsProvider);
     if (accounts.isEmpty) return 'New account';
     return _section == _FinanceSection.transactions ? 'New transaction' : 'New budget';
   }
 
+  Future<void> _addAccount(BuildContext context, WidgetRef ref) async {
+    final result = await showQuickAddAccountSheet(context);
+    if (result == null) return;
+    await ref.read(financeControllerProvider).addAccount(
+      name: result.name,
+      type: result.type,
+      balanceMinor: result.startingBalanceMinor,
+    );
+  }
+
   Future<void> _handleFab(BuildContext context, WidgetRef ref) async {
-    final accounts = ref.read(accountsProvider).value ?? const [];
+    final accounts = ref.read(activeAccountsProvider);
     if (accounts.isEmpty) {
-      final result = await showQuickAddAccountSheet(context);
-      if (result == null) return;
-      await ref.read(financeControllerProvider).addAccount(
-        name: result.name,
-        type: result.type,
-        balanceMinor: result.startingBalanceMinor,
-      );
+      await _addAccount(context, ref);
       return;
     }
 
@@ -199,10 +237,61 @@ class _TransactionsSliver extends ConsumerWidget {
         separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, index) {
           final t = transactions[index];
-          return TransactionTile(transaction: t, category: categoryById[t.categoryId]);
+          return TransactionTile(
+            transaction: t,
+            category: categoryById[t.categoryId],
+            onEdit: () => _editTransaction(context, ref, t),
+            onDelete: () => _deleteTransaction(context, ref, t),
+          );
         },
       ),
     );
+  }
+
+  Future<void> _editTransaction(BuildContext context, WidgetRef ref, Transaction t) async {
+    final accounts = ref.read(activeAccountsProvider);
+    final categories = ref.read(categoriesProvider).value ?? const [];
+    final result = await showQuickAddTransactionSheet(
+      context,
+      accounts: accounts,
+      categories: categories,
+      initial: t,
+    );
+    if (result == null) return;
+    await ref.read(financeControllerProvider).updateTransaction(
+      id: t.id,
+      accountId: result.accountId,
+      categoryId: result.categoryId,
+      merchant: result.merchant,
+      amountMinor: result.amountMinor,
+      date: t.date,
+    );
+  }
+
+  Future<void> _deleteTransaction(BuildContext context, WidgetRef ref, Transaction t) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this transaction?'),
+        content: Text('"${t.merchant}" will be removed and the account balance adjusted.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(financeControllerProvider).deleteTransaction(t.id);
   }
 }
 
@@ -224,9 +313,54 @@ class _BudgetsSliver extends ConsumerWidget {
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
       sliver: SliverList.list(
-        children: [for (final p in progress) BudgetBar(progress: p)],
+        children: [
+          for (final p in progress)
+            BudgetBar(
+              progress: p,
+              onEdit: () => _editBudget(context, ref, p),
+              onDelete: () => _deleteBudget(context, ref, p),
+            ),
+        ],
       ),
     );
+  }
+
+  Future<void> _editBudget(BuildContext context, WidgetRef ref, BudgetProgress p) async {
+    final categories = ref.read(categoriesProvider).value ?? const [];
+    final result = await showQuickAddBudgetSheet(context, categories: categories, initial: p.budget);
+    if (result == null) return;
+    await ref.read(financeControllerProvider).updateBudget(
+      id: p.budget.id,
+      categoryId: result.categoryId,
+      limitMinor: result.limitMinor,
+      period: result.period,
+    );
+  }
+
+  Future<void> _deleteBudget(BuildContext context, WidgetRef ref, BudgetProgress p) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this budget?'),
+        content: Text('The budget for "${p.category.name}" will be removed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(financeControllerProvider).deleteBudget(p.budget.id);
   }
 }
 

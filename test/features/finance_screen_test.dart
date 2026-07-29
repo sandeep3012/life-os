@@ -57,7 +57,7 @@ void main() {
       await tester.pump();
       await tester.enterText(find.byType(TextField).at(1), '1000');
       await tester.pump();
-      await tester.tap(find.text('Add account'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Add account'));
       await tester.pumpAndSettle();
 
       expect(find.text('Checking'), findsOneWidget);

@@ -10,8 +10,21 @@ final financeRepositoryProvider = Provider<FinanceRepository>((ref) {
   return FinanceRepository(ref.watch(appDatabaseProvider));
 });
 
+/// All accounts, active and deactivated — kept around (rather than filtered)
+/// because label lookups (e.g. a goal linked to an account that's since been
+/// deactivated) still need to resolve a name for it.
 final accountsProvider = StreamProvider<List<Account>>((ref) {
   return ref.watch(financeRepositoryProvider).watchAccounts();
+});
+
+/// The set anywhere a *new* transaction/goal-link should pick from, and what
+/// the balance total and account row on the Finance screen show.
+final activeAccountsProvider = Provider<List<Account>>((ref) {
+  return (ref.watch(accountsProvider).value ?? const []).where((a) => a.isActive).toList();
+});
+
+final archivedAccountsProvider = Provider<List<Account>>((ref) {
+  return (ref.watch(accountsProvider).value ?? const []).where((a) => !a.isActive).toList();
 });
 
 final transactionsProvider = StreamProvider<List<Transaction>>((ref) {
@@ -27,7 +40,7 @@ final budgetsProvider = StreamProvider<List<Budget>>((ref) {
 });
 
 final totalBalanceMinorProvider = Provider<int>((ref) {
-  final accounts = ref.watch(accountsProvider).value ?? const [];
+  final accounts = ref.watch(activeAccountsProvider);
   return accounts.fold<int>(0, (sum, a) => sum + a.balanceMinor);
 });
 
@@ -72,6 +85,19 @@ class FinanceController {
     return _repo.createAccount(name: name, type: type, balanceMinor: balanceMinor);
   }
 
+  Future<({int transactionCount, int goalLinkCount})> checkAccountUsage(String accountId) {
+    return _repo.checkAccountUsage(accountId);
+  }
+
+  /// Callers must call [checkAccountUsage] first and confirm both counts are
+  /// zero — this doesn't re-check, so calling it on a referenced account
+  /// would silently orphan those rows.
+  Future<void> deleteAccount(String accountId) => _repo.deleteAccount(accountId);
+
+  Future<void> deactivateAccount(String accountId) => _repo.setAccountActive(accountId, false);
+
+  Future<void> reactivateAccount(String accountId) => _repo.setAccountActive(accountId, true);
+
   Future<void> addTransaction({
     required String accountId,
     String? categoryId,
@@ -90,6 +116,28 @@ class FinanceController {
     );
   }
 
+  Future<void> updateTransaction({
+    required String id,
+    required String accountId,
+    String? categoryId,
+    required String merchant,
+    required int amountMinor,
+    DateTime? date,
+    String? note,
+  }) {
+    return _repo.updateTransaction(
+      id: id,
+      accountId: accountId,
+      categoryId: categoryId,
+      merchant: merchant,
+      amountMinor: amountMinor,
+      date: date ?? DateTime.now(),
+      note: note,
+    );
+  }
+
+  Future<void> deleteTransaction(String id) => _repo.deleteTransaction(id);
+
   Future<void> addBudget({
     required String categoryId,
     required int limitMinor,
@@ -97,6 +145,22 @@ class FinanceController {
   }) {
     return _repo.createBudget(categoryId: categoryId, limitMinor: limitMinor, period: period);
   }
+
+  Future<void> updateBudget({
+    required String id,
+    required String categoryId,
+    required int limitMinor,
+    required String period,
+  }) {
+    return _repo.updateBudget(
+      id: id,
+      categoryId: categoryId,
+      limitMinor: limitMinor,
+      period: period,
+    );
+  }
+
+  Future<void> deleteBudget(String id) => _repo.deleteBudget(id);
 }
 
 final financeControllerProvider = Provider<FinanceController>((ref) {

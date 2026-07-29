@@ -17,27 +17,36 @@ class QuickAddBudgetResult {
 Future<QuickAddBudgetResult?> showQuickAddBudgetSheet(
   BuildContext context, {
   required List<Category> categories,
+  Budget? initial,
 }) {
   return showModalBottomSheet<QuickAddBudgetResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _QuickAddBudgetSheet(categories: categories),
+    builder: (context) => _QuickAddBudgetSheet(categories: categories, initial: initial),
   );
 }
 
 class _QuickAddBudgetSheet extends StatefulWidget {
-  const _QuickAddBudgetSheet({required this.categories});
+  const _QuickAddBudgetSheet({required this.categories, this.initial});
 
   final List<Category> categories;
+  final Budget? initial;
 
   @override
   State<_QuickAddBudgetSheet> createState() => _QuickAddBudgetSheetState();
 }
 
 class _QuickAddBudgetSheetState extends State<_QuickAddBudgetSheet> {
-  final _limitController = TextEditingController();
-  late String? _categoryId = widget.categories.isEmpty ? null : widget.categories.first.id;
-  String _period = 'monthly';
+  late final _limitController = TextEditingController(
+    text: widget.initial == null
+        ? null
+        : (widget.initial!.limitMinor / 100).toStringAsFixed(2),
+  );
+  late String? _categoryId =
+      widget.initial?.categoryId ?? (widget.categories.isEmpty ? null : widget.categories.first.id);
+  late String _period = widget.initial?.period ?? 'monthly';
+
+  bool get _isEditing => widget.initial != null;
 
   @override
   void initState() {
@@ -67,7 +76,10 @@ class _QuickAddBudgetSheetState extends State<_QuickAddBudgetSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('New budget', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            _isEditing ? 'Edit budget' : 'New budget',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             initialValue: _categoryId,
@@ -109,7 +121,7 @@ class _QuickAddBudgetSheetState extends State<_QuickAddBudgetSheet> {
                       );
                     }
                   : null,
-              child: const Text('Add budget'),
+              child: Text(_isEditing ? 'Save changes' : 'Add budget'),
             ),
           ),
         ],

@@ -7,10 +7,18 @@ import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
 
 class TransactionTile extends StatelessWidget {
-  const TransactionTile({super.key, required this.transaction, this.category});
+  const TransactionTile({
+    super.key,
+    required this.transaction,
+    this.category,
+    this.onEdit,
+    this.onDelete,
+  });
 
   final Transaction transaction;
   final Category? category;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -21,48 +29,66 @@ class TransactionTile extends StatelessWidget {
         ? Color(int.parse(category!.colorHex.replaceFirst('#', '0xFF')))
         : (isIncome ? colors.good : colors.spend);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 11),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.16), shape: BoxShape.circle),
-            child: Icon(
-              isIncome ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-              size: 18,
-              color: color,
+    return InkWell(
+      onTap: onEdit,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.16), shape: BoxShape.circle),
+              child: Icon(
+                isIncome ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                size: 18,
+                color: color,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  transaction.merchant,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                ),
-                Text(
-                  '${category?.name ?? 'Uncategorized'} · ${_relativeDate(transaction.date)}',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    transaction.merchant,
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                   ),
-                ),
-              ],
+                  Text(
+                    '${category?.name ?? 'Uncategorized'} · ${_relativeDate(transaction.date)}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Text(
-            formatMinor(transaction.amountMinor, showSign: isIncome),
-            style: TextStyle(
-              fontFamily: 'PlexMono',
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: isIncome ? colors.good : theme.colorScheme.onSurface,
+            Text(
+              formatMinor(transaction.amountMinor, showSign: isIncome),
+              style: TextStyle(
+                fontFamily: 'PlexMono',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isIncome ? colors.good : theme.colorScheme.onSurface,
+              ),
             ),
-          ),
-        ],
+            if (onDelete != null)
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert_rounded, size: 18, color: theme.colorScheme.onSurfaceVariant),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                  const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                ],
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    onEdit?.call();
+                  } else if (value == 'delete') {
+                    onDelete?.call();
+                  }
+                },
+              ),
+          ],
+        ),
       ),
     );
   }

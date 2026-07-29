@@ -48,22 +48,31 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
-    // v1 -> v2: every table gained an explicit `PRIMARY KEY` on `id` (it was
-    // previously just a plain unique-by-convention text column, which is why
-    // `insertOnConflictUpdate` — used by the backup/restore feature — failed
-    // with "Table has no primary key"). No app has shipped with v1 data yet,
-    // so the simplest correct migration is a full recreate rather than a
-    // per-table `CREATE TABLE ... AS SELECT` rebuild.
     onUpgrade: (m, from, to) async {
-      for (final table in allTables) {
-        await m.deleteTable(table.actualTableName);
+      if (from < 2) {
+        // v1 -> v2: every table gained an explicit `PRIMARY KEY` on `id` (it
+        // was previously just a plain unique-by-convention text column,
+        // which is why `insertOnConflictUpdate` — used by the backup/restore
+        // feature — failed with "Table has no primary key"). No app had
+        // shipped with v1 data yet, so a full recreate was the simplest
+        // correct fix rather than a per-table rebuild.
+        for (final table in allTables) {
+          await m.deleteTable(table.actualTableName);
+        }
+        await m.createAll();
+        return;
       }
-      await m.createAll();
+      if (from < 3) {
+        // v2 -> v3: accounts gained `isActive`, for deactivating accounts
+        // that can't be safely hard-deleted (still referenced by
+        // transactions/goal links) — purely additive, no data loss.
+        await m.addColumn(accounts, accounts.isActive);
+      }
     },
   );
 }
