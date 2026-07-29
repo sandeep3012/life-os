@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/database/app_database.dart';
 
@@ -8,6 +9,7 @@ class QuickAddTransactionResult {
     this.categoryId,
     required this.merchant,
     required this.amountMinor,
+    required this.date,
   });
 
   final String accountId;
@@ -16,6 +18,7 @@ class QuickAddTransactionResult {
 
   /// Already signed: negative for expense, positive for income.
   final int amountMinor;
+  final DateTime date;
 }
 
 Future<QuickAddTransactionResult?> showQuickAddTransactionSheet(
@@ -60,6 +63,7 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
   late String _accountId = widget.initial?.accountId ?? widget.accounts.first.id;
   late String? _categoryId = widget.initial?.categoryId;
   late bool _isExpense = (widget.initial?.amountMinor ?? -1) < 0;
+  late DateTime _date = widget.initial?.date ?? DateTime.now();
 
   bool get _isEditing => widget.initial != null;
 
@@ -75,6 +79,16 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
     _merchantController.dispose();
     _amountController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) setState(() => _date = picked);
   }
 
   @override
@@ -140,6 +154,21 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
             ],
             onChanged: (value) => setState(() => _categoryId = value),
           ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: _pickDate,
+            borderRadius: BorderRadius.circular(12),
+            child: InputDecorator(
+              decoration: const InputDecoration(labelText: 'Date'),
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_today_rounded, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 8),
+                  Text(DateFormat.yMMMd().format(_date)),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -154,6 +183,7 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
                           categoryId: _categoryId,
                           merchant: _merchantController.text.trim(),
                           amountMinor: _isExpense ? -minor : minor,
+                          date: _date,
                         ),
                       );
                     }

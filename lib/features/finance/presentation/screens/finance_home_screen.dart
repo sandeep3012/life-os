@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -197,6 +199,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         categoryId: result.categoryId,
         merchant: result.merchant,
         amountMinor: result.amountMinor,
+        date: result.date,
       );
     } else {
       final categories = ref.read(categoriesProvider).value ?? const [];
@@ -206,19 +209,42 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         categoryId: result.categoryId,
         limitMinor: result.limitMinor,
         period: result.period,
+        effectiveMonth: result.effectiveMonth,
       );
     }
   }
 }
 
-class _TransactionsSliver extends ConsumerWidget {
+/// Delay before a swiped-away transaction/budget is actually deleted from the
+/// database, giving the snackbar's Undo button a window to cancel it.
+const _undoWindow = Duration(seconds: 4);
+
+class _TransactionsSliver extends ConsumerStatefulWidget {
   const _TransactionsSliver({required this.categoryById});
 
   final Map<String, Category> categoryById;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final transactions = ref.watch(transactionsProvider).value ?? const [];
+  ConsumerState<_TransactionsSliver> createState() => _TransactionsSliverState();
+}
+
+class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
+  final Set<String> _pendingDeleteIds = {};
+  final Map<String, Timer> _timers = {};
+
+  @override
+  void dispose() {
+    for (final timer in _timers.values) {
+      timer.cancel();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final transactions = (ref.watch(transactionsProvider).value ?? const [])
+        .where((t) => !_pendingDeleteIds.contains(t.id))
+        .toList();
 
     if (transactions.isEmpty) {
       return const SliverFillRemaining(
@@ -237,18 +263,23 @@ class _TransactionsSliver extends ConsumerWidget {
         separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, index) {
           final t = transactions[index];
-          return TransactionTile(
-            transaction: t,
-            category: categoryById[t.categoryId],
-            onEdit: () => _editTransaction(context, ref, t),
-            onDelete: () => _deleteTransaction(context, ref, t),
+          return Dismissible(
+            key: ValueKey(t.id),
+            direction: DismissDirection.endToStart,
+            background: const _SwipeDeleteBackground(),
+            onDismissed: (_) => _scheduleDelete(t),
+            child: TransactionTile(
+              transaction: t,
+              category: widget.categoryById[t.categoryId],
+              onEdit: () => _editTransaction(t),
+            ),
           );
         },
       ),
     );
   }
 
-  Future<void> _editTransaction(BuildContext context, WidgetRef ref, Transaction t) async {
+  Future<void> _editTransaction(Transaction t) async {
     final accounts = ref.read(activeAccountsProvider);
     final categories = ref.read(categoriesProvider).value ?? const [];
     final result = await showQuickAddTransactionSheet(
@@ -264,41 +295,57 @@ class _TransactionsSliver extends ConsumerWidget {
       categoryId: result.categoryId,
       merchant: result.merchant,
       amountMinor: result.amountMinor,
-      date: t.date,
+      date: result.date,
     );
   }
 
-  Future<void> _deleteTransaction(BuildContext context, WidgetRef ref, Transaction t) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete this transaction?'),
-        content: Text('"${t.merchant}" will be removed and the account balance adjusted.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
+  void _scheduleDelete(Transaction t) {
+    setState(() => _pendingDeleteIds.add(t.id));
+    _timers[t.id] = Timer(_undoWindow, () async {
+      _timers.remove(t.id);
+      await ref.read(financeControllerProvider).deleteTransaction(t.id);
+      if (mounted) setState(() => _pendingDeleteIds.remove(t.id));
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Deleted "${t.merchant}"'),
+        duration: _undoWindow,
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            _timers.remove(t.id)?.cancel();
+            if (mounted) setState(() => _pendingDeleteIds.remove(t.id));
+          },
+        ),
       ),
     );
-    if (confirmed != true) return;
-    await ref.read(financeControllerProvider).deleteTransaction(t.id);
   }
 }
 
-class _BudgetsSliver extends ConsumerWidget {
+class _BudgetsSliver extends ConsumerStatefulWidget {
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final progress = ref.watch(budgetsWithProgressProvider);
+  ConsumerState<_BudgetsSliver> createState() => _BudgetsSliverState();
+}
+
+class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
+  final Set<String> _pendingDeleteIds = {};
+  final Map<String, Timer> _timers = {};
+
+  @override
+  void dispose() {
+    for (final timer in _timers.values) {
+      timer.cancel();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = ref
+        .watch(budgetsWithProgressProvider)
+        .where((p) => !_pendingDeleteIds.contains(p.budget.id))
+        .toList();
 
     if (progress.isEmpty) {
       return const SliverFillRemaining(
@@ -315,17 +362,19 @@ class _BudgetsSliver extends ConsumerWidget {
       sliver: SliverList.list(
         children: [
           for (final p in progress)
-            BudgetBar(
-              progress: p,
-              onEdit: () => _editBudget(context, ref, p),
-              onDelete: () => _deleteBudget(context, ref, p),
+            Dismissible(
+              key: ValueKey(p.budget.id),
+              direction: DismissDirection.endToStart,
+              background: const _SwipeDeleteBackground(),
+              onDismissed: (_) => _scheduleDelete(p),
+              child: BudgetBar(progress: p, onEdit: () => _editBudget(p)),
             ),
         ],
       ),
     );
   }
 
-  Future<void> _editBudget(BuildContext context, WidgetRef ref, BudgetProgress p) async {
+  Future<void> _editBudget(BudgetProgress p) async {
     final categories = ref.read(categoriesProvider).value ?? const [];
     final result = await showQuickAddBudgetSheet(context, categories: categories, initial: p.budget);
     if (result == null) return;
@@ -334,33 +383,45 @@ class _BudgetsSliver extends ConsumerWidget {
       categoryId: result.categoryId,
       limitMinor: result.limitMinor,
       period: result.period,
+      effectiveMonth: result.effectiveMonth,
     );
   }
 
-  Future<void> _deleteBudget(BuildContext context, WidgetRef ref, BudgetProgress p) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete this budget?'),
-        content: Text('The budget for "${p.category.name}" will be removed.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
+  void _scheduleDelete(BudgetProgress p) {
+    setState(() => _pendingDeleteIds.add(p.budget.id));
+    _timers[p.budget.id] = Timer(_undoWindow, () async {
+      _timers.remove(p.budget.id);
+      await ref.read(financeControllerProvider).deleteBudget(p.budget.id);
+      if (mounted) setState(() => _pendingDeleteIds.remove(p.budget.id));
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Deleted "${p.category.name}" budget'),
+        duration: _undoWindow,
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () {
+            _timers.remove(p.budget.id)?.cancel();
+            if (mounted) setState(() => _pendingDeleteIds.remove(p.budget.id));
+          },
+        ),
       ),
     );
-    if (confirmed != true) return;
-    await ref.read(financeControllerProvider).deleteBudget(p.budget.id);
+  }
+}
+
+class _SwipeDeleteBackground extends StatelessWidget {
+  const _SwipeDeleteBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      color: Theme.of(context).colorScheme.error,
+      child: Icon(Icons.delete_rounded, color: Theme.of(context).colorScheme.onError),
+    );
   }
 }
 

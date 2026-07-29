@@ -192,38 +192,135 @@ class FinanceRepository {
     });
   }
 
+  static DateTime _startOfMonth(DateTime d) => DateTime(d.year, d.month);
+
   Future<void> createBudget({
     required String categoryId,
     required int limitMinor,
     String period = 'monthly',
-    DateTime? startDate,
+    DateTime? effectiveMonth,
   }) {
+    final month = _startOfMonth(effectiveMonth ?? DateTime.now());
     return _db.into(_db.budgets).insert(
       BudgetsCompanion.insert(
         categoryId: categoryId,
         limitMinor: limitMinor,
         period: Value(period),
-        startDate: startDate ?? DateTime.now(),
+        startDate: month,
+        effectiveMonth: Value(month),
       ),
     );
   }
 
+  /// Upserts the version of [categoryId]'s budget effective from
+  /// [targetMonth]: updates the row already covering that month if one
+  /// exists (e.g. two edits within the same month), otherwise inserts a new
+  /// version — leaving every earlier version untouched so past months keep
+  /// showing what was true for them at the time.
+  Future<void> _upsertBudgetVersion({
+    required String categoryId,
+    required DateTime targetMonth,
+    required int limitMinor,
+    required String period,
+    required bool active,
+  }) async {
+    final month = _startOfMonth(targetMonth);
+    final existing = await (_db.select(_db.budgets)..where(
+          (b) => b.categoryId.equals(categoryId) & b.effectiveMonth.equals(month),
+        ))
+        .getSingleOrNull();
+
+    if (existing != null) {
+      await (_db.update(_db.budgets)..where((b) => b.id.equals(existing.id))).write(
+        BudgetsCompanion(
+          limitMinor: Value(limitMinor),
+          period: Value(period),
+          active: Value(active),
+        ),
+      );
+    } else {
+      await _db.into(_db.budgets).insert(
+        BudgetsCompanion.insert(
+          categoryId: categoryId,
+          limitMinor: limitMinor,
+          period: Value(period),
+          startDate: month,
+          effectiveMonth: Value(month),
+          active: Value(active),
+        ),
+      );
+    }
+  }
+
+  /// [id] identifies the budget version currently shown in the UI being
+  /// edited — used only to look up which category it belongs to (and detect
+  /// a category change). The edit itself always lands as a new/updated
+  /// version effective [effectiveMonth] (default: the current real month),
+  /// never as a mutation of a past version.
   Future<void> updateBudget({
     required String id,
     required String categoryId,
     required int limitMinor,
     required String period,
-  }) {
-    return (_db.update(_db.budgets)..where((b) => b.id.equals(id))).write(
-      BudgetsCompanion(
-        categoryId: Value(categoryId),
-        limitMinor: Value(limitMinor),
-        period: Value(period),
-      ),
+    DateTime? effectiveMonth,
+  }) async {
+    final original = await (_db.select(
+      _db.budgets,
+    )..where((b) => b.id.equals(id))).getSingleOrNull();
+    final target = effectiveMonth ?? DateTime.now();
+
+    if (original != null && original.categoryId != categoryId) {
+      // Category changed: stop the old category's budget from this month
+      // forward, then start a fresh version under the new category.
+      await _upsertBudgetVersion(
+        categoryId: original.categoryId,
+        targetMonth: target,
+        limitMinor: original.limitMinor,
+        period: original.period,
+        active: false,
+      );
+    }
+
+    await _upsertBudgetVersion(
+      categoryId: categoryId,
+      targetMonth: target,
+      limitMinor: limitMinor,
+      period: period,
+      active: true,
     );
   }
 
-  Future<void> deleteBudget(String id) {
-    return (_db.delete(_db.budgets)..where((b) => b.id.equals(id))).go();
+  /// Tombstones the budget (no more spend tracking for this category from
+  /// this month forward) rather than erasing it, unless this version has no
+  /// history before it — in that case there's nothing to preserve, so it's
+  /// removed outright.
+  Future<void> deleteBudget(String id) async {
+    final budget = await (_db.select(
+      _db.budgets,
+    )..where((b) => b.id.equals(id))).getSingle();
+
+    final hasEarlierHistory =
+        await (_db.select(_db.budgets)..where(
+              (b) =>
+                  b.categoryId.equals(budget.categoryId) &
+                  b.effectiveMonth.isSmallerThanValue(budget.effectiveMonth!),
+            ))
+            .get()
+            .then((rows) => rows.isNotEmpty);
+
+    if (!hasEarlierHistory) {
+      await (_db.delete(
+        _db.budgets,
+      )..where((b) => b.categoryId.equals(budget.categoryId))).go();
+      return;
+    }
+
+    await _upsertBudgetVersion(
+      categoryId: budget.categoryId,
+      targetMonth: DateTime.now(),
+      limitMinor: budget.limitMinor,
+      period: budget.period,
+      active: false,
+    );
   }
 }

@@ -20,6 +20,8 @@ Budget _budget({required String id, required String period, required int limitMi
   period: period,
   limitMinor: limitMinor,
   startDate: DateTime(2026, 7),
+  effectiveMonth: DateTime(2026, 7),
+  active: true,
   createdAt: DateTime(2026, 7),
 );
 

@@ -2017,6 +2017,31 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _effectiveMonthMeta = const VerificationMeta(
+    'effectiveMonth',
+  );
+  @override
+  late final GeneratedColumn<DateTime> effectiveMonth =
+      GeneratedColumn<DateTime>(
+        'effective_month',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _activeMeta = const VerificationMeta('active');
+  @override
+  late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
+    'active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2036,6 +2061,8 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
     period,
     limitMinor,
     startDate,
+    effectiveMonth,
+    active,
     createdAt,
   ];
   @override
@@ -2083,6 +2110,21 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
     } else if (isInserting) {
       context.missing(_startDateMeta);
     }
+    if (data.containsKey('effective_month')) {
+      context.handle(
+        _effectiveMonthMeta,
+        effectiveMonth.isAcceptableOrUnknown(
+          data['effective_month']!,
+          _effectiveMonthMeta,
+        ),
+      );
+    }
+    if (data.containsKey('active')) {
+      context.handle(
+        _activeMeta,
+        active.isAcceptableOrUnknown(data['active']!, _activeMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2118,6 +2160,14 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}start_date'],
       )!,
+      effectiveMonth: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}effective_month'],
+      ),
+      active: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}active'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2139,6 +2189,13 @@ class Budget extends DataClass implements Insertable<Budget> {
   final String period;
   final int limitMinor;
   final DateTime startDate;
+
+  /// First-of-month date this version takes effect from. Nullable only so
+  /// the column can be added via `ALTER TABLE` on upgrade (SQLite requires a
+  /// default or nullability for `NOT NULL` columns added to a non-empty
+  /// table) — every row written by the app always sets it.
+  final DateTime? effectiveMonth;
+  final bool active;
   final DateTime createdAt;
   const Budget({
     required this.id,
@@ -2146,6 +2203,8 @@ class Budget extends DataClass implements Insertable<Budget> {
     required this.period,
     required this.limitMinor,
     required this.startDate,
+    this.effectiveMonth,
+    required this.active,
     required this.createdAt,
   });
   @override
@@ -2156,6 +2215,10 @@ class Budget extends DataClass implements Insertable<Budget> {
     map['period'] = Variable<String>(period);
     map['limit_minor'] = Variable<int>(limitMinor);
     map['start_date'] = Variable<DateTime>(startDate);
+    if (!nullToAbsent || effectiveMonth != null) {
+      map['effective_month'] = Variable<DateTime>(effectiveMonth);
+    }
+    map['active'] = Variable<bool>(active);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -2167,6 +2230,10 @@ class Budget extends DataClass implements Insertable<Budget> {
       period: Value(period),
       limitMinor: Value(limitMinor),
       startDate: Value(startDate),
+      effectiveMonth: effectiveMonth == null && nullToAbsent
+          ? const Value.absent()
+          : Value(effectiveMonth),
+      active: Value(active),
       createdAt: Value(createdAt),
     );
   }
@@ -2182,6 +2249,8 @@ class Budget extends DataClass implements Insertable<Budget> {
       period: serializer.fromJson<String>(json['period']),
       limitMinor: serializer.fromJson<int>(json['limitMinor']),
       startDate: serializer.fromJson<DateTime>(json['startDate']),
+      effectiveMonth: serializer.fromJson<DateTime?>(json['effectiveMonth']),
+      active: serializer.fromJson<bool>(json['active']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2194,6 +2263,8 @@ class Budget extends DataClass implements Insertable<Budget> {
       'period': serializer.toJson<String>(period),
       'limitMinor': serializer.toJson<int>(limitMinor),
       'startDate': serializer.toJson<DateTime>(startDate),
+      'effectiveMonth': serializer.toJson<DateTime?>(effectiveMonth),
+      'active': serializer.toJson<bool>(active),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2204,6 +2275,8 @@ class Budget extends DataClass implements Insertable<Budget> {
     String? period,
     int? limitMinor,
     DateTime? startDate,
+    Value<DateTime?> effectiveMonth = const Value.absent(),
+    bool? active,
     DateTime? createdAt,
   }) => Budget(
     id: id ?? this.id,
@@ -2211,6 +2284,10 @@ class Budget extends DataClass implements Insertable<Budget> {
     period: period ?? this.period,
     limitMinor: limitMinor ?? this.limitMinor,
     startDate: startDate ?? this.startDate,
+    effectiveMonth: effectiveMonth.present
+        ? effectiveMonth.value
+        : this.effectiveMonth,
+    active: active ?? this.active,
     createdAt: createdAt ?? this.createdAt,
   );
   Budget copyWithCompanion(BudgetsCompanion data) {
@@ -2224,6 +2301,10 @@ class Budget extends DataClass implements Insertable<Budget> {
           ? data.limitMinor.value
           : this.limitMinor,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      effectiveMonth: data.effectiveMonth.present
+          ? data.effectiveMonth.value
+          : this.effectiveMonth,
+      active: data.active.present ? data.active.value : this.active,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2236,14 +2317,24 @@ class Budget extends DataClass implements Insertable<Budget> {
           ..write('period: $period, ')
           ..write('limitMinor: $limitMinor, ')
           ..write('startDate: $startDate, ')
+          ..write('effectiveMonth: $effectiveMonth, ')
+          ..write('active: $active, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, categoryId, period, limitMinor, startDate, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    categoryId,
+    period,
+    limitMinor,
+    startDate,
+    effectiveMonth,
+    active,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2253,6 +2344,8 @@ class Budget extends DataClass implements Insertable<Budget> {
           other.period == this.period &&
           other.limitMinor == this.limitMinor &&
           other.startDate == this.startDate &&
+          other.effectiveMonth == this.effectiveMonth &&
+          other.active == this.active &&
           other.createdAt == this.createdAt);
 }
 
@@ -2262,6 +2355,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
   final Value<String> period;
   final Value<int> limitMinor;
   final Value<DateTime> startDate;
+  final Value<DateTime?> effectiveMonth;
+  final Value<bool> active;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const BudgetsCompanion({
@@ -2270,6 +2365,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     this.period = const Value.absent(),
     this.limitMinor = const Value.absent(),
     this.startDate = const Value.absent(),
+    this.effectiveMonth = const Value.absent(),
+    this.active = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2279,6 +2376,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     this.period = const Value.absent(),
     required int limitMinor,
     required DateTime startDate,
+    this.effectiveMonth = const Value.absent(),
+    this.active = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : categoryId = Value(categoryId),
@@ -2290,6 +2389,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     Expression<String>? period,
     Expression<int>? limitMinor,
     Expression<DateTime>? startDate,
+    Expression<DateTime>? effectiveMonth,
+    Expression<bool>? active,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -2299,6 +2400,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
       if (period != null) 'period': period,
       if (limitMinor != null) 'limit_minor': limitMinor,
       if (startDate != null) 'start_date': startDate,
+      if (effectiveMonth != null) 'effective_month': effectiveMonth,
+      if (active != null) 'active': active,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2310,6 +2413,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     Value<String>? period,
     Value<int>? limitMinor,
     Value<DateTime>? startDate,
+    Value<DateTime?>? effectiveMonth,
+    Value<bool>? active,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -2319,6 +2424,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
       period: period ?? this.period,
       limitMinor: limitMinor ?? this.limitMinor,
       startDate: startDate ?? this.startDate,
+      effectiveMonth: effectiveMonth ?? this.effectiveMonth,
+      active: active ?? this.active,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2342,6 +2449,12 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     if (startDate.present) {
       map['start_date'] = Variable<DateTime>(startDate.value);
     }
+    if (effectiveMonth.present) {
+      map['effective_month'] = Variable<DateTime>(effectiveMonth.value);
+    }
+    if (active.present) {
+      map['active'] = Variable<bool>(active.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2359,6 +2472,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
           ..write('period: $period, ')
           ..write('limitMinor: $limitMinor, ')
           ..write('startDate: $startDate, ')
+          ..write('effectiveMonth: $effectiveMonth, ')
+          ..write('active: $active, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -9422,6 +9537,8 @@ typedef $$BudgetsTableCreateCompanionBuilder =
       Value<String> period,
       required int limitMinor,
       required DateTime startDate,
+      Value<DateTime?> effectiveMonth,
+      Value<bool> active,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -9432,6 +9549,8 @@ typedef $$BudgetsTableUpdateCompanionBuilder =
       Value<String> period,
       Value<int> limitMinor,
       Value<DateTime> startDate,
+      Value<DateTime?> effectiveMonth,
+      Value<bool> active,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -9484,6 +9603,16 @@ class $$BudgetsTableFilterComposer
 
   ColumnFilters<DateTime> get startDate => $composableBuilder(
     column: $table.startDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get effectiveMonth => $composableBuilder(
+    column: $table.effectiveMonth,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get active => $composableBuilder(
+    column: $table.active,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9545,6 +9674,16 @@ class $$BudgetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get effectiveMonth => $composableBuilder(
+    column: $table.effectiveMonth,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -9596,6 +9735,14 @@ class $$BudgetsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get startDate =>
       $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get effectiveMonth => $composableBuilder(
+    column: $table.effectiveMonth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -9657,6 +9804,8 @@ class $$BudgetsTableTableManager
                 Value<String> period = const Value.absent(),
                 Value<int> limitMinor = const Value.absent(),
                 Value<DateTime> startDate = const Value.absent(),
+                Value<DateTime?> effectiveMonth = const Value.absent(),
+                Value<bool> active = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BudgetsCompanion(
@@ -9665,6 +9814,8 @@ class $$BudgetsTableTableManager
                 period: period,
                 limitMinor: limitMinor,
                 startDate: startDate,
+                effectiveMonth: effectiveMonth,
+                active: active,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -9675,6 +9826,8 @@ class $$BudgetsTableTableManager
                 Value<String> period = const Value.absent(),
                 required int limitMinor,
                 required DateTime startDate,
+                Value<DateTime?> effectiveMonth = const Value.absent(),
+                Value<bool> active = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BudgetsCompanion.insert(
@@ -9683,6 +9836,8 @@ class $$BudgetsTableTableManager
                 period: period,
                 limitMinor: limitMinor,
                 startDate: startDate,
+                effectiveMonth: effectiveMonth,
+                active: active,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

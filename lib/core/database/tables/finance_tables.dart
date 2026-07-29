@@ -48,6 +48,15 @@ class Transactions extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Each row is one *version* of a category's budget, not a mutable singleton
+/// — editing a budget inserts/updates the version whose [effectiveMonth]
+/// matches the target month rather than overwriting history, so a limit
+/// change made this month doesn't retroactively change what past months
+/// show. [monthBudgetsWithProgressProvider] resolves "the budget for
+/// category X in month Y" by picking the latest version with
+/// `effectiveMonth <= Y`. [active] is a tombstone: `false` means "no budget
+/// for this category from this month forward" without erasing earlier
+/// versions.
 class Budgets extends Table {
   TextColumn get id => text().clientDefault(() => const Uuid().v4())();
   TextColumn get categoryId => text().references(Categories, #id)();
@@ -56,6 +65,13 @@ class Budgets extends Table {
   TextColumn get period => text().withDefault(const Constant('monthly'))();
   IntColumn get limitMinor => integer()();
   DateTimeColumn get startDate => dateTime()();
+
+  /// First-of-month date this version takes effect from. Nullable only so
+  /// the column can be added via `ALTER TABLE` on upgrade (SQLite requires a
+  /// default or nullability for `NOT NULL` columns added to a non-empty
+  /// table) — every row written by the app always sets it.
+  DateTimeColumn get effectiveMonth => dateTime().nullable()();
+  BoolColumn get active => boolean().withDefault(const Constant(true))();
 
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();

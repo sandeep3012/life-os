@@ -48,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -72,6 +72,18 @@ class AppDatabase extends _$AppDatabase {
         // that can't be safely hard-deleted (still referenced by
         // transactions/goal links) — purely additive, no data loss.
         await m.addColumn(accounts, accounts.isActive);
+      }
+      if (from < 4) {
+        // v3 -> v4: budgets became version-per-month (`effectiveMonth`,
+        // `active`) instead of one mutable row per category, so editing a
+        // limit no longer rewrites history. Existing rows are backfilled to
+        // their `startDate`'s month so they keep applying from whenever they
+        // were originally created.
+        await m.addColumn(budgets, budgets.effectiveMonth);
+        await m.addColumn(budgets, budgets.active);
+        await m.database.customStatement(
+          "UPDATE budgets SET effective_month = date(start_date, 'start of month')",
+        );
       }
     },
   );

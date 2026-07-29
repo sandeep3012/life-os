@@ -44,21 +44,50 @@ final totalBalanceMinorProvider = Provider<int>((ref) {
   return accounts.fold<int>(0, (sum, a) => sum + a.balanceMinor);
 });
 
-/// Budgets paired with actual spend for their current period (month-to-date
-/// for `monthly` budgets, week-to-date for `weekly`), derived the same way
-/// habit streaks are — never stored, always recomputed from transactions.
-final budgetsWithProgressProvider = Provider<List<BudgetProgress>>((ref) {
-  final budgets = ref.watch(budgetsProvider).value ?? const [];
-  final categories = ref.watch(categoriesProvider).value ?? const [];
-  final transactions = ref.watch(transactionsProvider).value ?? const [];
-  final categoryById = {for (final c in categories) c.id: c};
+/// For each category, the single version of its budget in effect for
+/// [month] — the latest row with `effectiveMonth <= month`, skipping
+/// categories whose latest applicable version is a tombstone (`active`
+/// false) or that had no budget yet as of that month. This is what makes
+/// budget history month-specific: editing a limit inserts a new version
+/// rather than mutating the old one, so resolving "for month X" here always
+/// picks whichever version was true back then.
+List<Budget> budgetsEffectiveFor(List<Budget> allVersions, DateTime month) {
+  final monthStart = DateTime(month.year, month.month);
+  final byCategory = <String, List<Budget>>{};
+  for (final b in allVersions) {
+    byCategory.putIfAbsent(b.categoryId, () => []).add(b);
+  }
 
-  final now = DateTime.now();
-  final monthStart = DateTime(now.year, now.month);
-  final weekStart = startOfWeek(now);
+  final result = <Budget>[];
+  for (final versions in byCategory.values) {
+    Budget? latest;
+    for (final v in versions) {
+      final effective = v.effectiveMonth ?? v.startDate;
+      if (effective.isAfter(monthStart)) continue;
+      if (latest == null || effective.isAfter(latest.effectiveMonth ?? latest.startDate)) {
+        latest = v;
+      }
+    }
+    if (latest != null && latest.active) result.add(latest);
+  }
+  return result;
+}
+
+List<BudgetProgress> progressFor({
+  required List<Budget> allBudgetVersions,
+  required List<Category> categories,
+  required List<Transaction> transactions,
+  required DateTime month,
+}) {
+  final categoryById = {for (final c in categories) c.id: c};
+  final effective = budgetsEffectiveFor(allBudgetVersions, month);
+
+  final monthStart = DateTime(month.year, month.month);
+  final monthEnd = DateTime(month.year, month.month + 1);
+  final weekStart = startOfWeek(monthEnd.subtract(const Duration(days: 1)));
 
   return [
-    for (final budget in budgets)
+    for (final budget in effective)
       if (categoryById[budget.categoryId] case final category?)
         BudgetProgress(
           budget: budget,
@@ -67,13 +96,25 @@ final budgetsWithProgressProvider = Provider<List<BudgetProgress>>((ref) {
               .where((t) => t.categoryId == budget.categoryId)
               .where((t) => t.amountMinor < 0)
               .where(
-                (t) => t.date.isAfter(
-                  budget.period == 'weekly' ? weekStart : monthStart,
-                ),
+                (t) => budget.period == 'weekly'
+                    ? !t.date.isBefore(weekStart) && t.date.isBefore(monthEnd)
+                    : !t.date.isBefore(monthStart) && t.date.isBefore(monthEnd),
               )
               .fold<int>(0, (sum, t) => sum + t.amountMinor.abs()),
         ),
   ];
+}
+
+/// Budgets paired with actual spend for the current real month, derived the
+/// same way habit streaks are — never stored, always recomputed from
+/// transactions.
+final budgetsWithProgressProvider = Provider<List<BudgetProgress>>((ref) {
+  return progressFor(
+    allBudgetVersions: ref.watch(budgetsProvider).value ?? const [],
+    categories: ref.watch(categoriesProvider).value ?? const [],
+    transactions: ref.watch(transactionsProvider).value ?? const [],
+    month: DateTime.now(),
+  );
 });
 
 class FinanceController {
@@ -142,8 +183,14 @@ class FinanceController {
     required String categoryId,
     required int limitMinor,
     String period = 'monthly',
+    DateTime? effectiveMonth,
   }) {
-    return _repo.createBudget(categoryId: categoryId, limitMinor: limitMinor, period: period);
+    return _repo.createBudget(
+      categoryId: categoryId,
+      limitMinor: limitMinor,
+      period: period,
+      effectiveMonth: effectiveMonth,
+    );
   }
 
   Future<void> updateBudget({
@@ -151,12 +198,14 @@ class FinanceController {
     required String categoryId,
     required int limitMinor,
     required String period,
+    DateTime? effectiveMonth,
   }) {
     return _repo.updateBudget(
       id: id,
       categoryId: categoryId,
       limitMinor: limitMinor,
       period: period,
+      effectiveMonth: effectiveMonth,
     );
   }
 

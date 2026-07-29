@@ -111,37 +111,15 @@ final weeklyTrendProvider = Provider<List<int>>((ref) {
   ];
 });
 
-/// Same shape as finance's `budgetsWithProgressProvider`, but spend is
-/// computed against the analyzer's selected month/week rather than
-/// `DateTime.now()` — otherwise navigating to a past or future month left
-/// this card showing the current period's spend regardless of which month
-/// was on screen.
+/// Same shape as finance's `budgetsWithProgressProvider`, but resolved
+/// against the analyzer's selected month rather than the current real month
+/// — both for which budget *version* applies (a limit edited this month
+/// shouldn't change what a past month shows) and for how much was spent.
 final monthBudgetsWithProgressProvider = Provider<List<BudgetProgress>>((ref) {
-  final budgets = ref.watch(budgetsProvider).value ?? const [];
-  final categories = ref.watch(categoriesProvider).value ?? const [];
-  final transactions = ref.watch(transactionsProvider).value ?? const [];
-  final categoryById = {for (final c in categories) c.id: c};
-
-  final month = ref.watch(selectedAnalyzerMonthProvider);
-  final monthStart = DateTime(month.year, month.month);
-  final monthEnd = DateTime(month.year, month.month + 1);
-  final weekStart = startOfWeek(monthEnd.subtract(const Duration(days: 1)));
-
-  return [
-    for (final budget in budgets)
-      if (categoryById[budget.categoryId] case final category?)
-        BudgetProgress(
-          budget: budget,
-          category: category,
-          spentMinor: transactions
-              .where((t) => t.categoryId == budget.categoryId)
-              .where((t) => t.amountMinor < 0)
-              .where(
-                (t) => budget.period == 'weekly'
-                    ? !t.date.isBefore(weekStart) && t.date.isBefore(monthEnd)
-                    : !t.date.isBefore(monthStart) && t.date.isBefore(monthEnd),
-              )
-              .fold<int>(0, (sum, t) => sum + t.amountMinor.abs()),
-        ),
-  ];
+  return progressFor(
+    allBudgetVersions: ref.watch(budgetsProvider).value ?? const [],
+    categories: ref.watch(categoriesProvider).value ?? const [],
+    transactions: ref.watch(transactionsProvider).value ?? const [],
+    month: ref.watch(selectedAnalyzerMonthProvider),
+  );
 });

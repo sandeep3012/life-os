@@ -7,18 +7,11 @@ import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
 
 class TransactionTile extends StatelessWidget {
-  const TransactionTile({
-    super.key,
-    required this.transaction,
-    this.category,
-    this.onEdit,
-    this.onDelete,
-  });
+  const TransactionTile({super.key, required this.transaction, this.category, this.onEdit});
 
   final Transaction transaction;
   final Category? category;
   final VoidCallback? onEdit;
-  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -72,21 +65,6 @@ class TransactionTile extends StatelessWidget {
                 color: isIncome ? colors.good : theme.colorScheme.onSurface,
               ),
             ),
-            if (onDelete != null)
-              PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded, size: 18, color: theme.colorScheme.onSurfaceVariant),
-                itemBuilder: (context) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                  const PopupMenuItem(value: 'delete', child: Text('Delete')),
-                ],
-                onSelected: (value) {
-                  if (value == 'edit') {
-                    onEdit?.call();
-                  } else if (value == 'delete') {
-                    onDelete?.call();
-                  }
-                },
-              ),
           ],
         ),
       ),
