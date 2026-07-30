@@ -78,13 +78,19 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
       title: result.title,
       priority: result.priority,
       dueDate: result.dueDate,
+      reminderEnabled: result.reminderEnabled,
     );
   }
 
   Future<void> _addHabit() async {
-    final name = await showQuickAddHabitSheet(context);
-    if (name == null) return;
-    await ref.read(habitsControllerProvider).addHabit(name);
+    final result = await showQuickAddHabitSheet(context);
+    if (result == null) return;
+    await ref.read(habitsControllerProvider).addHabit(
+      result.name,
+      reminderEnabled: result.reminderEnabled,
+      reminderHour: result.reminderHour,
+      reminderMinute: result.reminderMinute,
+    );
   }
 }
 

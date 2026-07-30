@@ -3,11 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
-/// Thin wrapper around `flutter_local_notifications` for the two reminder
-/// kinds the app schedules: a one-off nudge at a task's due time, and a
-/// single daily nudge for open habits. Kept deliberately minimal — no
-/// per-habit scheduling, no rich notification actions — since this is groundwork
-/// for Phase 2, not a notifications feature in its own right.
+/// Thin wrapper around `flutter_local_notifications` for the reminder kinds
+/// the app schedules: a one-off nudge at a task's due time, a single generic
+/// daily nudge for open habits (the app-wide "Habit reminders" setting), and
+/// a recurring per-habit reminder at a time the user picks for that habit.
 class NotificationService {
   NotificationService() : _plugin = FlutterLocalNotificationsPlugin();
 
@@ -111,6 +110,41 @@ class NotificationService {
   Future<void> cancelDailyHabitReminder() {
     return _plugin.cancel(id: _dailyHabitReminderId);
   }
+
+  /// Schedules (or re-schedules) a recurring per-habit reminder — a distinct
+  /// notification id from both the generic daily check-in (fixed id 0) and
+  /// task reminders (`taskId.hashCode`), namespaced so an ordinary habit id
+  /// and an ordinary task id can never collide and cancel each other's
+  /// notification.
+  Future<void> scheduleHabitReminder({
+    required String habitId,
+    required String title,
+    required int hour,
+    required int minute,
+  }) async {
+    final now = tz.TZDateTime.now(tz.local);
+    var next = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (next.isBefore(now)) next = next.add(const Duration(days: 1));
+
+    await _plugin.zonedSchedule(
+      id: _habitReminderId(habitId),
+      title: title,
+      body: "Time to log it — don't break the streak",
+      scheduledDate: next,
+      notificationDetails: NotificationDetails(
+        android: _habitChannel,
+        iOS: const DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  Future<void> cancelHabitReminder(String habitId) {
+    return _plugin.cancel(id: _habitReminderId(habitId));
+  }
+
+  int _habitReminderId(String habitId) => 'habit_reminder_$habitId'.hashCode;
 }
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {

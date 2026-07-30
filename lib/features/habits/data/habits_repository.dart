@@ -23,10 +23,20 @@ class HabitsRepository {
     )..where((l) => l.date.isBiggerOrEqualValue(since))).watch();
   }
 
-  Future<String> createHabit(String name) async {
-    final row = await _db
-        .into(_db.habits)
-        .insertReturning(HabitsCompanion.insert(name: name));
+  Future<String> createHabit(
+    String name, {
+    bool reminderEnabled = false,
+    int? reminderHour,
+    int? reminderMinute,
+  }) async {
+    final row = await _db.into(_db.habits).insertReturning(
+      HabitsCompanion.insert(
+        name: name,
+        reminderEnabled: Value(reminderEnabled),
+        reminderHour: Value(reminderHour),
+        reminderMinute: Value(reminderMinute),
+      ),
+    );
     return row.id;
   }
 

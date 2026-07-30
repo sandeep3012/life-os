@@ -114,20 +114,6 @@ class SpendAnalyzerScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Text('By payment mode', style: theme.textTheme.titleSmall),
-          const SizedBox(height: 10),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: paymentModeBreakdown.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Text('No payment mode tagged for this month yet.'),
-                    )
-                  : PaymentModeBreakdown(breakdown: paymentModeBreakdown),
-            ),
-          ),
-          const SizedBox(height: 20),
           Text('Budget vs actual', style: theme.textTheme.titleSmall),
           const SizedBox(height: 10),
           Card(
@@ -144,6 +130,20 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                           BudgetBar(progress: progress),
                       ],
                     ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text('By payment mode', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 10),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: paymentModeBreakdown.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Text('No payment mode tagged for this month yet.'),
+                    )
+                  : PaymentModeBreakdown(breakdown: paymentModeBreakdown),
             ),
           ),
         ],

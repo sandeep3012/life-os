@@ -25,8 +25,15 @@ Budget _budget({required String id, required String period, required int limitMi
   createdAt: DateTime(2026, 7),
 );
 
-Habit _habit(String id) =>
-    Habit(id: id, name: id, frequency: 'daily', targetPerWeek: 7, archived: false, createdAt: DateTime(2026));
+Habit _habit(String id) => Habit(
+  id: id,
+  name: id,
+  frequency: 'daily',
+  targetPerWeek: 7,
+  archived: false,
+  reminderEnabled: false,
+  createdAt: DateTime(2026),
+);
 
 Goal _goal({
   required String id,

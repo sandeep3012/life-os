@@ -16,6 +16,12 @@ class Tasks extends Table {
   TextColumn get status => text().withDefault(const Constant('open'))();
   TextColumn get categoryId => text().nullable().references(Categories, #id)();
 
+  /// Only meaningful when [dueDate] is set — a one-off local notification is
+  /// scheduled for that moment. Defaults true so existing behavior (any task
+  /// with a due date got a reminder) is unchanged for tasks created before
+  /// this toggle existed.
+  BoolColumn get reminderEnabled => boolean().withDefault(const Constant(true))();
+
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
   DateTimeColumn get completedAt => dateTime().nullable()();

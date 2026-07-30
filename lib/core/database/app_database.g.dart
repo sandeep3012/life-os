@@ -2902,6 +2902,43 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _reminderEnabledMeta = const VerificationMeta(
+    'reminderEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> reminderEnabled = GeneratedColumn<bool>(
+    'reminder_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("reminder_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _reminderHourMeta = const VerificationMeta(
+    'reminderHour',
+  );
+  @override
+  late final GeneratedColumn<int> reminderHour = GeneratedColumn<int>(
+    'reminder_hour',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reminderMinuteMeta = const VerificationMeta(
+    'reminderMinute',
+  );
+  @override
+  late final GeneratedColumn<int> reminderMinute = GeneratedColumn<int>(
+    'reminder_minute',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2921,6 +2958,9 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
     frequency,
     targetPerWeek,
     archived,
+    reminderEnabled,
+    reminderHour,
+    reminderMinute,
     createdAt,
   ];
   @override
@@ -2967,6 +3007,33 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
         archived.isAcceptableOrUnknown(data['archived']!, _archivedMeta),
       );
     }
+    if (data.containsKey('reminder_enabled')) {
+      context.handle(
+        _reminderEnabledMeta,
+        reminderEnabled.isAcceptableOrUnknown(
+          data['reminder_enabled']!,
+          _reminderEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_hour')) {
+      context.handle(
+        _reminderHourMeta,
+        reminderHour.isAcceptableOrUnknown(
+          data['reminder_hour']!,
+          _reminderHourMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_minute')) {
+      context.handle(
+        _reminderMinuteMeta,
+        reminderMinute.isAcceptableOrUnknown(
+          data['reminder_minute']!,
+          _reminderMinuteMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3002,6 +3069,18 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
         DriftSqlType.bool,
         data['${effectivePrefix}archived'],
       )!,
+      reminderEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}reminder_enabled'],
+      )!,
+      reminderHour: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_hour'],
+      ),
+      reminderMinute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_minute'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3023,6 +3102,13 @@ class Habit extends DataClass implements Insertable<Habit> {
   final String frequency;
   final int targetPerWeek;
   final bool archived;
+
+  /// Per-habit daily reminder, independent of the app-wide "Habit reminders"
+  /// generic check-in nudge in Settings — off by default (opt-in), unlike
+  /// tasks, since there's no natural due-date signal implying "remind me."
+  final bool reminderEnabled;
+  final int? reminderHour;
+  final int? reminderMinute;
   final DateTime createdAt;
   const Habit({
     required this.id,
@@ -3030,6 +3116,9 @@ class Habit extends DataClass implements Insertable<Habit> {
     required this.frequency,
     required this.targetPerWeek,
     required this.archived,
+    required this.reminderEnabled,
+    this.reminderHour,
+    this.reminderMinute,
     required this.createdAt,
   });
   @override
@@ -3040,6 +3129,13 @@ class Habit extends DataClass implements Insertable<Habit> {
     map['frequency'] = Variable<String>(frequency);
     map['target_per_week'] = Variable<int>(targetPerWeek);
     map['archived'] = Variable<bool>(archived);
+    map['reminder_enabled'] = Variable<bool>(reminderEnabled);
+    if (!nullToAbsent || reminderHour != null) {
+      map['reminder_hour'] = Variable<int>(reminderHour);
+    }
+    if (!nullToAbsent || reminderMinute != null) {
+      map['reminder_minute'] = Variable<int>(reminderMinute);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -3051,6 +3147,13 @@ class Habit extends DataClass implements Insertable<Habit> {
       frequency: Value(frequency),
       targetPerWeek: Value(targetPerWeek),
       archived: Value(archived),
+      reminderEnabled: Value(reminderEnabled),
+      reminderHour: reminderHour == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reminderHour),
+      reminderMinute: reminderMinute == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reminderMinute),
       createdAt: Value(createdAt),
     );
   }
@@ -3066,6 +3169,9 @@ class Habit extends DataClass implements Insertable<Habit> {
       frequency: serializer.fromJson<String>(json['frequency']),
       targetPerWeek: serializer.fromJson<int>(json['targetPerWeek']),
       archived: serializer.fromJson<bool>(json['archived']),
+      reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
+      reminderHour: serializer.fromJson<int?>(json['reminderHour']),
+      reminderMinute: serializer.fromJson<int?>(json['reminderMinute']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -3078,6 +3184,9 @@ class Habit extends DataClass implements Insertable<Habit> {
       'frequency': serializer.toJson<String>(frequency),
       'targetPerWeek': serializer.toJson<int>(targetPerWeek),
       'archived': serializer.toJson<bool>(archived),
+      'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
+      'reminderHour': serializer.toJson<int?>(reminderHour),
+      'reminderMinute': serializer.toJson<int?>(reminderMinute),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -3088,6 +3197,9 @@ class Habit extends DataClass implements Insertable<Habit> {
     String? frequency,
     int? targetPerWeek,
     bool? archived,
+    bool? reminderEnabled,
+    Value<int?> reminderHour = const Value.absent(),
+    Value<int?> reminderMinute = const Value.absent(),
     DateTime? createdAt,
   }) => Habit(
     id: id ?? this.id,
@@ -3095,6 +3207,11 @@ class Habit extends DataClass implements Insertable<Habit> {
     frequency: frequency ?? this.frequency,
     targetPerWeek: targetPerWeek ?? this.targetPerWeek,
     archived: archived ?? this.archived,
+    reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+    reminderHour: reminderHour.present ? reminderHour.value : this.reminderHour,
+    reminderMinute: reminderMinute.present
+        ? reminderMinute.value
+        : this.reminderMinute,
     createdAt: createdAt ?? this.createdAt,
   );
   Habit copyWithCompanion(HabitsCompanion data) {
@@ -3106,6 +3223,15 @@ class Habit extends DataClass implements Insertable<Habit> {
           ? data.targetPerWeek.value
           : this.targetPerWeek,
       archived: data.archived.present ? data.archived.value : this.archived,
+      reminderEnabled: data.reminderEnabled.present
+          ? data.reminderEnabled.value
+          : this.reminderEnabled,
+      reminderHour: data.reminderHour.present
+          ? data.reminderHour.value
+          : this.reminderHour,
+      reminderMinute: data.reminderMinute.present
+          ? data.reminderMinute.value
+          : this.reminderMinute,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -3118,14 +3244,26 @@ class Habit extends DataClass implements Insertable<Habit> {
           ..write('frequency: $frequency, ')
           ..write('targetPerWeek: $targetPerWeek, ')
           ..write('archived: $archived, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderHour: $reminderHour, ')
+          ..write('reminderMinute: $reminderMinute, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, frequency, targetPerWeek, archived, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    frequency,
+    targetPerWeek,
+    archived,
+    reminderEnabled,
+    reminderHour,
+    reminderMinute,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3135,6 +3273,9 @@ class Habit extends DataClass implements Insertable<Habit> {
           other.frequency == this.frequency &&
           other.targetPerWeek == this.targetPerWeek &&
           other.archived == this.archived &&
+          other.reminderEnabled == this.reminderEnabled &&
+          other.reminderHour == this.reminderHour &&
+          other.reminderMinute == this.reminderMinute &&
           other.createdAt == this.createdAt);
 }
 
@@ -3144,6 +3285,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
   final Value<String> frequency;
   final Value<int> targetPerWeek;
   final Value<bool> archived;
+  final Value<bool> reminderEnabled;
+  final Value<int?> reminderHour;
+  final Value<int?> reminderMinute;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const HabitsCompanion({
@@ -3152,6 +3296,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.frequency = const Value.absent(),
     this.targetPerWeek = const Value.absent(),
     this.archived = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    this.reminderHour = const Value.absent(),
+    this.reminderMinute = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3161,6 +3308,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.frequency = const Value.absent(),
     this.targetPerWeek = const Value.absent(),
     this.archived = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    this.reminderHour = const Value.absent(),
+    this.reminderMinute = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : name = Value(name);
@@ -3170,6 +3320,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     Expression<String>? frequency,
     Expression<int>? targetPerWeek,
     Expression<bool>? archived,
+    Expression<bool>? reminderEnabled,
+    Expression<int>? reminderHour,
+    Expression<int>? reminderMinute,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -3179,6 +3332,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
       if (frequency != null) 'frequency': frequency,
       if (targetPerWeek != null) 'target_per_week': targetPerWeek,
       if (archived != null) 'archived': archived,
+      if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
+      if (reminderHour != null) 'reminder_hour': reminderHour,
+      if (reminderMinute != null) 'reminder_minute': reminderMinute,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3190,6 +3346,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     Value<String>? frequency,
     Value<int>? targetPerWeek,
     Value<bool>? archived,
+    Value<bool>? reminderEnabled,
+    Value<int?>? reminderHour,
+    Value<int?>? reminderMinute,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -3199,6 +3358,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
       frequency: frequency ?? this.frequency,
       targetPerWeek: targetPerWeek ?? this.targetPerWeek,
       archived: archived ?? this.archived,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      reminderHour: reminderHour ?? this.reminderHour,
+      reminderMinute: reminderMinute ?? this.reminderMinute,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -3222,6 +3384,15 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     if (archived.present) {
       map['archived'] = Variable<bool>(archived.value);
     }
+    if (reminderEnabled.present) {
+      map['reminder_enabled'] = Variable<bool>(reminderEnabled.value);
+    }
+    if (reminderHour.present) {
+      map['reminder_hour'] = Variable<int>(reminderHour.value);
+    }
+    if (reminderMinute.present) {
+      map['reminder_minute'] = Variable<int>(reminderMinute.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3239,6 +3410,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
           ..write('frequency: $frequency, ')
           ..write('targetPerWeek: $targetPerWeek, ')
           ..write('archived: $archived, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderHour: $reminderHour, ')
+          ..write('reminderMinute: $reminderMinute, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -3644,6 +3818,21 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
       'REFERENCES categories (id)',
     ),
   );
+  static const VerificationMeta _reminderEnabledMeta = const VerificationMeta(
+    'reminderEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> reminderEnabled = GeneratedColumn<bool>(
+    'reminder_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("reminder_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -3676,6 +3865,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     priority,
     status,
     categoryId,
+    reminderEnabled,
     createdAt,
     completedAt,
   ];
@@ -3735,6 +3925,15 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
       );
     }
+    if (data.containsKey('reminder_enabled')) {
+      context.handle(
+        _reminderEnabledMeta,
+        reminderEnabled.isAcceptableOrUnknown(
+          data['reminder_enabled']!,
+          _reminderEnabledMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3787,6 +3986,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.string,
         data['${effectivePrefix}category_id'],
       ),
+      reminderEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}reminder_enabled'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3816,6 +4019,12 @@ class Task extends DataClass implements Insertable<Task> {
   /// open | done
   final String status;
   final String? categoryId;
+
+  /// Only meaningful when [dueDate] is set — a one-off local notification is
+  /// scheduled for that moment. Defaults true so existing behavior (any task
+  /// with a due date got a reminder) is unchanged for tasks created before
+  /// this toggle existed.
+  final bool reminderEnabled;
   final DateTime createdAt;
   final DateTime? completedAt;
   const Task({
@@ -3826,6 +4035,7 @@ class Task extends DataClass implements Insertable<Task> {
     required this.priority,
     required this.status,
     this.categoryId,
+    required this.reminderEnabled,
     required this.createdAt,
     this.completedAt,
   });
@@ -3845,6 +4055,7 @@ class Task extends DataClass implements Insertable<Task> {
     if (!nullToAbsent || categoryId != null) {
       map['category_id'] = Variable<String>(categoryId);
     }
+    map['reminder_enabled'] = Variable<bool>(reminderEnabled);
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || completedAt != null) {
       map['completed_at'] = Variable<DateTime>(completedAt);
@@ -3867,6 +4078,7 @@ class Task extends DataClass implements Insertable<Task> {
       categoryId: categoryId == null && nullToAbsent
           ? const Value.absent()
           : Value(categoryId),
+      reminderEnabled: Value(reminderEnabled),
       createdAt: Value(createdAt),
       completedAt: completedAt == null && nullToAbsent
           ? const Value.absent()
@@ -3887,6 +4099,7 @@ class Task extends DataClass implements Insertable<Task> {
       priority: serializer.fromJson<String>(json['priority']),
       status: serializer.fromJson<String>(json['status']),
       categoryId: serializer.fromJson<String?>(json['categoryId']),
+      reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
     );
@@ -3902,6 +4115,7 @@ class Task extends DataClass implements Insertable<Task> {
       'priority': serializer.toJson<String>(priority),
       'status': serializer.toJson<String>(status),
       'categoryId': serializer.toJson<String?>(categoryId),
+      'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
     };
@@ -3915,6 +4129,7 @@ class Task extends DataClass implements Insertable<Task> {
     String? priority,
     String? status,
     Value<String?> categoryId = const Value.absent(),
+    bool? reminderEnabled,
     DateTime? createdAt,
     Value<DateTime?> completedAt = const Value.absent(),
   }) => Task(
@@ -3925,6 +4140,7 @@ class Task extends DataClass implements Insertable<Task> {
     priority: priority ?? this.priority,
     status: status ?? this.status,
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    reminderEnabled: reminderEnabled ?? this.reminderEnabled,
     createdAt: createdAt ?? this.createdAt,
     completedAt: completedAt.present ? completedAt.value : this.completedAt,
   );
@@ -3941,6 +4157,9 @@ class Task extends DataClass implements Insertable<Task> {
       categoryId: data.categoryId.present
           ? data.categoryId.value
           : this.categoryId,
+      reminderEnabled: data.reminderEnabled.present
+          ? data.reminderEnabled.value
+          : this.reminderEnabled,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       completedAt: data.completedAt.present
           ? data.completedAt.value
@@ -3958,6 +4177,7 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('priority: $priority, ')
           ..write('status: $status, ')
           ..write('categoryId: $categoryId, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('completedAt: $completedAt')
           ..write(')'))
@@ -3973,6 +4193,7 @@ class Task extends DataClass implements Insertable<Task> {
     priority,
     status,
     categoryId,
+    reminderEnabled,
     createdAt,
     completedAt,
   );
@@ -3987,6 +4208,7 @@ class Task extends DataClass implements Insertable<Task> {
           other.priority == this.priority &&
           other.status == this.status &&
           other.categoryId == this.categoryId &&
+          other.reminderEnabled == this.reminderEnabled &&
           other.createdAt == this.createdAt &&
           other.completedAt == this.completedAt);
 }
@@ -3999,6 +4221,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<String> priority;
   final Value<String> status;
   final Value<String?> categoryId;
+  final Value<bool> reminderEnabled;
   final Value<DateTime> createdAt;
   final Value<DateTime?> completedAt;
   final Value<int> rowid;
@@ -4010,6 +4233,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.priority = const Value.absent(),
     this.status = const Value.absent(),
     this.categoryId = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -4022,6 +4246,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.priority = const Value.absent(),
     this.status = const Value.absent(),
     this.categoryId = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -4034,6 +4259,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<String>? priority,
     Expression<String>? status,
     Expression<String>? categoryId,
+    Expression<bool>? reminderEnabled,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? completedAt,
     Expression<int>? rowid,
@@ -4046,6 +4272,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (priority != null) 'priority': priority,
       if (status != null) 'status': status,
       if (categoryId != null) 'category_id': categoryId,
+      if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
       if (createdAt != null) 'created_at': createdAt,
       if (completedAt != null) 'completed_at': completedAt,
       if (rowid != null) 'rowid': rowid,
@@ -4060,6 +4287,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<String>? priority,
     Value<String>? status,
     Value<String?>? categoryId,
+    Value<bool>? reminderEnabled,
     Value<DateTime>? createdAt,
     Value<DateTime?>? completedAt,
     Value<int>? rowid,
@@ -4072,6 +4300,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       priority: priority ?? this.priority,
       status: status ?? this.status,
       categoryId: categoryId ?? this.categoryId,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       createdAt: createdAt ?? this.createdAt,
       completedAt: completedAt ?? this.completedAt,
       rowid: rowid ?? this.rowid,
@@ -4102,6 +4331,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (categoryId.present) {
       map['category_id'] = Variable<String>(categoryId.value);
     }
+    if (reminderEnabled.present) {
+      map['reminder_enabled'] = Variable<bool>(reminderEnabled.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -4124,6 +4356,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('priority: $priority, ')
           ..write('status: $status, ')
           ..write('categoryId: $categoryId, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('completedAt: $completedAt, ')
           ..write('rowid: $rowid')
@@ -10477,6 +10710,9 @@ typedef $$HabitsTableCreateCompanionBuilder =
       Value<String> frequency,
       Value<int> targetPerWeek,
       Value<bool> archived,
+      Value<bool> reminderEnabled,
+      Value<int?> reminderHour,
+      Value<int?> reminderMinute,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -10487,6 +10723,9 @@ typedef $$HabitsTableUpdateCompanionBuilder =
       Value<String> frequency,
       Value<int> targetPerWeek,
       Value<bool> archived,
+      Value<bool> reminderEnabled,
+      Value<int?> reminderHour,
+      Value<int?> reminderMinute,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -10545,6 +10784,21 @@ class $$HabitsTableFilterComposer
 
   ColumnFilters<bool> get archived => $composableBuilder(
     column: $table.archived,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10613,6 +10867,21 @@ class $$HabitsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -10644,6 +10913,21 @@ class $$HabitsTableAnnotationComposer
 
   GeneratedColumn<bool> get archived =>
       $composableBuilder(column: $table.archived, builder: (column) => column);
+
+  GeneratedColumn<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -10707,6 +10991,9 @@ class $$HabitsTableTableManager
                 Value<String> frequency = const Value.absent(),
                 Value<int> targetPerWeek = const Value.absent(),
                 Value<bool> archived = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<int?> reminderHour = const Value.absent(),
+                Value<int?> reminderMinute = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HabitsCompanion(
@@ -10715,6 +11002,9 @@ class $$HabitsTableTableManager
                 frequency: frequency,
                 targetPerWeek: targetPerWeek,
                 archived: archived,
+                reminderEnabled: reminderEnabled,
+                reminderHour: reminderHour,
+                reminderMinute: reminderMinute,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -10725,6 +11015,9 @@ class $$HabitsTableTableManager
                 Value<String> frequency = const Value.absent(),
                 Value<int> targetPerWeek = const Value.absent(),
                 Value<bool> archived = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<int?> reminderHour = const Value.absent(),
+                Value<int?> reminderMinute = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HabitsCompanion.insert(
@@ -10733,6 +11026,9 @@ class $$HabitsTableTableManager
                 frequency: frequency,
                 targetPerWeek: targetPerWeek,
                 archived: archived,
+                reminderEnabled: reminderEnabled,
+                reminderHour: reminderHour,
+                reminderMinute: reminderMinute,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -11089,6 +11385,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<String> priority,
       Value<String> status,
       Value<String?> categoryId,
+      Value<bool> reminderEnabled,
       Value<DateTime> createdAt,
       Value<DateTime?> completedAt,
       Value<int> rowid,
@@ -11102,6 +11399,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<String> priority,
       Value<String> status,
       Value<String?> categoryId,
+      Value<bool> reminderEnabled,
       Value<DateTime> createdAt,
       Value<DateTime?> completedAt,
       Value<int> rowid,
@@ -11183,6 +11481,11 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11284,6 +11587,11 @@ class $$TasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -11346,6 +11654,11 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -11439,6 +11752,7 @@ class $$TasksTableTableManager
                 Value<String> priority = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> categoryId = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -11450,6 +11764,7 @@ class $$TasksTableTableManager
                 priority: priority,
                 status: status,
                 categoryId: categoryId,
+                reminderEnabled: reminderEnabled,
                 createdAt: createdAt,
                 completedAt: completedAt,
                 rowid: rowid,
@@ -11463,6 +11778,7 @@ class $$TasksTableTableManager
                 Value<String> priority = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> categoryId = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -11474,6 +11790,7 @@ class $$TasksTableTableManager
                 priority: priority,
                 status: status,
                 categoryId: categoryId,
+                reminderEnabled: reminderEnabled,
                 createdAt: createdAt,
                 completedAt: completedAt,
                 rowid: rowid,

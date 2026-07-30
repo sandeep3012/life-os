@@ -17,12 +17,14 @@ class TasksRepository {
     required String title,
     DateTime? dueDate,
     String priority = 'medium',
+    bool reminderEnabled = true,
   }) async {
     final row = await _db.into(_db.tasks).insertReturning(
       TasksCompanion.insert(
         title: title,
         dueDate: Value(dueDate),
         priority: Value(priority),
+        reminderEnabled: Value(reminderEnabled),
       ),
     );
     return row.id;

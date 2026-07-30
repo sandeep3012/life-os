@@ -49,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -95,6 +95,16 @@ class AppDatabase extends _$AppDatabase {
         // stores the matching name string and needs no rewrite.
         await m.createTable(accountTypes);
         await m.addColumn(transactions, transactions.paymentMode);
+      }
+      if (from < 6) {
+        // v5 -> v6: per-item reminder toggles. Tasks default `true` (an
+        // existing task with a due date already got a reminder, so this
+        // preserves that behavior); habits default `false` (opt-in — there's
+        // no due-date-like signal implying a reminder was wanted).
+        await m.addColumn(tasks, tasks.reminderEnabled);
+        await m.addColumn(habits, habits.reminderEnabled);
+        await m.addColumn(habits, habits.reminderHour);
+        await m.addColumn(habits, habits.reminderMinute);
       }
     },
   );

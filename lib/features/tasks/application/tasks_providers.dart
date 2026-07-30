@@ -32,13 +32,15 @@ class TasksController {
     required String title,
     DateTime? dueDate,
     TaskPriority priority = TaskPriority.medium,
+    bool reminderEnabled = true,
   }) async {
     final id = await _repo.createTask(
       title: title,
       dueDate: dueDate,
       priority: priority.value,
+      reminderEnabled: reminderEnabled,
     );
-    if (dueDate != null && _remindersEnabled()) {
+    if (dueDate != null && reminderEnabled && _remindersEnabled()) {
       await _notifications.scheduleTaskReminder(
         taskId: id,
         title: title,

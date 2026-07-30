@@ -13,6 +13,13 @@ class Habits extends Table {
   IntColumn get targetPerWeek => integer().withDefault(const Constant(7))();
   BoolColumn get archived => boolean().withDefault(const Constant(false))();
 
+  /// Per-habit daily reminder, independent of the app-wide "Habit reminders"
+  /// generic check-in nudge in Settings — off by default (opt-in), unlike
+  /// tasks, since there's no natural due-date signal implying "remind me."
+  BoolColumn get reminderEnabled => boolean().withDefault(const Constant(false))();
+  IntColumn get reminderHour => integer().nullable()();
+  IntColumn get reminderMinute => integer().nullable()();
+
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
 
