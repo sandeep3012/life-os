@@ -1,5 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -36,6 +37,16 @@ class NotificationService {
     if (_initialized) return;
     try {
       tz_data.initializeTimeZones();
+      // `tz.local` defaults to UTC until explicitly set — without this,
+      // every "local time" reminder is computed against UTC instead of the
+      // device's actual zone, silently shifting it by the UTC offset (e.g.
+      // ~5.5 hours for IST) rather than firing when the user actually asked.
+      try {
+        tz.setLocalLocation(tz.getLocation(await FlutterTimezone.getLocalTimezone()));
+      } catch (_) {
+        // Falls back to UTC — reminders still fire, just at the wrong
+        // wall-clock time, which beats not firing at all.
+      }
 
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
       const iosInit = DarwinInitializationSettings();
