@@ -133,7 +133,7 @@ class $CategoriesTable extends Categories
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Category map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -471,7 +471,7 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Tag map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -920,6 +920,306 @@ class EntityTagsCompanion extends UpdateCompanion<EntityTag> {
   }
 }
 
+class $AccountTypesTable extends AccountTypes
+    with TableInfo<$AccountTypesTable, AccountType> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AccountTypesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: () => const Uuid().v4(),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+    'icon',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('account_balance_wallet'),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now(),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, icon, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'account_types';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AccountType> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('icon')) {
+      context.handle(
+        _iconMeta,
+        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AccountType map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AccountType(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      icon: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AccountTypesTable createAlias(String alias) {
+    return $AccountTypesTable(attachedDatabase, alias);
+  }
+}
+
+class AccountType extends DataClass implements Insertable<AccountType> {
+  final String id;
+  final String name;
+  final String icon;
+  final DateTime createdAt;
+  const AccountType({
+    required this.id,
+    required this.name,
+    required this.icon,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['icon'] = Variable<String>(icon);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  AccountTypesCompanion toCompanion(bool nullToAbsent) {
+    return AccountTypesCompanion(
+      id: Value(id),
+      name: Value(name),
+      icon: Value(icon),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory AccountType.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AccountType(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      icon: serializer.fromJson<String>(json['icon']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'icon': serializer.toJson<String>(icon),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  AccountType copyWith({
+    String? id,
+    String? name,
+    String? icon,
+    DateTime? createdAt,
+  }) => AccountType(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    icon: icon ?? this.icon,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  AccountType copyWithCompanion(AccountTypesCompanion data) {
+    return AccountType(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      icon: data.icon.present ? data.icon.value : this.icon,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountType(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('icon: $icon, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, icon, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AccountType &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.icon == this.icon &&
+          other.createdAt == this.createdAt);
+}
+
+class AccountTypesCompanion extends UpdateCompanion<AccountType> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> icon;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const AccountTypesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AccountTypesCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    this.icon = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : name = Value(name);
+  static Insertable<AccountType> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? icon,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (icon != null) 'icon': icon,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AccountTypesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? icon,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return AccountTypesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountTypesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('icon: $icon, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -977,6 +1277,21 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     requiredDuringInsert: false,
     defaultValue: const Constant('INR'),
   );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1008,6 +1323,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     type,
     balanceMinor,
     currencyCode,
+    isActive,
     createdAt,
     updatedAt,
   ];
@@ -1060,6 +1376,12 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         ),
       );
     }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1076,7 +1398,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Account map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -1100,6 +1422,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       currencyCode: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}currency_code'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
       )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -1127,6 +1453,12 @@ class Account extends DataClass implements Insertable<Account> {
   /// drift in balances — matches the Finance screen's ₹ totals exactly.
   final int balanceMinor;
   final String currencyCode;
+
+  /// Deactivated (not deleted) accounts drop out of balance totals and
+  /// picker lists but keep their transaction/goal-link history intact —
+  /// the fallback for accounts that can't be hard-deleted because they're
+  /// still referenced elsewhere.
+  final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Account({
@@ -1135,6 +1467,7 @@ class Account extends DataClass implements Insertable<Account> {
     required this.type,
     required this.balanceMinor,
     required this.currencyCode,
+    required this.isActive,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -1146,6 +1479,7 @@ class Account extends DataClass implements Insertable<Account> {
     map['type'] = Variable<String>(type);
     map['balance_minor'] = Variable<int>(balanceMinor);
     map['currency_code'] = Variable<String>(currencyCode);
+    map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -1158,6 +1492,7 @@ class Account extends DataClass implements Insertable<Account> {
       type: Value(type),
       balanceMinor: Value(balanceMinor),
       currencyCode: Value(currencyCode),
+      isActive: Value(isActive),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -1174,6 +1509,7 @@ class Account extends DataClass implements Insertable<Account> {
       type: serializer.fromJson<String>(json['type']),
       balanceMinor: serializer.fromJson<int>(json['balanceMinor']),
       currencyCode: serializer.fromJson<String>(json['currencyCode']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -1187,6 +1523,7 @@ class Account extends DataClass implements Insertable<Account> {
       'type': serializer.toJson<String>(type),
       'balanceMinor': serializer.toJson<int>(balanceMinor),
       'currencyCode': serializer.toJson<String>(currencyCode),
+      'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -1198,6 +1535,7 @@ class Account extends DataClass implements Insertable<Account> {
     String? type,
     int? balanceMinor,
     String? currencyCode,
+    bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Account(
@@ -1206,6 +1544,7 @@ class Account extends DataClass implements Insertable<Account> {
     type: type ?? this.type,
     balanceMinor: balanceMinor ?? this.balanceMinor,
     currencyCode: currencyCode ?? this.currencyCode,
+    isActive: isActive ?? this.isActive,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -1220,6 +1559,7 @@ class Account extends DataClass implements Insertable<Account> {
       currencyCode: data.currencyCode.present
           ? data.currencyCode.value
           : this.currencyCode,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -1233,6 +1573,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('type: $type, ')
           ..write('balanceMinor: $balanceMinor, ')
           ..write('currencyCode: $currencyCode, ')
+          ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1246,6 +1587,7 @@ class Account extends DataClass implements Insertable<Account> {
     type,
     balanceMinor,
     currencyCode,
+    isActive,
     createdAt,
     updatedAt,
   );
@@ -1258,6 +1600,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.type == this.type &&
           other.balanceMinor == this.balanceMinor &&
           other.currencyCode == this.currencyCode &&
+          other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -1268,6 +1611,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String> type;
   final Value<int> balanceMinor;
   final Value<String> currencyCode;
+  final Value<bool> isActive;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -1277,6 +1621,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.type = const Value.absent(),
     this.balanceMinor = const Value.absent(),
     this.currencyCode = const Value.absent(),
+    this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1287,6 +1632,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     required String type,
     this.balanceMinor = const Value.absent(),
     this.currencyCode = const Value.absent(),
+    this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1298,6 +1644,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? type,
     Expression<int>? balanceMinor,
     Expression<String>? currencyCode,
+    Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -1308,6 +1655,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (type != null) 'type': type,
       if (balanceMinor != null) 'balance_minor': balanceMinor,
       if (currencyCode != null) 'currency_code': currencyCode,
+      if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1320,6 +1668,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<String>? type,
     Value<int>? balanceMinor,
     Value<String>? currencyCode,
+    Value<bool>? isActive,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -1330,6 +1679,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       type: type ?? this.type,
       balanceMinor: balanceMinor ?? this.balanceMinor,
       currencyCode: currencyCode ?? this.currencyCode,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -1354,6 +1704,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (currencyCode.present) {
       map['currency_code'] = Variable<String>(currencyCode.value);
     }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1374,6 +1727,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('type: $type, ')
           ..write('balanceMinor: $balanceMinor, ')
           ..write('currencyCode: $currencyCode, ')
+          ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -1466,6 +1820,17 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _paymentModeMeta = const VerificationMeta(
+    'paymentMode',
+  );
+  @override
+  late final GeneratedColumn<String> paymentMode = GeneratedColumn<String>(
+    'payment_mode',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1487,6 +1852,7 @@ class $TransactionsTable extends Transactions
     amountMinor,
     date,
     note,
+    paymentMode,
     createdAt,
   ];
   @override
@@ -1551,6 +1917,15 @@ class $TransactionsTable extends Transactions
         note.isAcceptableOrUnknown(data['note']!, _noteMeta),
       );
     }
+    if (data.containsKey('payment_mode')) {
+      context.handle(
+        _paymentModeMeta,
+        paymentMode.isAcceptableOrUnknown(
+          data['payment_mode']!,
+          _paymentModeMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1561,7 +1936,7 @@ class $TransactionsTable extends Transactions
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Transaction map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -1594,6 +1969,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}note'],
       ),
+      paymentMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payment_mode'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1618,6 +1997,11 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final int amountMinor;
   final DateTime date;
   final String? note;
+
+  /// upi | cash | card | net_banking | other — a small fixed set (see
+  /// `PaymentModes` in payment_mode.dart), not user-manageable like
+  /// categories/account types, so no backing table.
+  final String? paymentMode;
   final DateTime createdAt;
   const Transaction({
     required this.id,
@@ -1627,6 +2011,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     required this.amountMinor,
     required this.date,
     this.note,
+    this.paymentMode,
     required this.createdAt,
   });
   @override
@@ -1643,6 +2028,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
     }
+    if (!nullToAbsent || paymentMode != null) {
+      map['payment_mode'] = Variable<String>(paymentMode);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1658,6 +2046,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       amountMinor: Value(amountMinor),
       date: Value(date),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      paymentMode: paymentMode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paymentMode),
       createdAt: Value(createdAt),
     );
   }
@@ -1675,6 +2066,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       amountMinor: serializer.fromJson<int>(json['amountMinor']),
       date: serializer.fromJson<DateTime>(json['date']),
       note: serializer.fromJson<String?>(json['note']),
+      paymentMode: serializer.fromJson<String?>(json['paymentMode']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1689,6 +2081,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'amountMinor': serializer.toJson<int>(amountMinor),
       'date': serializer.toJson<DateTime>(date),
       'note': serializer.toJson<String?>(note),
+      'paymentMode': serializer.toJson<String?>(paymentMode),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1701,6 +2094,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     int? amountMinor,
     DateTime? date,
     Value<String?> note = const Value.absent(),
+    Value<String?> paymentMode = const Value.absent(),
     DateTime? createdAt,
   }) => Transaction(
     id: id ?? this.id,
@@ -1710,6 +2104,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     amountMinor: amountMinor ?? this.amountMinor,
     date: date ?? this.date,
     note: note.present ? note.value : this.note,
+    paymentMode: paymentMode.present ? paymentMode.value : this.paymentMode,
     createdAt: createdAt ?? this.createdAt,
   );
   Transaction copyWithCompanion(TransactionsCompanion data) {
@@ -1725,6 +2120,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           : this.amountMinor,
       date: data.date.present ? data.date.value : this.date,
       note: data.note.present ? data.note.value : this.note,
+      paymentMode: data.paymentMode.present
+          ? data.paymentMode.value
+          : this.paymentMode,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1739,6 +2137,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('amountMinor: $amountMinor, ')
           ..write('date: $date, ')
           ..write('note: $note, ')
+          ..write('paymentMode: $paymentMode, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1753,6 +2152,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     amountMinor,
     date,
     note,
+    paymentMode,
     createdAt,
   );
   @override
@@ -1766,6 +2166,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.amountMinor == this.amountMinor &&
           other.date == this.date &&
           other.note == this.note &&
+          other.paymentMode == this.paymentMode &&
           other.createdAt == this.createdAt);
 }
 
@@ -1777,6 +2178,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<int> amountMinor;
   final Value<DateTime> date;
   final Value<String?> note;
+  final Value<String?> paymentMode;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const TransactionsCompanion({
@@ -1787,6 +2189,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.amountMinor = const Value.absent(),
     this.date = const Value.absent(),
     this.note = const Value.absent(),
+    this.paymentMode = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1798,6 +2201,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required int amountMinor,
     required DateTime date,
     this.note = const Value.absent(),
+    this.paymentMode = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : accountId = Value(accountId),
@@ -1812,6 +2216,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<int>? amountMinor,
     Expression<DateTime>? date,
     Expression<String>? note,
+    Expression<String>? paymentMode,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -1823,6 +2228,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (amountMinor != null) 'amount_minor': amountMinor,
       if (date != null) 'date': date,
       if (note != null) 'note': note,
+      if (paymentMode != null) 'payment_mode': paymentMode,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1836,6 +2242,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<int>? amountMinor,
     Value<DateTime>? date,
     Value<String?>? note,
+    Value<String?>? paymentMode,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -1847,6 +2254,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       amountMinor: amountMinor ?? this.amountMinor,
       date: date ?? this.date,
       note: note ?? this.note,
+      paymentMode: paymentMode ?? this.paymentMode,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1876,6 +2284,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
+    if (paymentMode.present) {
+      map['payment_mode'] = Variable<String>(paymentMode.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1895,6 +2306,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('amountMinor: $amountMinor, ')
           ..write('date: $date, ')
           ..write('note: $note, ')
+          ..write('paymentMode: $paymentMode, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1963,6 +2375,31 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _effectiveMonthMeta = const VerificationMeta(
+    'effectiveMonth',
+  );
+  @override
+  late final GeneratedColumn<DateTime> effectiveMonth =
+      GeneratedColumn<DateTime>(
+        'effective_month',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _activeMeta = const VerificationMeta('active');
+  @override
+  late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
+    'active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1982,6 +2419,8 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
     period,
     limitMinor,
     startDate,
+    effectiveMonth,
+    active,
     createdAt,
   ];
   @override
@@ -2029,6 +2468,21 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
     } else if (isInserting) {
       context.missing(_startDateMeta);
     }
+    if (data.containsKey('effective_month')) {
+      context.handle(
+        _effectiveMonthMeta,
+        effectiveMonth.isAcceptableOrUnknown(
+          data['effective_month']!,
+          _effectiveMonthMeta,
+        ),
+      );
+    }
+    if (data.containsKey('active')) {
+      context.handle(
+        _activeMeta,
+        active.isAcceptableOrUnknown(data['active']!, _activeMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2039,7 +2493,7 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Budget map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -2064,6 +2518,14 @@ class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}start_date'],
       )!,
+      effectiveMonth: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}effective_month'],
+      ),
+      active: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}active'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2085,6 +2547,13 @@ class Budget extends DataClass implements Insertable<Budget> {
   final String period;
   final int limitMinor;
   final DateTime startDate;
+
+  /// First-of-month date this version takes effect from. Nullable only so
+  /// the column can be added via `ALTER TABLE` on upgrade (SQLite requires a
+  /// default or nullability for `NOT NULL` columns added to a non-empty
+  /// table) — every row written by the app always sets it.
+  final DateTime? effectiveMonth;
+  final bool active;
   final DateTime createdAt;
   const Budget({
     required this.id,
@@ -2092,6 +2561,8 @@ class Budget extends DataClass implements Insertable<Budget> {
     required this.period,
     required this.limitMinor,
     required this.startDate,
+    this.effectiveMonth,
+    required this.active,
     required this.createdAt,
   });
   @override
@@ -2102,6 +2573,10 @@ class Budget extends DataClass implements Insertable<Budget> {
     map['period'] = Variable<String>(period);
     map['limit_minor'] = Variable<int>(limitMinor);
     map['start_date'] = Variable<DateTime>(startDate);
+    if (!nullToAbsent || effectiveMonth != null) {
+      map['effective_month'] = Variable<DateTime>(effectiveMonth);
+    }
+    map['active'] = Variable<bool>(active);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -2113,6 +2588,10 @@ class Budget extends DataClass implements Insertable<Budget> {
       period: Value(period),
       limitMinor: Value(limitMinor),
       startDate: Value(startDate),
+      effectiveMonth: effectiveMonth == null && nullToAbsent
+          ? const Value.absent()
+          : Value(effectiveMonth),
+      active: Value(active),
       createdAt: Value(createdAt),
     );
   }
@@ -2128,6 +2607,8 @@ class Budget extends DataClass implements Insertable<Budget> {
       period: serializer.fromJson<String>(json['period']),
       limitMinor: serializer.fromJson<int>(json['limitMinor']),
       startDate: serializer.fromJson<DateTime>(json['startDate']),
+      effectiveMonth: serializer.fromJson<DateTime?>(json['effectiveMonth']),
+      active: serializer.fromJson<bool>(json['active']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2140,6 +2621,8 @@ class Budget extends DataClass implements Insertable<Budget> {
       'period': serializer.toJson<String>(period),
       'limitMinor': serializer.toJson<int>(limitMinor),
       'startDate': serializer.toJson<DateTime>(startDate),
+      'effectiveMonth': serializer.toJson<DateTime?>(effectiveMonth),
+      'active': serializer.toJson<bool>(active),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2150,6 +2633,8 @@ class Budget extends DataClass implements Insertable<Budget> {
     String? period,
     int? limitMinor,
     DateTime? startDate,
+    Value<DateTime?> effectiveMonth = const Value.absent(),
+    bool? active,
     DateTime? createdAt,
   }) => Budget(
     id: id ?? this.id,
@@ -2157,6 +2642,10 @@ class Budget extends DataClass implements Insertable<Budget> {
     period: period ?? this.period,
     limitMinor: limitMinor ?? this.limitMinor,
     startDate: startDate ?? this.startDate,
+    effectiveMonth: effectiveMonth.present
+        ? effectiveMonth.value
+        : this.effectiveMonth,
+    active: active ?? this.active,
     createdAt: createdAt ?? this.createdAt,
   );
   Budget copyWithCompanion(BudgetsCompanion data) {
@@ -2170,6 +2659,10 @@ class Budget extends DataClass implements Insertable<Budget> {
           ? data.limitMinor.value
           : this.limitMinor,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      effectiveMonth: data.effectiveMonth.present
+          ? data.effectiveMonth.value
+          : this.effectiveMonth,
+      active: data.active.present ? data.active.value : this.active,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2182,14 +2675,24 @@ class Budget extends DataClass implements Insertable<Budget> {
           ..write('period: $period, ')
           ..write('limitMinor: $limitMinor, ')
           ..write('startDate: $startDate, ')
+          ..write('effectiveMonth: $effectiveMonth, ')
+          ..write('active: $active, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, categoryId, period, limitMinor, startDate, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    categoryId,
+    period,
+    limitMinor,
+    startDate,
+    effectiveMonth,
+    active,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2199,6 +2702,8 @@ class Budget extends DataClass implements Insertable<Budget> {
           other.period == this.period &&
           other.limitMinor == this.limitMinor &&
           other.startDate == this.startDate &&
+          other.effectiveMonth == this.effectiveMonth &&
+          other.active == this.active &&
           other.createdAt == this.createdAt);
 }
 
@@ -2208,6 +2713,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
   final Value<String> period;
   final Value<int> limitMinor;
   final Value<DateTime> startDate;
+  final Value<DateTime?> effectiveMonth;
+  final Value<bool> active;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const BudgetsCompanion({
@@ -2216,6 +2723,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     this.period = const Value.absent(),
     this.limitMinor = const Value.absent(),
     this.startDate = const Value.absent(),
+    this.effectiveMonth = const Value.absent(),
+    this.active = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2225,6 +2734,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     this.period = const Value.absent(),
     required int limitMinor,
     required DateTime startDate,
+    this.effectiveMonth = const Value.absent(),
+    this.active = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : categoryId = Value(categoryId),
@@ -2236,6 +2747,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     Expression<String>? period,
     Expression<int>? limitMinor,
     Expression<DateTime>? startDate,
+    Expression<DateTime>? effectiveMonth,
+    Expression<bool>? active,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -2245,6 +2758,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
       if (period != null) 'period': period,
       if (limitMinor != null) 'limit_minor': limitMinor,
       if (startDate != null) 'start_date': startDate,
+      if (effectiveMonth != null) 'effective_month': effectiveMonth,
+      if (active != null) 'active': active,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2256,6 +2771,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     Value<String>? period,
     Value<int>? limitMinor,
     Value<DateTime>? startDate,
+    Value<DateTime?>? effectiveMonth,
+    Value<bool>? active,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -2265,6 +2782,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
       period: period ?? this.period,
       limitMinor: limitMinor ?? this.limitMinor,
       startDate: startDate ?? this.startDate,
+      effectiveMonth: effectiveMonth ?? this.effectiveMonth,
+      active: active ?? this.active,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2288,6 +2807,12 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
     if (startDate.present) {
       map['start_date'] = Variable<DateTime>(startDate.value);
     }
+    if (effectiveMonth.present) {
+      map['effective_month'] = Variable<DateTime>(effectiveMonth.value);
+    }
+    if (active.present) {
+      map['active'] = Variable<bool>(active.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2305,6 +2830,8 @@ class BudgetsCompanion extends UpdateCompanion<Budget> {
           ..write('period: $period, ')
           ..write('limitMinor: $limitMinor, ')
           ..write('startDate: $startDate, ')
+          ..write('effectiveMonth: $effectiveMonth, ')
+          ..write('active: $active, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2375,6 +2902,43 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _reminderEnabledMeta = const VerificationMeta(
+    'reminderEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> reminderEnabled = GeneratedColumn<bool>(
+    'reminder_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("reminder_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _reminderHourMeta = const VerificationMeta(
+    'reminderHour',
+  );
+  @override
+  late final GeneratedColumn<int> reminderHour = GeneratedColumn<int>(
+    'reminder_hour',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reminderMinuteMeta = const VerificationMeta(
+    'reminderMinute',
+  );
+  @override
+  late final GeneratedColumn<int> reminderMinute = GeneratedColumn<int>(
+    'reminder_minute',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2394,6 +2958,9 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
     frequency,
     targetPerWeek,
     archived,
+    reminderEnabled,
+    reminderHour,
+    reminderMinute,
     createdAt,
   ];
   @override
@@ -2440,6 +3007,33 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
         archived.isAcceptableOrUnknown(data['archived']!, _archivedMeta),
       );
     }
+    if (data.containsKey('reminder_enabled')) {
+      context.handle(
+        _reminderEnabledMeta,
+        reminderEnabled.isAcceptableOrUnknown(
+          data['reminder_enabled']!,
+          _reminderEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_hour')) {
+      context.handle(
+        _reminderHourMeta,
+        reminderHour.isAcceptableOrUnknown(
+          data['reminder_hour']!,
+          _reminderHourMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_minute')) {
+      context.handle(
+        _reminderMinuteMeta,
+        reminderMinute.isAcceptableOrUnknown(
+          data['reminder_minute']!,
+          _reminderMinuteMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2450,7 +3044,7 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Habit map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -2475,6 +3069,18 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
         DriftSqlType.bool,
         data['${effectivePrefix}archived'],
       )!,
+      reminderEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}reminder_enabled'],
+      )!,
+      reminderHour: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_hour'],
+      ),
+      reminderMinute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_minute'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2496,6 +3102,13 @@ class Habit extends DataClass implements Insertable<Habit> {
   final String frequency;
   final int targetPerWeek;
   final bool archived;
+
+  /// Per-habit daily reminder, independent of the app-wide "Habit reminders"
+  /// generic check-in nudge in Settings — off by default (opt-in), unlike
+  /// tasks, since there's no natural due-date signal implying "remind me."
+  final bool reminderEnabled;
+  final int? reminderHour;
+  final int? reminderMinute;
   final DateTime createdAt;
   const Habit({
     required this.id,
@@ -2503,6 +3116,9 @@ class Habit extends DataClass implements Insertable<Habit> {
     required this.frequency,
     required this.targetPerWeek,
     required this.archived,
+    required this.reminderEnabled,
+    this.reminderHour,
+    this.reminderMinute,
     required this.createdAt,
   });
   @override
@@ -2513,6 +3129,13 @@ class Habit extends DataClass implements Insertable<Habit> {
     map['frequency'] = Variable<String>(frequency);
     map['target_per_week'] = Variable<int>(targetPerWeek);
     map['archived'] = Variable<bool>(archived);
+    map['reminder_enabled'] = Variable<bool>(reminderEnabled);
+    if (!nullToAbsent || reminderHour != null) {
+      map['reminder_hour'] = Variable<int>(reminderHour);
+    }
+    if (!nullToAbsent || reminderMinute != null) {
+      map['reminder_minute'] = Variable<int>(reminderMinute);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -2524,6 +3147,13 @@ class Habit extends DataClass implements Insertable<Habit> {
       frequency: Value(frequency),
       targetPerWeek: Value(targetPerWeek),
       archived: Value(archived),
+      reminderEnabled: Value(reminderEnabled),
+      reminderHour: reminderHour == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reminderHour),
+      reminderMinute: reminderMinute == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reminderMinute),
       createdAt: Value(createdAt),
     );
   }
@@ -2539,6 +3169,9 @@ class Habit extends DataClass implements Insertable<Habit> {
       frequency: serializer.fromJson<String>(json['frequency']),
       targetPerWeek: serializer.fromJson<int>(json['targetPerWeek']),
       archived: serializer.fromJson<bool>(json['archived']),
+      reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
+      reminderHour: serializer.fromJson<int?>(json['reminderHour']),
+      reminderMinute: serializer.fromJson<int?>(json['reminderMinute']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2551,6 +3184,9 @@ class Habit extends DataClass implements Insertable<Habit> {
       'frequency': serializer.toJson<String>(frequency),
       'targetPerWeek': serializer.toJson<int>(targetPerWeek),
       'archived': serializer.toJson<bool>(archived),
+      'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
+      'reminderHour': serializer.toJson<int?>(reminderHour),
+      'reminderMinute': serializer.toJson<int?>(reminderMinute),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2561,6 +3197,9 @@ class Habit extends DataClass implements Insertable<Habit> {
     String? frequency,
     int? targetPerWeek,
     bool? archived,
+    bool? reminderEnabled,
+    Value<int?> reminderHour = const Value.absent(),
+    Value<int?> reminderMinute = const Value.absent(),
     DateTime? createdAt,
   }) => Habit(
     id: id ?? this.id,
@@ -2568,6 +3207,11 @@ class Habit extends DataClass implements Insertable<Habit> {
     frequency: frequency ?? this.frequency,
     targetPerWeek: targetPerWeek ?? this.targetPerWeek,
     archived: archived ?? this.archived,
+    reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+    reminderHour: reminderHour.present ? reminderHour.value : this.reminderHour,
+    reminderMinute: reminderMinute.present
+        ? reminderMinute.value
+        : this.reminderMinute,
     createdAt: createdAt ?? this.createdAt,
   );
   Habit copyWithCompanion(HabitsCompanion data) {
@@ -2579,6 +3223,15 @@ class Habit extends DataClass implements Insertable<Habit> {
           ? data.targetPerWeek.value
           : this.targetPerWeek,
       archived: data.archived.present ? data.archived.value : this.archived,
+      reminderEnabled: data.reminderEnabled.present
+          ? data.reminderEnabled.value
+          : this.reminderEnabled,
+      reminderHour: data.reminderHour.present
+          ? data.reminderHour.value
+          : this.reminderHour,
+      reminderMinute: data.reminderMinute.present
+          ? data.reminderMinute.value
+          : this.reminderMinute,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2591,14 +3244,26 @@ class Habit extends DataClass implements Insertable<Habit> {
           ..write('frequency: $frequency, ')
           ..write('targetPerWeek: $targetPerWeek, ')
           ..write('archived: $archived, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderHour: $reminderHour, ')
+          ..write('reminderMinute: $reminderMinute, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, frequency, targetPerWeek, archived, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    frequency,
+    targetPerWeek,
+    archived,
+    reminderEnabled,
+    reminderHour,
+    reminderMinute,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2608,6 +3273,9 @@ class Habit extends DataClass implements Insertable<Habit> {
           other.frequency == this.frequency &&
           other.targetPerWeek == this.targetPerWeek &&
           other.archived == this.archived &&
+          other.reminderEnabled == this.reminderEnabled &&
+          other.reminderHour == this.reminderHour &&
+          other.reminderMinute == this.reminderMinute &&
           other.createdAt == this.createdAt);
 }
 
@@ -2617,6 +3285,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
   final Value<String> frequency;
   final Value<int> targetPerWeek;
   final Value<bool> archived;
+  final Value<bool> reminderEnabled;
+  final Value<int?> reminderHour;
+  final Value<int?> reminderMinute;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const HabitsCompanion({
@@ -2625,6 +3296,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.frequency = const Value.absent(),
     this.targetPerWeek = const Value.absent(),
     this.archived = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    this.reminderHour = const Value.absent(),
+    this.reminderMinute = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2634,6 +3308,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.frequency = const Value.absent(),
     this.targetPerWeek = const Value.absent(),
     this.archived = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    this.reminderHour = const Value.absent(),
+    this.reminderMinute = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : name = Value(name);
@@ -2643,6 +3320,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     Expression<String>? frequency,
     Expression<int>? targetPerWeek,
     Expression<bool>? archived,
+    Expression<bool>? reminderEnabled,
+    Expression<int>? reminderHour,
+    Expression<int>? reminderMinute,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -2652,6 +3332,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
       if (frequency != null) 'frequency': frequency,
       if (targetPerWeek != null) 'target_per_week': targetPerWeek,
       if (archived != null) 'archived': archived,
+      if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
+      if (reminderHour != null) 'reminder_hour': reminderHour,
+      if (reminderMinute != null) 'reminder_minute': reminderMinute,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2663,6 +3346,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     Value<String>? frequency,
     Value<int>? targetPerWeek,
     Value<bool>? archived,
+    Value<bool>? reminderEnabled,
+    Value<int?>? reminderHour,
+    Value<int?>? reminderMinute,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -2672,6 +3358,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
       frequency: frequency ?? this.frequency,
       targetPerWeek: targetPerWeek ?? this.targetPerWeek,
       archived: archived ?? this.archived,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      reminderHour: reminderHour ?? this.reminderHour,
+      reminderMinute: reminderMinute ?? this.reminderMinute,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2695,6 +3384,15 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     if (archived.present) {
       map['archived'] = Variable<bool>(archived.value);
     }
+    if (reminderEnabled.present) {
+      map['reminder_enabled'] = Variable<bool>(reminderEnabled.value);
+    }
+    if (reminderHour.present) {
+      map['reminder_hour'] = Variable<int>(reminderHour.value);
+    }
+    if (reminderMinute.present) {
+      map['reminder_minute'] = Variable<int>(reminderMinute.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2712,6 +3410,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
           ..write('frequency: $frequency, ')
           ..write('targetPerWeek: $targetPerWeek, ')
           ..write('archived: $archived, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderHour: $reminderHour, ')
+          ..write('reminderMinute: $reminderMinute, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -2816,7 +3517,7 @@ class $HabitLogsTable extends HabitLogs
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
     {habitId, date},
@@ -3117,6 +3818,21 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
       'REFERENCES categories (id)',
     ),
   );
+  static const VerificationMeta _reminderEnabledMeta = const VerificationMeta(
+    'reminderEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> reminderEnabled = GeneratedColumn<bool>(
+    'reminder_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("reminder_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -3149,6 +3865,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     priority,
     status,
     categoryId,
+    reminderEnabled,
     createdAt,
     completedAt,
   ];
@@ -3208,6 +3925,15 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
       );
     }
+    if (data.containsKey('reminder_enabled')) {
+      context.handle(
+        _reminderEnabledMeta,
+        reminderEnabled.isAcceptableOrUnknown(
+          data['reminder_enabled']!,
+          _reminderEnabledMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -3227,7 +3953,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Task map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -3260,6 +3986,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.string,
         data['${effectivePrefix}category_id'],
       ),
+      reminderEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}reminder_enabled'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -3289,6 +4019,12 @@ class Task extends DataClass implements Insertable<Task> {
   /// open | done
   final String status;
   final String? categoryId;
+
+  /// Only meaningful when [dueDate] is set — a one-off local notification is
+  /// scheduled for that moment. Defaults true so existing behavior (any task
+  /// with a due date got a reminder) is unchanged for tasks created before
+  /// this toggle existed.
+  final bool reminderEnabled;
   final DateTime createdAt;
   final DateTime? completedAt;
   const Task({
@@ -3299,6 +4035,7 @@ class Task extends DataClass implements Insertable<Task> {
     required this.priority,
     required this.status,
     this.categoryId,
+    required this.reminderEnabled,
     required this.createdAt,
     this.completedAt,
   });
@@ -3318,6 +4055,7 @@ class Task extends DataClass implements Insertable<Task> {
     if (!nullToAbsent || categoryId != null) {
       map['category_id'] = Variable<String>(categoryId);
     }
+    map['reminder_enabled'] = Variable<bool>(reminderEnabled);
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || completedAt != null) {
       map['completed_at'] = Variable<DateTime>(completedAt);
@@ -3340,6 +4078,7 @@ class Task extends DataClass implements Insertable<Task> {
       categoryId: categoryId == null && nullToAbsent
           ? const Value.absent()
           : Value(categoryId),
+      reminderEnabled: Value(reminderEnabled),
       createdAt: Value(createdAt),
       completedAt: completedAt == null && nullToAbsent
           ? const Value.absent()
@@ -3360,6 +4099,7 @@ class Task extends DataClass implements Insertable<Task> {
       priority: serializer.fromJson<String>(json['priority']),
       status: serializer.fromJson<String>(json['status']),
       categoryId: serializer.fromJson<String?>(json['categoryId']),
+      reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
     );
@@ -3375,6 +4115,7 @@ class Task extends DataClass implements Insertable<Task> {
       'priority': serializer.toJson<String>(priority),
       'status': serializer.toJson<String>(status),
       'categoryId': serializer.toJson<String?>(categoryId),
+      'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
     };
@@ -3388,6 +4129,7 @@ class Task extends DataClass implements Insertable<Task> {
     String? priority,
     String? status,
     Value<String?> categoryId = const Value.absent(),
+    bool? reminderEnabled,
     DateTime? createdAt,
     Value<DateTime?> completedAt = const Value.absent(),
   }) => Task(
@@ -3398,6 +4140,7 @@ class Task extends DataClass implements Insertable<Task> {
     priority: priority ?? this.priority,
     status: status ?? this.status,
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    reminderEnabled: reminderEnabled ?? this.reminderEnabled,
     createdAt: createdAt ?? this.createdAt,
     completedAt: completedAt.present ? completedAt.value : this.completedAt,
   );
@@ -3414,6 +4157,9 @@ class Task extends DataClass implements Insertable<Task> {
       categoryId: data.categoryId.present
           ? data.categoryId.value
           : this.categoryId,
+      reminderEnabled: data.reminderEnabled.present
+          ? data.reminderEnabled.value
+          : this.reminderEnabled,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       completedAt: data.completedAt.present
           ? data.completedAt.value
@@ -3431,6 +4177,7 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('priority: $priority, ')
           ..write('status: $status, ')
           ..write('categoryId: $categoryId, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('completedAt: $completedAt')
           ..write(')'))
@@ -3446,6 +4193,7 @@ class Task extends DataClass implements Insertable<Task> {
     priority,
     status,
     categoryId,
+    reminderEnabled,
     createdAt,
     completedAt,
   );
@@ -3460,6 +4208,7 @@ class Task extends DataClass implements Insertable<Task> {
           other.priority == this.priority &&
           other.status == this.status &&
           other.categoryId == this.categoryId &&
+          other.reminderEnabled == this.reminderEnabled &&
           other.createdAt == this.createdAt &&
           other.completedAt == this.completedAt);
 }
@@ -3472,6 +4221,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<String> priority;
   final Value<String> status;
   final Value<String?> categoryId;
+  final Value<bool> reminderEnabled;
   final Value<DateTime> createdAt;
   final Value<DateTime?> completedAt;
   final Value<int> rowid;
@@ -3483,6 +4233,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.priority = const Value.absent(),
     this.status = const Value.absent(),
     this.categoryId = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3495,6 +4246,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.priority = const Value.absent(),
     this.status = const Value.absent(),
     this.categoryId = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3507,6 +4259,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<String>? priority,
     Expression<String>? status,
     Expression<String>? categoryId,
+    Expression<bool>? reminderEnabled,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? completedAt,
     Expression<int>? rowid,
@@ -3519,6 +4272,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (priority != null) 'priority': priority,
       if (status != null) 'status': status,
       if (categoryId != null) 'category_id': categoryId,
+      if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
       if (createdAt != null) 'created_at': createdAt,
       if (completedAt != null) 'completed_at': completedAt,
       if (rowid != null) 'rowid': rowid,
@@ -3533,6 +4287,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<String>? priority,
     Value<String>? status,
     Value<String?>? categoryId,
+    Value<bool>? reminderEnabled,
     Value<DateTime>? createdAt,
     Value<DateTime?>? completedAt,
     Value<int>? rowid,
@@ -3545,6 +4300,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       priority: priority ?? this.priority,
       status: status ?? this.status,
       categoryId: categoryId ?? this.categoryId,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       createdAt: createdAt ?? this.createdAt,
       completedAt: completedAt ?? this.completedAt,
       rowid: rowid ?? this.rowid,
@@ -3575,6 +4331,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (categoryId.present) {
       map['category_id'] = Variable<String>(categoryId.value);
     }
+    if (reminderEnabled.present) {
+      map['reminder_enabled'] = Variable<bool>(reminderEnabled.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3597,6 +4356,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('priority: $priority, ')
           ..write('status: $status, ')
           ..write('categoryId: $categoryId, ')
+          ..write('reminderEnabled: $reminderEnabled, ')
           ..write('createdAt: $createdAt, ')
           ..write('completedAt: $completedAt, ')
           ..write('rowid: $rowid')
@@ -3697,7 +4457,7 @@ class $SubtasksTable extends Subtasks with TableInfo<$SubtasksTable, Subtask> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Subtask map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -4097,7 +4857,7 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Goal map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -4569,7 +5329,7 @@ class $GoalLinksTable extends GoalLinks
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
     {goalId, linkedType, linkedId},
@@ -4941,7 +5701,7 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Event map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -5369,7 +6129,7 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Folder map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -5750,7 +6510,7 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Note map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -6196,7 +6956,7 @@ class $DocumentsTable extends Documents
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Document map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -6715,7 +7475,7 @@ class $InsightsTable extends Insights with TableInfo<$InsightsTable, Insight> {
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => const {};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   Insight map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -7446,6 +8206,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $TagsTable tags = $TagsTable(this);
   late final $EntityTagsTable entityTags = $EntityTagsTable(this);
+  late final $AccountTypesTable accountTypes = $AccountTypesTable(this);
   late final $AccountsTable accounts = $AccountsTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $BudgetsTable budgets = $BudgetsTable(this);
@@ -7469,6 +8230,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     categories,
     tags,
     entityTags,
+    accountTypes,
     accounts,
     transactions,
     budgets,
@@ -8538,6 +9300,187 @@ typedef $$EntityTagsTableProcessedTableManager =
       EntityTag,
       PrefetchHooks Function({bool tagId})
     >;
+typedef $$AccountTypesTableCreateCompanionBuilder =
+    AccountTypesCompanion Function({
+      Value<String> id,
+      required String name,
+      Value<String> icon,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$AccountTypesTableUpdateCompanionBuilder =
+    AccountTypesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> icon,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$AccountTypesTableFilterComposer
+    extends Composer<_$AppDatabase, $AccountTypesTable> {
+  $$AccountTypesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AccountTypesTableOrderingComposer
+    extends Composer<_$AppDatabase, $AccountTypesTable> {
+  $$AccountTypesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AccountTypesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AccountTypesTable> {
+  $$AccountTypesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$AccountTypesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AccountTypesTable,
+          AccountType,
+          $$AccountTypesTableFilterComposer,
+          $$AccountTypesTableOrderingComposer,
+          $$AccountTypesTableAnnotationComposer,
+          $$AccountTypesTableCreateCompanionBuilder,
+          $$AccountTypesTableUpdateCompanionBuilder,
+          (
+            AccountType,
+            BaseReferences<_$AppDatabase, $AccountTypesTable, AccountType>,
+          ),
+          AccountType,
+          PrefetchHooks Function()
+        > {
+  $$AccountTypesTableTableManager(_$AppDatabase db, $AccountTypesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AccountTypesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AccountTypesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AccountTypesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> icon = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AccountTypesCompanion(
+                id: id,
+                name: name,
+                icon: icon,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                required String name,
+                Value<String> icon = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AccountTypesCompanion.insert(
+                id: id,
+                name: name,
+                icon: icon,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AccountTypesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AccountTypesTable,
+      AccountType,
+      $$AccountTypesTableFilterComposer,
+      $$AccountTypesTableOrderingComposer,
+      $$AccountTypesTableAnnotationComposer,
+      $$AccountTypesTableCreateCompanionBuilder,
+      $$AccountTypesTableUpdateCompanionBuilder,
+      (
+        AccountType,
+        BaseReferences<_$AppDatabase, $AccountTypesTable, AccountType>,
+      ),
+      AccountType,
+      PrefetchHooks Function()
+    >;
 typedef $$AccountsTableCreateCompanionBuilder =
     AccountsCompanion Function({
       Value<String> id,
@@ -8545,6 +9488,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
       required String type,
       Value<int> balanceMinor,
       Value<String> currencyCode,
+      Value<bool> isActive,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -8556,6 +9500,7 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<String> type,
       Value<int> balanceMinor,
       Value<String> currencyCode,
+      Value<bool> isActive,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -8615,6 +9560,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<String> get currencyCode => $composableBuilder(
     column: $table.currencyCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8688,6 +9638,11 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -8726,6 +9681,9 @@ class $$AccountsTableAnnotationComposer
     column: $table.currencyCode,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -8792,6 +9750,7 @@ class $$AccountsTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<int> balanceMinor = const Value.absent(),
                 Value<String> currencyCode = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -8801,6 +9760,7 @@ class $$AccountsTableTableManager
                 type: type,
                 balanceMinor: balanceMinor,
                 currencyCode: currencyCode,
+                isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -8812,6 +9772,7 @@ class $$AccountsTableTableManager
                 required String type,
                 Value<int> balanceMinor = const Value.absent(),
                 Value<String> currencyCode = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -8821,6 +9782,7 @@ class $$AccountsTableTableManager
                 type: type,
                 balanceMinor: balanceMinor,
                 currencyCode: currencyCode,
+                isActive: isActive,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -8889,6 +9851,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       required int amountMinor,
       required DateTime date,
       Value<String?> note,
+      Value<String?> paymentMode,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -8901,6 +9864,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<int> amountMinor,
       Value<DateTime> date,
       Value<String?> note,
+      Value<String?> paymentMode,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -8975,6 +9939,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get note => $composableBuilder(
     column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paymentMode => $composableBuilder(
+    column: $table.paymentMode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9064,6 +10033,11 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get paymentMode => $composableBuilder(
+    column: $table.paymentMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -9141,6 +10115,11 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get paymentMode => $composableBuilder(
+    column: $table.paymentMode,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -9227,6 +10206,7 @@ class $$TransactionsTableTableManager
                 Value<int> amountMinor = const Value.absent(),
                 Value<DateTime> date = const Value.absent(),
                 Value<String?> note = const Value.absent(),
+                Value<String?> paymentMode = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion(
@@ -9237,6 +10217,7 @@ class $$TransactionsTableTableManager
                 amountMinor: amountMinor,
                 date: date,
                 note: note,
+                paymentMode: paymentMode,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -9249,6 +10230,7 @@ class $$TransactionsTableTableManager
                 required int amountMinor,
                 required DateTime date,
                 Value<String?> note = const Value.absent(),
+                Value<String?> paymentMode = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TransactionsCompanion.insert(
@@ -9259,6 +10241,7 @@ class $$TransactionsTableTableManager
                 amountMinor: amountMinor,
                 date: date,
                 note: note,
+                paymentMode: paymentMode,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -9349,6 +10332,8 @@ typedef $$BudgetsTableCreateCompanionBuilder =
       Value<String> period,
       required int limitMinor,
       required DateTime startDate,
+      Value<DateTime?> effectiveMonth,
+      Value<bool> active,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -9359,6 +10344,8 @@ typedef $$BudgetsTableUpdateCompanionBuilder =
       Value<String> period,
       Value<int> limitMinor,
       Value<DateTime> startDate,
+      Value<DateTime?> effectiveMonth,
+      Value<bool> active,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -9411,6 +10398,16 @@ class $$BudgetsTableFilterComposer
 
   ColumnFilters<DateTime> get startDate => $composableBuilder(
     column: $table.startDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get effectiveMonth => $composableBuilder(
+    column: $table.effectiveMonth,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get active => $composableBuilder(
+    column: $table.active,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9472,6 +10469,16 @@ class $$BudgetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get effectiveMonth => $composableBuilder(
+    column: $table.effectiveMonth,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get active => $composableBuilder(
+    column: $table.active,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -9523,6 +10530,14 @@ class $$BudgetsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get startDate =>
       $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get effectiveMonth => $composableBuilder(
+    column: $table.effectiveMonth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -9584,6 +10599,8 @@ class $$BudgetsTableTableManager
                 Value<String> period = const Value.absent(),
                 Value<int> limitMinor = const Value.absent(),
                 Value<DateTime> startDate = const Value.absent(),
+                Value<DateTime?> effectiveMonth = const Value.absent(),
+                Value<bool> active = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BudgetsCompanion(
@@ -9592,6 +10609,8 @@ class $$BudgetsTableTableManager
                 period: period,
                 limitMinor: limitMinor,
                 startDate: startDate,
+                effectiveMonth: effectiveMonth,
+                active: active,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -9602,6 +10621,8 @@ class $$BudgetsTableTableManager
                 Value<String> period = const Value.absent(),
                 required int limitMinor,
                 required DateTime startDate,
+                Value<DateTime?> effectiveMonth = const Value.absent(),
+                Value<bool> active = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => BudgetsCompanion.insert(
@@ -9610,6 +10631,8 @@ class $$BudgetsTableTableManager
                 period: period,
                 limitMinor: limitMinor,
                 startDate: startDate,
+                effectiveMonth: effectiveMonth,
+                active: active,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -9687,6 +10710,9 @@ typedef $$HabitsTableCreateCompanionBuilder =
       Value<String> frequency,
       Value<int> targetPerWeek,
       Value<bool> archived,
+      Value<bool> reminderEnabled,
+      Value<int?> reminderHour,
+      Value<int?> reminderMinute,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -9697,6 +10723,9 @@ typedef $$HabitsTableUpdateCompanionBuilder =
       Value<String> frequency,
       Value<int> targetPerWeek,
       Value<bool> archived,
+      Value<bool> reminderEnabled,
+      Value<int?> reminderHour,
+      Value<int?> reminderMinute,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -9755,6 +10784,21 @@ class $$HabitsTableFilterComposer
 
   ColumnFilters<bool> get archived => $composableBuilder(
     column: $table.archived,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9823,6 +10867,21 @@ class $$HabitsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -9854,6 +10913,21 @@ class $$HabitsTableAnnotationComposer
 
   GeneratedColumn<bool> get archived =>
       $composableBuilder(column: $table.archived, builder: (column) => column);
+
+  GeneratedColumn<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderHour => $composableBuilder(
+    column: $table.reminderHour,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderMinute => $composableBuilder(
+    column: $table.reminderMinute,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -9917,6 +10991,9 @@ class $$HabitsTableTableManager
                 Value<String> frequency = const Value.absent(),
                 Value<int> targetPerWeek = const Value.absent(),
                 Value<bool> archived = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<int?> reminderHour = const Value.absent(),
+                Value<int?> reminderMinute = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HabitsCompanion(
@@ -9925,6 +11002,9 @@ class $$HabitsTableTableManager
                 frequency: frequency,
                 targetPerWeek: targetPerWeek,
                 archived: archived,
+                reminderEnabled: reminderEnabled,
+                reminderHour: reminderHour,
+                reminderMinute: reminderMinute,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -9935,6 +11015,9 @@ class $$HabitsTableTableManager
                 Value<String> frequency = const Value.absent(),
                 Value<int> targetPerWeek = const Value.absent(),
                 Value<bool> archived = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<int?> reminderHour = const Value.absent(),
+                Value<int?> reminderMinute = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HabitsCompanion.insert(
@@ -9943,6 +11026,9 @@ class $$HabitsTableTableManager
                 frequency: frequency,
                 targetPerWeek: targetPerWeek,
                 archived: archived,
+                reminderEnabled: reminderEnabled,
+                reminderHour: reminderHour,
+                reminderMinute: reminderMinute,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -10299,6 +11385,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<String> priority,
       Value<String> status,
       Value<String?> categoryId,
+      Value<bool> reminderEnabled,
       Value<DateTime> createdAt,
       Value<DateTime?> completedAt,
       Value<int> rowid,
@@ -10312,6 +11399,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<String> priority,
       Value<String> status,
       Value<String?> categoryId,
+      Value<bool> reminderEnabled,
       Value<DateTime> createdAt,
       Value<DateTime?> completedAt,
       Value<int> rowid,
@@ -10393,6 +11481,11 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10494,6 +11587,11 @@ class $$TasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -10556,6 +11654,11 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -10649,6 +11752,7 @@ class $$TasksTableTableManager
                 Value<String> priority = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> categoryId = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -10660,6 +11764,7 @@ class $$TasksTableTableManager
                 priority: priority,
                 status: status,
                 categoryId: categoryId,
+                reminderEnabled: reminderEnabled,
                 createdAt: createdAt,
                 completedAt: completedAt,
                 rowid: rowid,
@@ -10673,6 +11778,7 @@ class $$TasksTableTableManager
                 Value<String> priority = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> categoryId = const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -10684,6 +11790,7 @@ class $$TasksTableTableManager
                 priority: priority,
                 status: status,
                 categoryId: categoryId,
+                reminderEnabled: reminderEnabled,
                 createdAt: createdAt,
                 completedAt: completedAt,
                 rowid: rowid,
@@ -13651,6 +14758,8 @@ class $AppDatabaseManager {
   $$TagsTableTableManager get tags => $$TagsTableTableManager(_db, _db.tags);
   $$EntityTagsTableTableManager get entityTags =>
       $$EntityTagsTableTableManager(_db, _db.entityTags);
+  $$AccountTypesTableTableManager get accountTypes =>
+      $$AccountTypesTableTableManager(_db, _db.accountTypes);
   $$AccountsTableTableManager get accounts =>
       $$AccountsTableTableManager(_db, _db.accounts);
   $$TransactionsTableTableManager get transactions =>

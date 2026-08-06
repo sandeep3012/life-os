@@ -17,6 +17,27 @@ const _defaultCategories = [
   ('Income', 'payments', '#1E8F5E', 'income'),
 ];
 
+/// The app's original fixed account kinds, now just the seed data for the
+/// user-manageable `AccountTypes` table. Names are Title Case because — like
+/// `Categories.name` — this is both the identifier stored on
+/// `Accounts.type` for accounts created from now on *and* the display text;
+/// [normalizeAccountTypeKey] bridges the old lowercase/underscored values
+/// (`checking`, `credit_card`, ...) already on pre-existing accounts so
+/// icon/label lookup still matches them.
+const _defaultAccountTypes = [
+  ('Checking', 'account_balance_wallet'),
+  ('Savings', 'savings'),
+  ('Credit Card', 'credit_card'),
+  ('Cash', 'payments'),
+  ('Investment', 'trending_up'),
+];
+
+/// Matches an `Accounts.type`/`AccountTypes.name` value regardless of case
+/// or whether it uses spaces or underscores, so pre-existing accounts
+/// (stored as `checking`, `credit_card`, ...) still resolve against the
+/// newly-seeded Title Case `AccountTypes` rows (`Checking`, `Credit Card`).
+String normalizeAccountTypeKey(String s) => s.toLowerCase().replaceAll('_', ' ').trim();
+
 class FinanceRepository {
   FinanceRepository(this._db);
 
@@ -38,7 +59,100 @@ class FinanceRepository {
     });
   }
 
+  Future<void> ensureDefaultAccountTypes() async {
+    final existing = await _db.select(_db.accountTypes).get();
+    if (existing.isNotEmpty) return;
+    await _db.batch((batch) {
+      batch.insertAll(_db.accountTypes, [
+        for (final (name, icon) in _defaultAccountTypes)
+          AccountTypesCompanion.insert(name: name, icon: Value(icon)),
+      ]);
+    });
+  }
+
   Stream<List<Category>> watchCategories() => _db.select(_db.categories).watch();
+
+  Stream<List<AccountType>> watchAccountTypes() => _db.select(_db.accountTypes).watch();
+
+  Future<void> createCategory({
+    required String name,
+    required String icon,
+    required String colorHex,
+    String kind = 'expense',
+  }) {
+    return _db.into(_db.categories).insert(
+      CategoriesCompanion.insert(
+        name: name,
+        icon: Value(icon),
+        colorHex: colorHex,
+        kind: Value(kind),
+      ),
+    );
+  }
+
+  Future<void> updateCategory({
+    required String id,
+    required String name,
+    required String icon,
+    required String colorHex,
+    required String kind,
+  }) {
+    return (_db.update(_db.categories)..where((c) => c.id.equals(id))).write(
+      CategoriesCompanion(
+        name: Value(name),
+        icon: Value(icon),
+        colorHex: Value(colorHex),
+        kind: Value(kind),
+      ),
+    );
+  }
+
+  /// Rows referencing this category (transactions, budget versions) — the
+  /// gate for whether it can be deleted.
+  Future<int> categoryUsageCount(String categoryId) async {
+    final txnCount = await (_db.select(
+      _db.transactions,
+    )..where((t) => t.categoryId.equals(categoryId))).get().then((r) => r.length);
+    final budgetCount = await (_db.select(
+      _db.budgets,
+    )..where((b) => b.categoryId.equals(categoryId))).get().then((r) => r.length);
+    return txnCount + budgetCount;
+  }
+
+  /// Only safe once [categoryUsageCount] is confirmed zero.
+  Future<void> deleteCategory(String id) {
+    return (_db.delete(_db.categories)..where((c) => c.id.equals(id))).go();
+  }
+
+  Future<void> createAccountType({required String name, required String icon}) {
+    return _db.into(_db.accountTypes).insert(
+      AccountTypesCompanion.insert(name: name, icon: Value(icon)),
+    );
+  }
+
+  Future<void> updateAccountType({
+    required String id,
+    required String name,
+    required String icon,
+  }) {
+    return (_db.update(_db.accountTypes)..where((t) => t.id.equals(id))).write(
+      AccountTypesCompanion(name: Value(name), icon: Value(icon)),
+    );
+  }
+
+  /// Accounts currently using this type's name (case/underscore-insensitive,
+  /// since older accounts may still hold the old lowercase key) — the gate
+  /// for whether it can be deleted.
+  Future<int> accountTypeUsageCount(String typeName) async {
+    final accounts = await _db.select(_db.accounts).get();
+    final key = normalizeAccountTypeKey(typeName);
+    return accounts.where((a) => normalizeAccountTypeKey(a.type) == key).length;
+  }
+
+  /// Only safe once [accountTypeUsageCount] is confirmed zero.
+  Future<void> deleteAccountType(String id) {
+    return (_db.delete(_db.accountTypes)..where((t) => t.id.equals(id))).go();
+  }
 
   Stream<List<Account>> watchAccounts() => _db.select(_db.accounts).watch();
 
@@ -64,6 +178,35 @@ class FinanceRepository {
     );
   }
 
+  /// How many other rows reference this account — the gate for whether it
+  /// can be hard-deleted (only when both are zero) or must be deactivated
+  /// instead.
+  Future<({int transactionCount, int goalLinkCount})> checkAccountUsage(
+    String accountId,
+  ) async {
+    final transactionCount = await (_db.select(
+      _db.transactions,
+    )..where((t) => t.accountId.equals(accountId))).get().then((r) => r.length);
+    final goalLinkCount = await (_db.select(_db.goalLinks)..where(
+          (l) => l.linkedType.equals('account') & l.linkedId.equals(accountId),
+        ))
+        .get()
+        .then((r) => r.length);
+    return (transactionCount: transactionCount, goalLinkCount: goalLinkCount);
+  }
+
+  /// Only safe to call once [checkAccountUsage] confirms nothing references
+  /// this account — callers must check first, this doesn't re-verify.
+  Future<void> deleteAccount(String accountId) {
+    return (_db.delete(_db.accounts)..where((a) => a.id.equals(accountId))).go();
+  }
+
+  Future<void> setAccountActive(String accountId, bool active) {
+    return (_db.update(_db.accounts)..where((a) => a.id.equals(accountId))).write(
+      AccountsCompanion(isActive: Value(active), updatedAt: Value(DateTime.now())),
+    );
+  }
+
   Future<void> createTransaction({
     required String accountId,
     String? categoryId,
@@ -71,6 +214,7 @@ class FinanceRepository {
     required int amountMinor,
     required DateTime date,
     String? note,
+    String? paymentMode,
   }) {
     return _db.transaction(() async {
       await _db.into(_db.transactions).insert(
@@ -81,6 +225,7 @@ class FinanceRepository {
           amountMinor: amountMinor,
           date: date,
           note: Value(note),
+          paymentMode: Value(paymentMode),
         ),
       );
       final account = await (_db.select(
@@ -95,19 +240,214 @@ class FinanceRepository {
     });
   }
 
+  /// Reverts the transaction's effect on its old account, applies the new
+  /// values (including a possible account switch), then re-applies to the
+  /// (possibly different) account — keeps both balances correct in one go.
+  Future<void> updateTransaction({
+    required String id,
+    required String accountId,
+    String? categoryId,
+    required String merchant,
+    required int amountMinor,
+    required DateTime date,
+    String? note,
+    String? paymentMode,
+  }) {
+    return _db.transaction(() async {
+      final old = await (_db.select(
+        _db.transactions,
+      )..where((t) => t.id.equals(id))).getSingle();
+
+      final oldAccount = await (_db.select(
+        _db.accounts,
+      )..where((a) => a.id.equals(old.accountId))).getSingle();
+      await (_db.update(_db.accounts)..where((a) => a.id.equals(old.accountId))).write(
+        AccountsCompanion(
+          balanceMinor: Value(oldAccount.balanceMinor - old.amountMinor),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+
+      await (_db.update(_db.transactions)..where((t) => t.id.equals(id))).write(
+        TransactionsCompanion(
+          accountId: Value(accountId),
+          categoryId: Value(categoryId),
+          merchant: Value(merchant),
+          amountMinor: Value(amountMinor),
+          date: Value(date),
+          note: Value(note),
+          paymentMode: Value(paymentMode),
+        ),
+      );
+
+      final newAccount = await (_db.select(
+        _db.accounts,
+      )..where((a) => a.id.equals(accountId))).getSingle();
+      await (_db.update(_db.accounts)..where((a) => a.id.equals(accountId))).write(
+        AccountsCompanion(
+          balanceMinor: Value(newAccount.balanceMinor + amountMinor),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    });
+  }
+
+  Future<void> deleteTransaction(String id) {
+    return _db.transaction(() async {
+      final txn = await (_db.select(
+        _db.transactions,
+      )..where((t) => t.id.equals(id))).getSingle();
+      final account = await (_db.select(
+        _db.accounts,
+      )..where((a) => a.id.equals(txn.accountId))).getSingle();
+      await (_db.update(_db.accounts)..where((a) => a.id.equals(txn.accountId))).write(
+        AccountsCompanion(
+          balanceMinor: Value(account.balanceMinor - txn.amountMinor),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+      await (_db.delete(_db.transactions)..where((t) => t.id.equals(id))).go();
+    });
+  }
+
+  static DateTime _startOfMonth(DateTime d) => DateTime(d.year, d.month);
+
   Future<void> createBudget({
     required String categoryId,
     required int limitMinor,
     String period = 'monthly',
-    DateTime? startDate,
+    DateTime? effectiveMonth,
   }) {
+    final month = _startOfMonth(effectiveMonth ?? DateTime.now());
     return _db.into(_db.budgets).insert(
       BudgetsCompanion.insert(
         categoryId: categoryId,
         limitMinor: limitMinor,
         period: Value(period),
-        startDate: startDate ?? DateTime.now(),
+        startDate: month,
+        effectiveMonth: Value(month),
       ),
+    );
+  }
+
+  /// Upserts the version of [categoryId]'s budget effective from
+  /// [targetMonth]: updates the row already covering that month if one
+  /// exists (e.g. two edits within the same month), otherwise inserts a new
+  /// version — leaving every earlier version untouched so past months keep
+  /// showing what was true for them at the time.
+  Future<void> _upsertBudgetVersion({
+    required String categoryId,
+    required DateTime targetMonth,
+    required int limitMinor,
+    required String period,
+    required bool active,
+  }) async {
+    final month = _startOfMonth(targetMonth);
+    // Compared in Dart rather than via a SQL `.equals(month)` filter: SQLite
+    // stores DateTime as an epoch value, and a round-trip comparison there
+    // is one more place a timezone/precision mismatch could make two
+    // "same month" values compare unequal — matching on year+month here
+    // keeps this genuinely upsert (never duplicates a version for a month
+    // that already has one).
+    final candidates = await (_db.select(
+      _db.budgets,
+    )..where((b) => b.categoryId.equals(categoryId))).get();
+    final existing = candidates.cast<Budget?>().firstWhere((b) {
+      final effective = b!.effectiveMonth ?? b.startDate;
+      return effective.year == month.year && effective.month == month.month;
+    }, orElse: () => null);
+
+    if (existing != null) {
+      await (_db.update(_db.budgets)..where((b) => b.id.equals(existing.id))).write(
+        BudgetsCompanion(
+          limitMinor: Value(limitMinor),
+          period: Value(period),
+          active: Value(active),
+        ),
+      );
+    } else {
+      await _db.into(_db.budgets).insert(
+        BudgetsCompanion.insert(
+          categoryId: categoryId,
+          limitMinor: limitMinor,
+          period: Value(period),
+          startDate: month,
+          effectiveMonth: Value(month),
+          active: Value(active),
+        ),
+      );
+    }
+  }
+
+  /// [id] identifies the budget version currently shown in the UI being
+  /// edited — used only to look up which category it belongs to (and detect
+  /// a category change). The edit itself always lands as a new/updated
+  /// version effective [effectiveMonth] (default: the current real month),
+  /// never as a mutation of a past version.
+  Future<void> updateBudget({
+    required String id,
+    required String categoryId,
+    required int limitMinor,
+    required String period,
+    DateTime? effectiveMonth,
+  }) async {
+    final original = await (_db.select(
+      _db.budgets,
+    )..where((b) => b.id.equals(id))).getSingleOrNull();
+    final target = effectiveMonth ?? DateTime.now();
+
+    if (original != null && original.categoryId != categoryId) {
+      // Category changed: stop the old category's budget from this month
+      // forward, then start a fresh version under the new category.
+      await _upsertBudgetVersion(
+        categoryId: original.categoryId,
+        targetMonth: target,
+        limitMinor: original.limitMinor,
+        period: original.period,
+        active: false,
+      );
+    }
+
+    await _upsertBudgetVersion(
+      categoryId: categoryId,
+      targetMonth: target,
+      limitMinor: limitMinor,
+      period: period,
+      active: true,
+    );
+  }
+
+  /// Tombstones the budget (no more spend tracking for this category from
+  /// this month forward) rather than erasing it, unless this version has no
+  /// history before it — in that case there's nothing to preserve, so it's
+  /// removed outright.
+  Future<void> deleteBudget(String id) async {
+    final budget = await (_db.select(
+      _db.budgets,
+    )..where((b) => b.id.equals(id))).getSingle();
+
+    final siblings = await (_db.select(
+      _db.budgets,
+    )..where((b) => b.categoryId.equals(budget.categoryId))).get();
+    final thisMonth = budget.effectiveMonth ?? budget.startDate;
+    final hasEarlierHistory = siblings.any((b) {
+      final effective = b.effectiveMonth ?? b.startDate;
+      return effective.isBefore(thisMonth);
+    });
+
+    if (!hasEarlierHistory) {
+      await (_db.delete(
+        _db.budgets,
+      )..where((b) => b.categoryId.equals(budget.categoryId))).go();
+      return;
+    }
+
+    await _upsertBudgetVersion(
+      categoryId: budget.categoryId,
+      targetMonth: DateTime.now(),
+      limitMinor: budget.limitMinor,
+      period: budget.period,
+      active: false,
     );
   }
 }

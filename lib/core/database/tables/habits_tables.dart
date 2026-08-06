@@ -13,8 +13,18 @@ class Habits extends Table {
   IntColumn get targetPerWeek => integer().withDefault(const Constant(7))();
   BoolColumn get archived => boolean().withDefault(const Constant(false))();
 
+  /// Per-habit daily reminder, independent of the app-wide "Habit reminders"
+  /// generic check-in nudge in Settings — off by default (opt-in), unlike
+  /// tasks, since there's no natural due-date signal implying "remind me."
+  BoolColumn get reminderEnabled => boolean().withDefault(const Constant(false))();
+  IntColumn get reminderHour => integer().nullable()();
+  IntColumn get reminderMinute => integer().nullable()();
+
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }
 
 class HabitLogs extends Table {
@@ -24,6 +34,9 @@ class HabitLogs extends Table {
   /// Date-only (time truncated to midnight) — one log per habit per day.
   DateTimeColumn get date => dateTime()();
   BoolColumn get completed => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
 
   @override
   List<Set<Column>> get uniqueKeys => [

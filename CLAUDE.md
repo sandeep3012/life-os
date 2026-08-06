@@ -32,6 +32,33 @@ If `C:\flutter-sdk` doesn't exist on a given machine, recreate it:
 New-Item -ItemType Junction -Path "C:\flutter-sdk" -Target "C:\Program Files\flutter"
 ```
 
+**Android builds (`flutter build apk`, `flutter run` on Android) need a JDK
+17+ that isn't the machine's default.** `JAVA_HOME` on this machine points at
+a Java 8 JDK (`jdk1.8.0_231`), which AGP/Gradle 8.14 can't build with (needs
+11+) — `android/gradle.properties` pins `org.gradle.java.home` to a JDK 17
+install instead of relying on the system-wide `JAVA_HOME`. If that path
+(`C:/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot`) doesn't exist on
+a given machine, find another JDK 17+ install and update the property.
+
+**Android builds can intermittently fail with `Unable to establish loopback
+connection` or `The first result from the daemon was empty`.** This is
+Gradle's daemon (or Gradle's "single-use daemon" fallback, which forks a
+child JVM the same way) failing to open its own IPC socket back to itself —
+not a project bug. It's most likely local antivirus/firewall/EDR software
+intercepting a newly-spawned JVM process's socket. `org.gradle.daemon=false`
+is set to reduce how often this is hit, but doesn't fully avoid it (Gradle
+still forks a "single-use daemon" for the same reason). If it persists: add
+an AV/firewall exclusion for `java.exe` and the project/`.gradle` folders, or
+just retry — it's been observed to succeed on a subsequent attempt without
+any config change.
+
+**Uncommitted working-tree changes on this machine have been silently
+discarded mid-session before** (a Gradle-config fix and a notification-
+timezone fix both vanished between turns, with `git status` clean afterward
+— i.e. reverted to the last commit, not just unstaged). Cause unconfirmed.
+Commit fixes promptly rather than leaving them uncommitted for long stretches
+while iterating on something unrelated (e.g. build troubleshooting).
+
 ## Commands
 
 ```bash

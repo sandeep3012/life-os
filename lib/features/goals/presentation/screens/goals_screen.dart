@@ -50,7 +50,7 @@ class GoalsScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final habits = ref.read(habitsListProvider).value ?? const [];
-          final accounts = ref.read(accountsProvider).value ?? const [];
+          final accounts = ref.read(activeAccountsProvider);
           final result = await showQuickAddGoalSheet(context, habits: habits, accounts: accounts);
           if (result == null) return;
           final goalId = await ref.read(goalsControllerProvider).createGoal(

@@ -113,6 +113,30 @@ class AppTheme {
           return IconThemeData(color: selected ? brand : neutrals.ink3);
         }),
       ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return appColors.good.withValues(alpha: isLight ? 0.16 : 0.28);
+            }
+            return Colors.transparent;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return appColors.good;
+            return neutrals.ink2;
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return BorderSide(color: appColors.good.withValues(alpha: 0.5));
+            }
+            return BorderSide(color: neutrals.border);
+          }),
+          iconColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return appColors.good;
+            return neutrals.ink2;
+          }),
+        ),
+      ),
       chipTheme: ChipThemeData(
         backgroundColor: neutrals.surface,
         side: BorderSide(color: neutrals.border),

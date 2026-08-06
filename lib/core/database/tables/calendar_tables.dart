@@ -19,4 +19,7 @@ class Events extends Table {
 
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }

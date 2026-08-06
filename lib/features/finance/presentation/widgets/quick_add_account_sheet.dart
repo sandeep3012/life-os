@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/icon_lookup.dart';
+
 class QuickAddAccountResult {
   const QuickAddAccountResult({
     required this.name,
@@ -12,24 +15,21 @@ class QuickAddAccountResult {
   final int startingBalanceMinor;
 }
 
-const _accountTypes = [
-  ('checking', 'Checking'),
-  ('savings', 'Savings'),
-  ('credit_card', 'Credit Card'),
-  ('cash', 'Cash'),
-  ('investment', 'Investment'),
-];
-
-Future<QuickAddAccountResult?> showQuickAddAccountSheet(BuildContext context) {
+Future<QuickAddAccountResult?> showQuickAddAccountSheet(
+  BuildContext context, {
+  required List<AccountType> accountTypes,
+}) {
   return showModalBottomSheet<QuickAddAccountResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => const _QuickAddAccountSheet(),
+    builder: (context) => _QuickAddAccountSheet(accountTypes: accountTypes),
   );
 }
 
 class _QuickAddAccountSheet extends StatefulWidget {
-  const _QuickAddAccountSheet();
+  const _QuickAddAccountSheet({required this.accountTypes});
+
+  final List<AccountType> accountTypes;
 
   @override
   State<_QuickAddAccountSheet> createState() => _QuickAddAccountSheetState();
@@ -38,7 +38,7 @@ class _QuickAddAccountSheet extends StatefulWidget {
 class _QuickAddAccountSheetState extends State<_QuickAddAccountSheet> {
   final _nameController = TextEditingController();
   final _balanceController = TextEditingController();
-  String _type = _accountTypes.first.$1;
+  late String _type = widget.accountTypes.isEmpty ? '' : widget.accountTypes.first.name;
 
   @override
   void initState() {
@@ -79,11 +79,12 @@ class _QuickAddAccountSheetState extends State<_QuickAddAccountSheet> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final (value, label) in _accountTypes)
+              for (final t in widget.accountTypes)
                 ChoiceChip(
-                  label: Text(label),
-                  selected: _type == value,
-                  onSelected: (_) => setState(() => _type = value),
+                  avatar: Icon(resolveIcon(t.icon), size: 16),
+                  label: Text(t.name),
+                  selected: _type == t.name,
+                  onSelected: (_) => setState(() => _type = t.name),
                 ),
             ],
           ),
@@ -97,7 +98,7 @@ class _QuickAddAccountSheetState extends State<_QuickAddAccountSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _nameController.text.trim().isEmpty
+              onPressed: _nameController.text.trim().isEmpty || _type.isEmpty
                   ? null
                   : () {
                       final rupees = double.tryParse(_balanceController.text.trim()) ?? 0;

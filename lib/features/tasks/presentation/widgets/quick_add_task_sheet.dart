@@ -7,11 +7,15 @@ class QuickAddTaskResult {
     required this.title,
     required this.priority,
     this.dueDate,
+    this.reminderEnabled = true,
   });
 
   final String title;
   final TaskPriority priority;
   final DateTime? dueDate;
+
+  /// Only meaningful when [dueDate] is set.
+  final bool reminderEnabled;
 }
 
 Future<QuickAddTaskResult?> showQuickAddTaskSheet(BuildContext context) {
@@ -33,6 +37,7 @@ class _QuickAddTaskSheetState extends State<_QuickAddTaskSheet> {
   final _titleController = TextEditingController();
   TaskPriority _priority = TaskPriority.medium;
   DateTime? _dueDate;
+  bool _reminderEnabled = true;
 
   @override
   void initState() {
@@ -113,6 +118,14 @@ class _QuickAddTaskSheetState extends State<_QuickAddTaskSheet> {
                   : _dueDate!.toLocal().toString().substring(0, 16),
             ),
           ),
+          if (_dueDate != null)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Remind me'),
+              subtitle: const Text('Notify at the due time'),
+              value: _reminderEnabled,
+              onChanged: (v) => setState(() => _reminderEnabled = v),
+            ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -124,6 +137,7 @@ class _QuickAddTaskSheetState extends State<_QuickAddTaskSheet> {
                         title: _titleController.text.trim(),
                         priority: _priority,
                         dueDate: _dueDate,
+                        reminderEnabled: _reminderEnabled,
                       ),
                     ),
               child: const Text('Add task'),

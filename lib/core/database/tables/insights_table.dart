@@ -22,4 +22,7 @@ class Insights extends Table {
   DateTimeColumn get generatedAt =>
       dateTime().clientDefault(() => DateTime.now())();
   BoolColumn get dismissed => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }

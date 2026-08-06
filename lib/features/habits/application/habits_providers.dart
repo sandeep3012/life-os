@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/app_database_provider.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../settings/application/settings_providers.dart';
 import '../data/habits_repository.dart';
 import '../domain/habit_progress.dart';
 
@@ -76,11 +78,36 @@ Map<int, bool> _computeWeekCompletion(List<HabitLog> logs) {
 }
 
 class HabitsController {
-  HabitsController(this._repo);
+  HabitsController(this._repo, this._notifications, this._remindersEnabled);
 
   final HabitsRepository _repo;
+  final NotificationService _notifications;
 
-  Future<void> addHabit(String name) => _repo.createHabit(name);
+  /// Read at call time, same as `TasksController` — the app-wide "Habit
+  /// reminders" setting acts as a master switch over every per-habit one.
+  final bool Function() _remindersEnabled;
+
+  Future<void> addHabit(
+    String name, {
+    bool reminderEnabled = false,
+    int? reminderHour,
+    int? reminderMinute,
+  }) async {
+    final id = await _repo.createHabit(
+      name,
+      reminderEnabled: reminderEnabled,
+      reminderHour: reminderHour,
+      reminderMinute: reminderMinute,
+    );
+    if (reminderEnabled && reminderHour != null && reminderMinute != null && _remindersEnabled()) {
+      await _notifications.scheduleHabitReminder(
+        habitId: id,
+        title: name,
+        hour: reminderHour,
+        minute: reminderMinute,
+      );
+    }
+  }
 
   Future<void> toggleToday(Habit habit, bool completed) {
     return _repo.setCompletedForDate(habit.id, DateTime.now(), completed);
@@ -88,5 +115,9 @@ class HabitsController {
 }
 
 final habitsControllerProvider = Provider<HabitsController>((ref) {
-  return HabitsController(ref.watch(habitsRepositoryProvider));
+  return HabitsController(
+    ref.watch(habitsRepositoryProvider),
+    ref.watch(notificationServiceProvider),
+    () => ref.read(settingsProvider).habitReminders,
+  );
 });
