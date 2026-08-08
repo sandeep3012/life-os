@@ -74,13 +74,17 @@ class FinanceRepository {
 
   Stream<List<AccountType>> watchAccountTypes() => _db.select(_db.accountTypes).watch();
 
-  Future<void> createCategory({
+  /// Returns the created row (rather than just succeeding) so a caller that
+  /// created this category inline — e.g. from the transaction/budget
+  /// category picker — can select it immediately without waiting on the
+  /// `watchCategories()` stream to catch up.
+  Future<Category> createCategory({
     required String name,
     required String icon,
     required String colorHex,
     String kind = 'expense',
   }) {
-    return _db.into(_db.categories).insert(
+    return _db.into(_db.categories).insertReturning(
       CategoriesCompanion.insert(
         name: name,
         icon: Value(icon),
@@ -90,14 +94,14 @@ class FinanceRepository {
     );
   }
 
-  Future<void> updateCategory({
+  Future<Category> updateCategory({
     required String id,
     required String name,
     required String icon,
     required String colorHex,
     required String kind,
-  }) {
-    return (_db.update(_db.categories)..where((c) => c.id.equals(id))).write(
+  }) async {
+    await (_db.update(_db.categories)..where((c) => c.id.equals(id))).write(
       CategoriesCompanion(
         name: Value(name),
         icon: Value(icon),
@@ -105,6 +109,9 @@ class FinanceRepository {
         kind: Value(kind),
       ),
     );
+    return (_db.select(
+      _db.categories,
+    )..where((c) => c.id.equals(id))).getSingle();
   }
 
   /// Rows referencing this category (transactions, budget versions) — the

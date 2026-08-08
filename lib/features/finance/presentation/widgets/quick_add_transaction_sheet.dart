@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../application/finance_providers.dart';
 import '../../domain/payment_mode.dart';
+import '../screens/category_management_screen.dart';
 
 class QuickAddTransactionResult {
   const QuickAddTransactionResult({
@@ -42,7 +45,7 @@ Future<QuickAddTransactionResult?> showQuickAddTransactionSheet(
   );
 }
 
-class _QuickAddTransactionSheet extends StatefulWidget {
+class _QuickAddTransactionSheet extends ConsumerStatefulWidget {
   const _QuickAddTransactionSheet({
     required this.accounts,
     required this.categories,
@@ -54,10 +57,14 @@ class _QuickAddTransactionSheet extends StatefulWidget {
   final Transaction? initial;
 
   @override
-  State<_QuickAddTransactionSheet> createState() => _QuickAddTransactionSheetState();
+  ConsumerState<_QuickAddTransactionSheet> createState() => _QuickAddTransactionSheetState();
 }
 
-class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
+/// Sentinel dropdown value for the trailing "Add new category" entry —
+/// distinct from any real category id.
+const _addCategoryValue = '__add_category__';
+
+class _QuickAddTransactionSheetState extends ConsumerState<_QuickAddTransactionSheet> {
   late final _merchantController = TextEditingController(text: widget.initial?.merchant);
   late final _amountController = TextEditingController(
     text: widget.initial == null
@@ -65,12 +72,21 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
         : (widget.initial!.amountMinor.abs() / 100).toStringAsFixed(2),
   );
   late String _accountId = widget.initial?.accountId ?? widget.accounts.first.id;
+  late List<Category> _categories = List.of(widget.categories);
   late String? _categoryId = widget.initial?.categoryId;
   late bool _isExpense = (widget.initial?.amountMinor ?? -1) < 0;
   late DateTime _date = widget.initial?.date ?? DateTime.now();
   late String? _paymentMode = widget.initial?.paymentMode;
 
+  /// See the identical field in `_QuickAddBudgetSheetState` — forces the
+  /// (uncontrolled) category dropdown back to `_categoryId` after "Add new
+  /// category" resolves or is cancelled.
+  int _categoryFieldEpoch = 0;
+
   bool get _isEditing => widget.initial != null;
+
+  Category? get _selectedCategory =>
+      _categories.where((c) => c.id == _categoryId).firstOrNull;
 
   @override
   void initState() {
@@ -84,6 +100,46 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
     _merchantController.dispose();
     _amountController.dispose();
     super.dispose();
+  }
+
+  Future<void> _addCategory() async {
+    final result = await showCategoryEditorSheet(context);
+    if (result == null) {
+      if (mounted) setState(() => _categoryFieldEpoch++);
+      return;
+    }
+    final category = await ref.read(financeControllerProvider).addCategory(
+      name: result.name,
+      icon: result.icon,
+      colorHex: result.colorHex,
+      kind: result.kind,
+    );
+    if (!mounted) return;
+    setState(() {
+      _categories = [..._categories, category];
+      _categoryId = category.id;
+      _categoryFieldEpoch++;
+    });
+  }
+
+  Future<void> _editSelectedCategory() async {
+    final existing = _selectedCategory;
+    if (existing == null) return;
+    final result = await showCategoryEditorSheet(context, existing: existing);
+    if (result == null) return;
+    final updated = await ref.read(financeControllerProvider).updateCategory(
+      id: existing.id,
+      name: result.name,
+      icon: result.icon,
+      colorHex: result.colorHex,
+      kind: result.kind,
+    );
+    if (!mounted) return;
+    setState(() {
+      _categories = [
+        for (final c in _categories) if (c.id == updated.id) updated else c,
+      ];
+    });
   }
 
   Future<void> _pickDate() async {
@@ -151,24 +207,55 @@ class _QuickAddTransactionSheetState extends State<_QuickAddTransactionSheet> {
             onChanged: (value) => setState(() => _accountId = value!),
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: _categoryId,
-            decoration: const InputDecoration(labelText: 'Category'),
-            items: [
-              for (final c in widget.categories)
-                DropdownMenuItem(
-                  value: c.id,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(resolveIcon(c.icon), size: 16),
-                      const SizedBox(width: 8),
-                      Text(c.name),
-                    ],
-                  ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: ValueKey('$_categoryId#$_categoryFieldEpoch'),
+                  initialValue: _categoryId,
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  items: [
+                    for (final c in _categories)
+                      DropdownMenuItem(
+                        value: c.id,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(resolveIcon(c.icon), size: 16),
+                            const SizedBox(width: 8),
+                            Text(c.name),
+                          ],
+                        ),
+                      ),
+                    const DropdownMenuItem(
+                      value: _addCategoryValue,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add_circle_outline_rounded, size: 16),
+                          SizedBox(width: 8),
+                          Text('Add new category'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value == _addCategoryValue) {
+                      _addCategory();
+                    } else {
+                      setState(() => _categoryId = value);
+                    }
+                  },
+                ),
+              ),
+              if (_selectedCategory != null)
+                IconButton(
+                  tooltip: 'Edit category',
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  onPressed: _editSelectedCategory,
                 ),
             ],
-            onChanged: (value) => setState(() => _categoryId = value),
           ),
           const SizedBox(height: 12),
           Text('Payment mode', style: Theme.of(context).textTheme.labelMedium),
