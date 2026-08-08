@@ -22,6 +22,10 @@ class Tasks extends Table {
   /// this toggle existed.
   BoolColumn get reminderEnabled => boolean().withDefault(const Constant(true))();
 
+  /// notification | alarm — see `ReminderMode`.
+  TextColumn get reminderMode =>
+      text().withDefault(const Constant('notification'))();
+
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
   DateTimeColumn get completedAt => dateTime().nullable()();

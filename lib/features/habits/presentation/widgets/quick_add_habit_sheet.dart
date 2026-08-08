@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/reminders/reminder_mode.dart';
+
 class QuickAddHabitResult {
   const QuickAddHabitResult({
     required this.name,
     this.reminderEnabled = false,
     this.reminderHour,
     this.reminderMinute,
+    this.reminderMode = ReminderMode.notification,
   });
 
   final String name;
@@ -14,6 +17,7 @@ class QuickAddHabitResult {
   /// Only set when [reminderEnabled] is true.
   final int? reminderHour;
   final int? reminderMinute;
+  final ReminderMode reminderMode;
 }
 
 Future<QuickAddHabitResult?> showQuickAddHabitSheet(BuildContext context) {
@@ -35,6 +39,7 @@ class _QuickAddHabitSheetState extends State<_QuickAddHabitSheet> {
   final _nameController = TextEditingController();
   bool _reminderEnabled = false;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
+  ReminderMode _reminderMode = ReminderMode.notification;
 
   @override
   void initState() {
@@ -87,6 +92,26 @@ class _QuickAddHabitSheetState extends State<_QuickAddHabitSheet> {
               icon: const Icon(Icons.schedule_rounded, size: 16),
               label: Text(_reminderTime.format(context)),
             ),
+          if (_reminderEnabled)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 4),
+              child: SegmentedButton<ReminderMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: ReminderMode.notification,
+                    label: Text('Notification'),
+                    icon: Icon(Icons.notifications_rounded, size: 16),
+                  ),
+                  ButtonSegment(
+                    value: ReminderMode.alarm,
+                    label: Text('Alarm'),
+                    icon: Icon(Icons.alarm_rounded, size: 16),
+                  ),
+                ],
+                selected: {_reminderMode},
+                onSelectionChanged: (s) => setState(() => _reminderMode = s.first),
+              ),
+            ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -99,6 +124,7 @@ class _QuickAddHabitSheetState extends State<_QuickAddHabitSheet> {
                         reminderEnabled: _reminderEnabled,
                         reminderHour: _reminderEnabled ? _reminderTime.hour : null,
                         reminderMinute: _reminderEnabled ? _reminderTime.minute : null,
+                        reminderMode: _reminderMode,
                       ),
                     ),
               child: const Text('Add habit'),

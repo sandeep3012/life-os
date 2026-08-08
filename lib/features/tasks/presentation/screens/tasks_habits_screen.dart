@@ -79,6 +79,7 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
       priority: result.priority,
       dueDate: result.dueDate,
       reminderEnabled: result.reminderEnabled,
+      reminderMode: result.reminderMode,
     );
   }
 
@@ -90,6 +91,7 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
       reminderEnabled: result.reminderEnabled,
       reminderHour: result.reminderHour,
       reminderMinute: result.reminderMinute,
+      reminderMode: result.reminderMode,
     );
   }
 }

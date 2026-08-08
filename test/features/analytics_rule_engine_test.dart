@@ -32,6 +32,7 @@ Habit _habit(String id) => Habit(
   targetPerWeek: 7,
   archived: false,
   reminderEnabled: false,
+  reminderMode: 'notification',
   createdAt: DateTime(2026),
 );
 

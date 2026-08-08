@@ -28,6 +28,7 @@ class HabitsRepository {
     bool reminderEnabled = false,
     int? reminderHour,
     int? reminderMinute,
+    String reminderMode = 'notification',
   }) async {
     final row = await _db.into(_db.habits).insertReturning(
       HabitsCompanion.insert(
@@ -35,6 +36,7 @@ class HabitsRepository {
         reminderEnabled: Value(reminderEnabled),
         reminderHour: Value(reminderHour),
         reminderMinute: Value(reminderMinute),
+        reminderMode: Value(reminderMode),
       ),
     );
     return row.id;

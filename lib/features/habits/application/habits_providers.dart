@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/app_database_provider.dart';
+import '../../../core/reminders/reminder_mode.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../settings/application/settings_providers.dart';
@@ -92,12 +93,14 @@ class HabitsController {
     bool reminderEnabled = false,
     int? reminderHour,
     int? reminderMinute,
+    ReminderMode reminderMode = ReminderMode.notification,
   }) async {
     final id = await _repo.createHabit(
       name,
       reminderEnabled: reminderEnabled,
       reminderHour: reminderHour,
       reminderMinute: reminderMinute,
+      reminderMode: reminderMode.storageValue,
     );
     if (reminderEnabled && reminderHour != null && reminderMinute != null && _remindersEnabled()) {
       await _notifications.scheduleHabitReminder(
@@ -105,6 +108,7 @@ class HabitsController {
         title: name,
         hour: reminderHour,
         minute: reminderMinute,
+        mode: reminderMode,
       );
     }
   }
