@@ -16,6 +16,35 @@ const _paletteHex = [
   '#8B84A3',
 ];
 
+class CategoryEditorResult {
+  const CategoryEditorResult({
+    required this.name,
+    required this.icon,
+    required this.colorHex,
+    required this.kind,
+  });
+
+  final String name;
+  final String icon;
+  final String colorHex;
+  final String kind;
+}
+
+/// Opens the add/edit category sheet directly — used by the category
+/// management screen, and inline from the transaction/budget category
+/// pickers so a missing category can be created (or the selected one
+/// edited) without leaving that flow.
+Future<CategoryEditorResult?> showCategoryEditorSheet(
+  BuildContext context, {
+  Category? existing,
+}) {
+  return showModalBottomSheet<CategoryEditorResult>(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => _CategoryEditorSheet(existing: existing),
+  );
+}
+
 class CategoryManagementScreen extends ConsumerWidget {
   const CategoryManagementScreen({super.key});
 
@@ -60,11 +89,7 @@ class CategoryManagementScreen extends ConsumerWidget {
   }
 
   Future<void> _openEditor(BuildContext context, WidgetRef ref, {Category? existing}) async {
-    final result = await showModalBottomSheet<_CategoryEditorResult>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _CategoryEditorSheet(existing: existing),
-    );
+    final result = await showCategoryEditorSheet(context, existing: existing);
     if (result == null) return;
 
     final controller = ref.read(financeControllerProvider);
@@ -133,20 +158,6 @@ class CategoryManagementScreen extends ConsumerWidget {
     );
     if (confirmed == true) await controller.deleteCategory(category.id);
   }
-}
-
-class _CategoryEditorResult {
-  const _CategoryEditorResult({
-    required this.name,
-    required this.icon,
-    required this.colorHex,
-    required this.kind,
-  });
-
-  final String name;
-  final String icon;
-  final String colorHex;
-  final String kind;
 }
 
 class _CategoryEditorSheet extends StatefulWidget {
@@ -248,7 +259,7 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
               onPressed: _nameController.text.trim().isEmpty
                   ? null
                   : () => Navigator.of(context).pop(
-                      _CategoryEditorResult(
+                      CategoryEditorResult(
                         name: _nameController.text.trim(),
                         icon: _icon,
                         colorHex: _colorHex,
