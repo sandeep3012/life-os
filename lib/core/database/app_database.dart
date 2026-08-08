@@ -49,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -105,6 +105,13 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(habits, habits.reminderEnabled);
         await m.addColumn(habits, habits.reminderHour);
         await m.addColumn(habits, habits.reminderMinute);
+      }
+      if (from < 7) {
+        // v6 -> v7: reminders can be delivered as a plain notification or
+        // an alarm-style one (loud, bypasses silent mode). Existing rows
+        // default to 'notification', preserving current behavior.
+        await m.addColumn(tasks, tasks.reminderMode);
+        await m.addColumn(habits, habits.reminderMode);
       }
     },
   );

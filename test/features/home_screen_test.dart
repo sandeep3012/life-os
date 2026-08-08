@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
+import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
 import 'package:life_manager/core/utils/date_utils.dart';
 import 'package:life_manager/features/finance/data/finance_repository.dart';
@@ -22,6 +23,7 @@ class _FakeNotificationService extends NotificationService {
     required String taskId,
     required String title,
     required DateTime dueDate,
+    ReminderMode mode = ReminderMode.notification,
   }) async {}
 
   @override

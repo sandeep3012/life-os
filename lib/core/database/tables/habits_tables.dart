@@ -20,6 +20,10 @@ class Habits extends Table {
   IntColumn get reminderHour => integer().nullable()();
   IntColumn get reminderMinute => integer().nullable()();
 
+  /// notification | alarm — see `ReminderMode`.
+  TextColumn get reminderMode =>
+      text().withDefault(const Constant('notification'))();
+
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
 

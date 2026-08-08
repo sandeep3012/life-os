@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/reminders/reminder_mode.dart';
 import '../../domain/task_priority.dart';
 
 class QuickAddTaskResult {
@@ -8,6 +9,7 @@ class QuickAddTaskResult {
     required this.priority,
     this.dueDate,
     this.reminderEnabled = true,
+    this.reminderMode = ReminderMode.notification,
   });
 
   final String title;
@@ -16,6 +18,9 @@ class QuickAddTaskResult {
 
   /// Only meaningful when [dueDate] is set.
   final bool reminderEnabled;
+
+  /// Only meaningful when [reminderEnabled] is true.
+  final ReminderMode reminderMode;
 }
 
 Future<QuickAddTaskResult?> showQuickAddTaskSheet(BuildContext context) {
@@ -38,6 +43,7 @@ class _QuickAddTaskSheetState extends State<_QuickAddTaskSheet> {
   TaskPriority _priority = TaskPriority.medium;
   DateTime? _dueDate;
   bool _reminderEnabled = true;
+  ReminderMode _reminderMode = ReminderMode.notification;
 
   @override
   void initState() {
@@ -126,6 +132,26 @@ class _QuickAddTaskSheetState extends State<_QuickAddTaskSheet> {
               value: _reminderEnabled,
               onChanged: (v) => setState(() => _reminderEnabled = v),
             ),
+          if (_dueDate != null && _reminderEnabled)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: SegmentedButton<ReminderMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: ReminderMode.notification,
+                    label: Text('Notification'),
+                    icon: Icon(Icons.notifications_rounded, size: 16),
+                  ),
+                  ButtonSegment(
+                    value: ReminderMode.alarm,
+                    label: Text('Alarm'),
+                    icon: Icon(Icons.alarm_rounded, size: 16),
+                  ),
+                ],
+                selected: {_reminderMode},
+                onSelectionChanged: (s) => setState(() => _reminderMode = s.first),
+              ),
+            ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -138,6 +164,7 @@ class _QuickAddTaskSheetState extends State<_QuickAddTaskSheet> {
                         priority: _priority,
                         dueDate: _dueDate,
                         reminderEnabled: _reminderEnabled,
+                        reminderMode: _reminderMode,
                       ),
                     ),
               child: const Text('Add task'),

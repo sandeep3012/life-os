@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/app_database_provider.dart';
+import '../../../core/reminders/reminder_mode.dart';
 import '../../../core/services/notification_service.dart';
 import '../../settings/application/settings_providers.dart';
 import '../data/tasks_repository.dart';
@@ -33,18 +34,21 @@ class TasksController {
     DateTime? dueDate,
     TaskPriority priority = TaskPriority.medium,
     bool reminderEnabled = true,
+    ReminderMode reminderMode = ReminderMode.notification,
   }) async {
     final id = await _repo.createTask(
       title: title,
       dueDate: dueDate,
       priority: priority.value,
       reminderEnabled: reminderEnabled,
+      reminderMode: reminderMode.storageValue,
     );
     if (dueDate != null && reminderEnabled && _remindersEnabled()) {
       await _notifications.scheduleTaskReminder(
         taskId: id,
         title: title,
         dueDate: dueDate,
+        mode: reminderMode,
       );
     }
   }

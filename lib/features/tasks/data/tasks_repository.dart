@@ -18,6 +18,7 @@ class TasksRepository {
     DateTime? dueDate,
     String priority = 'medium',
     bool reminderEnabled = true,
+    String reminderMode = 'notification',
   }) async {
     final row = await _db.into(_db.tasks).insertReturning(
       TasksCompanion.insert(
@@ -25,6 +26,7 @@ class TasksRepository {
         dueDate: Value(dueDate),
         priority: Value(priority),
         reminderEnabled: Value(reminderEnabled),
+        reminderMode: Value(reminderMode),
       ),
     );
     return row.id;
