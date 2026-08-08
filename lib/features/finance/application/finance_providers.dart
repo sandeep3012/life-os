@@ -208,7 +208,7 @@ class FinanceController {
 
   Future<void> deleteTransaction(String id) => _repo.deleteTransaction(id);
 
-  Future<void> addCategory({
+  Future<Category> addCategory({
     required String name,
     required String icon,
     required String colorHex,
@@ -217,7 +217,7 @@ class FinanceController {
     return _repo.createCategory(name: name, icon: icon, colorHex: colorHex, kind: kind);
   }
 
-  Future<void> updateCategory({
+  Future<Category> updateCategory({
     required String id,
     required String name,
     required String icon,
