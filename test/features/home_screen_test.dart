@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
+import 'package:life_manager/core/services/file_storage_service.dart';
 import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
 import 'package:life_manager/core/utils/date_utils.dart';
@@ -83,7 +84,7 @@ void main() {
     final today = dateOnly(DateTime.now());
 
     // Finance: one expense logged this week.
-    final finance = FinanceRepository(db);
+    final finance = FinanceRepository(db, FileStorageService());
     await finance.ensureDefaultCategories();
     await finance.createAccount(name: 'Checking', type: 'checking', balanceMinor: 500000);
     final accountId = (await db.select(db.accounts).get()).first.id;

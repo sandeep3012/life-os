@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
+import 'package:life_manager/core/services/file_storage_service.dart';
 import 'package:life_manager/core/utils/date_utils.dart';
 import 'package:life_manager/features/ai_analyser/application/ai_analyser_providers.dart';
 import 'package:life_manager/features/ai_analyser/presentation/screens/ai_analyser_screen.dart';
@@ -33,7 +34,7 @@ void main() {
   }
 
   testWidgets('refreshing surfaces an overspend insight, dismissing removes it', (tester) async {
-    final financeRepo = FinanceRepository(db);
+    final financeRepo = FinanceRepository(db, FileStorageService());
     await financeRepo.ensureDefaultCategories();
     final categories = await db.select(db.categories).get();
     final diningCategory = categories.firstWhere((c) => c.name == 'Dining');

@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/services/file_storage_service.dart';
+import '../../../core/utils/date_utils.dart';
 
 /// Default expense categories seeded on first launch, using the same hex
 /// values as the prototype's validated spend-category palette
@@ -39,9 +43,10 @@ const _defaultAccountTypes = [
 String normalizeAccountTypeKey(String s) => s.toLowerCase().replaceAll('_', ' ').trim();
 
 class FinanceRepository {
-  FinanceRepository(this._db);
+  FinanceRepository(this._db, this._storage);
 
   final AppDatabase _db;
+  final FileStorageService _storage;
 
   Future<void> ensureDefaultCategories() async {
     final existing = await _db.select(_db.categories).get();
@@ -314,6 +319,216 @@ class FinanceRepository {
         ),
       );
       await (_db.delete(_db.transactions)..where((t) => t.id.equals(id))).go();
+    });
+  }
+
+  static const _receiptsFolderName = 'Receipts';
+
+  /// Files receipts under a "Receipts" folder in the shared Documents
+  /// module (created on first use, same lazy-seed pattern as default
+  /// categories/account types) so they're browsable there too, not just
+  /// reachable from the transaction that owns them.
+  Future<String> _ensureReceiptsFolder() async {
+    final existing = await (_db.select(_db.folders)..where(
+      (f) => f.scope.equals('documents') & f.name.equals(_receiptsFolderName),
+    )).getSingleOrNull();
+    if (existing != null) return existing.id;
+
+    final created = await _db.into(_db.folders).insertReturning(
+      FoldersCompanion.insert(name: _receiptsFolderName, scope: 'documents'),
+    );
+    return created.id;
+  }
+
+  /// Imports [source] as a Document filed under the Receipts folder and
+  /// links it to [transactionId], replacing (and deleting the file for) any
+  /// receipt already attached.
+  Future<void> attachReceipt({
+    required String transactionId,
+    required File source,
+    required String originalName,
+  }) async {
+    await removeReceipt(transactionId);
+    final folderId = await _ensureReceiptsFolder();
+    final stored = await _storage.importFile(source, originalName: originalName);
+    final document = await _db.into(_db.documents).insertReturning(
+      DocumentsCompanion.insert(
+        title: originalName,
+        filePath: stored.relativePath,
+        thumbnailPath: Value(stored.thumbnailRelativePath),
+        mimeType: stored.mimeType,
+        sizeBytes: Value(stored.sizeBytes),
+        folderId: Value(folderId),
+      ),
+    );
+    await (_db.update(_db.transactions)..where((t) => t.id.equals(transactionId))).write(
+      TransactionsCompanion(receiptDocumentId: Value(document.id)),
+    );
+  }
+
+  /// No-op if the transaction has no receipt attached.
+  Future<void> removeReceipt(String transactionId) async {
+    final txn = await (_db.select(
+      _db.transactions,
+    )..where((t) => t.id.equals(transactionId))).getSingle();
+    final documentId = txn.receiptDocumentId;
+    if (documentId == null) return;
+
+    await (_db.update(_db.transactions)..where((t) => t.id.equals(transactionId))).write(
+      const TransactionsCompanion(receiptDocumentId: Value(null)),
+    );
+    final document = await (_db.select(
+      _db.documents,
+    )..where((d) => d.id.equals(documentId))).getSingleOrNull();
+    if (document == null) return;
+    await _storage.deleteFile(document.filePath, thumbnailRelativePath: document.thumbnailPath);
+    await (_db.delete(_db.documents)..where((d) => d.id.equals(documentId))).go();
+  }
+
+  Stream<List<RecurringTransaction>> watchRecurringTransactions() {
+    return (_db.select(_db.recurringTransactions)
+          ..orderBy([(r) => OrderingTerm.asc(r.nextDueDate)]))
+        .watch();
+  }
+
+  Future<void> createRecurringTransaction({
+    required String accountId,
+    String? categoryId,
+    required String merchant,
+    required int amountMinor,
+    required String frequency,
+    required DateTime startDate,
+    DateTime? endDate,
+    String? note,
+    String? paymentMode,
+  }) {
+    return _db.into(_db.recurringTransactions).insert(
+      RecurringTransactionsCompanion.insert(
+        accountId: accountId,
+        categoryId: Value(categoryId),
+        merchant: merchant,
+        amountMinor: amountMinor,
+        frequency: Value(frequency),
+        nextDueDate: startDate,
+        endDate: Value(endDate),
+        note: Value(note),
+        paymentMode: Value(paymentMode),
+      ),
+    );
+  }
+
+  Future<void> setRecurringTransactionActive(String id, bool active) {
+    return (_db.update(
+      _db.recurringTransactions,
+    )..where((r) => r.id.equals(id))).write(RecurringTransactionsCompanion(active: Value(active)));
+  }
+
+  Future<void> deleteRecurringTransaction(String id) {
+    return (_db.delete(_db.recurringTransactions)..where((r) => r.id.equals(id))).go();
+  }
+
+  /// Generates a real [Transaction] row for every occurrence of every active
+  /// recurring transaction whose [RecurringTransactions.nextDueDate] has
+  /// passed, advancing the schedule as it goes. Comparing against "now"
+  /// rather than a stored list of future dates means this naturally
+  /// catches up on everything missed while the app was closed — e.g. a
+  /// monthly rent entry left un-opened for 3 months backfills all 3 — capped
+  /// at 500 occurrences per schedule so a corrupt/ancient `nextDueDate`
+  /// can't spin this into an unbounded loop.
+  Future<void> generateDueRecurringTransactions() async {
+    final due = await (_db.select(
+      _db.recurringTransactions,
+    )..where((r) => r.active.equals(true) & r.nextDueDate.isSmallerOrEqualValue(DateTime.now()))).get();
+
+    for (final schedule in due) {
+      var next = schedule.nextDueDate;
+      var iterations = 0;
+      while (!next.isAfter(DateTime.now()) &&
+          (schedule.endDate == null || !next.isAfter(schedule.endDate!)) &&
+          iterations < 500) {
+        await createTransaction(
+          accountId: schedule.accountId,
+          categoryId: schedule.categoryId,
+          merchant: schedule.merchant,
+          amountMinor: schedule.amountMinor,
+          date: next,
+          note: schedule.note,
+          paymentMode: schedule.paymentMode,
+        );
+        next = addRecurrenceInterval(next, schedule.frequency);
+        iterations++;
+      }
+
+      final pastEnd = schedule.endDate != null && next.isAfter(schedule.endDate!);
+      await (_db.update(_db.recurringTransactions)..where((r) => r.id.equals(schedule.id))).write(
+        RecurringTransactionsCompanion(
+          nextDueDate: Value(next),
+          active: Value(!pastEnd),
+        ),
+      );
+    }
+  }
+
+  Stream<List<Bill>> watchBills() {
+    return (_db.select(_db.bills)..orderBy([(b) => OrderingTerm.asc(b.dueDate)])).watch();
+  }
+
+  Future<Bill> createBill({
+    required String name,
+    String? accountId,
+    String? categoryId,
+    required int amountMinor,
+    required DateTime dueDate,
+    String frequency = 'monthly',
+    bool reminderEnabled = true,
+    String reminderMode = 'notification',
+    int reminderDaysBefore = 0,
+  }) {
+    return _db.into(_db.bills).insertReturning(
+      BillsCompanion.insert(
+        name: name,
+        accountId: Value(accountId),
+        categoryId: Value(categoryId),
+        amountMinor: amountMinor,
+        dueDate: dueDate,
+        frequency: Value(frequency),
+        reminderEnabled: Value(reminderEnabled),
+        reminderMode: Value(reminderMode),
+        reminderDaysBefore: Value(reminderDaysBefore),
+      ),
+    );
+  }
+
+  Future<void> deleteBill(String id) {
+    return (_db.delete(_db.bills)..where((b) => b.id.equals(id))).go();
+  }
+
+  /// Records the payment as a real expense transaction against [accountId]
+  /// (falling back to the bill's own default account, since the payer can
+  /// choose a different one at pay-time) and either archives a one-time
+  /// bill or rolls a repeating one forward to its next due date.
+  Future<Bill> markBillPaid(String billId, {required String accountId}) async {
+    return _db.transaction(() async {
+      final bill = await (_db.select(
+        _db.bills,
+      )..where((b) => b.id.equals(billId))).getSingle();
+
+      await createTransaction(
+        accountId: accountId,
+        categoryId: bill.categoryId,
+        merchant: bill.name,
+        amountMinor: -bill.amountMinor,
+        date: DateTime.now(),
+      );
+
+      final isOneOff = bill.frequency == 'once';
+      final updated = BillsCompanion(
+        lastPaidDate: Value(DateTime.now()),
+        dueDate: isOneOff ? const Value.absent() : Value(addRecurrenceInterval(bill.dueDate, bill.frequency)),
+        active: Value(!isOneOff),
+      );
+      await (_db.update(_db.bills)..where((b) => b.id.equals(billId))).write(updated);
+      return (_db.select(_db.bills)..where((b) => b.id.equals(billId))).getSingle();
     });
   }
 

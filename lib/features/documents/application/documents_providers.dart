@@ -22,6 +22,18 @@ final documentsListProvider = StreamProvider<List<Document>>((ref) {
   return ref.watch(documentsRepositoryProvider).watchDocuments();
 });
 
+/// Resolves a single document by id — used wherever another module (e.g. a
+/// transaction's attached receipt) holds a `Documents.id` foreign key and
+/// needs to render its thumbnail/title without importing the whole list.
+final documentByIdProvider = Provider.family<Document?, String?>((ref, id) {
+  if (id == null) return null;
+  final documents = ref.watch(documentsListProvider).value ?? const [];
+  for (final d in documents) {
+    if (d.id == id) return d;
+  }
+  return null;
+});
+
 /// Folder name -> document count, for the folder grid's subtitle.
 final documentCountByFolderProvider = Provider<Map<String, int>>((ref) {
   final documents = ref.watch(documentsListProvider).value ?? const [];

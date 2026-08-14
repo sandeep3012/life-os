@@ -5,6 +5,10 @@ class RoutePaths {
   static const home = '/home';
   static const finance = '/finance';
   static const spendAnalyzer = '/finance/analyzer';
+  static const recurringTransactions = '/finance/recurring';
+  static const bills = '/finance/bills';
+  static const netWorth = '/finance/net-worth';
+  static const reports = '/finance/reports';
   static const tasksHabits = '/tasks-habits';
   static const calendar = '/calendar';
   static const more = '/more';

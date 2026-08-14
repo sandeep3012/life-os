@@ -1,9 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/file_storage_service.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../documents/application/documents_providers.dart';
 import '../../application/finance_providers.dart';
 import '../../domain/payment_mode.dart';
 import '../screens/category_management_screen.dart';
@@ -290,6 +296,9 @@ class _QuickAddTransactionSheetState extends ConsumerState<_QuickAddTransactionS
               ),
             ),
           ),
+          // Only meaningful once the transaction has an id to attach to —
+          // shown on the edit path, not while composing a brand-new one.
+          if (_isEditing) ...[const SizedBox(height: 12), _ReceiptSection(transactionId: widget.initial!.id)],
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -316,6 +325,133 @@ class _QuickAddTransactionSheetState extends ConsumerState<_QuickAddTransactionS
         ],
       ),
       ),
+    );
+  }
+}
+
+/// Shown only when editing an existing transaction — attaching a receipt
+/// writes to the DB immediately (unlike the rest of this sheet's fields,
+/// which wait for "Save changes") because it needs a real transaction id to
+/// link against, and there's no reason to make the user re-open the sheet
+/// just to confirm a photo they already picked.
+class _ReceiptSection extends ConsumerWidget {
+  const _ReceiptSection({required this.transactionId});
+
+  final String transactionId;
+
+  Future<void> _pickReceipt(BuildContext context, WidgetRef ref) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded),
+              title: const Text('Take photo'),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    final picked = await ImagePicker().pickImage(source: source, imageQuality: 85);
+    if (picked == null || !context.mounted) return;
+    await ref
+        .read(financeControllerProvider)
+        .attachReceipt(
+          transactionId: transactionId,
+          source: File(picked.path),
+          originalName: p.basename(picked.path),
+        );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final transactions = ref.watch(transactionsProvider).value ?? const [];
+    final transaction = transactions.where((t) => t.id == transactionId).firstOrNull;
+    final receipt = ref.watch(documentByIdProvider(transaction?.receiptDocumentId));
+
+    return InputDecorator(
+      decoration: const InputDecoration(labelText: 'Receipt'),
+      child: Row(
+        children: [
+          if (receipt != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: _ReceiptThumbnail(document: receipt),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(receipt.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+            IconButton(
+              tooltip: 'Remove receipt',
+              icon: const Icon(Icons.close_rounded, size: 20),
+              onPressed: () => ref.read(financeControllerProvider).removeReceipt(transactionId),
+            ),
+          ] else
+            Expanded(
+              child: TextButton.icon(
+                onPressed: () => _pickReceipt(context, ref),
+                icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+                label: const Text('Attach receipt'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReceiptThumbnail extends StatefulWidget {
+  const _ReceiptThumbnail({required this.document});
+
+  final Document document;
+
+  @override
+  State<_ReceiptThumbnail> createState() => _ReceiptThumbnailState();
+}
+
+class _ReceiptThumbnailState extends State<_ReceiptThumbnail> {
+  final _storage = FileStorageService();
+  File? _file;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ReceiptThumbnail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.document.id != widget.document.id) _load();
+  }
+
+  void _load() {
+    final path = widget.document.thumbnailPath ?? widget.document.filePath;
+    _storage.absoluteFile(path).then((f) {
+      if (mounted) setState(() => _file = f);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_file == null) return const SizedBox(width: 40, height: 40);
+    return Image.file(
+      _file!,
+      width: 40,
+      height: 40,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) =>
+          const SizedBox(width: 40, height: 40, child: Icon(Icons.receipt_long_rounded, size: 18)),
     );
   }
 }

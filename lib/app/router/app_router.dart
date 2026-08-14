@@ -3,6 +3,10 @@ import 'package:go_router/go_router.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/more_screen.dart';
 import '../../features/finance/presentation/screens/finance_home_screen.dart';
+import '../../features/finance/presentation/screens/recurring_transactions_screen.dart';
+import '../../features/finance/presentation/screens/bills_screen.dart';
+import '../../features/finance/presentation/screens/net_worth_screen.dart';
+import '../../features/finance/presentation/screens/reports_screen.dart';
 import '../../features/spend_analyzer/presentation/screens/spend_analyzer_screen.dart';
 import '../../features/tasks/presentation/screens/tasks_habits_screen.dart';
 import '../../features/calendar/presentation/screens/calendar_screen.dart';
@@ -31,6 +35,13 @@ final appRouter = GoRouter(
             builder: (context, state) => const FinanceHomeScreen(),
             routes: [
               GoRoute(path: 'analyzer', builder: (context, state) => const SpendAnalyzerScreen()),
+              GoRoute(
+                path: 'recurring',
+                builder: (context, state) => const RecurringTransactionsScreen(),
+              ),
+              GoRoute(path: 'bills', builder: (context, state) => const BillsScreen()),
+              GoRoute(path: 'net-worth', builder: (context, state) => const NetWorthScreen()),
+              GoRoute(path: 'reports', builder: (context, state) => const ReportsScreen()),
             ],
           ),
         ]),

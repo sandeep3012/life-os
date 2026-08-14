@@ -66,6 +66,14 @@ class TransactionTile extends StatelessWidget {
                         const SizedBox(width: 6),
                         Icon(mode.icon, size: 12, color: theme.colorScheme.onSurfaceVariant),
                       ],
+                      if (transaction.receiptDocumentId != null) ...[
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.attach_file_rounded,
+                          size: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ],
                     ],
                   ),
                 ],

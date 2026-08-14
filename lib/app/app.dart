@@ -27,6 +27,7 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp> {
     ref.read(notificationServiceProvider).init();
     ref.read(financeRepositoryProvider).ensureDefaultCategories();
     ref.read(financeRepositoryProvider).ensureDefaultAccountTypes();
+    ref.read(financeRepositoryProvider).generateDueRecurringTransactions();
     ref.read(aiAnalyserControllerProvider).refresh().catchError((_) {});
   }
 

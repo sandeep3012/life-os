@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
+import 'package:life_manager/core/services/file_storage_service.dart';
 import 'package:life_manager/features/finance/data/finance_repository.dart';
 import 'package:life_manager/features/finance/presentation/screens/finance_home_screen.dart';
 import 'package:life_manager/features/spend_analyzer/presentation/screens/spend_analyzer_screen.dart';
@@ -15,8 +16,8 @@ void main() {
 
   setUp(() async {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    await FinanceRepository(db).ensureDefaultCategories();
-    await FinanceRepository(db).ensureDefaultAccountTypes();
+    await FinanceRepository(db, FileStorageService()).ensureDefaultCategories();
+    await FinanceRepository(db, FileStorageService()).ensureDefaultAccountTypes();
   });
 
   tearDown(() => db.close());
@@ -81,7 +82,9 @@ void main() {
       // 1000 - 250 = 750, both the account card and header should reflect it.
       expect(find.textContaining('750.00'), findsWidgets);
 
-      await tester.tap(find.byTooltip('Spend Analyzer'));
+      await tester.tap(find.byTooltip('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Spend Analyzer'));
       await tester.pumpAndSettle();
 
       expect(find.text('Total spent'), findsOneWidget);

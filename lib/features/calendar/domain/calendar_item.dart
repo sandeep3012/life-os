@@ -1,4 +1,4 @@
-enum CalendarItemType { task, habit, event }
+enum CalendarItemType { task, habit, event, bill }
 
 /// A unified item shown on the Calendar screen. Tasks and habit completions
 /// are read directly from their own tables (never duplicated into [Events])

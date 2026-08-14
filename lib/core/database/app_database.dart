@@ -28,6 +28,8 @@ part 'app_database.g.dart';
     AccountTypes,
     Accounts,
     Transactions,
+    RecurringTransactions,
+    Bills,
     Budgets,
     Habits,
     HabitLogs,
@@ -49,7 +51,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -112,6 +114,22 @@ class AppDatabase extends _$AppDatabase {
         // default to 'notification', preserving current behavior.
         await m.addColumn(tasks, tasks.reminderMode);
         await m.addColumn(habits, habits.reminderMode);
+      }
+      if (from < 8) {
+        // v7 -> v8: recurring transactions (subscriptions, rent, EMIs) that
+        // auto-generate real Transactions rows on a schedule.
+        await m.createTable(recurringTransactions);
+      }
+      if (from < 9) {
+        // v8 -> v9: bill due-date tracking with its own reminder, separate
+        // from recurring transactions since a bill needs manual confirm-
+        // and-pay rather than silent auto-entry.
+        await m.createTable(bills);
+      }
+      if (from < 10) {
+        // v9 -> v10: a transaction can carry a receipt photo, filed as a
+        // Document like any other imported file.
+        await m.addColumn(transactions, transactions.receiptDocumentId);
       }
     },
   );
