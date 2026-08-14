@@ -26,6 +26,10 @@ final _manualEventsProvider = StreamProvider<List<Event>>((ref) {
   return ref.watch(calendarRepositoryProvider).watchManualEvents();
 });
 
+final _unpaidBillsProvider = StreamProvider<List<Bill>>((ref) {
+  return ref.watch(calendarRepositoryProvider).watchUnpaidBills();
+});
+
 class SelectedCalendarDay extends Notifier<DateTime> {
   @override
   DateTime build() => dateOnly(DateTime.now());
@@ -45,6 +49,7 @@ final allCalendarItemsProvider = Provider<List<CalendarItem>>((ref) {
   final habitsById = {for (final h in habits) h.id: h};
   final habitLogs = ref.watch(_completedHabitLogsProvider).value ?? const [];
   final events = ref.watch(_manualEventsProvider).value ?? const [];
+  final bills = ref.watch(_unpaidBillsProvider).value ?? const [];
 
   return [
     for (final t in tasks)
@@ -73,6 +78,14 @@ final allCalendarItemsProvider = Provider<List<CalendarItem>>((ref) {
         time: e.startTime,
         subtitle: 'Event',
         sourceId: e.id,
+      ),
+    for (final b in bills)
+      CalendarItem(
+        type: CalendarItemType.bill,
+        title: b.name,
+        date: dateOnly(b.dueDate),
+        subtitle: 'Bill · due',
+        sourceId: b.id,
       ),
   ];
 });

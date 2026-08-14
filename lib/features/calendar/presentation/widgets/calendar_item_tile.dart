@@ -10,6 +10,7 @@ Color colorForCalendarItemType(BuildContext context, CalendarItemType type) {
     CalendarItemType.task => colors.tasks,
     CalendarItemType.habit => colors.habits,
     CalendarItemType.event => colors.calendar,
+    CalendarItemType.bill => colors.finance,
   };
 }
 

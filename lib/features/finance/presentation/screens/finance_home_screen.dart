@@ -139,9 +139,9 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                         ),
                         const SizedBox(width: 8),
                         IconButton.filledTonal(
-                          tooltip: 'Spend Analyzer',
-                          icon: const Icon(Icons.insights_rounded),
-                          onPressed: () => context.push(RoutePaths.spendAnalyzer),
+                          tooltip: 'More',
+                          icon: const Icon(Icons.more_horiz_rounded),
+                          onPressed: () => _showFinanceMenu(context),
                         ),
                       ],
                     ),
@@ -165,6 +165,59 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         onPressed: () => _handleFab(context, ref),
         icon: const Icon(Icons.add_rounded),
         label: Text(_fabLabel(ref)),
+      ),
+    );
+  }
+
+  void _showFinanceMenu(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.insights_rounded),
+              title: const Text('Spend Analyzer'),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push(RoutePaths.spendAnalyzer);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.trending_up_rounded),
+              title: const Text('Net worth'),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push(RoutePaths.netWorth);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long_rounded),
+              title: const Text('Bills'),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push(RoutePaths.bills);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.autorenew_rounded),
+              title: const Text('Recurring transactions'),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push(RoutePaths.recurringTransactions);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.summarize_rounded),
+              title: const Text('Reports'),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push(RoutePaths.reports);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -25,32 +25,59 @@ void main() {
     db.close();
   });
 
-  test('merges tasks due today, completed habit logs, and manual events into one list', () async {
-    final today = dateOnly(DateTime.now());
+  test(
+    'merges tasks due today, completed habit logs, manual events, and unpaid bills into one list',
+    () async {
+      final today = dateOnly(DateTime.now());
 
-    // Keep the merged provider (and everything it watches) subscribed from
-    // the start, since a fresh `read()` would otherwise race the underlying
-    // Drift streams' first (asynchronous) emission.
-    container.listen(selectedDayItemsProvider, (_, _) {});
-    await Future.delayed(const Duration(milliseconds: 50));
+      // Keep the merged provider (and everything it watches) subscribed from
+      // the start, since a fresh `read()` would otherwise race the underlying
+      // Drift streams' first (asynchronous) emission.
+      container.listen(selectedDayItemsProvider, (_, _) {});
+      await Future.delayed(const Duration(milliseconds: 50));
 
-    final task = await db.into(db.tasks).insertReturning(
-      TasksCompanion.insert(
-        title: 'Call plumber',
-        dueDate: Value(today.add(const Duration(hours: 11))),
-      ),
-    );
-    final habit = await db.into(db.habits).insertReturning(HabitsCompanion.insert(name: 'Evening run'));
-    await db.into(db.habitLogs).insert(HabitLogsCompanion.insert(habitId: habit.id, date: today));
-    await CalendarRepository(db).createEvent(title: 'Dinner', startTime: today.add(const Duration(hours: 19, minutes: 30)));
+      final task = await db
+          .into(db.tasks)
+          .insertReturning(
+            TasksCompanion.insert(
+              title: 'Call plumber',
+              dueDate: Value(today.add(const Duration(hours: 11))),
+            ),
+          );
+      final habit = await db
+          .into(db.habits)
+          .insertReturning(HabitsCompanion.insert(name: 'Evening run'));
+      await db
+          .into(db.habitLogs)
+          .insert(HabitLogsCompanion.insert(habitId: habit.id, date: today));
+      await CalendarRepository(db).createEvent(
+        title: 'Dinner',
+        startTime: today.add(const Duration(hours: 19, minutes: 30)),
+      );
+      final account = await db
+          .into(db.accounts)
+          .insertReturning(
+            AccountsCompanion.insert(name: 'Checking', type: 'checking'),
+          );
+      await db
+          .into(db.bills)
+          .insert(
+            BillsCompanion.insert(
+              name: 'Electricity',
+              accountId: Value(account.id),
+              amountMinor: 150000,
+              dueDate: today,
+            ),
+          );
 
-    await Future.delayed(const Duration(milliseconds: 100));
-    container.read(selectedCalendarDayProvider.notifier).select(today);
+      await Future.delayed(const Duration(milliseconds: 100));
+      container.read(selectedCalendarDayProvider.notifier).select(today);
 
-    final items = container.read(selectedDayItemsProvider);
-    expect(items, hasLength(3));
-    expect(items.map((i) => i.type), containsAll(CalendarItemType.values));
-    expect(items.first.title, isNotEmpty);
-    expect(task.title, 'Call plumber');
-  });
+      final items = container.read(selectedDayItemsProvider);
+      expect(items, hasLength(4));
+      expect(items.map((i) => i.type), containsAll(CalendarItemType.values));
+      expect(items.first.title, isNotEmpty);
+      expect(task.title, 'Call plumber');
+    },
+  );
 }

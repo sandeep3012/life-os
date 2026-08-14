@@ -29,6 +29,13 @@ class CalendarRepository {
     )..where((e) => e.sourceType.equals('manual'))).watch();
   }
 
+  /// Cross-module: the Calendar screen surfaces due bills alongside tasks
+  /// and habits (see the module-level doc on `Events`) without duplicating
+  /// their data into that table.
+  Stream<List<Bill>> watchUnpaidBills() {
+    return (_db.select(_db.bills)..where((b) => b.active.equals(true))).watch();
+  }
+
   Future<void> createEvent({
     required String title,
     required DateTime startTime,

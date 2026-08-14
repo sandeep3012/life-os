@@ -66,6 +66,26 @@ class NotificationService {
     additionalFlags: _insistentFlag,
   );
 
+  static const _billChannel = AndroidNotificationDetails(
+    'bill_reminders',
+    'Bill reminders',
+    channelDescription: 'Reminders for upcoming bill due dates',
+    importance: Importance.defaultImportance,
+  );
+
+  static final _billAlarmChannel = AndroidNotificationDetails(
+    'bill_alarms',
+    'Bill alarms',
+    channelDescription: 'Alarm-style reminders for upcoming bill due dates',
+    importance: Importance.max,
+    priority: Priority.high,
+    category: AndroidNotificationCategory.alarm,
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    sound: UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+    fullScreenIntent: true,
+    additionalFlags: _insistentFlag,
+  );
+
   static final _insistentFlag = Int32List.fromList(<int>[4]);
 
   static const _dailyHabitReminderId = 0;
@@ -160,6 +180,37 @@ class NotificationService {
   Future<void> cancelTaskReminder(String taskId) {
     return _plugin.cancel(id: taskId.hashCode);
   }
+
+  /// Schedules a one-off reminder for a bill at [reminderTime] (the due
+  /// date, offset by however many days early the user asked for). Distinct
+  /// notification id namespace from tasks/habits so an ordinary bill id can
+  /// never collide with a task or habit id and cancel the wrong reminder.
+  Future<void> scheduleBillReminder({
+    required String billId,
+    required String title,
+    required DateTime reminderTime,
+    ReminderMode mode = ReminderMode.notification,
+  }) async {
+    if (reminderTime.isBefore(DateTime.now())) return;
+    final isAlarm = mode == ReminderMode.alarm;
+    await _plugin.zonedSchedule(
+      id: _billReminderId(billId),
+      title: title,
+      body: 'Bill due',
+      scheduledDate: tz.TZDateTime.from(reminderTime, tz.local),
+      notificationDetails: NotificationDetails(
+        android: isAlarm ? _billAlarmChannel : _billChannel,
+        iOS: isAlarm ? _iosAlarmDetails : const DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
+  Future<void> cancelBillReminder(String billId) {
+    return _plugin.cancel(id: _billReminderId(billId));
+  }
+
+  int _billReminderId(String billId) => 'bill_reminder_$billId'.hashCode;
 
   /// Schedules (or re-schedules) one recurring notification at [hour]:[minute]
   /// local time every day, reminding the user to check in on open habits.
