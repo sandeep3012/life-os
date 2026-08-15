@@ -57,6 +57,10 @@ class GoalsScreen extends ConsumerWidget {
             title: result.title,
             type: result.type,
             targetValue: result.targetValue,
+            targetDate: result.targetDate,
+            reminderEnabled: result.reminderEnabled,
+            reminderMode: result.reminderMode,
+            reminderDaysBefore: result.reminderDaysBefore,
           );
           if (result.link != null) {
             await ref.read(goalsControllerProvider).addLink(
