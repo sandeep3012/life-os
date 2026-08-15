@@ -117,7 +117,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
                     itemCount: dayItems.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) => CalendarItemTile(item: dayItems[index]),
+                    itemBuilder: (context, index) => _buildItemTile(context, dayItems[index]),
                   ),
           ),
         ],
@@ -128,14 +128,131 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           if (result == null) return;
           await ref
               .read(calendarControllerProvider)
-              .addEvent(title: result.title, startTime: result.startTime);
+              .addEvent(
+                title: result.title,
+                startTime: result.startTime,
+                endTime: result.endTime,
+                frequency: result.frequency,
+                recurrenceEndDate: result.recurrenceEndDate,
+                reminderEnabled: result.reminderEnabled,
+                reminderMode: result.reminderMode,
+                reminderMinutesBefore: result.reminderMinutesBefore,
+              );
         },
         icon: const Icon(Icons.add_rounded),
         label: const Text('New event'),
       ),
     );
   }
+
+  /// Manual events (not tasks/habits/bills, which keep navigating to their
+  /// own modules elsewhere) get tap-to-edit and swipe-to-delete.
+  Widget _buildItemTile(BuildContext context, CalendarItem item) {
+    if (item.type != CalendarItemType.event || item.sourceId == null) {
+      return CalendarItemTile(item: item);
+    }
+    final eventId = item.sourceId!;
+    final recurrenceId = item.recurrenceId;
+    return Dismissible(
+      key: ValueKey(eventId),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        color: Theme.of(context).colorScheme.errorContainer,
+        child: Icon(Icons.delete_outline_rounded, color: Theme.of(context).colorScheme.onErrorContainer),
+      ),
+      confirmDismiss: (_) async {
+        final choice = await _confirmDelete(context, isPartOfSeries: recurrenceId != null);
+        switch (choice) {
+          case _DeleteChoice.cancel:
+            return false;
+          case _DeleteChoice.thisEvent:
+            await ref.read(calendarControllerProvider).deleteEvent(eventId);
+            return true;
+          case _DeleteChoice.allInSeries:
+            await ref.read(calendarControllerProvider).deleteEventSeries(recurrenceId!);
+            return true;
+        }
+      },
+      child: CalendarItemTile(item: item, onTap: () => _editEvent(context, eventId)),
+    );
+  }
+
+  /// Offers "delete this event" alone for a standalone event, or a third
+  /// "delete all events in this series" option when the event belongs to a
+  /// recurring series (see the calendar delete-series plan notes).
+  Future<_DeleteChoice> _confirmDelete(BuildContext context, {required bool isPartOfSeries}) async {
+    final choice = await showDialog<_DeleteChoice>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete event?'),
+        content: Text(
+          isPartOfSeries
+              ? 'This event repeats. Choose what to delete.'
+              : 'This can\'t be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_DeleteChoice.cancel),
+            child: const Text('Cancel'),
+          ),
+          if (isPartOfSeries)
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(_DeleteChoice.allInSeries),
+              child: Text(
+                'Delete all events',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_DeleteChoice.thisEvent),
+            child: Text(
+              isPartOfSeries ? 'Delete this event' : 'Delete',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    return choice ?? _DeleteChoice.cancel;
+  }
+
+  Future<void> _editEvent(BuildContext context, String eventId) async {
+    final event = await ref.read(calendarRepositoryProvider).getEvent(eventId);
+    if (event == null || !context.mounted) return;
+    final result = await showQuickAddEventSheet(
+      context,
+      initialDate: dateOnly(event.startTime),
+      initial: event,
+      onDelete: () async {
+        final choice = await _confirmDelete(context, isPartOfSeries: event.recurrenceId != null);
+        switch (choice) {
+          case _DeleteChoice.cancel:
+            return;
+          case _DeleteChoice.thisEvent:
+            await ref.read(calendarControllerProvider).deleteEvent(eventId);
+          case _DeleteChoice.allInSeries:
+            await ref.read(calendarControllerProvider).deleteEventSeries(event.recurrenceId!);
+        }
+      },
+    );
+    if (result == null) return;
+    await ref
+        .read(calendarControllerProvider)
+        .updateEvent(
+          id: eventId,
+          title: result.title,
+          startTime: result.startTime,
+          endTime: result.endTime,
+          reminderEnabled: result.reminderEnabled,
+          reminderMode: result.reminderMode,
+          reminderMinutesBefore: result.reminderMinutesBefore,
+        );
+  }
 }
+
+enum _DeleteChoice { cancel, thisEvent, allInSeries }
 
 class _LegendDot extends StatelessWidget {
   const _LegendDot({required this.label, required this.color});

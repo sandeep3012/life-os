@@ -86,6 +86,26 @@ class NotificationService {
     additionalFlags: _insistentFlag,
   );
 
+  static const _eventChannel = AndroidNotificationDetails(
+    'event_reminders',
+    'Event reminders',
+    channelDescription: 'Reminders for upcoming calendar events',
+    importance: Importance.defaultImportance,
+  );
+
+  static final _eventAlarmChannel = AndroidNotificationDetails(
+    'event_alarms',
+    'Event alarms',
+    channelDescription: 'Alarm-style reminders for upcoming calendar events',
+    importance: Importance.max,
+    priority: Priority.high,
+    category: AndroidNotificationCategory.alarm,
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    sound: UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+    fullScreenIntent: true,
+    additionalFlags: _insistentFlag,
+  );
+
   static final _insistentFlag = Int32List.fromList(<int>[4]);
 
   static const _dailyHabitReminderId = 0;
@@ -211,6 +231,38 @@ class NotificationService {
   }
 
   int _billReminderId(String billId) => 'bill_reminder_$billId'.hashCode;
+
+  /// Schedules a one-off reminder for a calendar event at [reminderTime]
+  /// (the event's start time, offset by however many minutes early the user
+  /// asked for). Distinct notification id namespace from tasks/habits/bills
+  /// so an ordinary event id can never collide with theirs and cancel the
+  /// wrong reminder.
+  Future<void> scheduleEventReminder({
+    required String eventId,
+    required String title,
+    required DateTime reminderTime,
+    ReminderMode mode = ReminderMode.notification,
+  }) async {
+    if (reminderTime.isBefore(DateTime.now())) return;
+    final isAlarm = mode == ReminderMode.alarm;
+    await _plugin.zonedSchedule(
+      id: _eventReminderId(eventId),
+      title: title,
+      body: 'Event starting',
+      scheduledDate: tz.TZDateTime.from(reminderTime, tz.local),
+      notificationDetails: NotificationDetails(
+        android: isAlarm ? _eventAlarmChannel : _eventChannel,
+        iOS: isAlarm ? _iosAlarmDetails : const DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
+  Future<void> cancelEventReminder(String eventId) {
+    return _plugin.cancel(id: _eventReminderId(eventId));
+  }
+
+  int _eventReminderId(String eventId) => 'event_reminder_$eventId'.hashCode;
 
   /// Schedules (or re-schedules) one recurring notification at [hour]:[minute]
   /// local time every day, reminding the user to check in on open habits.

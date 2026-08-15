@@ -2,7 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/app_database_provider.dart';
+import '../../../core/reminders/reminder_mode.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../settings/application/settings_providers.dart';
 import '../data/calendar_repository.dart';
 import '../domain/calendar_item.dart';
 
@@ -76,8 +79,11 @@ final allCalendarItemsProvider = Provider<List<CalendarItem>>((ref) {
         title: e.title,
         date: dateOnly(e.startTime),
         time: e.startTime,
+        endTime: e.endTime,
         subtitle: 'Event',
         sourceId: e.id,
+        reminderEnabled: e.reminderEnabled,
+        recurrenceId: e.recurrenceId,
       ),
     for (final b in bills)
       CalendarItem(
@@ -113,21 +119,98 @@ final selectedDayItemsProvider = Provider<List<CalendarItem>>((ref) {
 });
 
 class CalendarController {
-  CalendarController(this._repo);
+  CalendarController(this._repo, this._notifications, this._remindersEnabled);
 
   final CalendarRepository _repo;
+  final NotificationService _notifications;
+  final bool Function() _remindersEnabled;
 
   Future<void> addEvent({
     required String title,
     required DateTime startTime,
     DateTime? endTime,
-  }) {
-    return _repo.createEvent(title: title, startTime: startTime, endTime: endTime);
+    String frequency = 'none',
+    DateTime? recurrenceEndDate,
+    bool reminderEnabled = false,
+    ReminderMode reminderMode = ReminderMode.notification,
+    int reminderMinutesBefore = 0,
+  }) async {
+    final event = await _repo.createEvent(
+      title: title,
+      startTime: startTime,
+      endTime: endTime,
+      frequency: frequency,
+      recurrenceEndDate: recurrenceEndDate,
+      reminderEnabled: reminderEnabled,
+      reminderMode: reminderMode,
+      reminderMinutesBefore: reminderMinutesBefore,
+    );
+    await _scheduleEventReminder(event, reminderMode);
   }
 
-  Future<void> deleteEvent(String id) => _repo.deleteEvent(id);
+  Future<void> updateEvent({
+    required String id,
+    required String title,
+    required DateTime startTime,
+    DateTime? endTime,
+    bool reminderEnabled = false,
+    ReminderMode reminderMode = ReminderMode.notification,
+    int reminderMinutesBefore = 0,
+  }) async {
+    await _notifications.cancelEventReminder(id);
+    await _repo.updateEvent(
+      id: id,
+      title: title,
+      startTime: startTime,
+      endTime: endTime,
+      reminderEnabled: reminderEnabled,
+      reminderMode: reminderMode,
+      reminderMinutesBefore: reminderMinutesBefore,
+    );
+    if (reminderEnabled && _remindersEnabled()) {
+      await _notifications.scheduleEventReminder(
+        eventId: id,
+        title: title,
+        reminderTime: startTime.subtract(Duration(minutes: reminderMinutesBefore)),
+        mode: reminderMode,
+      );
+    }
+  }
+
+  Future<void> deleteEvent(String id) async {
+    await _notifications.cancelEventReminder(id);
+    await _repo.deleteEvent(id);
+  }
+
+  /// Cancels every event's reminder in the series before the bulk delete —
+  /// a SQL delete doesn't touch the OS notification queue, so each id needs
+  /// its own cancel call.
+  Future<void> deleteEventSeries(String recurrenceId) async {
+    final events = await _repo.getEventsInSeries(recurrenceId);
+    for (final e in events) {
+      await _notifications.cancelEventReminder(e.id);
+    }
+    await _repo.deleteEventSeries(recurrenceId);
+  }
+
+  Future<void> extendRecurringEvents() => _repo.extendRecurringEvents();
+
+  Future<void> _scheduleEventReminder(Event event, ReminderMode mode) async {
+    if (!event.reminderEnabled || !_remindersEnabled()) return;
+    final reminderTime = event.startTime.subtract(Duration(minutes: event.reminderMinutesBefore));
+    await _notifications.scheduleEventReminder(
+      eventId: event.id,
+      title: event.title,
+      reminderTime: reminderTime,
+      mode: mode,
+    );
+  }
 }
 
 final calendarControllerProvider = Provider<CalendarController>((ref) {
-  return CalendarController(ref.watch(calendarRepositoryProvider));
+  return CalendarController(
+    ref.watch(calendarRepositoryProvider),
+    ref.watch(notificationServiceProvider),
+    () => ref.read(settingsProvider).taskReminders,
+  );
 });

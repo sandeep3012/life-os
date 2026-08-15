@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/services/notification_service.dart';
 import '../features/ai_analyser/application/ai_analyser_providers.dart';
+import '../features/calendar/application/calendar_providers.dart';
 import '../features/finance/application/finance_providers.dart';
 import '../features/settings/application/settings_providers.dart';
 import 'router/app_router.dart';
@@ -28,6 +29,7 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp> {
     ref.read(financeRepositoryProvider).ensureDefaultCategories();
     ref.read(financeRepositoryProvider).ensureDefaultAccountTypes();
     ref.read(financeRepositoryProvider).generateDueRecurringTransactions();
+    ref.read(calendarRepositoryProvider).extendRecurringEvents();
     ref.read(aiAnalyserControllerProvider).refresh().catchError((_) {});
   }
 
