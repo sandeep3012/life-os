@@ -15,6 +15,8 @@ class GoalsRepository {
 
   Stream<List<GoalLink>> watchAllLinks() => _db.select(_db.goalLinks).watch();
 
+  Stream<List<GoalMilestone>> watchAllMilestones() => _db.select(_db.goalMilestones).watch();
+
   Future<Goal?> getGoal(String id) {
     return (_db.select(_db.goals)..where((g) => g.id.equals(id))).getSingleOrNull();
   }

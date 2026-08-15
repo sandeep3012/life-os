@@ -53,6 +53,9 @@ class AiAnalyserController {
       _ref.listen(allTasksProvider, (_, _) {}),
       _ref.listen(goalsListProvider, (_, _) {}),
       _ref.listen(allGoalLinksProvider, (_, _) {}),
+      _ref.listen(billsProvider, (_, _) {}),
+      _ref.listen(allGoalMilestonesProvider, (_, _) {}),
+      _ref.listen(habitCategoriesProvider, (_, _) {}),
     ];
     try {
       await Future.wait([
@@ -65,6 +68,9 @@ class AiAnalyserController {
         _ref.read(allTasksProvider.future),
         _ref.read(goalsListProvider.future),
         _ref.read(allGoalLinksProvider.future),
+        _ref.read(billsProvider.future),
+        _ref.read(allGoalMilestonesProvider.future),
+        _ref.read(habitCategoriesProvider.future),
       ]);
     } finally {
       for (final subscription in subscriptions) {
@@ -88,12 +94,23 @@ class AiAnalyserController {
           .length;
     }
 
+    final bills = _ref.read(billsProvider).value ?? const [];
+    final netWorthTrend = _ref.read(netWorthTrendProvider);
+    final allMilestones = _ref.read(allGoalMilestonesProvider).value ?? const [];
+    final milestonesByGoal = <String, List<GoalMilestone>>{};
+    for (final m in allMilestones) {
+      milestonesByGoal.putIfAbsent(m.goalId, () => []).add(m);
+    }
+
     final drafts = computeInsights(
       budgets: _ref.read(budgetsWithProgressProvider),
       habits: _ref.read(habitsWithProgressProvider),
       tasksCompletedThisWeek: completedInRange(thisWeekStart, now),
       tasksCompletedLastWeek: completedInRange(lastWeekStart, thisWeekStart),
       goals: _ref.read(goalsWithLinksProvider),
+      bills: bills,
+      netWorthTrend: netWorthTrend,
+      milestonesByGoal: milestonesByGoal,
       now: now,
     );
 

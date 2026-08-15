@@ -27,6 +27,10 @@ final goalMilestonesProvider = StreamProvider.family<List<GoalMilestone>, String
   return ref.watch(goalsRepositoryProvider).watchMilestonesForGoal(goalId);
 });
 
+final allGoalMilestonesProvider = StreamProvider<List<GoalMilestone>>((ref) {
+  return ref.watch(goalsRepositoryProvider).watchAllMilestones();
+});
+
 /// Resolves each link's `linkedId` against whichever module owns it
 /// (habits/accounts/tasks) — the cross-module lookup the single shared
 /// database exists to make possible without a network of foreign services.
