@@ -11,7 +11,10 @@ class CalendarItem {
     required this.date,
     required this.subtitle,
     this.time,
+    this.endTime,
     this.sourceId,
+    this.reminderEnabled = false,
+    this.recurrenceId,
   });
 
   final CalendarItemType type;
@@ -20,6 +23,13 @@ class CalendarItem {
   /// Date-only, used for grouping into a day.
   final DateTime date;
   final DateTime? time;
+  final DateTime? endTime;
   final String subtitle;
   final String? sourceId;
+  final bool reminderEnabled;
+
+  /// Non-null when this event belongs to a recurring series — lets the
+  /// calendar screen offer a "delete this event / delete all in series"
+  /// choice without an extra DB round trip.
+  final String? recurrenceId;
 }

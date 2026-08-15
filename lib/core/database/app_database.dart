@@ -51,7 +51,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -130,6 +130,19 @@ class AppDatabase extends _$AppDatabase {
         // v9 -> v10: a transaction can carry a receipt photo, filed as a
         // Document like any other imported file.
         await m.addColumn(transactions, transactions.receiptDocumentId);
+      }
+      if (from < 11) {
+        // v10 -> v11: recurring events (simple daily/weekly/monthly/yearly,
+        // upfront-generated occurrences) and per-event reminders, mirroring
+        // Bills' reminder shape but offset in minutes-before-start since
+        // events are time-of-day scheduled rather than date-only.
+        await m.addColumn(events, events.frequency);
+        await m.addColumn(events, events.recurrenceEndDate);
+        await m.addColumn(events, events.recurrenceId);
+        await m.addColumn(events, events.recurrenceNextGenerationDate);
+        await m.addColumn(events, events.reminderEnabled);
+        await m.addColumn(events, events.reminderMode);
+        await m.addColumn(events, events.reminderMinutesBefore);
       }
     },
   );

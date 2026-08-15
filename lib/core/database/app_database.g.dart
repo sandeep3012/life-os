@@ -8200,6 +8200,90 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _frequencyMeta = const VerificationMeta(
+    'frequency',
+  );
+  @override
+  late final GeneratedColumn<String> frequency = GeneratedColumn<String>(
+    'frequency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('none'),
+  );
+  static const VerificationMeta _recurrenceEndDateMeta = const VerificationMeta(
+    'recurrenceEndDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> recurrenceEndDate =
+      GeneratedColumn<DateTime>(
+        'recurrence_end_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _recurrenceIdMeta = const VerificationMeta(
+    'recurrenceId',
+  );
+  @override
+  late final GeneratedColumn<String> recurrenceId = GeneratedColumn<String>(
+    'recurrence_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _recurrenceNextGenerationDateMeta =
+      const VerificationMeta('recurrenceNextGenerationDate');
+  @override
+  late final GeneratedColumn<DateTime> recurrenceNextGenerationDate =
+      GeneratedColumn<DateTime>(
+        'recurrence_next_generation_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _reminderEnabledMeta = const VerificationMeta(
+    'reminderEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> reminderEnabled = GeneratedColumn<bool>(
+    'reminder_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("reminder_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _reminderModeMeta = const VerificationMeta(
+    'reminderMode',
+  );
+  @override
+  late final GeneratedColumn<String> reminderMode = GeneratedColumn<String>(
+    'reminder_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('notification'),
+  );
+  static const VerificationMeta _reminderMinutesBeforeMeta =
+      const VerificationMeta('reminderMinutesBefore');
+  @override
+  late final GeneratedColumn<int> reminderMinutesBefore = GeneratedColumn<int>(
+    'reminder_minutes_before',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -8220,6 +8304,13 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
     endTime,
     sourceType,
     sourceId,
+    frequency,
+    recurrenceEndDate,
+    recurrenceId,
+    recurrenceNextGenerationDate,
+    reminderEnabled,
+    reminderMode,
+    reminderMinutesBefore,
     createdAt,
   ];
   @override
@@ -8271,6 +8362,66 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
         sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
       );
     }
+    if (data.containsKey('frequency')) {
+      context.handle(
+        _frequencyMeta,
+        frequency.isAcceptableOrUnknown(data['frequency']!, _frequencyMeta),
+      );
+    }
+    if (data.containsKey('recurrence_end_date')) {
+      context.handle(
+        _recurrenceEndDateMeta,
+        recurrenceEndDate.isAcceptableOrUnknown(
+          data['recurrence_end_date']!,
+          _recurrenceEndDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('recurrence_id')) {
+      context.handle(
+        _recurrenceIdMeta,
+        recurrenceId.isAcceptableOrUnknown(
+          data['recurrence_id']!,
+          _recurrenceIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('recurrence_next_generation_date')) {
+      context.handle(
+        _recurrenceNextGenerationDateMeta,
+        recurrenceNextGenerationDate.isAcceptableOrUnknown(
+          data['recurrence_next_generation_date']!,
+          _recurrenceNextGenerationDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_enabled')) {
+      context.handle(
+        _reminderEnabledMeta,
+        reminderEnabled.isAcceptableOrUnknown(
+          data['reminder_enabled']!,
+          _reminderEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_mode')) {
+      context.handle(
+        _reminderModeMeta,
+        reminderMode.isAcceptableOrUnknown(
+          data['reminder_mode']!,
+          _reminderModeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('reminder_minutes_before')) {
+      context.handle(
+        _reminderMinutesBeforeMeta,
+        reminderMinutesBefore.isAcceptableOrUnknown(
+          data['reminder_minutes_before']!,
+          _reminderMinutesBeforeMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -8310,6 +8461,34 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
         DriftSqlType.string,
         data['${effectivePrefix}source_id'],
       ),
+      frequency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}frequency'],
+      )!,
+      recurrenceEndDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}recurrence_end_date'],
+      ),
+      recurrenceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recurrence_id'],
+      ),
+      recurrenceNextGenerationDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}recurrence_next_generation_date'],
+      ),
+      reminderEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}reminder_enabled'],
+      )!,
+      reminderMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reminder_mode'],
+      )!,
+      reminderMinutesBefore: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}reminder_minutes_before'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -8332,6 +8511,34 @@ class Event extends DataClass implements Insertable<Event> {
   /// manual | task | habit | goal
   final String sourceType;
   final String? sourceId;
+
+  /// none | daily | weekly | monthly | yearly. Meaningful only on the head
+  /// row of a recurring series ([recurrenceId] == [id]) — generated
+  /// occurrence rows always carry 'none', since only the head drives further
+  /// generation (see [CalendarRepository.extendRecurringEvents]).
+  final String frequency;
+
+  /// The series stops generating occurrences past this date. Null means
+  /// generate indefinitely, capped instead by the repository's rolling
+  /// 365-day horizon.
+  final DateTime? recurrenceEndDate;
+
+  /// Groups the head row and every occurrence generated from it. Null for a
+  /// plain one-off event. Not a foreign key — same polymorphic-reference
+  /// idiom as [sourceType]/[sourceId] above, just self-referential.
+  final String? recurrenceId;
+
+  /// Head-row-only bookkeeping: the start time up to which occurrences have
+  /// already been generated, so extending the horizon later doesn't rescan
+  /// or duplicate existing rows.
+  final DateTime? recurrenceNextGenerationDate;
+  final bool reminderEnabled;
+
+  /// notification | alarm — see ReminderMode.
+  final String reminderMode;
+
+  /// Minutes before [startTime] the reminder fires. 0 = at start time.
+  final int reminderMinutesBefore;
   final DateTime createdAt;
   const Event({
     required this.id,
@@ -8340,6 +8547,13 @@ class Event extends DataClass implements Insertable<Event> {
     this.endTime,
     required this.sourceType,
     this.sourceId,
+    required this.frequency,
+    this.recurrenceEndDate,
+    this.recurrenceId,
+    this.recurrenceNextGenerationDate,
+    required this.reminderEnabled,
+    required this.reminderMode,
+    required this.reminderMinutesBefore,
     required this.createdAt,
   });
   @override
@@ -8355,6 +8569,21 @@ class Event extends DataClass implements Insertable<Event> {
     if (!nullToAbsent || sourceId != null) {
       map['source_id'] = Variable<String>(sourceId);
     }
+    map['frequency'] = Variable<String>(frequency);
+    if (!nullToAbsent || recurrenceEndDate != null) {
+      map['recurrence_end_date'] = Variable<DateTime>(recurrenceEndDate);
+    }
+    if (!nullToAbsent || recurrenceId != null) {
+      map['recurrence_id'] = Variable<String>(recurrenceId);
+    }
+    if (!nullToAbsent || recurrenceNextGenerationDate != null) {
+      map['recurrence_next_generation_date'] = Variable<DateTime>(
+        recurrenceNextGenerationDate,
+      );
+    }
+    map['reminder_enabled'] = Variable<bool>(reminderEnabled);
+    map['reminder_mode'] = Variable<String>(reminderMode);
+    map['reminder_minutes_before'] = Variable<int>(reminderMinutesBefore);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -8371,6 +8600,20 @@ class Event extends DataClass implements Insertable<Event> {
       sourceId: sourceId == null && nullToAbsent
           ? const Value.absent()
           : Value(sourceId),
+      frequency: Value(frequency),
+      recurrenceEndDate: recurrenceEndDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceEndDate),
+      recurrenceId: recurrenceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceId),
+      recurrenceNextGenerationDate:
+          recurrenceNextGenerationDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceNextGenerationDate),
+      reminderEnabled: Value(reminderEnabled),
+      reminderMode: Value(reminderMode),
+      reminderMinutesBefore: Value(reminderMinutesBefore),
       createdAt: Value(createdAt),
     );
   }
@@ -8387,6 +8630,19 @@ class Event extends DataClass implements Insertable<Event> {
       endTime: serializer.fromJson<DateTime?>(json['endTime']),
       sourceType: serializer.fromJson<String>(json['sourceType']),
       sourceId: serializer.fromJson<String?>(json['sourceId']),
+      frequency: serializer.fromJson<String>(json['frequency']),
+      recurrenceEndDate: serializer.fromJson<DateTime?>(
+        json['recurrenceEndDate'],
+      ),
+      recurrenceId: serializer.fromJson<String?>(json['recurrenceId']),
+      recurrenceNextGenerationDate: serializer.fromJson<DateTime?>(
+        json['recurrenceNextGenerationDate'],
+      ),
+      reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
+      reminderMode: serializer.fromJson<String>(json['reminderMode']),
+      reminderMinutesBefore: serializer.fromJson<int>(
+        json['reminderMinutesBefore'],
+      ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -8400,6 +8656,15 @@ class Event extends DataClass implements Insertable<Event> {
       'endTime': serializer.toJson<DateTime?>(endTime),
       'sourceType': serializer.toJson<String>(sourceType),
       'sourceId': serializer.toJson<String?>(sourceId),
+      'frequency': serializer.toJson<String>(frequency),
+      'recurrenceEndDate': serializer.toJson<DateTime?>(recurrenceEndDate),
+      'recurrenceId': serializer.toJson<String?>(recurrenceId),
+      'recurrenceNextGenerationDate': serializer.toJson<DateTime?>(
+        recurrenceNextGenerationDate,
+      ),
+      'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
+      'reminderMode': serializer.toJson<String>(reminderMode),
+      'reminderMinutesBefore': serializer.toJson<int>(reminderMinutesBefore),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -8411,6 +8676,13 @@ class Event extends DataClass implements Insertable<Event> {
     Value<DateTime?> endTime = const Value.absent(),
     String? sourceType,
     Value<String?> sourceId = const Value.absent(),
+    String? frequency,
+    Value<DateTime?> recurrenceEndDate = const Value.absent(),
+    Value<String?> recurrenceId = const Value.absent(),
+    Value<DateTime?> recurrenceNextGenerationDate = const Value.absent(),
+    bool? reminderEnabled,
+    String? reminderMode,
+    int? reminderMinutesBefore,
     DateTime? createdAt,
   }) => Event(
     id: id ?? this.id,
@@ -8419,6 +8691,17 @@ class Event extends DataClass implements Insertable<Event> {
     endTime: endTime.present ? endTime.value : this.endTime,
     sourceType: sourceType ?? this.sourceType,
     sourceId: sourceId.present ? sourceId.value : this.sourceId,
+    frequency: frequency ?? this.frequency,
+    recurrenceEndDate: recurrenceEndDate.present
+        ? recurrenceEndDate.value
+        : this.recurrenceEndDate,
+    recurrenceId: recurrenceId.present ? recurrenceId.value : this.recurrenceId,
+    recurrenceNextGenerationDate: recurrenceNextGenerationDate.present
+        ? recurrenceNextGenerationDate.value
+        : this.recurrenceNextGenerationDate,
+    reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+    reminderMode: reminderMode ?? this.reminderMode,
+    reminderMinutesBefore: reminderMinutesBefore ?? this.reminderMinutesBefore,
     createdAt: createdAt ?? this.createdAt,
   );
   Event copyWithCompanion(EventsCompanion data) {
@@ -8431,6 +8714,25 @@ class Event extends DataClass implements Insertable<Event> {
           ? data.sourceType.value
           : this.sourceType,
       sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      frequency: data.frequency.present ? data.frequency.value : this.frequency,
+      recurrenceEndDate: data.recurrenceEndDate.present
+          ? data.recurrenceEndDate.value
+          : this.recurrenceEndDate,
+      recurrenceId: data.recurrenceId.present
+          ? data.recurrenceId.value
+          : this.recurrenceId,
+      recurrenceNextGenerationDate: data.recurrenceNextGenerationDate.present
+          ? data.recurrenceNextGenerationDate.value
+          : this.recurrenceNextGenerationDate,
+      reminderEnabled: data.reminderEnabled.present
+          ? data.reminderEnabled.value
+          : this.reminderEnabled,
+      reminderMode: data.reminderMode.present
+          ? data.reminderMode.value
+          : this.reminderMode,
+      reminderMinutesBefore: data.reminderMinutesBefore.present
+          ? data.reminderMinutesBefore.value
+          : this.reminderMinutesBefore,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -8444,6 +8746,15 @@ class Event extends DataClass implements Insertable<Event> {
           ..write('endTime: $endTime, ')
           ..write('sourceType: $sourceType, ')
           ..write('sourceId: $sourceId, ')
+          ..write('frequency: $frequency, ')
+          ..write('recurrenceEndDate: $recurrenceEndDate, ')
+          ..write('recurrenceId: $recurrenceId, ')
+          ..write(
+            'recurrenceNextGenerationDate: $recurrenceNextGenerationDate, ',
+          )
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderMode: $reminderMode, ')
+          ..write('reminderMinutesBefore: $reminderMinutesBefore, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -8457,6 +8768,13 @@ class Event extends DataClass implements Insertable<Event> {
     endTime,
     sourceType,
     sourceId,
+    frequency,
+    recurrenceEndDate,
+    recurrenceId,
+    recurrenceNextGenerationDate,
+    reminderEnabled,
+    reminderMode,
+    reminderMinutesBefore,
     createdAt,
   );
   @override
@@ -8469,6 +8787,14 @@ class Event extends DataClass implements Insertable<Event> {
           other.endTime == this.endTime &&
           other.sourceType == this.sourceType &&
           other.sourceId == this.sourceId &&
+          other.frequency == this.frequency &&
+          other.recurrenceEndDate == this.recurrenceEndDate &&
+          other.recurrenceId == this.recurrenceId &&
+          other.recurrenceNextGenerationDate ==
+              this.recurrenceNextGenerationDate &&
+          other.reminderEnabled == this.reminderEnabled &&
+          other.reminderMode == this.reminderMode &&
+          other.reminderMinutesBefore == this.reminderMinutesBefore &&
           other.createdAt == this.createdAt);
 }
 
@@ -8479,6 +8805,13 @@ class EventsCompanion extends UpdateCompanion<Event> {
   final Value<DateTime?> endTime;
   final Value<String> sourceType;
   final Value<String?> sourceId;
+  final Value<String> frequency;
+  final Value<DateTime?> recurrenceEndDate;
+  final Value<String?> recurrenceId;
+  final Value<DateTime?> recurrenceNextGenerationDate;
+  final Value<bool> reminderEnabled;
+  final Value<String> reminderMode;
+  final Value<int> reminderMinutesBefore;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const EventsCompanion({
@@ -8488,6 +8821,13 @@ class EventsCompanion extends UpdateCompanion<Event> {
     this.endTime = const Value.absent(),
     this.sourceType = const Value.absent(),
     this.sourceId = const Value.absent(),
+    this.frequency = const Value.absent(),
+    this.recurrenceEndDate = const Value.absent(),
+    this.recurrenceId = const Value.absent(),
+    this.recurrenceNextGenerationDate = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    this.reminderMode = const Value.absent(),
+    this.reminderMinutesBefore = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -8498,6 +8838,13 @@ class EventsCompanion extends UpdateCompanion<Event> {
     this.endTime = const Value.absent(),
     this.sourceType = const Value.absent(),
     this.sourceId = const Value.absent(),
+    this.frequency = const Value.absent(),
+    this.recurrenceEndDate = const Value.absent(),
+    this.recurrenceId = const Value.absent(),
+    this.recurrenceNextGenerationDate = const Value.absent(),
+    this.reminderEnabled = const Value.absent(),
+    this.reminderMode = const Value.absent(),
+    this.reminderMinutesBefore = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : title = Value(title),
@@ -8509,6 +8856,13 @@ class EventsCompanion extends UpdateCompanion<Event> {
     Expression<DateTime>? endTime,
     Expression<String>? sourceType,
     Expression<String>? sourceId,
+    Expression<String>? frequency,
+    Expression<DateTime>? recurrenceEndDate,
+    Expression<String>? recurrenceId,
+    Expression<DateTime>? recurrenceNextGenerationDate,
+    Expression<bool>? reminderEnabled,
+    Expression<String>? reminderMode,
+    Expression<int>? reminderMinutesBefore,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -8519,6 +8873,15 @@ class EventsCompanion extends UpdateCompanion<Event> {
       if (endTime != null) 'end_time': endTime,
       if (sourceType != null) 'source_type': sourceType,
       if (sourceId != null) 'source_id': sourceId,
+      if (frequency != null) 'frequency': frequency,
+      if (recurrenceEndDate != null) 'recurrence_end_date': recurrenceEndDate,
+      if (recurrenceId != null) 'recurrence_id': recurrenceId,
+      if (recurrenceNextGenerationDate != null)
+        'recurrence_next_generation_date': recurrenceNextGenerationDate,
+      if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
+      if (reminderMode != null) 'reminder_mode': reminderMode,
+      if (reminderMinutesBefore != null)
+        'reminder_minutes_before': reminderMinutesBefore,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -8531,6 +8894,13 @@ class EventsCompanion extends UpdateCompanion<Event> {
     Value<DateTime?>? endTime,
     Value<String>? sourceType,
     Value<String?>? sourceId,
+    Value<String>? frequency,
+    Value<DateTime?>? recurrenceEndDate,
+    Value<String?>? recurrenceId,
+    Value<DateTime?>? recurrenceNextGenerationDate,
+    Value<bool>? reminderEnabled,
+    Value<String>? reminderMode,
+    Value<int>? reminderMinutesBefore,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -8541,6 +8911,15 @@ class EventsCompanion extends UpdateCompanion<Event> {
       endTime: endTime ?? this.endTime,
       sourceType: sourceType ?? this.sourceType,
       sourceId: sourceId ?? this.sourceId,
+      frequency: frequency ?? this.frequency,
+      recurrenceEndDate: recurrenceEndDate ?? this.recurrenceEndDate,
+      recurrenceId: recurrenceId ?? this.recurrenceId,
+      recurrenceNextGenerationDate:
+          recurrenceNextGenerationDate ?? this.recurrenceNextGenerationDate,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      reminderMode: reminderMode ?? this.reminderMode,
+      reminderMinutesBefore:
+          reminderMinutesBefore ?? this.reminderMinutesBefore,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -8567,6 +8946,31 @@ class EventsCompanion extends UpdateCompanion<Event> {
     if (sourceId.present) {
       map['source_id'] = Variable<String>(sourceId.value);
     }
+    if (frequency.present) {
+      map['frequency'] = Variable<String>(frequency.value);
+    }
+    if (recurrenceEndDate.present) {
+      map['recurrence_end_date'] = Variable<DateTime>(recurrenceEndDate.value);
+    }
+    if (recurrenceId.present) {
+      map['recurrence_id'] = Variable<String>(recurrenceId.value);
+    }
+    if (recurrenceNextGenerationDate.present) {
+      map['recurrence_next_generation_date'] = Variable<DateTime>(
+        recurrenceNextGenerationDate.value,
+      );
+    }
+    if (reminderEnabled.present) {
+      map['reminder_enabled'] = Variable<bool>(reminderEnabled.value);
+    }
+    if (reminderMode.present) {
+      map['reminder_mode'] = Variable<String>(reminderMode.value);
+    }
+    if (reminderMinutesBefore.present) {
+      map['reminder_minutes_before'] = Variable<int>(
+        reminderMinutesBefore.value,
+      );
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -8585,6 +8989,15 @@ class EventsCompanion extends UpdateCompanion<Event> {
           ..write('endTime: $endTime, ')
           ..write('sourceType: $sourceType, ')
           ..write('sourceId: $sourceId, ')
+          ..write('frequency: $frequency, ')
+          ..write('recurrenceEndDate: $recurrenceEndDate, ')
+          ..write('recurrenceId: $recurrenceId, ')
+          ..write(
+            'recurrenceNextGenerationDate: $recurrenceNextGenerationDate, ',
+          )
+          ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderMode: $reminderMode, ')
+          ..write('reminderMinutesBefore: $reminderMinutesBefore, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -17228,6 +17641,13 @@ typedef $$EventsTableCreateCompanionBuilder =
       Value<DateTime?> endTime,
       Value<String> sourceType,
       Value<String?> sourceId,
+      Value<String> frequency,
+      Value<DateTime?> recurrenceEndDate,
+      Value<String?> recurrenceId,
+      Value<DateTime?> recurrenceNextGenerationDate,
+      Value<bool> reminderEnabled,
+      Value<String> reminderMode,
+      Value<int> reminderMinutesBefore,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -17239,6 +17659,13 @@ typedef $$EventsTableUpdateCompanionBuilder =
       Value<DateTime?> endTime,
       Value<String> sourceType,
       Value<String?> sourceId,
+      Value<String> frequency,
+      Value<DateTime?> recurrenceEndDate,
+      Value<String?> recurrenceId,
+      Value<DateTime?> recurrenceNextGenerationDate,
+      Value<bool> reminderEnabled,
+      Value<String> reminderMode,
+      Value<int> reminderMinutesBefore,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -17279,6 +17706,42 @@ class $$EventsTableFilterComposer
 
   ColumnFilters<String> get sourceId => $composableBuilder(
     column: $table.sourceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get frequency => $composableBuilder(
+    column: $table.frequency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get recurrenceEndDate => $composableBuilder(
+    column: $table.recurrenceEndDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recurrenceId => $composableBuilder(
+    column: $table.recurrenceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get recurrenceNextGenerationDate =>
+      $composableBuilder(
+        column: $table.recurrenceNextGenerationDate,
+        builder: (column) => ColumnFilters(column),
+      );
+
+  ColumnFilters<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reminderMode => $composableBuilder(
+    column: $table.reminderMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get reminderMinutesBefore => $composableBuilder(
+    column: $table.reminderMinutesBefore,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17327,6 +17790,42 @@ class $$EventsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get frequency => $composableBuilder(
+    column: $table.frequency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get recurrenceEndDate => $composableBuilder(
+    column: $table.recurrenceEndDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recurrenceId => $composableBuilder(
+    column: $table.recurrenceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get recurrenceNextGenerationDate =>
+      $composableBuilder(
+        column: $table.recurrenceNextGenerationDate,
+        builder: (column) => ColumnOrderings(column),
+      );
+
+  ColumnOrderings<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reminderMode => $composableBuilder(
+    column: $table.reminderMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get reminderMinutesBefore => $composableBuilder(
+    column: $table.reminderMinutesBefore,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -17361,6 +17860,40 @@ class $$EventsTableAnnotationComposer
 
   GeneratedColumn<String> get sourceId =>
       $composableBuilder(column: $table.sourceId, builder: (column) => column);
+
+  GeneratedColumn<String> get frequency =>
+      $composableBuilder(column: $table.frequency, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get recurrenceEndDate => $composableBuilder(
+    column: $table.recurrenceEndDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get recurrenceId => $composableBuilder(
+    column: $table.recurrenceId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get recurrenceNextGenerationDate =>
+      $composableBuilder(
+        column: $table.recurrenceNextGenerationDate,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<bool> get reminderEnabled => $composableBuilder(
+    column: $table.reminderEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get reminderMode => $composableBuilder(
+    column: $table.reminderMode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get reminderMinutesBefore => $composableBuilder(
+    column: $table.reminderMinutesBefore,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -17400,6 +17933,14 @@ class $$EventsTableTableManager
                 Value<DateTime?> endTime = const Value.absent(),
                 Value<String> sourceType = const Value.absent(),
                 Value<String?> sourceId = const Value.absent(),
+                Value<String> frequency = const Value.absent(),
+                Value<DateTime?> recurrenceEndDate = const Value.absent(),
+                Value<String?> recurrenceId = const Value.absent(),
+                Value<DateTime?> recurrenceNextGenerationDate =
+                    const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<String> reminderMode = const Value.absent(),
+                Value<int> reminderMinutesBefore = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EventsCompanion(
@@ -17409,6 +17950,13 @@ class $$EventsTableTableManager
                 endTime: endTime,
                 sourceType: sourceType,
                 sourceId: sourceId,
+                frequency: frequency,
+                recurrenceEndDate: recurrenceEndDate,
+                recurrenceId: recurrenceId,
+                recurrenceNextGenerationDate: recurrenceNextGenerationDate,
+                reminderEnabled: reminderEnabled,
+                reminderMode: reminderMode,
+                reminderMinutesBefore: reminderMinutesBefore,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -17420,6 +17968,14 @@ class $$EventsTableTableManager
                 Value<DateTime?> endTime = const Value.absent(),
                 Value<String> sourceType = const Value.absent(),
                 Value<String?> sourceId = const Value.absent(),
+                Value<String> frequency = const Value.absent(),
+                Value<DateTime?> recurrenceEndDate = const Value.absent(),
+                Value<String?> recurrenceId = const Value.absent(),
+                Value<DateTime?> recurrenceNextGenerationDate =
+                    const Value.absent(),
+                Value<bool> reminderEnabled = const Value.absent(),
+                Value<String> reminderMode = const Value.absent(),
+                Value<int> reminderMinutesBefore = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EventsCompanion.insert(
@@ -17429,6 +17985,13 @@ class $$EventsTableTableManager
                 endTime: endTime,
                 sourceType: sourceType,
                 sourceId: sourceId,
+                frequency: frequency,
+                recurrenceEndDate: recurrenceEndDate,
+                recurrenceId: recurrenceId,
+                recurrenceNextGenerationDate: recurrenceNextGenerationDate,
+                reminderEnabled: reminderEnabled,
+                reminderMode: reminderMode,
+                reminderMinutesBefore: reminderMinutesBefore,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
