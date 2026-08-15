@@ -84,4 +84,58 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
   });
+
+  testWidgets('refreshing surfaces a bill-due-soon insight', (tester) async {
+    final financeRepo = FinanceRepository(db, FileStorageService());
+    await financeRepo.createBill(
+      name: 'Electricity',
+      amountMinor: 150000,
+      dueDate: DateTime.now().add(const Duration(days: 2)),
+    );
+
+    await tester.pumpWidget(buildApp());
+    await tester.pump();
+
+    await container.read(aiAnalyserControllerProvider).refresh();
+    await tester.pump();
+
+    expect(find.textContaining('Electricity'), findsOneWidget);
+    expect(find.textContaining('is due'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('refreshing surfaces a habit category rollup insight', (tester) async {
+    // Regression test: habitCategoriesProvider must be explicitly kept
+    // alive during refresh() (like every other upstream provider it reads)
+    // or every habit resolves to category: null and this insight never
+    // fires, even though the underlying habits are genuinely at risk.
+    final habitsRepo = HabitsRepository(db);
+    final category = await habitsRepo.createHabitCategory(
+      name: 'Fitness',
+      icon: 'fitness_center',
+      colorHex: '#2E9E63',
+    );
+    for (final name in ['Run', 'Lift', 'Stretch']) {
+      final id = await habitsRepo.createHabit(name, categoryId: category.id);
+      // Give each a live streak (logged yesterday, not today) so isAtRisk is true.
+      await habitsRepo.setCompletedForDate(
+        id,
+        dateOnly(DateTime.now()).subtract(const Duration(days: 1)),
+        true,
+      );
+    }
+
+    await tester.pumpWidget(buildApp());
+    await tester.pump();
+
+    await container.read(aiAnalyserControllerProvider).refresh();
+    await tester.pump();
+
+    expect(find.textContaining('"Fitness" habits are at risk today'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 }

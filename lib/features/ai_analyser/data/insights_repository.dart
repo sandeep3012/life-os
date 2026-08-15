@@ -24,12 +24,16 @@ class InsightsRepository {
   /// Reconciles the freshly computed [drafts] against what's persisted:
   /// insights whose underlying condition no longer holds are removed
   /// (unless the user already dismissed them — no point deleting what's
-  /// already hidden), and drafts with no existing row (dismissed or not)
-  /// are inserted. A still-true condition that was already dismissed stays
-  /// dismissed instead of reappearing every refresh.
+  /// already hidden), drafts with no existing row (dismissed or not) are
+  /// inserted, and a still-live condition whose row already exists gets its
+  /// title/severity refreshed in place — otherwise e.g. a goal's "9 days"
+  /// insight would never update to "3 days" after editing the deadline,
+  /// since the dedupe key (type:goalId) doesn't change. A still-true
+  /// condition that was already dismissed stays dismissed (and unrefreshed)
+  /// instead of reappearing every refresh.
   Future<void> reconcile(List<InsightDraft> drafts) async {
     final existing = await _db.select(_db.insights).get();
-    final existingKeys = {for (final e in existing) '${e.type}:${e.relatedEntityId ?? ''}'};
+    final existingByKey = {for (final e in existing) '${e.type}:${e.relatedEntityId ?? ''}': e};
     final draftKeys = drafts.map((d) => d.dedupeKey).toSet();
 
     await _db.batch((batch) {
@@ -40,7 +44,8 @@ class InsightsRepository {
         }
       }
       for (final d in drafts) {
-        if (!existingKeys.contains(d.dedupeKey)) {
+        final match = existingByKey[d.dedupeKey];
+        if (match == null) {
           batch.insert(
             _db.insights,
             InsightsCompanion.insert(
@@ -50,6 +55,13 @@ class InsightsRepository {
               relatedModule: Value(d.relatedModule),
               relatedEntityId: Value(d.relatedEntityId),
             ),
+          );
+        } else if (!match.dismissed &&
+            (match.title != d.title || match.severity != d.severity)) {
+          batch.update(
+            _db.insights,
+            InsightsCompanion(severity: Value(d.severity), title: Value(d.title)),
+            where: (i) => i.id.equals(match.id),
           );
         }
       }
