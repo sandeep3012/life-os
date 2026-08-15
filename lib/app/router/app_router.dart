@@ -8,6 +8,7 @@ import '../../features/finance/presentation/screens/bills_screen.dart';
 import '../../features/finance/presentation/screens/net_worth_screen.dart';
 import '../../features/finance/presentation/screens/reports_screen.dart';
 import '../../features/spend_analyzer/presentation/screens/spend_analyzer_screen.dart';
+import '../../features/habits/presentation/screens/habit_detail_screen.dart';
 import '../../features/tasks/presentation/screens/tasks_habits_screen.dart';
 import '../../features/calendar/presentation/screens/calendar_screen.dart';
 import '../../features/notes/presentation/screens/notes_screen.dart';
@@ -46,7 +47,17 @@ final appRouter = GoRouter(
           ),
         ]),
         StatefulShellBranch(routes: [
-          GoRoute(path: RoutePaths.tasksHabits, builder: (context, state) => const TasksHabitsScreen()),
+          GoRoute(
+            path: RoutePaths.tasksHabits,
+            builder: (context, state) => const TasksHabitsScreen(),
+            routes: [
+              GoRoute(
+                path: ':habitId',
+                builder: (context, state) =>
+                    HabitDetailScreen(habitId: state.pathParameters['habitId']!),
+              ),
+            ],
+          ),
         ]),
         StatefulShellBranch(routes: [
           GoRoute(path: RoutePaths.calendar, builder: (context, state) => const CalendarScreen()),

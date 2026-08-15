@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/utils/icon_lookup.dart';
 import '../../../habits/application/habits_providers.dart';
 import '../../../habits/presentation/widgets/habit_tile.dart';
 import '../../../habits/presentation/widgets/quick_add_habit_sheet.dart';
@@ -26,10 +29,12 @@ class TasksHabitsScreen extends ConsumerStatefulWidget {
 class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
   _Section _section = _Section.tasks;
   _TaskFilter _taskFilter = _TaskFilter.today;
+  bool _showArchivedHabits = false;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final showFab = _section == _Section.tasks || !_showArchivedHabits;
 
     return Scaffold(
       body: SafeArea(
@@ -38,7 +43,23 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-              child: Text('Tasks & Habits', style: theme.textTheme.headlineSmall),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text('Tasks & Habits', style: theme.textTheme.headlineSmall),
+                  ),
+                  if (_section == _Section.habits)
+                    IconButton(
+                      tooltip: _showArchivedHabits ? 'Show active habits' : 'Archived habits',
+                      icon: Icon(
+                        _showArchivedHabits
+                            ? Icons.inventory_2_rounded
+                            : Icons.inventory_2_outlined,
+                      ),
+                      onPressed: () => setState(() => _showArchivedHabits = !_showArchivedHabits),
+                    ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -58,16 +79,18 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
                       filter: _taskFilter,
                       onFilterChanged: (f) => setState(() => _taskFilter = f),
                     )
-                  : const _HabitsPane(),
+                  : _HabitsPane(showArchived: _showArchivedHabits),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _section == _Section.tasks ? _addTask() : _addHabit(),
-        icon: const Icon(Icons.add_rounded),
-        label: Text(_section == _Section.tasks ? 'New task' : 'New habit'),
-      ),
+      floatingActionButton: showFab
+          ? FloatingActionButton.extended(
+              onPressed: () => _section == _Section.tasks ? _addTask() : _addHabit(),
+              icon: const Icon(Icons.add_rounded),
+              label: Text(_section == _Section.tasks ? 'New task' : 'New habit'),
+            )
+          : null,
     );
   }
 
@@ -84,10 +107,12 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
   }
 
   Future<void> _addHabit() async {
-    final result = await showQuickAddHabitSheet(context);
+    final categories = ref.read(habitCategoriesProvider).value ?? const [];
+    final result = await showQuickAddHabitSheet(context, categories: categories);
     if (result == null) return;
     await ref.read(habitsControllerProvider).addHabit(
       result.name,
+      categoryId: result.categoryId,
       reminderEnabled: result.reminderEnabled,
       reminderHour: result.reminderHour,
       reminderMinute: result.reminderMinute,
@@ -176,10 +201,40 @@ class _TasksPane extends ConsumerWidget {
 }
 
 class _HabitsPane extends ConsumerWidget {
-  const _HabitsPane();
+  const _HabitsPane({required this.showArchived});
+
+  final bool showArchived;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (showArchived) {
+      final archived = ref.watch(archivedHabitsProvider).value ?? const [];
+      final categories = ref.watch(habitCategoriesProvider).value ?? const [];
+      final categoriesById = {for (final c in categories) c.id: c};
+
+      if (archived.isEmpty) {
+        return const _EmptyState(
+          icon: Icons.inventory_2_outlined,
+          message: 'No archived habits.',
+        );
+      }
+
+      return ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        itemCount: archived.length,
+        itemBuilder: (context, index) {
+          final habit = archived[index];
+          return _ArchivedHabitTile(
+            key: ValueKey(habit.id),
+            habit: habit,
+            category: habit.categoryId == null ? null : categoriesById[habit.categoryId],
+            onUnarchive: () => ref.read(habitsControllerProvider).unarchiveHabit(habit),
+            onTap: () => context.push(RoutePaths.habitDetail(habit.id)),
+          ).animate().fadeIn(duration: 200.ms);
+        },
+      );
+    }
+
     final progress = ref.watch(habitsWithProgressProvider);
 
     if (progress.isEmpty) {
@@ -199,8 +254,45 @@ class _HabitsPane extends ConsumerWidget {
           progress: p,
           onToggleToday: (completed) =>
               ref.read(habitsControllerProvider).toggleToday(p.habit, completed),
+          onTap: () => context.push(RoutePaths.habitDetail(p.habit.id)),
         ).animate().fadeIn(duration: 200.ms);
       },
+    );
+  }
+}
+
+class _ArchivedHabitTile extends StatelessWidget {
+  const _ArchivedHabitTile({
+    super.key,
+    required this.habit,
+    required this.category,
+    required this.onUnarchive,
+    required this.onTap,
+  });
+
+  final Habit habit;
+  final Category? category;
+  final VoidCallback onUnarchive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final color = category == null
+        ? colors.habits
+        : Color(int.parse(category!.colorHex.replaceFirst('#', '0xFF')));
+    final icon = category == null ? Icons.local_fire_department_rounded : resolveIcon(category!.icon);
+
+    return ListTile(
+      onTap: onTap,
+      leading: CircleAvatar(
+        backgroundColor: color.withValues(alpha: 0.16),
+        foregroundColor: color,
+        child: Icon(icon, size: 20),
+      ),
+      title: Text(habit.name),
+      subtitle: const Text('Archived'),
+      trailing: TextButton(onPressed: onUnarchive, child: const Text('Unarchive')),
     );
   }
 }

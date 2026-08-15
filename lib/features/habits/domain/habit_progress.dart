@@ -8,10 +8,14 @@ class HabitProgress {
     required this.habit,
     required this.streakDays,
     required this.weekCompletion,
+    this.category,
   });
 
   final Habit habit;
   final int streakDays;
+
+  /// Resolved from [Habit.categoryId] — null when the habit is uncategorized.
+  final Category? category;
 
   /// Keyed by [DateTime.weekday] (1 = Monday .. 7 = Sunday).
   final Map<int, bool> weekCompletion;

@@ -34,14 +34,20 @@ class CategoryEditorResult {
 /// management screen, and inline from the transaction/budget category
 /// pickers so a missing category can be created (or the selected one
 /// edited) without leaving that flow.
+///
+/// [fixedKind], when passed, locks the sheet to that `kind` and hides the
+/// Expense/Income toggle — for callers outside finance (e.g. the habit
+/// category picker, which creates `kind: 'habit'` rows) where that toggle
+/// wouldn't make sense.
 Future<CategoryEditorResult?> showCategoryEditorSheet(
   BuildContext context, {
   Category? existing,
+  String? fixedKind,
 }) {
   return showModalBottomSheet<CategoryEditorResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _CategoryEditorSheet(existing: existing),
+    builder: (context) => _CategoryEditorSheet(existing: existing, fixedKind: fixedKind),
   );
 }
 
@@ -161,9 +167,10 @@ class CategoryManagementScreen extends ConsumerWidget {
 }
 
 class _CategoryEditorSheet extends StatefulWidget {
-  const _CategoryEditorSheet({this.existing});
+  const _CategoryEditorSheet({this.existing, this.fixedKind});
 
   final Category? existing;
+  final String? fixedKind;
 
   @override
   State<_CategoryEditorSheet> createState() => _CategoryEditorSheetState();
@@ -173,7 +180,7 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
   late final _nameController = TextEditingController(text: widget.existing?.name);
   late String _icon = widget.existing?.icon ?? pickableIcons.first;
   late String _colorHex = widget.existing?.colorHex ?? _paletteHex.first;
-  late String _kind = widget.existing?.kind ?? 'expense';
+  late String _kind = widget.existing?.kind ?? widget.fixedKind ?? 'expense';
 
   bool get _isEditing => widget.existing != null;
 
@@ -212,15 +219,17 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
             textCapitalization: TextCapitalization.words,
             decoration: const InputDecoration(hintText: 'Category name'),
           ),
-          const SizedBox(height: 12),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'expense', label: Text('Expense')),
-              ButtonSegment(value: 'income', label: Text('Income')),
-            ],
-            selected: {_kind},
-            onSelectionChanged: (s) => setState(() => _kind = s.first),
-          ),
+          if (widget.fixedKind == null) ...[
+            const SizedBox(height: 12),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'expense', label: Text('Expense')),
+                ButtonSegment(value: 'income', label: Text('Income')),
+              ],
+              selected: {_kind},
+              onSelectionChanged: (s) => setState(() => _kind = s.first),
+            ),
+          ],
           const SizedBox(height: 12),
           Text('Icon', style: theme.textTheme.labelMedium),
           const SizedBox(height: 8),

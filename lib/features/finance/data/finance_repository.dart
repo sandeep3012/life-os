@@ -75,7 +75,13 @@ class FinanceRepository {
     });
   }
 
-  Stream<List<Category>> watchCategories() => _db.select(_db.categories).watch();
+  /// Excludes non-finance kinds (e.g. `habit`) that share this table —
+  /// see `Categories.kind`'s doc comment for the full list of kinds.
+  Stream<List<Category>> watchCategories() {
+    return (_db.select(
+      _db.categories,
+    )..where((c) => c.kind.isIn(const ['expense', 'income']))).watch();
+  }
 
   Stream<List<AccountType>> watchAccountTypes() => _db.select(_db.accountTypes).watch();
 
