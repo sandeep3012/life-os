@@ -5376,6 +5376,20 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES categories (id)',
+    ),
+  );
   static const VerificationMeta _reminderEnabledMeta = const VerificationMeta(
     'reminderEnabled',
   );
@@ -5444,6 +5458,7 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
     frequency,
     targetPerWeek,
     archived,
+    categoryId,
     reminderEnabled,
     reminderHour,
     reminderMinute,
@@ -5492,6 +5507,12 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
       context.handle(
         _archivedMeta,
         archived.isAcceptableOrUnknown(data['archived']!, _archivedMeta),
+      );
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
       );
     }
     if (data.containsKey('reminder_enabled')) {
@@ -5565,6 +5586,10 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
         DriftSqlType.bool,
         data['${effectivePrefix}archived'],
       )!,
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      ),
       reminderEnabled: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}reminder_enabled'],
@@ -5603,6 +5628,11 @@ class Habit extends DataClass implements Insertable<Habit> {
   final int targetPerWeek;
   final bool archived;
 
+  /// Optional — references a [Categories] row with `kind == 'habit'`. Not a
+  /// hard dependency (unlike finance, which seeds default categories on
+  /// first run), so this stays nullable.
+  final String? categoryId;
+
   /// Per-habit daily reminder, independent of the app-wide "Habit reminders"
   /// generic check-in nudge in Settings — off by default (opt-in), unlike
   /// tasks, since there's no natural due-date signal implying "remind me."
@@ -5619,6 +5649,7 @@ class Habit extends DataClass implements Insertable<Habit> {
     required this.frequency,
     required this.targetPerWeek,
     required this.archived,
+    this.categoryId,
     required this.reminderEnabled,
     this.reminderHour,
     this.reminderMinute,
@@ -5633,6 +5664,9 @@ class Habit extends DataClass implements Insertable<Habit> {
     map['frequency'] = Variable<String>(frequency);
     map['target_per_week'] = Variable<int>(targetPerWeek);
     map['archived'] = Variable<bool>(archived);
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
+    }
     map['reminder_enabled'] = Variable<bool>(reminderEnabled);
     if (!nullToAbsent || reminderHour != null) {
       map['reminder_hour'] = Variable<int>(reminderHour);
@@ -5652,6 +5686,9 @@ class Habit extends DataClass implements Insertable<Habit> {
       frequency: Value(frequency),
       targetPerWeek: Value(targetPerWeek),
       archived: Value(archived),
+      categoryId: categoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryId),
       reminderEnabled: Value(reminderEnabled),
       reminderHour: reminderHour == null && nullToAbsent
           ? const Value.absent()
@@ -5675,6 +5712,7 @@ class Habit extends DataClass implements Insertable<Habit> {
       frequency: serializer.fromJson<String>(json['frequency']),
       targetPerWeek: serializer.fromJson<int>(json['targetPerWeek']),
       archived: serializer.fromJson<bool>(json['archived']),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
       reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
       reminderHour: serializer.fromJson<int?>(json['reminderHour']),
       reminderMinute: serializer.fromJson<int?>(json['reminderMinute']),
@@ -5691,6 +5729,7 @@ class Habit extends DataClass implements Insertable<Habit> {
       'frequency': serializer.toJson<String>(frequency),
       'targetPerWeek': serializer.toJson<int>(targetPerWeek),
       'archived': serializer.toJson<bool>(archived),
+      'categoryId': serializer.toJson<String?>(categoryId),
       'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
       'reminderHour': serializer.toJson<int?>(reminderHour),
       'reminderMinute': serializer.toJson<int?>(reminderMinute),
@@ -5705,6 +5744,7 @@ class Habit extends DataClass implements Insertable<Habit> {
     String? frequency,
     int? targetPerWeek,
     bool? archived,
+    Value<String?> categoryId = const Value.absent(),
     bool? reminderEnabled,
     Value<int?> reminderHour = const Value.absent(),
     Value<int?> reminderMinute = const Value.absent(),
@@ -5716,6 +5756,7 @@ class Habit extends DataClass implements Insertable<Habit> {
     frequency: frequency ?? this.frequency,
     targetPerWeek: targetPerWeek ?? this.targetPerWeek,
     archived: archived ?? this.archived,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
     reminderEnabled: reminderEnabled ?? this.reminderEnabled,
     reminderHour: reminderHour.present ? reminderHour.value : this.reminderHour,
     reminderMinute: reminderMinute.present
@@ -5733,6 +5774,9 @@ class Habit extends DataClass implements Insertable<Habit> {
           ? data.targetPerWeek.value
           : this.targetPerWeek,
       archived: data.archived.present ? data.archived.value : this.archived,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
       reminderEnabled: data.reminderEnabled.present
           ? data.reminderEnabled.value
           : this.reminderEnabled,
@@ -5757,6 +5801,7 @@ class Habit extends DataClass implements Insertable<Habit> {
           ..write('frequency: $frequency, ')
           ..write('targetPerWeek: $targetPerWeek, ')
           ..write('archived: $archived, ')
+          ..write('categoryId: $categoryId, ')
           ..write('reminderEnabled: $reminderEnabled, ')
           ..write('reminderHour: $reminderHour, ')
           ..write('reminderMinute: $reminderMinute, ')
@@ -5773,6 +5818,7 @@ class Habit extends DataClass implements Insertable<Habit> {
     frequency,
     targetPerWeek,
     archived,
+    categoryId,
     reminderEnabled,
     reminderHour,
     reminderMinute,
@@ -5788,6 +5834,7 @@ class Habit extends DataClass implements Insertable<Habit> {
           other.frequency == this.frequency &&
           other.targetPerWeek == this.targetPerWeek &&
           other.archived == this.archived &&
+          other.categoryId == this.categoryId &&
           other.reminderEnabled == this.reminderEnabled &&
           other.reminderHour == this.reminderHour &&
           other.reminderMinute == this.reminderMinute &&
@@ -5801,6 +5848,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
   final Value<String> frequency;
   final Value<int> targetPerWeek;
   final Value<bool> archived;
+  final Value<String?> categoryId;
   final Value<bool> reminderEnabled;
   final Value<int?> reminderHour;
   final Value<int?> reminderMinute;
@@ -5813,6 +5861,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.frequency = const Value.absent(),
     this.targetPerWeek = const Value.absent(),
     this.archived = const Value.absent(),
+    this.categoryId = const Value.absent(),
     this.reminderEnabled = const Value.absent(),
     this.reminderHour = const Value.absent(),
     this.reminderMinute = const Value.absent(),
@@ -5826,6 +5875,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.frequency = const Value.absent(),
     this.targetPerWeek = const Value.absent(),
     this.archived = const Value.absent(),
+    this.categoryId = const Value.absent(),
     this.reminderEnabled = const Value.absent(),
     this.reminderHour = const Value.absent(),
     this.reminderMinute = const Value.absent(),
@@ -5839,6 +5889,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     Expression<String>? frequency,
     Expression<int>? targetPerWeek,
     Expression<bool>? archived,
+    Expression<String>? categoryId,
     Expression<bool>? reminderEnabled,
     Expression<int>? reminderHour,
     Expression<int>? reminderMinute,
@@ -5852,6 +5903,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
       if (frequency != null) 'frequency': frequency,
       if (targetPerWeek != null) 'target_per_week': targetPerWeek,
       if (archived != null) 'archived': archived,
+      if (categoryId != null) 'category_id': categoryId,
       if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
       if (reminderHour != null) 'reminder_hour': reminderHour,
       if (reminderMinute != null) 'reminder_minute': reminderMinute,
@@ -5867,6 +5919,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     Value<String>? frequency,
     Value<int>? targetPerWeek,
     Value<bool>? archived,
+    Value<String?>? categoryId,
     Value<bool>? reminderEnabled,
     Value<int?>? reminderHour,
     Value<int?>? reminderMinute,
@@ -5880,6 +5933,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
       frequency: frequency ?? this.frequency,
       targetPerWeek: targetPerWeek ?? this.targetPerWeek,
       archived: archived ?? this.archived,
+      categoryId: categoryId ?? this.categoryId,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       reminderHour: reminderHour ?? this.reminderHour,
       reminderMinute: reminderMinute ?? this.reminderMinute,
@@ -5906,6 +5960,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     }
     if (archived.present) {
       map['archived'] = Variable<bool>(archived.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
     }
     if (reminderEnabled.present) {
       map['reminder_enabled'] = Variable<bool>(reminderEnabled.value);
@@ -5936,6 +5993,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
           ..write('frequency: $frequency, ')
           ..write('targetPerWeek: $targetPerWeek, ')
           ..write('archived: $archived, ')
+          ..write('categoryId: $categoryId, ')
           ..write('reminderEnabled: $reminderEnabled, ')
           ..write('reminderHour: $reminderHour, ')
           ..write('reminderMinute: $reminderMinute, ')
@@ -6001,8 +6059,17 @@ class $HabitLogsTable extends HabitLogs
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
   @override
-  List<GeneratedColumn> get $columns => [id, habitId, date, completed];
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, habitId, date, completed, notes];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -6040,6 +6107,12 @@ class $HabitLogsTable extends HabitLogs
         completed.isAcceptableOrUnknown(data['completed']!, _completedMeta),
       );
     }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
     return context;
   }
 
@@ -6069,6 +6142,10 @@ class $HabitLogsTable extends HabitLogs
         DriftSqlType.bool,
         data['${effectivePrefix}completed'],
       )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
     );
   }
 
@@ -6085,11 +6162,17 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
   /// Date-only (time truncated to midnight) — one log per habit per day.
   final DateTime date;
   final bool completed;
+
+  /// Optional short note for the day (e.g. "felt great", "skipped, was
+  /// sick") — completion itself stays a plain boolean, this is purely
+  /// supplementary context shown on the habit's detail/history screen.
+  final String? notes;
   const HabitLog({
     required this.id,
     required this.habitId,
     required this.date,
     required this.completed,
+    this.notes,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6098,6 +6181,9 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
     map['habit_id'] = Variable<String>(habitId);
     map['date'] = Variable<DateTime>(date);
     map['completed'] = Variable<bool>(completed);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
     return map;
   }
 
@@ -6107,6 +6193,9 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
       habitId: Value(habitId),
       date: Value(date),
       completed: Value(completed),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
     );
   }
 
@@ -6120,6 +6209,7 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
       habitId: serializer.fromJson<String>(json['habitId']),
       date: serializer.fromJson<DateTime>(json['date']),
       completed: serializer.fromJson<bool>(json['completed']),
+      notes: serializer.fromJson<String?>(json['notes']),
     );
   }
   @override
@@ -6130,6 +6220,7 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
       'habitId': serializer.toJson<String>(habitId),
       'date': serializer.toJson<DateTime>(date),
       'completed': serializer.toJson<bool>(completed),
+      'notes': serializer.toJson<String?>(notes),
     };
   }
 
@@ -6138,11 +6229,13 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
     String? habitId,
     DateTime? date,
     bool? completed,
+    Value<String?> notes = const Value.absent(),
   }) => HabitLog(
     id: id ?? this.id,
     habitId: habitId ?? this.habitId,
     date: date ?? this.date,
     completed: completed ?? this.completed,
+    notes: notes.present ? notes.value : this.notes,
   );
   HabitLog copyWithCompanion(HabitLogsCompanion data) {
     return HabitLog(
@@ -6150,6 +6243,7 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
       habitId: data.habitId.present ? data.habitId.value : this.habitId,
       date: data.date.present ? data.date.value : this.date,
       completed: data.completed.present ? data.completed.value : this.completed,
+      notes: data.notes.present ? data.notes.value : this.notes,
     );
   }
 
@@ -6159,13 +6253,14 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
           ..write('id: $id, ')
           ..write('habitId: $habitId, ')
           ..write('date: $date, ')
-          ..write('completed: $completed')
+          ..write('completed: $completed, ')
+          ..write('notes: $notes')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, habitId, date, completed);
+  int get hashCode => Object.hash(id, habitId, date, completed, notes);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6173,7 +6268,8 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
           other.id == this.id &&
           other.habitId == this.habitId &&
           other.date == this.date &&
-          other.completed == this.completed);
+          other.completed == this.completed &&
+          other.notes == this.notes);
 }
 
 class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
@@ -6181,12 +6277,14 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
   final Value<String> habitId;
   final Value<DateTime> date;
   final Value<bool> completed;
+  final Value<String?> notes;
   final Value<int> rowid;
   const HabitLogsCompanion({
     this.id = const Value.absent(),
     this.habitId = const Value.absent(),
     this.date = const Value.absent(),
     this.completed = const Value.absent(),
+    this.notes = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   HabitLogsCompanion.insert({
@@ -6194,6 +6292,7 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
     required String habitId,
     required DateTime date,
     this.completed = const Value.absent(),
+    this.notes = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : habitId = Value(habitId),
        date = Value(date);
@@ -6202,6 +6301,7 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
     Expression<String>? habitId,
     Expression<DateTime>? date,
     Expression<bool>? completed,
+    Expression<String>? notes,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -6209,6 +6309,7 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
       if (habitId != null) 'habit_id': habitId,
       if (date != null) 'date': date,
       if (completed != null) 'completed': completed,
+      if (notes != null) 'notes': notes,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -6218,6 +6319,7 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
     Value<String>? habitId,
     Value<DateTime>? date,
     Value<bool>? completed,
+    Value<String?>? notes,
     Value<int>? rowid,
   }) {
     return HabitLogsCompanion(
@@ -6225,6 +6327,7 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
       habitId: habitId ?? this.habitId,
       date: date ?? this.date,
       completed: completed ?? this.completed,
+      notes: notes ?? this.notes,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6244,6 +6347,9 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
     if (completed.present) {
       map['completed'] = Variable<bool>(completed.value);
     }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -6257,6 +6363,7 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
           ..write('habitId: $habitId, ')
           ..write('date: $date, ')
           ..write('completed: $completed, ')
+          ..write('notes: $notes, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -10471,6 +10578,25 @@ final class $$CategoriesTableReferences
     );
   }
 
+  static MultiTypedResultKey<$HabitsTable, List<Habit>> _habitsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.habits,
+    aliasName: 'categories__id__habits__category_id',
+  );
+
+  $$HabitsTableProcessedTableManager get habitsRefs {
+    final manager = $$HabitsTableTableManager(
+      $_db,
+      $_db.habits,
+    ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_habitsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$TasksTable, List<Task>> _tasksRefsTable(
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
@@ -10622,6 +10748,31 @@ class $$CategoriesTableFilterComposer
           }) => $$BudgetsTableFilterComposer(
             $db: $db,
             $table: $db.budgets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> habitsRefs(
+    Expression<bool> Function($$HabitsTableFilterComposer f) f,
+  ) {
+    final $$HabitsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.habits,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HabitsTableFilterComposer(
+            $db: $db,
+            $table: $db.habits,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -10825,6 +10976,31 @@ class $$CategoriesTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> habitsRefs<T extends Object>(
+    Expression<T> Function($$HabitsTableAnnotationComposer a) f,
+  ) {
+    final $$HabitsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.habits,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$HabitsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.habits,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> tasksRefs<T extends Object>(
     Expression<T> Function($$TasksTableAnnotationComposer a) f,
   ) {
@@ -10869,6 +11045,7 @@ class $$CategoriesTableTableManager
             bool recurringTransactionsRefs,
             bool billsRefs,
             bool budgetsRefs,
+            bool habitsRefs,
             bool tasksRefs,
           })
         > {
@@ -10933,6 +11110,7 @@ class $$CategoriesTableTableManager
                 recurringTransactionsRefs = false,
                 billsRefs = false,
                 budgetsRefs = false,
+                habitsRefs = false,
                 tasksRefs = false,
               }) {
                 return PrefetchHooks(
@@ -10942,6 +11120,7 @@ class $$CategoriesTableTableManager
                     if (recurringTransactionsRefs) db.recurringTransactions,
                     if (billsRefs) db.bills,
                     if (budgetsRefs) db.budgets,
+                    if (habitsRefs) db.habits,
                     if (tasksRefs) db.tasks,
                   ],
                   addJoins: null,
@@ -11031,6 +11210,27 @@ class $$CategoriesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (habitsRefs)
+                        await $_getPrefetchedData<
+                          Category,
+                          $CategoriesTable,
+                          Habit
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CategoriesTableReferences
+                              ._habitsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CategoriesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).habitsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.categoryId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (tasksRefs)
                         await $_getPrefetchedData<
                           Category,
@@ -11077,6 +11277,7 @@ typedef $$CategoriesTableProcessedTableManager =
         bool recurringTransactionsRefs,
         bool billsRefs,
         bool budgetsRefs,
+        bool habitsRefs,
         bool tasksRefs,
       })
     >;
@@ -15457,6 +15658,7 @@ typedef $$HabitsTableCreateCompanionBuilder =
       Value<String> frequency,
       Value<int> targetPerWeek,
       Value<bool> archived,
+      Value<String?> categoryId,
       Value<bool> reminderEnabled,
       Value<int?> reminderHour,
       Value<int?> reminderMinute,
@@ -15471,6 +15673,7 @@ typedef $$HabitsTableUpdateCompanionBuilder =
       Value<String> frequency,
       Value<int> targetPerWeek,
       Value<bool> archived,
+      Value<String?> categoryId,
       Value<bool> reminderEnabled,
       Value<int?> reminderHour,
       Value<int?> reminderMinute,
@@ -15482,6 +15685,23 @@ typedef $$HabitsTableUpdateCompanionBuilder =
 final class $$HabitsTableReferences
     extends BaseReferences<_$AppDatabase, $HabitsTable, Habit> {
   $$HabitsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $CategoriesTable _categoryIdTable(_$AppDatabase db) =>
+      db.categories.createAlias('habits__category_id__categories__id');
+
+  $$CategoriesTableProcessedTableManager? get categoryId {
+    final $_column = $_itemColumn<String>('category_id');
+    if ($_column == null) return null;
+    final manager = $$CategoriesTableTableManager(
+      $_db,
+      $_db.categories,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
 
   static MultiTypedResultKey<$HabitLogsTable, List<HabitLog>>
   _habitLogsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
@@ -15560,6 +15780,29 @@ class $$HabitsTableFilterComposer
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$CategoriesTableFilterComposer get categoryId {
+    final $$CategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   Expression<bool> habitLogsRefs(
     Expression<bool> Function($$HabitLogsTableFilterComposer f) f,
@@ -15645,6 +15888,29 @@ class $$HabitsTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$CategoriesTableOrderingComposer get categoryId {
+    final $$CategoriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$HabitsTableAnnotationComposer
@@ -15696,6 +15962,29 @@ class $$HabitsTableAnnotationComposer
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
+  $$CategoriesTableAnnotationComposer get categoryId {
+    final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.categories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.categories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   Expression<T> habitLogsRefs<T extends Object>(
     Expression<T> Function($$HabitLogsTableAnnotationComposer a) f,
   ) {
@@ -15735,7 +16024,7 @@ class $$HabitsTableTableManager
           $$HabitsTableUpdateCompanionBuilder,
           (Habit, $$HabitsTableReferences),
           Habit,
-          PrefetchHooks Function({bool habitLogsRefs})
+          PrefetchHooks Function({bool categoryId, bool habitLogsRefs})
         > {
   $$HabitsTableTableManager(_$AppDatabase db, $HabitsTable table)
     : super(
@@ -15755,6 +16044,7 @@ class $$HabitsTableTableManager
                 Value<String> frequency = const Value.absent(),
                 Value<int> targetPerWeek = const Value.absent(),
                 Value<bool> archived = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
                 Value<bool> reminderEnabled = const Value.absent(),
                 Value<int?> reminderHour = const Value.absent(),
                 Value<int?> reminderMinute = const Value.absent(),
@@ -15767,6 +16057,7 @@ class $$HabitsTableTableManager
                 frequency: frequency,
                 targetPerWeek: targetPerWeek,
                 archived: archived,
+                categoryId: categoryId,
                 reminderEnabled: reminderEnabled,
                 reminderHour: reminderHour,
                 reminderMinute: reminderMinute,
@@ -15781,6 +16072,7 @@ class $$HabitsTableTableManager
                 Value<String> frequency = const Value.absent(),
                 Value<int> targetPerWeek = const Value.absent(),
                 Value<bool> archived = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
                 Value<bool> reminderEnabled = const Value.absent(),
                 Value<int?> reminderHour = const Value.absent(),
                 Value<int?> reminderMinute = const Value.absent(),
@@ -15793,6 +16085,7 @@ class $$HabitsTableTableManager
                 frequency: frequency,
                 targetPerWeek: targetPerWeek,
                 archived: archived,
+                categoryId: categoryId,
                 reminderEnabled: reminderEnabled,
                 reminderHour: reminderHour,
                 reminderMinute: reminderMinute,
@@ -15806,11 +16099,42 @@ class $$HabitsTableTableManager
                     (e.readTable(table), $$HabitsTableReferences(db, table, e)),
               )
               .toList(),
-          prefetchHooksCallback: ({habitLogsRefs = false}) {
+          prefetchHooksCallback: ({categoryId = false, habitLogsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [if (habitLogsRefs) db.habitLogs],
-              addJoins: null,
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (categoryId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.categoryId,
+                                referencedTable: $$HabitsTableReferences
+                                    ._categoryIdTable(db),
+                                referencedColumn: $$HabitsTableReferences
+                                    ._categoryIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (habitLogsRefs)
@@ -15844,7 +16168,7 @@ typedef $$HabitsTableProcessedTableManager =
       $$HabitsTableUpdateCompanionBuilder,
       (Habit, $$HabitsTableReferences),
       Habit,
-      PrefetchHooks Function({bool habitLogsRefs})
+      PrefetchHooks Function({bool categoryId, bool habitLogsRefs})
     >;
 typedef $$HabitLogsTableCreateCompanionBuilder =
     HabitLogsCompanion Function({
@@ -15852,6 +16176,7 @@ typedef $$HabitLogsTableCreateCompanionBuilder =
       required String habitId,
       required DateTime date,
       Value<bool> completed,
+      Value<String?> notes,
       Value<int> rowid,
     });
 typedef $$HabitLogsTableUpdateCompanionBuilder =
@@ -15860,6 +16185,7 @@ typedef $$HabitLogsTableUpdateCompanionBuilder =
       Value<String> habitId,
       Value<DateTime> date,
       Value<bool> completed,
+      Value<String?> notes,
       Value<int> rowid,
     });
 
@@ -15906,6 +16232,11 @@ class $$HabitLogsTableFilterComposer
 
   ColumnFilters<bool> get completed => $composableBuilder(
     column: $table.completed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15957,6 +16288,11 @@ class $$HabitLogsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$HabitsTableOrderingComposer get habitId {
     final $$HabitsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -15998,6 +16334,9 @@ class $$HabitLogsTableAnnotationComposer
 
   GeneratedColumn<bool> get completed =>
       $composableBuilder(column: $table.completed, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
 
   $$HabitsTableAnnotationComposer get habitId {
     final $$HabitsTableAnnotationComposer composer = $composerBuilder(
@@ -16055,12 +16394,14 @@ class $$HabitLogsTableTableManager
                 Value<String> habitId = const Value.absent(),
                 Value<DateTime> date = const Value.absent(),
                 Value<bool> completed = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HabitLogsCompanion(
                 id: id,
                 habitId: habitId,
                 date: date,
                 completed: completed,
+                notes: notes,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -16069,12 +16410,14 @@ class $$HabitLogsTableTableManager
                 required String habitId,
                 required DateTime date,
                 Value<bool> completed = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HabitLogsCompanion.insert(
                 id: id,
                 habitId: habitId,
                 date: date,
                 completed: completed,
+                notes: notes,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

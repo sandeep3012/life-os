@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/utils/icon_lookup.dart';
 import '../../../habits/domain/habit_progress.dart';
 
 class HabitCheckInCard extends StatelessWidget {
@@ -14,8 +15,19 @@ class HabitCheckInCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = context.appColors;
     final atRisk = progress.isAtRisk;
+    // The at-risk signal always wins on the streak text below — only the
+    // icon circle picks up the category's color/icon when uncategorized
+    // wouldn't otherwise show one, same split as HabitTile.
     final accent = atRisk ? colors.critical : colors.habits;
+    final category = progress.category;
+    final categoryColor = category == null
+        ? null
+        : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
+    final iconColor = categoryColor ?? accent;
     final doneToday = progress.weekCompletion[DateTime.now().weekday] ?? false;
+    final icon = doneToday
+        ? Icons.check_rounded
+        : (category == null ? Icons.local_fire_department_rounded : resolveIcon(category.icon));
 
     return SizedBox(
       width: 140,
@@ -33,16 +45,10 @@ class HabitCheckInCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.16),
+                    color: iconColor.withValues(alpha: 0.16),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    doneToday
-                        ? Icons.check_rounded
-                        : Icons.local_fire_department_rounded,
-                    size: 18,
-                    color: accent,
-                  ),
+                  child: Icon(icon, size: 18, color: iconColor),
                 ),
                 const SizedBox(height: 8),
                 Text(

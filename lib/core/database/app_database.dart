@@ -51,7 +51,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -143,6 +143,13 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(events, events.reminderEnabled);
         await m.addColumn(events, events.reminderMode);
         await m.addColumn(events, events.reminderMinutesBefore);
+      }
+      if (from < 12) {
+        // v11 -> v12: habits glow-up — optional category (Categories,
+        // kind='habit') and an optional note per log. Both nullable, no
+        // backfill needed.
+        await m.addColumn(habits, habits.categoryId);
+        await m.addColumn(habitLogs, habitLogs.notes);
       }
     },
   );

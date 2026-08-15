@@ -91,9 +91,6 @@ class _QuickAddTransactionSheetState extends ConsumerState<_QuickAddTransactionS
 
   bool get _isEditing => widget.initial != null;
 
-  Category? get _selectedCategory =>
-      _categories.where((c) => c.id == _categoryId).firstOrNull;
-
   @override
   void initState() {
     super.initState();
@@ -125,26 +122,6 @@ class _QuickAddTransactionSheetState extends ConsumerState<_QuickAddTransactionS
       _categories = [..._categories, category];
       _categoryId = category.id;
       _categoryFieldEpoch++;
-    });
-  }
-
-  Future<void> _editSelectedCategory() async {
-    final existing = _selectedCategory;
-    if (existing == null) return;
-    final result = await showCategoryEditorSheet(context, existing: existing);
-    if (result == null) return;
-    final updated = await ref.read(financeControllerProvider).updateCategory(
-      id: existing.id,
-      name: result.name,
-      icon: result.icon,
-      colorHex: result.colorHex,
-      kind: result.kind,
-    );
-    if (!mounted) return;
-    setState(() {
-      _categories = [
-        for (final c in _categories) if (c.id == updated.id) updated else c,
-      ];
     });
   }
 
@@ -213,55 +190,42 @@ class _QuickAddTransactionSheetState extends ConsumerState<_QuickAddTransactionS
             onChanged: (value) => setState(() => _accountId = value!),
           ),
           const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  key: ValueKey('$_categoryId#$_categoryFieldEpoch'),
-                  initialValue: _categoryId,
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  items: [
-                    for (final c in _categories)
-                      DropdownMenuItem(
-                        value: c.id,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(resolveIcon(c.icon), size: 16),
-                            const SizedBox(width: 8),
-                            Text(c.name),
-                          ],
-                        ),
-                      ),
-                    const DropdownMenuItem(
-                      value: _addCategoryValue,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.add_circle_outline_rounded, size: 16),
-                          SizedBox(width: 8),
-                          Text('Add new category'),
-                        ],
-                      ),
-                    ),
+          DropdownButtonFormField<String>(
+            key: ValueKey('$_categoryId#$_categoryFieldEpoch'),
+            initialValue: _categoryId,
+            decoration: const InputDecoration(labelText: 'Category'),
+            items: [
+              for (final c in _categories)
+                DropdownMenuItem(
+                  value: c.id,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(resolveIcon(c.icon), size: 16),
+                      const SizedBox(width: 8),
+                      Text(c.name),
+                    ],
+                  ),
+                ),
+              const DropdownMenuItem(
+                value: _addCategoryValue,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_circle_outline_rounded, size: 16),
+                    SizedBox(width: 8),
+                    Text('Add new category'),
                   ],
-                  onChanged: (value) {
-                    if (value == _addCategoryValue) {
-                      _addCategory();
-                    } else {
-                      setState(() => _categoryId = value);
-                    }
-                  },
                 ),
               ),
-              if (_selectedCategory != null)
-                IconButton(
-                  tooltip: 'Edit category',
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  onPressed: _editSelectedCategory,
-                ),
             ],
+            onChanged: (value) {
+              if (value == _addCategoryValue) {
+                _addCategory();
+              } else {
+                setState(() => _categoryId = value);
+              }
+            },
           ),
           const SizedBox(height: 12),
           Text('Payment mode', style: Theme.of(context).textTheme.labelMedium),

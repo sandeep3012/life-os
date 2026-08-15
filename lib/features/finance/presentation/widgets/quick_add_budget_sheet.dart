@@ -63,9 +63,6 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
 
   bool get _isEditing => widget.initial != null;
 
-  Category? get _selectedCategory =>
-      _categories.where((c) => c.id == _categoryId).firstOrNull;
-
   /// Bumped every time the category dropdown needs to be forced back to
   /// `_categoryId` — including when "Add new category" is cancelled, since
   /// the dropdown (an uncontrolled `DropdownButtonFormField`) would
@@ -119,26 +116,6 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
     });
   }
 
-  Future<void> _editSelectedCategory() async {
-    final existing = _selectedCategory;
-    if (existing == null) return;
-    final result = await showCategoryEditorSheet(context, existing: existing);
-    if (result == null) return;
-    final updated = await ref.read(financeControllerProvider).updateCategory(
-      id: existing.id,
-      name: result.name,
-      icon: result.icon,
-      colorHex: result.colorHex,
-      kind: result.kind,
-    );
-    if (!mounted) return;
-    setState(() {
-      _categories = [
-        for (final c in _categories) if (c.id == updated.id) updated else c,
-      ];
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final canSubmit =
@@ -161,61 +138,48 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  // DropdownButtonFormField is uncontrolled (it only reads
-                  // `initialValue` on first build) — keying on the value
-                  // forces it to rebuild fresh whenever `_categoryId`
-                  // changes programmatically (e.g. after adding a category
-                  // inline), otherwise the dropdown would keep showing
-                  // whatever the user last tapped in the menu.
-                  key: ValueKey('$_categoryId#$_categoryFieldEpoch'),
-                  initialValue: _categoryId,
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  items: [
-                    for (final c in _categories)
-                      DropdownMenuItem(
-                        value: c.id,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(resolveIcon(c.icon), size: 16),
-                            const SizedBox(width: 8),
-                            Text(c.name),
-                          ],
-                        ),
-                      ),
-                    const DropdownMenuItem(
-                      value: _addCategoryValue,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.add_circle_outline_rounded, size: 16),
-                          SizedBox(width: 8),
-                          Text('Add new category'),
-                        ],
-                      ),
-                    ),
+          DropdownButtonFormField<String>(
+            // DropdownButtonFormField is uncontrolled (it only reads
+            // `initialValue` on first build) — keying on the value
+            // forces it to rebuild fresh whenever `_categoryId`
+            // changes programmatically (e.g. after adding a category
+            // inline), otherwise the dropdown would keep showing
+            // whatever the user last tapped in the menu.
+            key: ValueKey('$_categoryId#$_categoryFieldEpoch'),
+            initialValue: _categoryId,
+            decoration: const InputDecoration(labelText: 'Category'),
+            items: [
+              for (final c in _categories)
+                DropdownMenuItem(
+                  value: c.id,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(resolveIcon(c.icon), size: 16),
+                      const SizedBox(width: 8),
+                      Text(c.name),
+                    ],
+                  ),
+                ),
+              const DropdownMenuItem(
+                value: _addCategoryValue,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_circle_outline_rounded, size: 16),
+                    SizedBox(width: 8),
+                    Text('Add new category'),
                   ],
-                  onChanged: (value) {
-                    if (value == _addCategoryValue) {
-                      _addCategory();
-                    } else {
-                      setState(() => _categoryId = value);
-                    }
-                  },
                 ),
               ),
-              if (_selectedCategory != null)
-                IconButton(
-                  tooltip: 'Edit category',
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  onPressed: _editSelectedCategory,
-                ),
             ],
+            onChanged: (value) {
+              if (value == _addCategoryValue) {
+                _addCategory();
+              } else {
+                setState(() => _categoryId = value);
+              }
+            },
           ),
           const SizedBox(height: 12),
           TextField(
