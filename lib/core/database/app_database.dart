@@ -37,6 +37,7 @@ part 'app_database.g.dart';
     Subtasks,
     Goals,
     GoalLinks,
+    GoalMilestones,
     Events,
     Folders,
     Notes,
@@ -51,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -150,6 +151,17 @@ class AppDatabase extends _$AppDatabase {
         // backfill needed.
         await m.addColumn(habits, habits.categoryId);
         await m.addColumn(habitLogs, habitLogs.notes);
+      }
+      if (from < 13) {
+        // v12 -> v13: goal deadline reminders (mirrors Bills' day-offset
+        // shape, since a goal target date is date-only like a bill's due
+        // date) plus an ordered milestone checklist per goal — purely
+        // additive, decoupled from currentValue/targetValue/ratio so the AI
+        // Analyser's pacing insight is unaffected.
+        await m.addColumn(goals, goals.reminderEnabled);
+        await m.addColumn(goals, goals.reminderMode);
+        await m.addColumn(goals, goals.reminderDaysBefore);
+        await m.createTable(goalMilestones);
       }
     },
   );

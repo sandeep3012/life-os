@@ -63,4 +63,31 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
   });
+
+  testWidgets('setting a deadline in the sheet round-trips to the created goal', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('New goal'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, 'Finish course');
+    await tester.pump();
+
+    await tester.tap(find.text('No deadline'));
+    await tester.pumpAndSettle();
+    // Confirm today's date on the date picker (default initialDate).
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No deadline'), findsNothing);
+
+    await tester.tap(find.text('Add goal'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Finish course'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 }

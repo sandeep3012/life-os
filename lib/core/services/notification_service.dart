@@ -106,6 +106,26 @@ class NotificationService {
     additionalFlags: _insistentFlag,
   );
 
+  static const _goalChannel = AndroidNotificationDetails(
+    'goal_reminders',
+    'Goal reminders',
+    channelDescription: 'Reminders for upcoming goal deadlines',
+    importance: Importance.defaultImportance,
+  );
+
+  static final _goalAlarmChannel = AndroidNotificationDetails(
+    'goal_alarms',
+    'Goal alarms',
+    channelDescription: 'Alarm-style reminders for upcoming goal deadlines',
+    importance: Importance.max,
+    priority: Priority.high,
+    category: AndroidNotificationCategory.alarm,
+    audioAttributesUsage: AudioAttributesUsage.alarm,
+    sound: UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+    fullScreenIntent: true,
+    additionalFlags: _insistentFlag,
+  );
+
   static final _insistentFlag = Int32List.fromList(<int>[4]);
 
   static const _dailyHabitReminderId = 0;
@@ -231,6 +251,38 @@ class NotificationService {
   }
 
   int _billReminderId(String billId) => 'bill_reminder_$billId'.hashCode;
+
+  /// Schedules a one-off reminder for a goal at [reminderTime] (the target
+  /// date, offset by however many days early the user asked for). Distinct
+  /// notification id namespace from tasks/habits/bills/events so an
+  /// ordinary goal id can never collide with theirs and cancel the wrong
+  /// reminder.
+  Future<void> scheduleGoalReminder({
+    required String goalId,
+    required String title,
+    required DateTime reminderTime,
+    ReminderMode mode = ReminderMode.notification,
+  }) async {
+    if (reminderTime.isBefore(DateTime.now())) return;
+    final isAlarm = mode == ReminderMode.alarm;
+    await _plugin.zonedSchedule(
+      id: _goalReminderId(goalId),
+      title: title,
+      body: 'Goal deadline',
+      scheduledDate: tz.TZDateTime.from(reminderTime, tz.local),
+      notificationDetails: NotificationDetails(
+        android: isAlarm ? _goalAlarmChannel : _goalChannel,
+        iOS: isAlarm ? _iosAlarmDetails : const DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
+  Future<void> cancelGoalReminder(String goalId) {
+    return _plugin.cancel(id: _goalReminderId(goalId));
+  }
+
+  int _goalReminderId(String goalId) => 'goal_reminder_$goalId'.hashCode;
 
   /// Schedules a one-off reminder for a calendar event at [reminderTime]
   /// (the event's start time, offset by however many minutes early the user

@@ -51,6 +51,9 @@ Goal _goal({
   currentValue: currentValue,
   status: 'active',
   targetDate: targetDate,
+  reminderEnabled: false,
+  reminderMode: 'notification',
+  reminderDaysBefore: 0,
   createdAt: createdAt ?? DateTime(2026, 1, 1),
 );
 

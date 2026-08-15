@@ -2,8 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/app_database_provider.dart';
+import '../../../core/reminders/reminder_mode.dart';
+import '../../../core/services/notification_service.dart';
 import '../../finance/application/finance_providers.dart';
 import '../../habits/application/habits_providers.dart';
+import '../../settings/application/settings_providers.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../data/goals_repository.dart';
 import '../domain/goal_progress.dart';
@@ -18,6 +21,10 @@ final goalsListProvider = StreamProvider<List<Goal>>((ref) {
 
 final allGoalLinksProvider = StreamProvider<List<GoalLink>>((ref) {
   return ref.watch(goalsRepositoryProvider).watchAllLinks();
+});
+
+final goalMilestonesProvider = StreamProvider.family<List<GoalMilestone>, String>((ref, goalId) {
+  return ref.watch(goalsRepositoryProvider).watchMilestonesForGoal(goalId);
 });
 
 /// Resolves each link's `linkedId` against whichever module owns it
@@ -53,9 +60,11 @@ final goalsWithLinksProvider = Provider<List<GoalWithLinks>>((ref) {
 });
 
 class GoalsController {
-  GoalsController(this._repo);
+  GoalsController(this._repo, this._notifications, this._remindersEnabled);
 
   final GoalsRepository _repo;
+  final NotificationService _notifications;
+  final bool Function() _remindersEnabled;
 
   Future<String> createGoal({
     required String title,
@@ -63,13 +72,59 @@ class GoalsController {
     double? targetValue,
     double currentValue = 0,
     DateTime? targetDate,
-  }) {
-    return _repo.createGoal(
+    bool reminderEnabled = false,
+    ReminderMode reminderMode = ReminderMode.notification,
+    int reminderDaysBefore = 0,
+  }) async {
+    final id = await _repo.createGoal(
       title: title,
       type: type,
       targetValue: targetValue,
       currentValue: currentValue,
       targetDate: targetDate,
+      reminderEnabled: reminderEnabled,
+      reminderMode: reminderMode.storageValue,
+      reminderDaysBefore: reminderDaysBefore,
+    );
+    await _scheduleGoalReminder(
+      goalId: id,
+      title: title,
+      targetDate: targetDate,
+      reminderEnabled: reminderEnabled,
+      reminderDaysBefore: reminderDaysBefore,
+      mode: reminderMode,
+    );
+    return id;
+  }
+
+  Future<void> updateGoal({
+    required String id,
+    required String title,
+    required String type,
+    double? targetValue,
+    DateTime? targetDate,
+    bool reminderEnabled = false,
+    ReminderMode reminderMode = ReminderMode.notification,
+    int reminderDaysBefore = 0,
+  }) async {
+    await _notifications.cancelGoalReminder(id);
+    await _repo.updateGoal(
+      id: id,
+      title: title,
+      type: type,
+      targetValue: targetValue,
+      targetDate: targetDate,
+      reminderEnabled: reminderEnabled,
+      reminderMode: reminderMode.storageValue,
+      reminderDaysBefore: reminderDaysBefore,
+    );
+    await _scheduleGoalReminder(
+      goalId: id,
+      title: title,
+      targetDate: targetDate,
+      reminderEnabled: reminderEnabled,
+      reminderDaysBefore: reminderDaysBefore,
+      mode: reminderMode,
     );
   }
 
@@ -83,9 +138,44 @@ class GoalsController {
 
   Future<void> removeLink(String linkId) => _repo.removeLink(linkId);
 
-  Future<void> deleteGoal(String id) => _repo.deleteGoal(id);
+  Future<void> deleteGoal(String id) async {
+    await _notifications.cancelGoalReminder(id);
+    await _repo.deleteGoal(id);
+  }
+
+  Future<String> createMilestone({required String goalId, required String title}) {
+    return _repo.createMilestone(goalId: goalId, title: title);
+  }
+
+  Future<void> setMilestoneCompleted(String id, bool completed) {
+    return _repo.setMilestoneCompleted(id, completed);
+  }
+
+  Future<void> deleteMilestone(String id) => _repo.deleteMilestone(id);
+
+  Future<void> _scheduleGoalReminder({
+    required String goalId,
+    required String title,
+    required DateTime? targetDate,
+    required bool reminderEnabled,
+    required int reminderDaysBefore,
+    required ReminderMode mode,
+  }) async {
+    if (!reminderEnabled || targetDate == null || !_remindersEnabled()) return;
+    final reminderTime = targetDate.subtract(Duration(days: reminderDaysBefore));
+    await _notifications.scheduleGoalReminder(
+      goalId: goalId,
+      title: '$title due',
+      reminderTime: reminderTime,
+      mode: mode,
+    );
+  }
 }
 
 final goalsControllerProvider = Provider<GoalsController>((ref) {
-  return GoalsController(ref.watch(goalsRepositoryProvider));
+  return GoalsController(
+    ref.watch(goalsRepositoryProvider),
+    ref.watch(notificationServiceProvider),
+    () => ref.read(settingsProvider).taskReminders,
+  );
 });
