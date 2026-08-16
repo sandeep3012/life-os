@@ -67,6 +67,10 @@ class DocumentsController {
     );
   }
 
+  Future<void> updateDocument({required String id, required String title, String? folderId}) {
+    return _repo.updateDocument(id: id, title: title, folderId: folderId);
+  }
+
   Future<void> deleteDocument(Document document) => _repo.deleteDocument(document);
 }
 

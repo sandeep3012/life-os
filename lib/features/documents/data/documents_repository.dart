@@ -48,6 +48,16 @@ class DocumentsRepository {
     );
   }
 
+  Future<void> updateDocument({
+    required String id,
+    required String title,
+    String? folderId,
+  }) {
+    return (_db.update(_db.documents)..where((d) => d.id.equals(id))).write(
+      DocumentsCompanion(title: Value(title), folderId: Value(folderId)),
+    );
+  }
+
   Future<void> deleteDocument(Document document) async {
     await _storage.deleteFile(
       document.filePath,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../tags/presentation/widgets/tag_chip_row.dart';
 import '../../application/notes_providers.dart';
 
 enum _SaveStatus { saved, unsaved, saving }
@@ -203,6 +204,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                       ),
                   ],
                 ),
+              ],
+              if (_noteId != null) ...[
+                const SizedBox(height: 12),
+                TagChipRow(entityType: 'note', entityId: _noteId!),
               ],
               const SizedBox(height: 12),
               Expanded(

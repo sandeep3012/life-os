@@ -56,4 +56,34 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
   });
+
+  testWidgets('tagging a note shows the tag chip and filters the list', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('New note'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Tagged note');
+    await tester.pump(const Duration(milliseconds: 900));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add tag'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Tag name'), 'Work');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Work'), findsWidgets);
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    // Filter the list by the "Work" tag chip.
+    await tester.tap(find.text('Work'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tagged note'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 }

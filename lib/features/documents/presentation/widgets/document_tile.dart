@@ -14,10 +14,11 @@ IconData _iconForMime(String mime) {
 }
 
 class DocumentTile extends StatelessWidget {
-  const DocumentTile({super.key, required this.document, required this.onDelete});
+  const DocumentTile({super.key, required this.document, required this.onDelete, this.onTap});
 
   final Document document;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -36,42 +37,45 @@ class DocumentTile extends StatelessWidget {
         color: colors.critical.withValues(alpha: 0.15),
         child: Icon(Icons.delete_outline_rounded, color: colors.critical),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: isImage && document.thumbnailPath != null
-                  ? _Thumbnail(relativePath: document.thumbnailPath!)
-                  : Container(
-                      width: 38,
-                      height: 38,
-                      color: color.withValues(alpha: 0.14),
-                      child: Icon(_iconForMime(document.mimeType), size: 18, color: color),
-                    ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    document.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    '${_formatSize(document.sizeBytes)} · ${DateFormat.MMMd().format(document.createdAt)}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: isImage && document.thumbnailPath != null
+                    ? _Thumbnail(relativePath: document.thumbnailPath!)
+                    : Container(
+                        width: 38,
+                        height: 38,
+                        color: color.withValues(alpha: 0.14),
+                        child: Icon(_iconForMime(document.mimeType), size: 18, color: color),
+                      ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      document.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      '${_formatSize(document.sizeBytes)} · ${DateFormat.MMMd().format(document.createdAt)}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
