@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../tags/presentation/widgets/tag_chip_row.dart';
 
 class QuickAddDocumentDetails {
   const QuickAddDocumentDetails({required this.title, this.folderId});
@@ -9,31 +10,41 @@ class QuickAddDocumentDetails {
   final String? folderId;
 }
 
+/// Pass [initial] to edit an existing document's title/folder (and its
+/// tags — only offered in edit mode, since a brand-new document doesn't
+/// have a real id yet at the point this sheet is shown during import).
 Future<QuickAddDocumentDetails?> showQuickAddDocumentDetailsSheet(
   BuildContext context, {
   required String suggestedTitle,
   required List<Folder> folders,
+  Document? initial,
 }) {
   return showModalBottomSheet<QuickAddDocumentDetails>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _DetailsSheet(suggestedTitle: suggestedTitle, folders: folders),
+    builder: (context) =>
+        _DetailsSheet(suggestedTitle: suggestedTitle, folders: folders, initial: initial),
   );
 }
 
 class _DetailsSheet extends StatefulWidget {
-  const _DetailsSheet({required this.suggestedTitle, required this.folders});
+  const _DetailsSheet({required this.suggestedTitle, required this.folders, this.initial});
 
   final String suggestedTitle;
   final List<Folder> folders;
+  final Document? initial;
 
   @override
   State<_DetailsSheet> createState() => _DetailsSheetState();
 }
 
 class _DetailsSheetState extends State<_DetailsSheet> {
-  late final _titleController = TextEditingController(text: widget.suggestedTitle);
-  String? _folderId;
+  late final _titleController = TextEditingController(
+    text: widget.initial?.title ?? widget.suggestedTitle,
+  );
+  late String? _folderId = widget.initial?.folderId;
+
+  bool get _isEditMode => widget.initial != null;
 
   @override
   void initState() {
@@ -60,7 +71,10 @@ class _DetailsSheetState extends State<_DetailsSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Save document', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            _isEditMode ? 'Edit document' : 'Save document',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
           TextField(
             controller: _titleController,
@@ -86,6 +100,10 @@ class _DetailsSheetState extends State<_DetailsSheet> {
               ],
             ),
           ],
+          if (widget.initial != null) ...[
+            const SizedBox(height: 12),
+            TagChipRow(entityType: 'document', entityId: widget.initial!.id),
+          ],
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -98,7 +116,7 @@ class _DetailsSheetState extends State<_DetailsSheet> {
                         folderId: _folderId,
                       ),
                     ),
-              child: const Text('Save'),
+              child: Text(_isEditMode ? 'Save changes' : 'Save'),
             ),
           ),
         ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../tags/application/tags_providers.dart';
 import '../../application/notes_providers.dart';
 import '../widgets/note_card.dart';
 import 'note_editor_screen.dart';
@@ -15,6 +16,7 @@ class NotesScreen extends ConsumerStatefulWidget {
 class _NotesScreenState extends ConsumerState<NotesScreen> {
   final _searchController = TextEditingController();
   String? _selectedFolderId;
+  String? _selectedTagId;
 
   @override
   void initState() {
@@ -34,6 +36,14 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     final folders = ref.watch(noteFoldersProvider).value ?? const [];
     final folderById = {for (final f in folders) f.id: f};
     final query = _searchController.text.trim().toLowerCase();
+    final tags = ref.watch(allTagsProvider).value ?? const [];
+    final entityTags = ref.watch(allEntityTagsProvider).value ?? const [];
+    final taggedNoteIds = _selectedTagId == null
+        ? null
+        : {
+            for (final e in entityTags)
+              if (e.entityType == 'note' && e.tagId == _selectedTagId) e.entityId,
+          };
 
     return Scaffold(
       appBar: AppBar(title: const Text('Notes')),
@@ -76,6 +86,29 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               ],
             ),
           ),
+          if (tags.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: [
+                  for (final t in tags)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(t.name),
+                        selected: _selectedTagId == t.id,
+                        onSelected: (_) => setState(
+                          () => _selectedTagId = _selectedTagId == t.id ? null : t.id,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Expanded(
             child: notesAsync.when(
@@ -89,7 +122,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                       query.isEmpty ||
                       n.title.toLowerCase().contains(query) ||
                       n.body.toLowerCase().contains(query);
-                  return matchesFolder && matchesQuery;
+                  final matchesTag = taggedNoteIds == null || taggedNoteIds.contains(n.id);
+                  return matchesFolder && matchesQuery && matchesTag;
                 }).toList();
 
                 if (filtered.isEmpty) {

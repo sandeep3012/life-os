@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../../core/database/app_database.dart';
+import '../../../tags/application/tags_providers.dart';
 import '../../application/documents_providers.dart';
 import '../widgets/document_tile.dart';
 import '../widgets/folder_tile.dart';
@@ -21,6 +23,7 @@ class DocumentsScreen extends ConsumerStatefulWidget {
 class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
   final _searchController = TextEditingController();
   String? _selectedFolderId;
+  String? _selectedTagId;
 
   @override
   void initState() {
@@ -40,6 +43,14 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     final folders = ref.watch(documentFoldersProvider).value ?? const [];
     final counts = ref.watch(documentCountByFolderProvider);
     final query = _searchController.text.trim().toLowerCase();
+    final tags = ref.watch(allTagsProvider).value ?? const [];
+    final entityTags = ref.watch(allEntityTagsProvider).value ?? const [];
+    final taggedDocumentIds = _selectedTagId == null
+        ? null
+        : {
+            for (final e in entityTags)
+              if (e.entityType == 'document' && e.tagId == _selectedTagId) e.entityId,
+          };
 
     return Scaffold(
       appBar: AppBar(title: const Text('Documents')),
@@ -87,6 +98,29 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
             ),
             const SizedBox(height: 8),
           ],
+          if (tags.isNotEmpty) ...[
+            SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: [
+                  for (final t in tags)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(t.name),
+                        selected: _selectedTagId == t.id,
+                        onSelected: (_) => setState(
+                          () => _selectedTagId = _selectedTagId == t.id ? null : t.id,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
             child: Text('Recent', style: Theme.of(context).textTheme.titleSmall),
@@ -100,7 +134,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                   final matchesFolder =
                       _selectedFolderId == null || d.folderId == _selectedFolderId;
                   final matchesQuery = query.isEmpty || d.title.toLowerCase().contains(query);
-                  return matchesFolder && matchesQuery;
+                  final matchesTag =
+                      taggedDocumentIds == null || taggedDocumentIds.contains(d.id);
+                  return matchesFolder && matchesQuery && matchesTag;
                 }).toList();
 
                 if (filtered.isEmpty) {
@@ -129,6 +165,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                     return DocumentTile(
                       document: d,
                       onDelete: () => ref.read(documentsControllerProvider).deleteDocument(d),
+                      onTap: () => _editDocument(d),
                     );
                   },
                 );
@@ -143,6 +180,20 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
         label: const Text('Add'),
       ),
     );
+  }
+
+  Future<void> _editDocument(Document document) async {
+    final folders = ref.read(documentFoldersProvider).value ?? const [];
+    final details = await showQuickAddDocumentDetailsSheet(
+      context,
+      suggestedTitle: document.title,
+      folders: folders,
+      initial: document,
+    );
+    if (details == null) return;
+    await ref
+        .read(documentsControllerProvider)
+        .updateDocument(id: document.id, title: details.title, folderId: details.folderId);
   }
 
   Future<void> _pickImportSource() async {
