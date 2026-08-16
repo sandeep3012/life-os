@@ -8,6 +8,7 @@ import '../../finance/application/finance_providers.dart';
 import '../../goals/application/goals_providers.dart';
 import '../../habits/application/habits_providers.dart';
 import '../../notes/application/notes_providers.dart';
+import '../../settings/application/settings_providers.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../domain/search_result.dart';
 
@@ -31,6 +32,7 @@ final searchResultsProvider = Provider<List<SearchResult>>((ref) {
 
   bool matches(String s) => s.toLowerCase().contains(query);
 
+  final currencyCode = ref.watch(settingsProvider).currencyCode;
   final transactions = ref.watch(transactionsProvider).value ?? const [];
   final bills = ref.watch(billsProvider).value ?? const [];
   final recurring = ref.watch(recurringTransactionsProvider).value ?? const [];
@@ -47,7 +49,7 @@ final searchResultsProvider = Provider<List<SearchResult>>((ref) {
         SearchResult(
           type: SearchResultType.transaction,
           title: t.merchant,
-          subtitle: '${formatMinor(t.amountMinor, showSign: t.amountMinor >= 0)} · ${DateFormat.MMMd().format(t.date)}',
+          subtitle: '${formatMinor(t.amountMinor, currencyCode: currencyCode, showSign: t.amountMinor >= 0)} · ${DateFormat.MMMd().format(t.date)}',
           sourceId: t.id,
         ),
     for (final b in bills)
@@ -55,7 +57,7 @@ final searchResultsProvider = Provider<List<SearchResult>>((ref) {
         SearchResult(
           type: SearchResultType.bill,
           title: b.name,
-          subtitle: '${formatMinor(b.amountMinor)} · due ${DateFormat.MMMd().format(b.dueDate)}',
+          subtitle: '${formatMinor(b.amountMinor, currencyCode: currencyCode)} · due ${DateFormat.MMMd().format(b.dueDate)}',
           sourceId: b.id,
         ),
     for (final r in recurring)
@@ -63,7 +65,7 @@ final searchResultsProvider = Provider<List<SearchResult>>((ref) {
         SearchResult(
           type: SearchResultType.recurringTransaction,
           title: r.merchant,
-          subtitle: '${formatMinor(r.amountMinor)} · ${r.frequency}',
+          subtitle: '${formatMinor(r.amountMinor, currencyCode: currencyCode)} · ${r.frequency}',
           sourceId: r.id,
         ),
     for (final task in tasks)

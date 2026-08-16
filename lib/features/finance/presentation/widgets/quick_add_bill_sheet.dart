@@ -39,19 +39,29 @@ Future<QuickAddBillResult?> showQuickAddBillSheet(
   BuildContext context, {
   required List<Account> accounts,
   required List<Category> categories,
+  required String currencySymbol,
 }) {
   return showModalBottomSheet<QuickAddBillResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _QuickAddBillSheet(accounts: accounts, categories: categories),
+    builder: (context) => _QuickAddBillSheet(
+      accounts: accounts,
+      categories: categories,
+      currencySymbol: currencySymbol,
+    ),
   );
 }
 
 class _QuickAddBillSheet extends StatefulWidget {
-  const _QuickAddBillSheet({required this.accounts, required this.categories});
+  const _QuickAddBillSheet({
+    required this.accounts,
+    required this.categories,
+    required this.currencySymbol,
+  });
 
   final List<Account> accounts;
   final List<Category> categories;
+  final String currencySymbol;
 
   @override
   State<_QuickAddBillSheet> createState() => _QuickAddBillSheetState();
@@ -122,7 +132,7 @@ class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
             TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(hintText: 'Amount (₹)'),
+              decoration: InputDecoration(hintText: 'Amount (${widget.currencySymbol})'),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(

@@ -26,12 +26,17 @@ class QuickAddBudgetResult {
 Future<QuickAddBudgetResult?> showQuickAddBudgetSheet(
   BuildContext context, {
   required List<Category> categories,
+  required String currencySymbol,
   Budget? initial,
 }) {
   return showModalBottomSheet<QuickAddBudgetResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _QuickAddBudgetSheet(categories: categories, initial: initial),
+    builder: (context) => _QuickAddBudgetSheet(
+      categories: categories,
+      currencySymbol: currencySymbol,
+      initial: initial,
+    ),
   );
 }
 
@@ -40,9 +45,10 @@ Future<QuickAddBudgetResult?> showQuickAddBudgetSheet(
 const _addCategoryValue = '__add_category__';
 
 class _QuickAddBudgetSheet extends ConsumerStatefulWidget {
-  const _QuickAddBudgetSheet({required this.categories, this.initial});
+  const _QuickAddBudgetSheet({required this.categories, required this.currencySymbol, this.initial});
 
   final List<Category> categories;
+  final String currencySymbol;
   final Budget? initial;
 
   @override
@@ -185,7 +191,7 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
           TextField(
             controller: _limitController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(hintText: 'Limit (₹)'),
+            decoration: InputDecoration(hintText: 'Limit (${widget.currencySymbol})'),
           ),
           const SizedBox(height: 12),
           SegmentedButton<String>(

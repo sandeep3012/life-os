@@ -45,6 +45,7 @@ Future<QuickAddGoalResult?> showQuickAddGoalSheet(
   BuildContext context, {
   required List<Habit> habits,
   required List<Account> accounts,
+  required String currencySymbol,
   Goal? initial,
 }) {
   final linkOptions = [
@@ -54,14 +55,19 @@ Future<QuickAddGoalResult?> showQuickAddGoalSheet(
   return showModalBottomSheet<QuickAddGoalResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _QuickAddGoalSheet(linkOptions: linkOptions, initial: initial),
+    builder: (context) => _QuickAddGoalSheet(
+      linkOptions: linkOptions,
+      currencySymbol: currencySymbol,
+      initial: initial,
+    ),
   );
 }
 
 class _QuickAddGoalSheet extends StatefulWidget {
-  const _QuickAddGoalSheet({required this.linkOptions, this.initial});
+  const _QuickAddGoalSheet({required this.linkOptions, required this.currencySymbol, this.initial});
 
   final List<LinkOption> linkOptions;
+  final String currencySymbol;
   final Goal? initial;
 
   @override
@@ -134,10 +140,10 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
             ),
             const SizedBox(height: 12),
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'financial', label: Text('₹')),
-                ButtonSegment(value: 'habit', label: Text('Habit')),
-                ButtonSegment(value: 'generic', label: Text('Generic')),
+              segments: [
+                ButtonSegment(value: 'financial', label: Text(widget.currencySymbol)),
+                const ButtonSegment(value: 'habit', label: Text('Habit')),
+                const ButtonSegment(value: 'generic', label: Text('Generic')),
               ],
               selected: {_type},
               onSelectionChanged: (s) => setState(() => _type = s.first),
@@ -147,7 +153,9 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
               controller: _targetController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                hintText: _type == 'financial' ? 'Target amount (₹)' : 'Target count',
+                hintText: _type == 'financial'
+                    ? 'Target amount (${widget.currencySymbol})'
+                    : 'Target count',
               ),
             ),
             const SizedBox(height: 12),

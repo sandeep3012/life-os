@@ -35,4 +35,16 @@ class SettingsRepository {
   Future<void> setAiInsightAlerts(bool enabled) => _upsert(
     AppSettingsCompanion(aiInsightAlerts: Value(enabled)),
   );
+
+  Future<void> setCurrencyCode(String code) => _upsert(
+    AppSettingsCompanion(currencyCode: Value(code)),
+  );
+
+  Future<void> setAppLockEnabled(bool enabled) => _upsert(
+    AppSettingsCompanion(appLockEnabled: Value(enabled)),
+  );
+
+  Future<void> setBiometricEnabled(bool enabled) => _upsert(
+    AppSettingsCompanion(biometricEnabled: Value(enabled)),
+  );
 }

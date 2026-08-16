@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../widgets/quick_add_recurring_transaction_sheet.dart';
 
@@ -27,6 +28,7 @@ class RecurringTransactionsScreen extends ConsumerWidget {
       context,
       accounts: accounts,
       categories: categories,
+      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
     );
     if (result == null) return;
     await ref
@@ -88,6 +90,7 @@ class _RecurringTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colors = context.appColors;
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
     final isIncome = schedule.amountMinor >= 0;
     final color = category != null
         ? Color(int.parse(category!.colorHex.replaceFirst('#', '0xFF')))
@@ -116,7 +119,7 @@ class _RecurringTile extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              formatMinor(schedule.amountMinor, showSign: true),
+              formatMinor(schedule.amountMinor, currencyCode: currencyCode, showSign: true),
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: isIncome ? colors.good : colors.spend,

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../../spend_analyzer/presentation/widgets/budget_bar.dart';
 import '../../application/finance_providers.dart';
 import '../../domain/budget_progress.dart';
@@ -45,6 +46,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     final totalBalance = ref.watch(totalBalanceMinorProvider);
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final categoryById = {for (final c in categories) c.id: c};
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
 
     return Scaffold(
       body: SafeArea(
@@ -73,7 +75,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                                 ),
                               ),
                               Text(
-                                formatMinor(totalBalance),
+                                formatMinor(totalBalance, currencyCode: currencyCode),
                                 style: theme.textTheme.headlineMedium?.copyWith(fontFamily: 'Fraunces'),
                               ),
                             ],
@@ -153,7 +155,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                     child: _EmptyAccountsState(),
                   )
                 else if (_section == _FinanceSection.transactions)
-                  _TransactionsSliver(categoryById: categoryById)
+                  _TransactionsSliver(categoryById: categoryById, currencyCode: currencyCode)
                 else
                   _BudgetsSliver(),
               ],
@@ -230,7 +232,11 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
 
   Future<void> _addAccount(BuildContext context, WidgetRef ref) async {
     final accountTypes = ref.read(accountTypesProvider).value ?? const [];
-    final result = await showQuickAddAccountSheet(context, accountTypes: accountTypes);
+    final result = await showQuickAddAccountSheet(
+      context,
+      accountTypes: accountTypes,
+      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+    );
     if (result == null) return;
     await ref.read(financeControllerProvider).addAccount(
       name: result.name,
@@ -261,6 +267,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         context,
         accounts: transactableAccounts,
         categories: categories,
+        currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
       );
       if (result == null) return;
       await ref.read(financeControllerProvider).addTransaction(
@@ -273,7 +280,11 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
       );
     } else {
       final categories = ref.read(categoriesProvider).value ?? const [];
-      final result = await showQuickAddBudgetSheet(context, categories: categories);
+      final result = await showQuickAddBudgetSheet(
+        context,
+        categories: categories,
+        currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+      );
       if (result == null) return;
       await ref.read(financeControllerProvider).addBudget(
         categoryId: result.categoryId,
@@ -290,9 +301,10 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
 const _undoWindow = Duration(seconds: 4);
 
 class _TransactionsSliver extends ConsumerStatefulWidget {
-  const _TransactionsSliver({required this.categoryById});
+  const _TransactionsSliver({required this.categoryById, required this.currencyCode});
 
   final Map<String, Category> categoryById;
+  final String currencyCode;
 
   @override
   ConsumerState<_TransactionsSliver> createState() => _TransactionsSliverState();
@@ -341,6 +353,7 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
             child: TransactionTile(
               transaction: t,
               category: widget.categoryById[t.categoryId],
+              currencyCode: widget.currencyCode,
               onEdit: () => _editTransaction(t),
             ),
           );
@@ -370,6 +383,7 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
       context,
       accounts: accounts,
       categories: categories,
+      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
       initial: t,
     );
     if (result == null) return;
@@ -442,6 +456,7 @@ class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
         .watch(budgetsWithProgressProvider)
         .where((p) => !_pendingDeleteIds.contains(p.budget.id))
         .toList();
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
 
     if (progress.isEmpty) {
       return const SliverFillRemaining(
@@ -463,7 +478,7 @@ class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
               direction: DismissDirection.endToStart,
               background: const _SwipeDeleteBackground(),
               onDismissed: (_) => _scheduleDelete(p),
-              child: BudgetBar(progress: p, onEdit: () => _editBudget(p)),
+              child: BudgetBar(progress: p, currencyCode: currencyCode, onEdit: () => _editBudget(p)),
             ),
         ],
       ),
@@ -472,7 +487,12 @@ class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
 
   Future<void> _editBudget(BudgetProgress p) async {
     final categories = ref.read(categoriesProvider).value ?? const [];
-    final result = await showQuickAddBudgetSheet(context, categories: categories, initial: p.budget);
+    final result = await showQuickAddBudgetSheet(
+      context,
+      categories: categories,
+      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+      initial: p.budget,
+    );
     if (result == null) return;
     await ref.read(financeControllerProvider).updateBudget(
       id: p.budget.id,

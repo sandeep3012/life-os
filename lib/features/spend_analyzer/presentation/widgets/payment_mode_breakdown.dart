@@ -5,9 +5,10 @@ import '../../../../core/utils/currency_utils.dart';
 import '../../domain/payment_mode_spend.dart';
 
 class PaymentModeBreakdown extends StatelessWidget {
-  const PaymentModeBreakdown({super.key, required this.breakdown});
+  const PaymentModeBreakdown({super.key, required this.breakdown, required this.currencyCode});
 
   final List<PaymentModeSpend> breakdown;
+  final String currencyCode;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +45,7 @@ class PaymentModeBreakdown extends StatelessWidget {
                             style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           Text(
-                            formatMinor(entry.totalMinor, showDecimals: false),
+                            formatMinor(entry.totalMinor, currencyCode: currencyCode, showDecimals: false),
                             style: TextStyle(
                               fontFamily: 'PlexMono',
                               fontSize: 12.5,

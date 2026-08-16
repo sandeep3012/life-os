@@ -14,6 +14,16 @@ class AppSettings extends Table {
   BoolColumn get aiInsightAlerts =>
       boolean().withDefault(const Constant(false))();
 
+  /// One of `currency_utils.dart`'s curated `supportedCurrencies` codes.
+  TextColumn get currencyCode => text().withDefault(const Constant('INR'))();
+
+  /// Whether app lock is on. The PIN itself is never stored here — it lives
+  /// in `flutter_secure_storage`, already OS-encrypted at rest.
+  BoolColumn get appLockEnabled =>
+      boolean().withDefault(const Constant(false))();
+  BoolColumn get biometricEnabled =>
+      boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

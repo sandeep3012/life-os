@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../../domain/finance_report.dart';
 
@@ -68,6 +69,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final transactions = ref.watch(transactionsProvider).value ?? const [];
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final categoryNameById = {for (final c in categories) c.id: c.name};
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
     final report = buildFinanceReport(
       period: _period,
       allTransactions: transactions,
@@ -107,7 +109,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             Row(
               children: [
                 Expanded(
-                  child: _SummaryCard(label: 'Income', valueMinor: report.totalIncomeMinor, color: colors.good),
+                  child: _SummaryCard(
+                    label: 'Income',
+                    valueMinor: report.totalIncomeMinor,
+                    color: colors.good,
+                    currencyCode: currencyCode,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -115,12 +122,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     label: 'Expense',
                     valueMinor: report.totalExpenseMinor,
                     color: colors.spend,
+                    currencyCode: currencyCode,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            _SummaryCard(label: 'Net', valueMinor: report.netMinor, color: colors.finance, wide: true),
+            _SummaryCard(
+              label: 'Net',
+              valueMinor: report.netMinor,
+              color: colors.finance,
+              currencyCode: currencyCode,
+              wide: true,
+            ),
             const SizedBox(height: 20),
             if (report.categoryLines.isEmpty)
               Padding(
@@ -146,7 +160,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        formatMinor(line.spentMinor),
+                        formatMinor(line.spentMinor, currencyCode: currencyCode),
                         style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -176,12 +190,14 @@ class _SummaryCard extends StatelessWidget {
     required this.label,
     required this.valueMinor,
     required this.color,
+    required this.currencyCode,
     this.wide = false,
   });
 
   final String label;
   final int valueMinor;
   final Color color;
+  final String currencyCode;
   final bool wide;
 
   @override
@@ -195,7 +211,7 @@ class _SummaryCard extends StatelessWidget {
                 children: [
                   Expanded(child: Text(label, style: theme.textTheme.labelMedium)),
                   Text(
-                    formatMinor(valueMinor, showSign: true),
+                    formatMinor(valueMinor, currencyCode: currencyCode, showSign: true),
                     style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: color),
                   ),
                 ],
@@ -206,7 +222,7 @@ class _SummaryCard extends StatelessWidget {
                   Text(label, style: theme.textTheme.labelMedium),
                   const SizedBox(height: 4),
                   Text(
-                    formatMinor(valueMinor),
+                    formatMinor(valueMinor, currencyCode: currencyCode),
                     style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: color),
                   ),
                 ],

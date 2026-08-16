@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../application/spend_analyzer_providers.dart';
 import '../widgets/budget_bar.dart';
 import '../widgets/category_donut_chart.dart';
@@ -24,6 +25,7 @@ class SpendAnalyzerScreen extends ConsumerWidget {
     final weeklyTrend = ref.watch(weeklyTrendProvider);
     final budgetsProgress = ref.watch(monthBudgetsWithProgressProvider);
     final paymentModeBreakdown = ref.watch(paymentModeBreakdownProvider);
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
 
     final delta = previousTotal == 0 ? 0.0 : (total - previousTotal) / previousTotal;
 
@@ -65,7 +67,7 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            formatMinor(total, showDecimals: false),
+                            formatMinor(total, currencyCode: currencyCode, showDecimals: false),
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontFamily: 'Fraunces',
                             ),
@@ -110,7 +112,7 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                       padding: EdgeInsets.symmetric(vertical: 12),
                       child: Text('No spending logged for this month yet.'),
                     )
-                  : CategoryDonutChart(breakdown: breakdown, totalMinor: total),
+                  : CategoryDonutChart(breakdown: breakdown, totalMinor: total, currencyCode: currencyCode),
             ),
           ),
           const SizedBox(height: 20),
@@ -127,7 +129,7 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                   : Column(
                       children: [
                         for (final progress in budgetsProgress)
-                          BudgetBar(progress: progress),
+                          BudgetBar(progress: progress, currencyCode: currencyCode),
                       ],
                     ),
             ),
@@ -143,7 +145,7 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                       padding: EdgeInsets.symmetric(vertical: 20),
                       child: Text('No payment mode tagged for this month yet.'),
                     )
-                  : PaymentModeBreakdown(breakdown: paymentModeBreakdown),
+                  : PaymentModeBreakdown(breakdown: paymentModeBreakdown, currencyCode: currencyCode),
             ),
           ),
         ],

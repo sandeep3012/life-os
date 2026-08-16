@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../widgets/net_worth_trend_chart.dart';
 
@@ -15,6 +16,7 @@ class NetWorthScreen extends ConsumerWidget {
     final colors = context.appColors;
     final points = ref.watch(netWorthTrendProvider);
     final latest = points.isEmpty ? null : points.last;
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Net worth')),
@@ -25,7 +27,7 @@ class NetWorthScreen extends ConsumerWidget {
             Text('Net worth', style: theme.textTheme.labelLarge),
             const SizedBox(height: 4),
             Text(
-              formatMinor(latest?.netWorthMinor ?? 0),
+              formatMinor(latest?.netWorthMinor ?? 0, currencyCode: currencyCode),
               style: theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 20),
@@ -36,6 +38,7 @@ class NetWorthScreen extends ConsumerWidget {
                     label: 'Assets',
                     valueMinor: latest?.assetsMinor ?? 0,
                     color: colors.good,
+                    currencyCode: currencyCode,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -44,6 +47,7 @@ class NetWorthScreen extends ConsumerWidget {
                     label: 'Liabilities',
                     valueMinor: latest?.liabilitiesMinor ?? 0,
                     color: colors.critical,
+                    currencyCode: currencyCode,
                   ),
                 ),
               ],
@@ -88,11 +92,17 @@ class NetWorthScreen extends ConsumerWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.valueMinor, required this.color});
+  const _StatCard({
+    required this.label,
+    required this.valueMinor,
+    required this.color,
+    required this.currencyCode,
+  });
 
   final String label;
   final int valueMinor;
   final Color color;
+  final String currencyCode;
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +116,7 @@ class _StatCard extends StatelessWidget {
             Text(label, style: theme.textTheme.labelMedium),
             const SizedBox(height: 4),
             Text(
-              formatMinor(valueMinor),
+              formatMinor(valueMinor, currencyCode: currencyCode),
               style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: color),
             ),
           ],

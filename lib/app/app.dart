@@ -5,7 +5,9 @@ import '../core/services/notification_service.dart';
 import '../features/ai_analyser/application/ai_analyser_providers.dart';
 import '../features/calendar/application/calendar_providers.dart';
 import '../features/finance/application/finance_providers.dart';
+import '../features/settings/application/app_lock_providers.dart';
 import '../features/settings/application/settings_providers.dart';
+import '../features/settings/presentation/screens/lock_screen.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
@@ -16,12 +18,13 @@ class LifeOSApp extends ConsumerStatefulWidget {
   ConsumerState<LifeOSApp> createState() => _LifeOSAppState();
 }
 
-class _LifeOSAppState extends ConsumerState<LifeOSApp> {
+class _LifeOSAppState extends ConsumerState<LifeOSApp> with WidgetsBindingObserver {
   bool? _habitReminderScheduled;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Fire-and-forget: none of these should block first frame, and none
     // should crash the app if the widget tree is torn down (e.g. hot
     // restart, or the app closing) while they're still in flight.
@@ -31,6 +34,23 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp> {
     ref.read(financeRepositoryProvider).generateDueRecurringTransactions();
     ref.read(calendarRepositoryProvider).extendRecurringEvents();
     ref.read(aiAnalyserControllerProvider).refresh().catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Re-locks the moment the app leaves the foreground — otherwise "app
+  /// lock" wouldn't actually protect anything once the app has been opened
+  /// once in a session.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!ref.read(settingsProvider).appLockEnabled) return;
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      ref.read(isLockedProvider.notifier).lock();
+    }
   }
 
   /// Keeps the recurring habit reminder in sync with its setting. Driven off
@@ -58,6 +78,9 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp> {
     final themeMode = settings.themeMode;
     _syncHabitReminder(settings.habitReminders);
 
+    final isLocked = ref.watch(isLockedProvider);
+    final showLockScreen = settings.appLockEnabled && isLocked;
+
     return MaterialApp.router(
       title: 'LifeOS',
       debugShowCheckedModeBanner: false,
@@ -65,6 +88,10 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp> {
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
       routerConfig: appRouter,
+      builder: (context, child) {
+        if (showLockScreen) return const LockScreen();
+        return child ?? const SizedBox.shrink();
+      },
     );
   }
 }

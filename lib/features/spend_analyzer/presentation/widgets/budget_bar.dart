@@ -7,9 +7,10 @@ import '../../../../core/utils/icon_lookup.dart';
 import '../../../finance/domain/budget_progress.dart';
 
 class BudgetBar extends StatelessWidget {
-  const BudgetBar({super.key, required this.progress, this.onEdit});
+  const BudgetBar({super.key, required this.progress, required this.currencyCode, this.onEdit});
 
   final BudgetProgress progress;
+  final String currencyCode;
   final VoidCallback? onEdit;
 
   @override
@@ -42,7 +43,7 @@ class BudgetBar extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  '${formatMinor(progress.spentMinor, showDecimals: false)} / ${formatMinor(progress.limitMinor, showDecimals: false)}',
+                  '${formatMinor(progress.spentMinor, currencyCode: currencyCode, showDecimals: false)} / ${formatMinor(progress.limitMinor, currencyCode: currencyCode, showDecimals: false)}',
                   style: TextStyle(
                     fontFamily: 'PlexMono',
                     fontSize: 12.5,

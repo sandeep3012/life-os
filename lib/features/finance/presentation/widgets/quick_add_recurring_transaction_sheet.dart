@@ -42,20 +42,29 @@ Future<QuickAddRecurringTransactionResult?> showQuickAddRecurringTransactionShee
   BuildContext context, {
   required List<Account> accounts,
   required List<Category> categories,
+  required String currencySymbol,
 }) {
   return showModalBottomSheet<QuickAddRecurringTransactionResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) =>
-        _QuickAddRecurringTransactionSheet(accounts: accounts, categories: categories),
+    builder: (context) => _QuickAddRecurringTransactionSheet(
+      accounts: accounts,
+      categories: categories,
+      currencySymbol: currencySymbol,
+    ),
   );
 }
 
 class _QuickAddRecurringTransactionSheet extends StatefulWidget {
-  const _QuickAddRecurringTransactionSheet({required this.accounts, required this.categories});
+  const _QuickAddRecurringTransactionSheet({
+    required this.accounts,
+    required this.categories,
+    required this.currencySymbol,
+  });
 
   final List<Account> accounts;
   final List<Category> categories;
+  final String currencySymbol;
 
   @override
   State<_QuickAddRecurringTransactionSheet> createState() =>
@@ -147,7 +156,7 @@ class _QuickAddRecurringTransactionSheetState
             TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(hintText: 'Amount (₹)'),
+              decoration: InputDecoration(hintText: 'Amount (${widget.currencySymbol})'),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(

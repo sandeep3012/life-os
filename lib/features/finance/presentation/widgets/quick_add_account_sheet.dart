@@ -18,18 +18,21 @@ class QuickAddAccountResult {
 Future<QuickAddAccountResult?> showQuickAddAccountSheet(
   BuildContext context, {
   required List<AccountType> accountTypes,
+  required String currencySymbol,
 }) {
   return showModalBottomSheet<QuickAddAccountResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _QuickAddAccountSheet(accountTypes: accountTypes),
+    builder: (context) =>
+        _QuickAddAccountSheet(accountTypes: accountTypes, currencySymbol: currencySymbol),
   );
 }
 
 class _QuickAddAccountSheet extends StatefulWidget {
-  const _QuickAddAccountSheet({required this.accountTypes});
+  const _QuickAddAccountSheet({required this.accountTypes, required this.currencySymbol});
 
   final List<AccountType> accountTypes;
+  final String currencySymbol;
 
   @override
   State<_QuickAddAccountSheet> createState() => _QuickAddAccountSheetState();
@@ -92,7 +95,7 @@ class _QuickAddAccountSheetState extends State<_QuickAddAccountSheet> {
           TextField(
             controller: _balanceController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(hintText: 'Starting balance (₹)'),
+            decoration: InputDecoration(hintText: 'Starting balance (${widget.currencySymbol})'),
           ),
           const SizedBox(height: 16),
           SizedBox(
