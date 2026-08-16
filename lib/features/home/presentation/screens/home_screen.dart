@@ -11,6 +11,7 @@ import '../../../ai_analyser/application/ai_analyser_providers.dart';
 import '../../../ai_analyser/presentation/widgets/insight_card.dart';
 import '../../../calendar/presentation/widgets/calendar_item_tile.dart';
 import '../../../habits/application/habits_providers.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../../tasks/application/tasks_providers.dart';
 import '../../../tasks/presentation/widgets/task_tile.dart';
 import '../../application/home_providers.dart';
@@ -33,6 +34,7 @@ class HomeScreen extends ConsumerWidget {
     final averageStreak = ref.watch(averageStreakDaysProvider);
     final activeGoals = ref.watch(activeGoalCountProvider);
     final upcoming = ref.watch(upcomingItemsProvider);
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
 
     final spendDelta = lastWeekSpend == 0
         ? null
@@ -77,7 +79,7 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   StatTile(
                     label: 'This week spend',
-                    value: formatMinor(weekSpend, showDecimals: false),
+                    value: formatMinor(weekSpend, currencyCode: currencyCode, showDecimals: false),
                     icon: Icons.account_balance_wallet_rounded,
                     accent: colors.spend,
                     delta: spendDelta == null

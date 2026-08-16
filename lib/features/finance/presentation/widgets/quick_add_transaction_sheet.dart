@@ -38,6 +38,7 @@ Future<QuickAddTransactionResult?> showQuickAddTransactionSheet(
   BuildContext context, {
   required List<Account> accounts,
   required List<Category> categories,
+  required String currencySymbol,
   Transaction? initial,
 }) {
   return showModalBottomSheet<QuickAddTransactionResult>(
@@ -46,6 +47,7 @@ Future<QuickAddTransactionResult?> showQuickAddTransactionSheet(
     builder: (context) => _QuickAddTransactionSheet(
       accounts: accounts,
       categories: categories,
+      currencySymbol: currencySymbol,
       initial: initial,
     ),
   );
@@ -55,11 +57,13 @@ class _QuickAddTransactionSheet extends ConsumerStatefulWidget {
   const _QuickAddTransactionSheet({
     required this.accounts,
     required this.categories,
+    required this.currencySymbol,
     this.initial,
   });
 
   final List<Account> accounts;
   final List<Category> categories;
+  final String currencySymbol;
   final Transaction? initial;
 
   @override
@@ -177,7 +181,7 @@ class _QuickAddTransactionSheetState extends ConsumerState<_QuickAddTransactionS
           TextField(
             controller: _amountController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(hintText: 'Amount (₹)'),
+            decoration: InputDecoration(hintText: 'Amount (${widget.currencySymbol})'),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(

@@ -7,6 +7,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../widgets/quick_add_bill_sheet.dart';
 
@@ -19,7 +20,12 @@ class BillsScreen extends ConsumerWidget {
     final accounts = ref.read(transactableAccountsProvider);
     if (accounts.isEmpty) return;
     final categories = ref.read(categoriesProvider).value ?? const [];
-    final result = await showQuickAddBillSheet(context, accounts: accounts, categories: categories);
+    final result = await showQuickAddBillSheet(
+      context,
+      accounts: accounts,
+      categories: categories,
+      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+    );
     if (result == null) return;
     await ref
         .read(financeControllerProvider)
@@ -105,6 +111,7 @@ class _BillTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colors = context.appColors;
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
     final overdue = bill.dueDate.isBefore(dateOnly(DateTime.now()));
     final color = overdue ? colors.critical : colors.finance;
 
@@ -130,7 +137,7 @@ class _BillTile extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            formatMinor(bill.amountMinor),
+            formatMinor(bill.amountMinor, currencyCode: currencyCode),
             style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           IconButton(

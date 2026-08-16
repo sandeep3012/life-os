@@ -21,18 +21,27 @@ class ResolvedSettings {
     required this.taskReminders,
     required this.habitReminders,
     required this.aiInsightAlerts,
+    required this.currencyCode,
+    required this.appLockEnabled,
+    required this.biometricEnabled,
   });
 
   final ThemeMode themeMode;
   final bool taskReminders;
   final bool habitReminders;
   final bool aiInsightAlerts;
+  final String currencyCode;
+  final bool appLockEnabled;
+  final bool biometricEnabled;
 
   static const defaults = ResolvedSettings(
     themeMode: ThemeMode.system,
     taskReminders: true,
     habitReminders: true,
     aiInsightAlerts: false,
+    currencyCode: 'INR',
+    appLockEnabled: false,
+    biometricEnabled: false,
   );
 }
 
@@ -56,6 +65,9 @@ final settingsProvider = Provider<ResolvedSettings>((ref) {
     taskReminders: row.taskReminders,
     habitReminders: row.habitReminders,
     aiInsightAlerts: row.aiInsightAlerts,
+    currencyCode: row.currencyCode,
+    appLockEnabled: row.appLockEnabled,
+    biometricEnabled: row.biometricEnabled,
   );
 });
 
@@ -72,6 +84,12 @@ class SettingsController {
   Future<void> setHabitReminders(bool enabled) => _repo.setHabitReminders(enabled);
 
   Future<void> setAiInsightAlerts(bool enabled) => _repo.setAiInsightAlerts(enabled);
+
+  Future<void> setCurrencyCode(String code) => _repo.setCurrencyCode(code);
+
+  Future<void> setAppLockEnabled(bool enabled) => _repo.setAppLockEnabled(enabled);
+
+  Future<void> setBiometricEnabled(bool enabled) => _repo.setBiometricEnabled(enabled);
 }
 
 final settingsControllerProvider = Provider<SettingsController>((ref) {

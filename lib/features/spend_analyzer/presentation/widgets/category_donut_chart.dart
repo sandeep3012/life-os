@@ -9,10 +9,12 @@ class CategoryDonutChart extends StatelessWidget {
     super.key,
     required this.breakdown,
     required this.totalMinor,
+    required this.currencyCode,
   });
 
   final List<CategorySpend> breakdown;
   final int totalMinor;
+  final String currencyCode;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +50,7 @@ class CategoryDonutChart extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    formatMinor(totalMinor, showDecimals: false),
+                    formatMinor(totalMinor, currencyCode: currencyCode, showDecimals: false),
                     style: theme.textTheme.titleMedium?.copyWith(fontFamily: 'Fraunces'),
                   ),
                   Text(

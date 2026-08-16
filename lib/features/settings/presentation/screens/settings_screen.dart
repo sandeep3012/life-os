@@ -7,9 +7,12 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/services/backup_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../../finance/presentation/screens/account_type_management_screen.dart';
 import '../../../finance/presentation/screens/category_management_screen.dart';
+import '../../application/app_lock_providers.dart';
 import '../../application/settings_providers.dart';
+import '../widgets/pin_setup_sheet.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -137,9 +140,19 @@ class SettingsScreen extends ConsumerWidget {
                     MaterialPageRoute(builder: (_) => const AccountTypeManagementScreen()),
                   ),
                 ),
+                const Divider(height: 1),
+                ListTile(
+                  title: const Text('Currency'),
+                  subtitle: Text('${currencySymbolFor(settings.currencyCode)} · ${settings.currencyCode}'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _pickCurrency(context, ref, settings.currencyCode),
+                ),
               ],
             ),
           ),
+
+          const _SectionTitle('Security'),
+          const _SecuritySection(),
 
           const _SectionTitle('Data'),
           const _BackupCard(),
@@ -175,6 +188,136 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> _pickCurrency(BuildContext context, WidgetRef ref, String currentCode) async {
+  final picked = await showDialog<String>(
+    context: context,
+    builder: (context) => SimpleDialog(
+      title: const Text('Currency'),
+      children: [
+        for (final option in supportedCurrencies)
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop(option.code),
+            child: Row(
+              children: [
+                SizedBox(width: 32, child: Text(option.symbol)),
+                Expanded(child: Text('${option.label} (${option.code})')),
+                if (option.code == currentCode)
+                  const Icon(Icons.check_rounded, size: 18),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
+  if (picked != null) {
+    await ref.read(settingsControllerProvider).setCurrencyCode(picked);
+  }
+}
+
+class _SecuritySection extends ConsumerStatefulWidget {
+  const _SecuritySection();
+
+  @override
+  ConsumerState<_SecuritySection> createState() => _SecuritySectionState();
+}
+
+class _SecuritySectionState extends ConsumerState<_SecuritySection> {
+  Future<bool> _confirmPin(BuildContext context) async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enter your PIN'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          obscureText: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(hintText: 'PIN'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return false;
+    return ref.read(appLockServiceProvider).verifyPin(controller.text.trim());
+  }
+
+  Future<void> _onAppLockChanged(bool enabled) async {
+    final controller = ref.read(settingsControllerProvider);
+    if (enabled) {
+      final result = await showPinSetupSheet(context, mode: PinSetupMode.create);
+      if (result != true) return;
+      await controller.setAppLockEnabled(true);
+      // Setting a PIN mid-session shouldn't immediately lock the user out
+      // of the screen they're already on.
+      ref.read(isLockedProvider.notifier).unlock();
+    } else {
+      final ok = await _confirmPin(context);
+      if (!ok) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Incorrect PIN')));
+        }
+        return;
+      }
+      await ref.read(appLockServiceProvider).clearPin();
+      await controller.setAppLockEnabled(false);
+      await controller.setBiometricEnabled(false);
+    }
+  }
+
+  Future<void> _onChangePin() async {
+    await showPinSetupSheet(context, mode: PinSetupMode.change);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
+    final canUseBiometrics = ref.watch(canUseBiometricsProvider).value ?? false;
+    final controller = ref.read(settingsControllerProvider);
+
+    return Card(
+      child: Column(
+        children: [
+          _SettingSwitch(
+            title: 'App lock',
+            subtitle: 'Require a PIN or biometrics to open the app',
+            value: settings.appLockEnabled,
+            onChanged: _onAppLockChanged,
+          ),
+          if (settings.appLockEnabled) ...[
+            const Divider(height: 1),
+            ListTile(
+              title: const Text('Change PIN'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: _onChangePin,
+            ),
+            const Divider(height: 1),
+            _SettingSwitch(
+              title: 'Use biometrics',
+              subtitle: canUseBiometrics
+                  ? 'Unlock with Face ID or fingerprint'
+                  : 'Not available on this device',
+              value: settings.biometricEnabled && canUseBiometrics,
+              onChanged: canUseBiometrics ? controller.setBiometricEnabled : null,
+            ),
+          ],
         ],
       ),
     );
@@ -339,7 +482,7 @@ class _SettingSwitch extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {

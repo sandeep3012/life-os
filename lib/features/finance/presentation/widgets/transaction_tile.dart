@@ -10,9 +10,16 @@ import '../../../../core/utils/icon_lookup.dart';
 import '../../domain/payment_mode.dart';
 
 class TransactionTile extends StatelessWidget {
-  const TransactionTile({super.key, required this.transaction, this.category, this.onEdit});
+  const TransactionTile({
+    super.key,
+    required this.transaction,
+    required this.currencyCode,
+    this.category,
+    this.onEdit,
+  });
 
   final Transaction transaction;
+  final String currencyCode;
   final Category? category;
   final VoidCallback? onEdit;
 
@@ -80,7 +87,7 @@ class TransactionTile extends StatelessWidget {
               ),
             ),
             Text(
-              formatMinor(transaction.amountMinor, showSign: isIncome),
+              formatMinor(transaction.amountMinor, currencyCode: currencyCode, showSign: isIncome),
               style: TextStyle(
                 fontFamily: 'PlexMono',
                 fontSize: 14,

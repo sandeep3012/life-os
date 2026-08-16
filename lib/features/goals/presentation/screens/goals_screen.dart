@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/currency_utils.dart';
 import '../../../finance/application/finance_providers.dart';
 import '../../../habits/application/habits_providers.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../application/goals_providers.dart';
 import '../widgets/goal_card.dart';
 import '../widgets/quick_add_goal_sheet.dart';
@@ -14,6 +16,7 @@ class GoalsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final goals = ref.watch(goalsWithLinksProvider);
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -39,6 +42,7 @@ class GoalsScreen extends ConsumerWidget {
                 final data = goals[index];
                 return GoalCard(
                   data: data,
+                  currencyCode: currencyCode,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => GoalDetailScreen(goalId: data.goal.id),
@@ -51,7 +55,12 @@ class GoalsScreen extends ConsumerWidget {
         onPressed: () async {
           final habits = ref.read(habitsListProvider).value ?? const [];
           final accounts = ref.read(activeAccountsProvider);
-          final result = await showQuickAddGoalSheet(context, habits: habits, accounts: accounts);
+          final result = await showQuickAddGoalSheet(
+            context,
+            habits: habits,
+            accounts: accounts,
+            currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+          );
           if (result == null) return;
           final goalId = await ref.read(goalsControllerProvider).createGoal(
             title: result.title,

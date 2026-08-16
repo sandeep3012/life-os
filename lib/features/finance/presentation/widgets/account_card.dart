@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../../data/finance_repository.dart';
 
@@ -35,6 +36,7 @@ class AccountCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final types = ref.watch(accountTypesProvider).value ?? const [];
     final icon = accountIconFor(account.type, types);
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
 
     return Material(
       color: theme.colorScheme.surface,
@@ -80,7 +82,7 @@ class AccountCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  formatMinor(account.balanceMinor, showDecimals: false),
+                  formatMinor(account.balanceMinor, currencyCode: currencyCode, showDecimals: false),
                   style: TextStyle(
                     fontFamily: 'PlexMono',
                     fontSize: 19,

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../../finance/application/finance_providers.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../../habits/application/habits_providers.dart';
 import '../../application/goals_providers.dart';
 import '../../domain/goal_progress.dart';
@@ -33,6 +35,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
     }
 
     final goal = data.goal;
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
     final color = switch (goal.type) {
       'financial' => colors.finance,
       'habit' => colors.habits,
@@ -65,8 +68,8 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
           Center(
             child: Text(
               goal.targetValue == null
-                  ? formatGoalValue(goal.type, goal.currentValue)
-                  : '${formatGoalValue(goal.type, goal.currentValue)} / ${formatGoalValue(goal.type, goal.targetValue!)}',
+                  ? formatGoalValue(goal.type, goal.currentValue, currencyCode: currencyCode)
+                  : '${formatGoalValue(goal.type, goal.currentValue, currencyCode: currencyCode)} / ${formatGoalValue(goal.type, goal.targetValue!, currencyCode: currencyCode)}',
               style: theme.textTheme.titleMedium?.copyWith(fontFamily: 'PlexMono'),
             ),
           ),
@@ -136,6 +139,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
       context,
       habits: habits,
       accounts: accounts,
+      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
       initial: goal,
     );
     if (result == null) return;

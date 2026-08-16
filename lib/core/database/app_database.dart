@@ -52,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -162,6 +162,14 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(goals, goals.reminderMode);
         await m.addColumn(goals, goals.reminderDaysBefore);
         await m.createTable(goalMilestones);
+      }
+      if (from < 14) {
+        // v13 -> v14: app-wide currency setting (curated list, not full
+        // ISO-4217) plus app-lock flags — the PIN itself lives in
+        // flutter_secure_storage, never in this table.
+        await m.addColumn(appSettings, appSettings.currencyCode);
+        await m.addColumn(appSettings, appSettings.appLockEnabled);
+        await m.addColumn(appSettings, appSettings.biometricEnabled);
       }
     },
   );

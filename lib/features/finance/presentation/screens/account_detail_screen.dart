@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../widgets/account_card.dart';
 
@@ -28,6 +29,7 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
         ?.where((a) => a.id == widget.accountId)
         .firstOrNull;
     final accountTypes = ref.watch(accountTypesProvider).value ?? const [];
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
 
     if (account == null) {
       return const Scaffold(body: Center(child: Text('Account not found')));
@@ -77,7 +79,7 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    formatMinor(account.balanceMinor),
+                    formatMinor(account.balanceMinor, currencyCode: currencyCode),
                     style: TextStyle(
                       fontFamily: 'PlexMono',
                       fontSize: 28,

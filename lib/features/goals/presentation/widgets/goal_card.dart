@@ -2,21 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../domain/goal_progress.dart';
 import 'goal_ring.dart';
 
-final _currencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
-
-String formatGoalValue(String type, double value) {
-  if (type == 'financial') return _currencyFormat.format(value);
+/// Goal values are stored as whole-unit doubles (not minor-unit ints like
+/// [formatMinor] expects), so this stays a separate formatter rather than
+/// being forced through `formatMinor` — but is still driven by the same
+/// dynamic [currencyCode] rather than a hardcoded symbol/locale.
+String formatGoalValue(String type, double value, {required String currencyCode}) {
+  if (type == 'financial') {
+    final option = supportedCurrencies.firstWhere(
+      (c) => c.code == currencyCode,
+      orElse: () => supportedCurrencies.first,
+    );
+    final format = NumberFormat.currency(
+      locale: option.locale,
+      symbol: option.symbol,
+      decimalDigits: 0,
+    );
+    return format.format(value);
+  }
   if (value == value.roundToDouble()) return value.round().toString();
   return value.toStringAsFixed(1);
 }
 
 class GoalCard extends StatelessWidget {
-  const GoalCard({super.key, required this.data, required this.onTap});
+  const GoalCard({super.key, required this.data, required this.currencyCode, required this.onTap});
 
   final GoalWithLinks data;
+  final String currencyCode;
   final VoidCallback onTap;
 
   @override
@@ -32,8 +47,8 @@ class GoalCard extends StatelessWidget {
 
     final target = goal.targetValue;
     final progressLabel = target == null
-        ? formatGoalValue(goal.type, goal.currentValue)
-        : '${formatGoalValue(goal.type, goal.currentValue)} / ${formatGoalValue(goal.type, target)}';
+        ? formatGoalValue(goal.type, goal.currentValue, currencyCode: currencyCode)
+        : '${formatGoalValue(goal.type, goal.currentValue, currencyCode: currencyCode)} / ${formatGoalValue(goal.type, target, currencyCode: currencyCode)}';
 
     return Card(
       clipBehavior: Clip.antiAlias,

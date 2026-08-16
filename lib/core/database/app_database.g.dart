@@ -10689,6 +10689,48 @@ class $AppSettingsTable extends AppSettings
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _currencyCodeMeta = const VerificationMeta(
+    'currencyCode',
+  );
+  @override
+  late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
+    'currency_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('INR'),
+  );
+  static const VerificationMeta _appLockEnabledMeta = const VerificationMeta(
+    'appLockEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> appLockEnabled = GeneratedColumn<bool>(
+    'app_lock_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("app_lock_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _biometricEnabledMeta = const VerificationMeta(
+    'biometricEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> biometricEnabled = GeneratedColumn<bool>(
+    'biometric_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("biometric_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -10696,6 +10738,9 @@ class $AppSettingsTable extends AppSettings
     taskReminders,
     habitReminders,
     aiInsightAlerts,
+    currencyCode,
+    appLockEnabled,
+    biometricEnabled,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -10745,6 +10790,33 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('currency_code')) {
+      context.handle(
+        _currencyCodeMeta,
+        currencyCode.isAcceptableOrUnknown(
+          data['currency_code']!,
+          _currencyCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('app_lock_enabled')) {
+      context.handle(
+        _appLockEnabledMeta,
+        appLockEnabled.isAcceptableOrUnknown(
+          data['app_lock_enabled']!,
+          _appLockEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('biometric_enabled')) {
+      context.handle(
+        _biometricEnabledMeta,
+        biometricEnabled.isAcceptableOrUnknown(
+          data['biometric_enabled']!,
+          _biometricEnabledMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -10774,6 +10846,18 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.bool,
         data['${effectivePrefix}ai_insight_alerts'],
       )!,
+      currencyCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency_code'],
+      )!,
+      appLockEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}app_lock_enabled'],
+      )!,
+      biometricEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}biometric_enabled'],
+      )!,
     );
   }
 
@@ -10791,12 +10875,23 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final bool taskReminders;
   final bool habitReminders;
   final bool aiInsightAlerts;
+
+  /// One of `currency_utils.dart`'s curated `supportedCurrencies` codes.
+  final String currencyCode;
+
+  /// Whether app lock is on. The PIN itself is never stored here — it lives
+  /// in `flutter_secure_storage`, already OS-encrypted at rest.
+  final bool appLockEnabled;
+  final bool biometricEnabled;
   const AppSetting({
     required this.id,
     required this.themeMode,
     required this.taskReminders,
     required this.habitReminders,
     required this.aiInsightAlerts,
+    required this.currencyCode,
+    required this.appLockEnabled,
+    required this.biometricEnabled,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -10806,6 +10901,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['task_reminders'] = Variable<bool>(taskReminders);
     map['habit_reminders'] = Variable<bool>(habitReminders);
     map['ai_insight_alerts'] = Variable<bool>(aiInsightAlerts);
+    map['currency_code'] = Variable<String>(currencyCode);
+    map['app_lock_enabled'] = Variable<bool>(appLockEnabled);
+    map['biometric_enabled'] = Variable<bool>(biometricEnabled);
     return map;
   }
 
@@ -10816,6 +10914,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       taskReminders: Value(taskReminders),
       habitReminders: Value(habitReminders),
       aiInsightAlerts: Value(aiInsightAlerts),
+      currencyCode: Value(currencyCode),
+      appLockEnabled: Value(appLockEnabled),
+      biometricEnabled: Value(biometricEnabled),
     );
   }
 
@@ -10830,6 +10931,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       taskReminders: serializer.fromJson<bool>(json['taskReminders']),
       habitReminders: serializer.fromJson<bool>(json['habitReminders']),
       aiInsightAlerts: serializer.fromJson<bool>(json['aiInsightAlerts']),
+      currencyCode: serializer.fromJson<String>(json['currencyCode']),
+      appLockEnabled: serializer.fromJson<bool>(json['appLockEnabled']),
+      biometricEnabled: serializer.fromJson<bool>(json['biometricEnabled']),
     );
   }
   @override
@@ -10841,6 +10945,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'taskReminders': serializer.toJson<bool>(taskReminders),
       'habitReminders': serializer.toJson<bool>(habitReminders),
       'aiInsightAlerts': serializer.toJson<bool>(aiInsightAlerts),
+      'currencyCode': serializer.toJson<String>(currencyCode),
+      'appLockEnabled': serializer.toJson<bool>(appLockEnabled),
+      'biometricEnabled': serializer.toJson<bool>(biometricEnabled),
     };
   }
 
@@ -10850,12 +10957,18 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     bool? taskReminders,
     bool? habitReminders,
     bool? aiInsightAlerts,
+    String? currencyCode,
+    bool? appLockEnabled,
+    bool? biometricEnabled,
   }) => AppSetting(
     id: id ?? this.id,
     themeMode: themeMode ?? this.themeMode,
     taskReminders: taskReminders ?? this.taskReminders,
     habitReminders: habitReminders ?? this.habitReminders,
     aiInsightAlerts: aiInsightAlerts ?? this.aiInsightAlerts,
+    currencyCode: currencyCode ?? this.currencyCode,
+    appLockEnabled: appLockEnabled ?? this.appLockEnabled,
+    biometricEnabled: biometricEnabled ?? this.biometricEnabled,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -10870,6 +10983,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       aiInsightAlerts: data.aiInsightAlerts.present
           ? data.aiInsightAlerts.value
           : this.aiInsightAlerts,
+      currencyCode: data.currencyCode.present
+          ? data.currencyCode.value
+          : this.currencyCode,
+      appLockEnabled: data.appLockEnabled.present
+          ? data.appLockEnabled.value
+          : this.appLockEnabled,
+      biometricEnabled: data.biometricEnabled.present
+          ? data.biometricEnabled.value
+          : this.biometricEnabled,
     );
   }
 
@@ -10880,7 +11002,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('themeMode: $themeMode, ')
           ..write('taskReminders: $taskReminders, ')
           ..write('habitReminders: $habitReminders, ')
-          ..write('aiInsightAlerts: $aiInsightAlerts')
+          ..write('aiInsightAlerts: $aiInsightAlerts, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('appLockEnabled: $appLockEnabled, ')
+          ..write('biometricEnabled: $biometricEnabled')
           ..write(')'))
         .toString();
   }
@@ -10892,6 +11017,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     taskReminders,
     habitReminders,
     aiInsightAlerts,
+    currencyCode,
+    appLockEnabled,
+    biometricEnabled,
   );
   @override
   bool operator ==(Object other) =>
@@ -10901,7 +11029,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.themeMode == this.themeMode &&
           other.taskReminders == this.taskReminders &&
           other.habitReminders == this.habitReminders &&
-          other.aiInsightAlerts == this.aiInsightAlerts);
+          other.aiInsightAlerts == this.aiInsightAlerts &&
+          other.currencyCode == this.currencyCode &&
+          other.appLockEnabled == this.appLockEnabled &&
+          other.biometricEnabled == this.biometricEnabled);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -10910,12 +11041,18 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<bool> taskReminders;
   final Value<bool> habitReminders;
   final Value<bool> aiInsightAlerts;
+  final Value<String> currencyCode;
+  final Value<bool> appLockEnabled;
+  final Value<bool> biometricEnabled;
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.taskReminders = const Value.absent(),
     this.habitReminders = const Value.absent(),
     this.aiInsightAlerts = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.appLockEnabled = const Value.absent(),
+    this.biometricEnabled = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
@@ -10923,6 +11060,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.taskReminders = const Value.absent(),
     this.habitReminders = const Value.absent(),
     this.aiInsightAlerts = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.appLockEnabled = const Value.absent(),
+    this.biometricEnabled = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<int>? id,
@@ -10930,6 +11070,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<bool>? taskReminders,
     Expression<bool>? habitReminders,
     Expression<bool>? aiInsightAlerts,
+    Expression<String>? currencyCode,
+    Expression<bool>? appLockEnabled,
+    Expression<bool>? biometricEnabled,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -10937,6 +11080,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (taskReminders != null) 'task_reminders': taskReminders,
       if (habitReminders != null) 'habit_reminders': habitReminders,
       if (aiInsightAlerts != null) 'ai_insight_alerts': aiInsightAlerts,
+      if (currencyCode != null) 'currency_code': currencyCode,
+      if (appLockEnabled != null) 'app_lock_enabled': appLockEnabled,
+      if (biometricEnabled != null) 'biometric_enabled': biometricEnabled,
     });
   }
 
@@ -10946,6 +11092,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<bool>? taskReminders,
     Value<bool>? habitReminders,
     Value<bool>? aiInsightAlerts,
+    Value<String>? currencyCode,
+    Value<bool>? appLockEnabled,
+    Value<bool>? biometricEnabled,
   }) {
     return AppSettingsCompanion(
       id: id ?? this.id,
@@ -10953,6 +11102,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       taskReminders: taskReminders ?? this.taskReminders,
       habitReminders: habitReminders ?? this.habitReminders,
       aiInsightAlerts: aiInsightAlerts ?? this.aiInsightAlerts,
+      currencyCode: currencyCode ?? this.currencyCode,
+      appLockEnabled: appLockEnabled ?? this.appLockEnabled,
+      biometricEnabled: biometricEnabled ?? this.biometricEnabled,
     );
   }
 
@@ -10974,6 +11126,15 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (aiInsightAlerts.present) {
       map['ai_insight_alerts'] = Variable<bool>(aiInsightAlerts.value);
     }
+    if (currencyCode.present) {
+      map['currency_code'] = Variable<String>(currencyCode.value);
+    }
+    if (appLockEnabled.present) {
+      map['app_lock_enabled'] = Variable<bool>(appLockEnabled.value);
+    }
+    if (biometricEnabled.present) {
+      map['biometric_enabled'] = Variable<bool>(biometricEnabled.value);
+    }
     return map;
   }
 
@@ -10984,7 +11145,10 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('themeMode: $themeMode, ')
           ..write('taskReminders: $taskReminders, ')
           ..write('habitReminders: $habitReminders, ')
-          ..write('aiInsightAlerts: $aiInsightAlerts')
+          ..write('aiInsightAlerts: $aiInsightAlerts, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('appLockEnabled: $appLockEnabled, ')
+          ..write('biometricEnabled: $biometricEnabled')
           ..write(')'))
         .toString();
   }
@@ -20036,6 +20200,9 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<bool> taskReminders,
       Value<bool> habitReminders,
       Value<bool> aiInsightAlerts,
+      Value<String> currencyCode,
+      Value<bool> appLockEnabled,
+      Value<bool> biometricEnabled,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -20044,6 +20211,9 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<bool> taskReminders,
       Value<bool> habitReminders,
       Value<bool> aiInsightAlerts,
+      Value<String> currencyCode,
+      Value<bool> appLockEnabled,
+      Value<bool> biometricEnabled,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -20077,6 +20247,21 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<bool> get aiInsightAlerts => $composableBuilder(
     column: $table.aiInsightAlerts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get appLockEnabled => $composableBuilder(
+    column: $table.appLockEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get biometricEnabled => $composableBuilder(
+    column: $table.biometricEnabled,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -20114,6 +20299,21 @@ class $$AppSettingsTableOrderingComposer
     column: $table.aiInsightAlerts,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get appLockEnabled => $composableBuilder(
+    column: $table.appLockEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get biometricEnabled => $composableBuilder(
+    column: $table.biometricEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -20143,6 +20343,21 @@ class $$AppSettingsTableAnnotationComposer
 
   GeneratedColumn<bool> get aiInsightAlerts => $composableBuilder(
     column: $table.aiInsightAlerts,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get appLockEnabled => $composableBuilder(
+    column: $table.appLockEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get biometricEnabled => $composableBuilder(
+    column: $table.biometricEnabled,
     builder: (column) => column,
   );
 }
@@ -20183,12 +20398,18 @@ class $$AppSettingsTableTableManager
                 Value<bool> taskReminders = const Value.absent(),
                 Value<bool> habitReminders = const Value.absent(),
                 Value<bool> aiInsightAlerts = const Value.absent(),
+                Value<String> currencyCode = const Value.absent(),
+                Value<bool> appLockEnabled = const Value.absent(),
+                Value<bool> biometricEnabled = const Value.absent(),
               }) => AppSettingsCompanion(
                 id: id,
                 themeMode: themeMode,
                 taskReminders: taskReminders,
                 habitReminders: habitReminders,
                 aiInsightAlerts: aiInsightAlerts,
+                currencyCode: currencyCode,
+                appLockEnabled: appLockEnabled,
+                biometricEnabled: biometricEnabled,
               ),
           createCompanionCallback:
               ({
@@ -20197,12 +20418,18 @@ class $$AppSettingsTableTableManager
                 Value<bool> taskReminders = const Value.absent(),
                 Value<bool> habitReminders = const Value.absent(),
                 Value<bool> aiInsightAlerts = const Value.absent(),
+                Value<String> currencyCode = const Value.absent(),
+                Value<bool> appLockEnabled = const Value.absent(),
+                Value<bool> biometricEnabled = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 id: id,
                 themeMode: themeMode,
                 taskReminders: taskReminders,
                 habitReminders: habitReminders,
                 aiInsightAlerts: aiInsightAlerts,
+                currencyCode: currencyCode,
+                appLockEnabled: appLockEnabled,
+                biometricEnabled: biometricEnabled,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
