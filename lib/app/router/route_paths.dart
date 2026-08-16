@@ -19,4 +19,5 @@ class RoutePaths {
   static const goals = '/more/goals';
   static const aiAnalyser = '/more/ai-analyser';
   static const settings = '/more/settings';
+  static const search = '/more/search';
 }

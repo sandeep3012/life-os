@@ -25,7 +25,7 @@ final _completedHabitLogsProvider = StreamProvider<List<HabitLog>>((ref) {
   return ref.watch(calendarRepositoryProvider).watchCompletedHabitLogs();
 });
 
-final _manualEventsProvider = StreamProvider<List<Event>>((ref) {
+final manualEventsProvider = StreamProvider<List<Event>>((ref) {
   return ref.watch(calendarRepositoryProvider).watchManualEvents();
 });
 
@@ -51,7 +51,7 @@ final allCalendarItemsProvider = Provider<List<CalendarItem>>((ref) {
   final habits = ref.watch(_habitsProvider).value ?? const [];
   final habitsById = {for (final h in habits) h.id: h};
   final habitLogs = ref.watch(_completedHabitLogsProvider).value ?? const [];
-  final events = ref.watch(_manualEventsProvider).value ?? const [];
+  final events = ref.watch(manualEventsProvider).value ?? const [];
   final bills = ref.watch(_unpaidBillsProvider).value ?? const [];
 
   return [

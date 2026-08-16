@@ -22,6 +22,7 @@ class MoreScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appColors = context.appColors;
     final entries = [
+      _MoreEntry('Search', Icons.search_rounded, appColors.info, RoutePaths.search),
       _MoreEntry('Notes', Icons.note_alt_rounded, appColors.notes, RoutePaths.notes),
       _MoreEntry('Documents', Icons.folder_copy_rounded, appColors.documents, RoutePaths.documents),
       _MoreEntry('Goals', Icons.flag_rounded, appColors.goals, RoutePaths.goals),
