@@ -65,6 +65,9 @@ void main() {
     await db.into(db.goalLinks).insert(
       GoalLinksCompanion.insert(goalId: goal.id, linkedType: 'account', linkedId: account.id),
     );
+    await db.into(db.goalMilestones).insert(
+      GoalMilestonesCompanion.insert(goalId: goal.id, title: 'Reach first ₹50k', completed: const Value(true)),
+    );
 
     final folder = await db.into(db.folders).insertReturning(
       FoldersCompanion.insert(name: 'Receipts', scope: 'documents'),
@@ -90,6 +93,7 @@ void main() {
     await db.delete(db.habitLogs).go();
     await db.delete(db.habits).go();
     await db.delete(db.goalLinks).go();
+    await db.delete(db.goalMilestones).go();
     await db.delete(db.goals).go();
     await db.delete(db.documents).go();
     await db.delete(db.folders).go();
@@ -113,6 +117,11 @@ void main() {
 
     final restoredGoalLinks = await db.select(db.goalLinks).get();
     expect(restoredGoalLinks.single.linkedType, 'account');
+
+    final restoredMilestones = await db.select(db.goalMilestones).get();
+    expect(restoredMilestones, hasLength(1));
+    expect(restoredMilestones.single.title, 'Reach first ₹50k');
+    expect(restoredMilestones.single.completed, isTrue);
 
     final restoredDocs = await db.select(db.documents).get();
     expect(restoredDocs.single.title, 'Rent receipt');

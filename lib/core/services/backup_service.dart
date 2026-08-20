@@ -48,6 +48,7 @@ class BackupService {
       'subtasks': (await _db.select(_db.subtasks).get()).map((e) => e.toJson()).toList(),
       'goals': (await _db.select(_db.goals).get()).map((e) => e.toJson()).toList(),
       'goalLinks': (await _db.select(_db.goalLinks).get()).map((e) => e.toJson()).toList(),
+      'goalMilestones': (await _db.select(_db.goalMilestones).get()).map((e) => e.toJson()).toList(),
       'events': (await _db.select(_db.events).get()).map((e) => e.toJson()).toList(),
       'folders': (await _db.select(_db.folders).get()).map((e) => e.toJson()).toList(),
       'notes': (await _db.select(_db.notes).get()).map((e) => e.toJson()).toList(),
@@ -123,6 +124,7 @@ class BackupService {
       await _db.delete(_db.entityTags).go();
       await _db.delete(_db.subtasks).go();
       await _db.delete(_db.goalLinks).go();
+      await _db.delete(_db.goalMilestones).go();
       await _db.delete(_db.habitLogs).go();
       await _db.delete(_db.transactions).go();
       await _db.delete(_db.events).go();
@@ -156,6 +158,7 @@ class BackupService {
       await _insertAll(_db.habitLogs, tables['habitLogs'], HabitLog.fromJson);
       await _insertAll(_db.subtasks, tables['subtasks'], Subtask.fromJson);
       await _insertAll(_db.goalLinks, tables['goalLinks'], GoalLink.fromJson);
+      await _insertAll(_db.goalMilestones, tables['goalMilestones'], GoalMilestone.fromJson);
       await _insertAll(_db.events, tables['events'], Event.fromJson);
       await _insertAll(_db.notes, tables['notes'], Note.fromJson);
       await _insertAll(_db.documents, tables['documents'], Document.fromJson);
