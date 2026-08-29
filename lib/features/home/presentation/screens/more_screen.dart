@@ -23,6 +23,7 @@ class MoreScreen extends StatelessWidget {
     final appColors = context.appColors;
     final entries = [
       _MoreEntry('Search', Icons.search_rounded, appColors.info, RoutePaths.search),
+      _MoreEntry('Voice commands', Icons.mic_rounded, appColors.aiAnalyser, RoutePaths.voiceCommands),
       _MoreEntry('Notes', Icons.note_alt_rounded, appColors.notes, RoutePaths.notes),
       _MoreEntry('Documents', Icons.folder_copy_rounded, appColors.documents, RoutePaths.documents),
       _MoreEntry('Goals', Icons.flag_rounded, appColors.goals, RoutePaths.goals),

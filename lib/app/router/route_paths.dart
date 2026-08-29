@@ -21,4 +21,5 @@ class RoutePaths {
   static const aiAnalyser = '/more/ai-analyser';
   static const settings = '/more/settings';
   static const search = '/more/search';
+  static const voiceCommands = '/more/voice-commands';
 }

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/services/backup_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/voice_model_service.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../finance/presentation/screens/account_type_management_screen.dart';
 import '../../../finance/presentation/screens/category_management_screen.dart';
@@ -154,6 +155,9 @@ class SettingsScreen extends ConsumerWidget {
           const _SectionTitle('Security'),
           const _SecuritySection(),
 
+          const _SectionTitle('Voice commands'),
+          const _VoiceCommandsCard(),
+
           const _SectionTitle('Data'),
           const _BackupCard(),
           Padding(
@@ -191,6 +195,80 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _VoiceCommandsCard extends ConsumerStatefulWidget {
+  const _VoiceCommandsCard();
+
+  @override
+  ConsumerState<_VoiceCommandsCard> createState() => _VoiceCommandsCardState();
+}
+
+class _VoiceCommandsCardState extends ConsumerState<_VoiceCommandsCard> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final service = ref.read(voiceModelServiceProvider);
+    return FutureBuilder<bool>(
+      future: service.isInstalled,
+      builder: (context, snapshot) {
+        final installed = snapshot.data ?? false;
+        return ValueListenableBuilder<bool>(
+          valueListenable: service.preparingModel,
+          builder: (context, preparing, _) => ValueListenableBuilder<double?>(
+          valueListenable: service.downloadProgress,
+          builder: (context, progress, _) => Card(
+          child: ListTile(
+            leading: const Icon(Icons.mic_none_rounded),
+            title: const Text('Offline voice model'),
+            subtitle: preparing
+                ? const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Preparing the model…'),
+                    SizedBox(height: 6),
+                    LinearProgressIndicator(),
+                  ])
+                : progress != null
+                ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Downloading ${(progress * 100).round()}%'),
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(value: progress),
+                  ])
+                : Text(installed
+                    ? 'English model downloaded. Voice recognition stays on this device.'
+                    : 'Download the English model to enable private voice commands.'),
+            trailing: _busy
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : TextButton(
+                    onPressed: () => _changeModel(installed),
+                    child: Text(installed ? 'Remove' : 'Download'),
+                  ),
+          ),
+        ),
+        ),
+        );
+      },
+    );
+  }
+
+  Future<void> _changeModel(bool installed) async {
+    setState(() => _busy = true);
+    try {
+      final service = ref.read(voiceModelServiceProvider);
+      if (installed) {
+        await service.remove();
+      } else {
+        await service.download();
+      }
+      if (mounted) setState(() {});
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }
 

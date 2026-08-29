@@ -9,6 +9,7 @@
          screen, same as the system Clock app's alarms. -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="LifeOS"
         android:name="${applicationName}"

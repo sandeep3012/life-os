@@ -18,6 +18,7 @@ import '../../features/goals/presentation/screens/goals_screen.dart';
 import '../../features/ai_analyser/presentation/screens/ai_analyser_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/voice_commands/presentation/screens/voice_commands_screen.dart';
 import 'app_shell.dart';
 import 'route_paths.dart';
 
@@ -79,6 +80,7 @@ final appRouter = GoRouter(
               GoRoute(path: 'ai-analyser', builder: (context, state) => const AiAnalyserScreen()),
               GoRoute(path: 'settings', builder: (context, state) => const SettingsScreen()),
               GoRoute(path: 'search', builder: (context, state) => const SearchScreen()),
+              GoRoute(path: 'voice-commands', builder: (context, state) => const VoiceCommandsScreen()),
             ],
           ),
         ]),
