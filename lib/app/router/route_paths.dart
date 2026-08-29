@@ -10,6 +10,7 @@ class RoutePaths {
   static const netWorth = '/finance/net-worth';
   static const reports = '/finance/reports';
   static const tasksHabits = '/tasks-habits';
+  static const archivedHabits = '/tasks-habits/archived-habits';
   static String habitDetail(String id) => '/tasks-habits/$id';
   static const calendar = '/calendar';
   static const more = '/more';

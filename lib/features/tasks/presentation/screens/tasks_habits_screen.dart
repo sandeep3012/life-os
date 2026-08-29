@@ -29,12 +29,9 @@ class TasksHabitsScreen extends ConsumerStatefulWidget {
 class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
   _Section _section = _Section.tasks;
   _TaskFilter _taskFilter = _TaskFilter.today;
-  bool _showArchivedHabits = false;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final showFab = _section == _Section.tasks || !_showArchivedHabits;
 
     return Scaffold(
       body: SafeArea(
@@ -50,13 +47,9 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
                   ),
                   if (_section == _Section.habits)
                     IconButton(
-                      tooltip: _showArchivedHabits ? 'Show active habits' : 'Archived habits',
-                      icon: Icon(
-                        _showArchivedHabits
-                            ? Icons.inventory_2_rounded
-                            : Icons.inventory_2_outlined,
-                      ),
-                      onPressed: () => setState(() => _showArchivedHabits = !_showArchivedHabits),
+                      tooltip: 'Archived habits',
+                      icon: const Icon(Icons.inventory_2_outlined),
+                      onPressed: () => context.push(RoutePaths.archivedHabits),
                     ),
                 ],
               ),
@@ -79,18 +72,16 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
                       filter: _taskFilter,
                       onFilterChanged: (f) => setState(() => _taskFilter = f),
                     )
-                  : _HabitsPane(showArchived: _showArchivedHabits),
+                  : const _HabitsPane(),
             ),
           ],
         ),
       ),
-      floatingActionButton: showFab
-          ? FloatingActionButton.extended(
-              onPressed: () => _section == _Section.tasks ? _addTask() : _addHabit(),
-              icon: const Icon(Icons.add_rounded),
-              label: Text(_section == _Section.tasks ? 'New task' : 'New habit'),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _section == _Section.tasks ? _addTask() : _addHabit(),
+        icon: const Icon(Icons.add_rounded),
+        label: Text(_section == _Section.tasks ? 'New task' : 'New habit'),
+      ),
     );
   }
 
@@ -201,40 +192,10 @@ class _TasksPane extends ConsumerWidget {
 }
 
 class _HabitsPane extends ConsumerWidget {
-  const _HabitsPane({required this.showArchived});
-
-  final bool showArchived;
+  const _HabitsPane();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (showArchived) {
-      final archived = ref.watch(archivedHabitsProvider).value ?? const [];
-      final categories = ref.watch(habitCategoriesProvider).value ?? const [];
-      final categoriesById = {for (final c in categories) c.id: c};
-
-      if (archived.isEmpty) {
-        return const _EmptyState(
-          icon: Icons.inventory_2_outlined,
-          message: 'No archived habits.',
-        );
-      }
-
-      return ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        itemCount: archived.length,
-        itemBuilder: (context, index) {
-          final habit = archived[index];
-          return _ArchivedHabitTile(
-            key: ValueKey(habit.id),
-            habit: habit,
-            category: habit.categoryId == null ? null : categoriesById[habit.categoryId],
-            onUnarchive: () => ref.read(habitsControllerProvider).unarchiveHabit(habit),
-            onTap: () => context.push(RoutePaths.habitDetail(habit.id)),
-          ).animate().fadeIn(duration: 200.ms);
-        },
-      );
-    }
-
     final progress = ref.watch(habitsWithProgressProvider);
 
     if (progress.isEmpty) {
@@ -257,42 +218,6 @@ class _HabitsPane extends ConsumerWidget {
           onTap: () => context.push(RoutePaths.habitDetail(p.habit.id)),
         ).animate().fadeIn(duration: 200.ms);
       },
-    );
-  }
-}
-
-class _ArchivedHabitTile extends StatelessWidget {
-  const _ArchivedHabitTile({
-    super.key,
-    required this.habit,
-    required this.category,
-    required this.onUnarchive,
-    required this.onTap,
-  });
-
-  final Habit habit;
-  final Category? category;
-  final VoidCallback onUnarchive;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final color = category == null
-        ? colors.habits
-        : Color(int.parse(category!.colorHex.replaceFirst('#', '0xFF')));
-    final icon = category == null ? Icons.local_fire_department_rounded : resolveIcon(category!.icon);
-
-    return ListTile(
-      onTap: onTap,
-      leading: CircleAvatar(
-        backgroundColor: color.withValues(alpha: 0.16),
-        foregroundColor: color,
-        child: Icon(icon, size: 20),
-      ),
-      title: Text(habit.name),
-      subtitle: const Text('Archived'),
-      trailing: TextButton(onPressed: onUnarchive, child: const Text('Unarchive')),
     );
   }
 }

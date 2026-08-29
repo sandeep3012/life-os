@@ -7,6 +7,8 @@ import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
+import 'package:life_manager/features/habits/data/habits_repository.dart';
+import 'package:life_manager/features/habits/presentation/screens/archived_habits_screen.dart';
 import 'package:life_manager/features/tasks/presentation/screens/tasks_habits_screen.dart';
 
 class _FakeNotificationService extends NotificationService {
@@ -96,6 +98,31 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Morning workout'), findsOneWidget);
+
+    await _disposeCleanly(tester);
+  });
+
+  testWidgets('archived habits have a titled screen and a Back button', (tester) async {
+    final repository = HabitsRepository(db);
+    await repository.createHabit('Read daily');
+    final habit = (await db.select(db.habits).getSingle());
+    await repository.archiveHabit(habit.id);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const ArchivedHabitsScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Archived habits'), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget);
+    expect(find.text('Read daily'), findsOneWidget);
+    expect(find.text('Unarchive'), findsOneWidget);
 
     await _disposeCleanly(tester);
   });
