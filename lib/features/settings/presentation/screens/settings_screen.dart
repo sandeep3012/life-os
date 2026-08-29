@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/services/demo_data_service.dart';
 import '../../../../core/services/backup_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/currency_utils.dart';
@@ -165,6 +167,10 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+          if (kDebugMode) ...[
+            const _SectionTitle('Developer tools'),
+            const _DemoDataCard(),
+          ],
 
           const _SectionTitle('More'),
           Card(
@@ -186,6 +192,159 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DemoDataCard extends ConsumerStatefulWidget {
+  const _DemoDataCard();
+
+  @override
+  ConsumerState<_DemoDataCard> createState() => _DemoDataCardState();
+}
+
+class _DemoDataCardState extends ConsumerState<_DemoDataCard> {
+  bool _busy = false;
+  bool? _hasDemoData;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final value = await ref.read(demoDataServiceProvider).hasDemoData;
+    if (mounted) setState(() => _hasDemoData = value);
+  }
+
+  Future<void> _generate() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Generate demo data?'),
+        content: const Text(
+          'This adds 24 months of synthetic finance, habit, task, goal, '
+          'calendar, and note history. Your existing data will not be changed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Generate'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _busy = true);
+    try {
+      final result = await ref.read(demoDataServiceProvider).generate();
+      if (!mounted) return;
+      setState(() => _hasDemoData = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Added ${result.transactions} transactions, '
+            '${result.habitLogs} habit check-ins, ${result.tasks} tasks, '
+            'and ${result.events} events.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not generate demo data: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _remove() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove demo data?'),
+        content: const Text(
+          'Only synthetic records created by the demo generator will be '
+          'removed. Your own records will remain untouched.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _busy = true);
+    try {
+      await ref.read(demoDataServiceProvider).remove();
+      if (!mounted) return;
+      setState(() => _hasDemoData = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Demo data removed.')),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not remove demo data: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDemoData = _hasDemoData;
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.science_outlined),
+            title: const Text('Demo history'),
+            subtitle: Text(
+              hasDemoData == null
+                  ? 'Checking demo data…'
+                  : hasDemoData
+                      ? '24 months of removable synthetic data is installed'
+                      : 'Add 24 months of synthetic data to explore the app',
+            ),
+          ),
+          if (_busy) const LinearProgressIndicator(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: hasDemoData == true
+                  ? OutlinedButton.icon(
+                      onPressed: _busy ? null : _remove,
+                      icon: const Icon(Icons.delete_outline_rounded),
+                      label: const Text('Remove demo data'),
+                    )
+                  : FilledButton.icon(
+                      onPressed: _busy || hasDemoData == null ? null : _generate,
+                      icon: const Icon(Icons.auto_awesome_rounded),
+                      label: const Text('Generate demo data'),
+                    ),
             ),
           ),
         ],
