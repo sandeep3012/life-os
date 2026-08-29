@@ -9,6 +9,7 @@ import '../../features/finance/presentation/screens/net_worth_screen.dart';
 import '../../features/finance/presentation/screens/reports_screen.dart';
 import '../../features/spend_analyzer/presentation/screens/spend_analyzer_screen.dart';
 import '../../features/habits/presentation/screens/habit_detail_screen.dart';
+import '../../features/habits/presentation/screens/archived_habits_screen.dart';
 import '../../features/tasks/presentation/screens/tasks_habits_screen.dart';
 import '../../features/calendar/presentation/screens/calendar_screen.dart';
 import '../../features/notes/presentation/screens/notes_screen.dart';
@@ -52,6 +53,10 @@ final appRouter = GoRouter(
             path: RoutePaths.tasksHabits,
             builder: (context, state) => const TasksHabitsScreen(),
             routes: [
+              GoRoute(
+                path: 'archived-habits',
+                builder: (context, state) => const ArchivedHabitsScreen(),
+              ),
               GoRoute(
                 path: ':habitId',
                 builder: (context, state) =>

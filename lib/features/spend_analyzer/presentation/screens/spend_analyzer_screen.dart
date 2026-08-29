@@ -31,14 +31,17 @@ class SpendAnalyzerScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left_rounded),
-          onPressed: () => _shiftMonth(ref, -1),
-        ),
+        leading: const BackButton(),
         title: Text(DateFormat.yMMMM().format(month)),
         centerTitle: true,
         actions: [
           IconButton(
+            tooltip: 'Previous month',
+            icon: const Icon(Icons.chevron_left_rounded),
+            onPressed: () => _shiftMonth(ref, -1),
+          ),
+          IconButton(
+            tooltip: 'Next month',
             icon: const Icon(Icons.chevron_right_rounded),
             onPressed: () => _shiftMonth(ref, 1),
           ),
