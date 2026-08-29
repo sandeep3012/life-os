@@ -40,7 +40,10 @@ class _AppShellState extends State<AppShell> {
           destinations: _destinations,
           onDestinationSelected: (index) => widget.navigationShell.goBranch(
             index,
-            initialLocation: index == widget.navigationShell.currentIndex,
+            // initialLocation: index == widget.navigationShell.currentIndex,
+            // Bottom tabs are launch points in LifeOS, not history buckets:
+            // every selection starts at the tab's root destination.
+            initialLocation: true,
           ),
         ),
       ),
