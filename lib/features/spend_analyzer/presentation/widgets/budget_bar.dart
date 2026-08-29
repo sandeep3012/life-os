@@ -64,12 +64,17 @@ class BudgetBar extends StatelessWidget {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          value: fillFraction.toDouble(),
-                          minHeight: 10,
-                          backgroundColor:
-                              Theme.of(context).colorScheme.surfaceContainerHighest,
-                          valueColor: AlwaysStoppedAnimation(color),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: fillFraction.toDouble()),
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, value, _) => LinearProgressIndicator(
+                            value: value,
+                            minHeight: 10,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.surfaceContainerHighest,
+                            valueColor: AlwaysStoppedAnimation(color),
+                          ),
                         ),
                       ),
                       Positioned(

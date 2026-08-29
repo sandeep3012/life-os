@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/services/backup_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../finance/presentation/screens/account_type_management_screen.dart';
 import '../../../finance/presentation/screens/category_management_screen.dart';
 import '../../application/app_lock_providers.dart';
@@ -407,12 +408,7 @@ class _BackupCardState extends ConsumerState<_BackupCard> {
   }
 
   void _showSnack(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
-      ),
-    );
+    showAppSnackBar(context, message: message, isError: isError);
   }
 
   @override

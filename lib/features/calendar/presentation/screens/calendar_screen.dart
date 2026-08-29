@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -111,13 +112,18 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
-                    ),
+                    )
+                        .animate()
+                        .fadeIn(duration: 250.ms),
                   )
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
                     itemCount: dayItems.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) => _buildItemTile(context, dayItems[index]),
+                    itemBuilder: (context, index) => _buildItemTile(context, dayItems[index])
+                        .animate(delay: (index * 20).ms)
+                        .fadeIn(duration: 200.ms)
+                        .slideY(begin: 0.05, end: 0, duration: 200.ms),
                   ),
           ),
         ],

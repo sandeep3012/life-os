@@ -1,12 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/route_paths.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/utils/haptics.dart';
+import '../../../../core/widgets/animations/index.dart';
+import '../../../../core/widgets/app_snackbar.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../../spend_analyzer/presentation/widgets/budget_bar.dart';
 import '../../application/finance_providers.dart';
@@ -51,36 +55,46 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     return Scaffold(
       body: SafeArea(
         child: accountsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const SkeletonListLoader(itemCount: 6, itemHeight: 56),
           error: (e, _) => Center(child: Text('Could not load accounts: $e')),
           data: (accounts) {
-            return CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                activeAccounts.isEmpty
-                                    ? 'No accounts yet'
-                                    : 'Across ${activeAccounts.length} account${activeAccounts.length == 1 ? '' : 's'}',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(accountsProvider);
+                await ref.read(accountsProvider.future);
+              },
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  activeAccounts.isEmpty
+                                      ? 'No accounts yet'
+                                      : 'Across ${activeAccounts.length} account${activeAccounts.length == 1 ? '' : 's'}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                formatMinor(totalBalance, currencyCode: currencyCode),
-                                style: theme.textTheme.headlineMedium?.copyWith(fontFamily: 'Fraunces'),
-                              ),
-                            ],
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween(begin: 0, end: totalBalance.toDouble()),
+                                  duration: const Duration(milliseconds: 500),
+                                  curve: Curves.easeOutCubic,
+                                  builder: (context, value, _) => Text(
+                                    formatMinor(value.round(), currencyCode: currencyCode),
+                                    style: theme.textTheme.headlineMedium?.copyWith(fontFamily: 'Fraunces'),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
                         if (archivedCount > 0)
                           TextButton.icon(
                             onPressed: () => Navigator.of(context).push(
@@ -159,7 +173,8 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                 else
                   _BudgetsSliver(),
               ],
-            );
+            ),
+          );
           },
         ),
       ),
@@ -255,10 +270,9 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     if (_section == _FinanceSection.transactions) {
       final transactableAccounts = ref.read(transactableAccountsProvider);
       if (transactableAccounts.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Add a non-investment account first to record transactions.'),
-          ),
+        showAppSnackBar(
+          context,
+          message: 'Add a non-investment account first to record transactions.',
         );
         return;
       }
@@ -355,7 +369,10 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
               category: widget.categoryById[t.categoryId],
               currencyCode: widget.currencyCode,
               onEdit: () => _editTransaction(t),
-            ),
+            )
+                .animate(delay: (index * 20).ms)
+                .fadeIn(duration: 200.ms)
+                .slideX(begin: 0.05, end: 0, duration: 200.ms),
           );
         },
       ),
@@ -364,10 +381,6 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
 
   Future<void> _editTransaction(Transaction t) async {
     final transactableAccounts = ref.read(transactableAccountsProvider);
-    // Keep the transaction's current account selectable even if it's an
-    // investment account (or otherwise no longer transactable) — it was
-    // valid when the transaction was recorded, and dropping it from the
-    // list here would silently reassign the transaction on save.
     final currentAccount = ref
         .read(accountsProvider)
         .value
@@ -399,16 +412,11 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
   }
 
   void _scheduleDelete(Transaction t) {
+    AppHaptics.delete();
     setState(() => _pendingDeleteIds.add(t.id));
     final messenger = ScaffoldMessenger.of(context);
     _timers[t.id] = Timer(_undoWindow, () async {
       _timers.remove(t.id);
-      // Dismissed explicitly here rather than left to the SnackBar's own
-      // `duration` timer: that timer is Ticker-driven, so it silently stalls
-      // if this route is offstage (e.g. the user switched bottom-nav tabs)
-      // — leaving the bar stuck on screen well past the undo window. Our
-      // own wall-clock Timer isn't affected, so tying dismissal to it keeps
-      // "hidden" and "actually deleted" in sync regardless of tab state.
       messenger.hideCurrentSnackBar();
       await ref.read(financeControllerProvider).deleteTransaction(t.id);
       if (mounted) setState(() => _pendingDeleteIds.remove(t.id));
@@ -421,6 +429,8 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
           content: Text('Deleted "${t.merchant}"'),
           duration: _undoWindow,
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           action: SnackBarAction(
             label: 'Undo',
             onPressed: () {
@@ -472,13 +482,20 @@ class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
       sliver: SliverList.list(
         children: [
-          for (final p in progress)
+          for (int idx = 0; idx < progress.length; idx++)
             Dismissible(
-              key: ValueKey(p.budget.id),
+              key: ValueKey(progress[idx].budget.id),
               direction: DismissDirection.endToStart,
               background: const _SwipeDeleteBackground(),
-              onDismissed: (_) => _scheduleDelete(p),
-              child: BudgetBar(progress: p, currencyCode: currencyCode, onEdit: () => _editBudget(p)),
+              onDismissed: (_) => _scheduleDelete(progress[idx]),
+              child: BudgetBar(
+                progress: progress[idx],
+                currencyCode: currencyCode,
+                onEdit: () => _editBudget(progress[idx]),
+              )
+                  .animate(delay: (idx * 20).ms)
+                  .fadeIn(duration: 200.ms)
+                  .slideX(begin: 0.03, end: 0, duration: 200.ms),
             ),
         ],
       ),
@@ -504,6 +521,7 @@ class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
   }
 
   void _scheduleDelete(BudgetProgress p) {
+    AppHaptics.delete();
     setState(() => _pendingDeleteIds.add(p.budget.id));
     final messenger = ScaffoldMessenger.of(context);
     _timers[p.budget.id] = Timer(_undoWindow, () async {
@@ -519,6 +537,8 @@ class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
         content: Text('Deleted "${p.category.name}" budget'),
         duration: _undoWindow,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () {
@@ -571,18 +591,30 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 12),
+            Icon(icon, size: 48, color: Theme.of(context).colorScheme.primary)
+                .animate()
+                .scale(
+                  begin: const Offset(0.8, 0.8),
+                  end: const Offset(1.0, 1.0),
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutBack,
+                )
+                .fadeIn(duration: const Duration(milliseconds: 250)),
+            const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-            ),
+            )
+                .animate(delay: 50.ms)
+                .fadeIn(duration: const Duration(milliseconds: 250))
+                .slideY(begin: 0.1, end: 0, duration: const Duration(milliseconds: 250)),
           ],
         ),
       ),
     );
   }
 }
+

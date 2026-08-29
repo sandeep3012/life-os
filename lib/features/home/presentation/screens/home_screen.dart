@@ -94,7 +94,10 @@ class HomeScreen extends ConsumerWidget {
                               ? Icons.arrow_upward_rounded
                               : Icons.arrow_downward_rounded),
                     onTap: () => context.go(RoutePaths.finance),
-                  ),
+                  )
+                      .animate(delay: 0.ms)
+                      .fadeIn(duration: 250.ms)
+                      .slideY(begin: 0.08, end: 0, duration: 250.ms),
                   const SizedBox(width: 12),
                   StatTile(
                     label: 'Tasks today',
@@ -105,7 +108,10 @@ class HomeScreen extends ConsumerWidget {
                         ? 'all done'
                         : '${todayTasks.remaining} remaining',
                     onTap: () => context.go(RoutePaths.tasksHabits),
-                  ),
+                  )
+                      .animate(delay: 40.ms)
+                      .fadeIn(duration: 250.ms)
+                      .slideY(begin: 0.08, end: 0, duration: 250.ms),
                   const SizedBox(width: 12),
                   StatTile(
                     label: 'Habit streaks',
@@ -114,7 +120,10 @@ class HomeScreen extends ConsumerWidget {
                     accent: colors.habits,
                     delta: '${habits.length} tracked',
                     onTap: () => context.go(RoutePaths.tasksHabits),
-                  ),
+                  )
+                      .animate(delay: 80.ms)
+                      .fadeIn(duration: 250.ms)
+                      .slideY(begin: 0.08, end: 0, duration: 250.ms),
                   const SizedBox(width: 12),
                   StatTile(
                     label: 'Active goals',
@@ -122,7 +131,10 @@ class HomeScreen extends ConsumerWidget {
                     icon: Icons.flag_rounded,
                     accent: colors.goals,
                     onTap: () => context.go(RoutePaths.goals),
-                  ),
+                  )
+                      .animate(delay: 120.ms)
+                      .fadeIn(duration: 250.ms)
+                      .slideY(begin: 0.08, end: 0, duration: 250.ms),
                 ],
               ),
             ),
@@ -140,15 +152,18 @@ class HomeScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: Column(
                       children: [
-                        for (final task in todayTasks.tasks.take(3))
+                        for (int idx = 0; idx < todayTasks.tasks.take(3).length; idx++)
                           TaskTile(
-                            key: ValueKey(task.id),
-                            task: task,
+                            key: ValueKey(todayTasks.tasks[idx].id),
+                            task: todayTasks.tasks[idx],
                             onToggle: () =>
-                                ref.read(tasksControllerProvider).toggleDone(task),
+                                ref.read(tasksControllerProvider).toggleDone(todayTasks.tasks[idx]),
                             onDelete: () =>
-                                ref.read(tasksControllerProvider).deleteTask(task),
-                          ),
+                                ref.read(tasksControllerProvider).deleteTask(todayTasks.tasks[idx]),
+                          )
+                              .animate(delay: (idx * 30).ms)
+                              .fadeIn(duration: 200.ms)
+                              .slideY(begin: 0.05, end: 0, duration: 200.ms),
                       ],
                     ),
                   ),
@@ -178,7 +193,10 @@ class HomeScreen extends ConsumerWidget {
                       onToggle: () => ref
                           .read(habitsControllerProvider)
                           .toggleToday(progress.habit, !doneToday),
-                    );
+                    )
+                        .animate(delay: (index * 40).ms)
+                        .fadeIn(duration: 200.ms)
+                        .slideY(begin: 0.08, end: 0, duration: 250.ms);
                   },
                 ),
               ),
@@ -197,7 +215,11 @@ class HomeScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                     child: Column(
                       children: [
-                        for (final item in upcoming) CalendarItemTile(item: item),
+                        for (int idx = 0; idx < upcoming.length; idx++)
+                          CalendarItemTile(item: upcoming[idx])
+                              .animate(delay: (idx * 30).ms)
+                              .fadeIn(duration: 200.ms)
+                              .slideY(begin: 0.05, end: 0, duration: 200.ms),
                       ],
                     ),
                   ),
@@ -271,15 +293,26 @@ class _EmptyDashboard extends StatelessWidget {
         children: [
           Icon(
             Icons.auto_awesome_rounded,
-            size: 40,
+            size: 48,
             color: theme.colorScheme.primary,
-          ),
-          const SizedBox(height: 12),
+          )
+              .animate()
+              .scale(
+                begin: const Offset(0.8, 0.8),
+                end: const Offset(1.0, 1.0),
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutBack,
+              )
+              .fadeIn(duration: const Duration(milliseconds: 300)),
+          const SizedBox(height: 16),
           Text(
             'Your dashboard fills in as you go',
             textAlign: TextAlign.center,
             style: theme.textTheme.titleSmall,
-          ),
+          )
+              .animate(delay: 50.ms)
+              .fadeIn(duration: const Duration(milliseconds: 300))
+              .slideY(begin: 0.1, end: 0, duration: const Duration(milliseconds: 300)),
           const SizedBox(height: 6),
           Text(
             'Add a task, log a habit, or record a transaction to see it summarised here.',
@@ -287,7 +320,10 @@ class _EmptyDashboard extends StatelessWidget {
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
-          ),
+          )
+              .animate(delay: 100.ms)
+              .fadeIn(duration: const Duration(milliseconds: 300))
+              .slideY(begin: 0.1, end: 0, duration: const Duration(milliseconds: 300)),
         ],
       ),
     );

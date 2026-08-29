@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/utils/haptics.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../../habits/domain/habit_progress.dart';
 
@@ -25,16 +27,17 @@ class HabitCheckInCard extends StatelessWidget {
         : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
     final iconColor = categoryColor ?? accent;
     final doneToday = progress.weekCompletion[DateTime.now().weekday] ?? false;
-    final icon = doneToday
-        ? Icons.check_rounded
-        : (category == null ? Icons.local_fire_department_rounded : resolveIcon(category.icon));
+    final icon = category == null ? Icons.local_fire_department_rounded : resolveIcon(category.icon);
 
     return SizedBox(
       width: 140,
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: onToggle,
+          onTap: () {
+            AppHaptics.toggle();
+            onToggle();
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
             child: Column(
@@ -48,7 +51,29 @@ class HabitCheckInCard extends StatelessWidget {
                     color: iconColor.withValues(alpha: 0.16),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 18, color: iconColor),
+                  child: AnimatedCrossFade(
+                    firstChild: Icon(
+                      Icons.check_rounded,
+                      size: 18,
+                      color: iconColor,
+                    )
+                        .animate()
+                        .scale(
+                          begin: doneToday ? const Offset(1.2, 1.2) : const Offset(1.0, 1.0),
+                          end: const Offset(1.0, 1.0),
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOutBack,
+                        ),
+                    secondChild: Icon(
+                      icon,
+                      size: 18,
+                      color: iconColor,
+                    ),
+                    crossFadeState: doneToday
+                        ? CrossFadeState.showFirst
+                        : CrossFadeState.showSecond,
+                    duration: const Duration(milliseconds: 200),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(

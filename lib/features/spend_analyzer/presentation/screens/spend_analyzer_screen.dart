@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -27,26 +28,32 @@ class SpendAnalyzerScreen extends ConsumerWidget {
     final paymentModeBreakdown = ref.watch(paymentModeBreakdownProvider);
     final currencyCode = ref.watch(settingsProvider).currencyCode;
 
+    final monthLabel = DateFormat('MMMM yyyy').format(month);
     final delta = previousTotal == 0 ? 0.0 : (total - previousTotal) / previousTotal;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left_rounded),
-          onPressed: () => _shiftMonth(ref, -1),
-        ),
-        title: Text(DateFormat.yMMMM().format(month)),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.chevron_right_rounded),
-            onPressed: () => _shiftMonth(ref, 1),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Spend Analyzer')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left_rounded),
+                onPressed: () => _shiftMonth(ref, -1),
+              ),
+              Text(
+                monthLabel,
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right_rounded),
+                onPressed: () => _shiftMonth(ref, 1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -71,7 +78,9 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontFamily: 'Fraunces',
                             ),
-                          ),
+                          )
+                              .animate()
+                              .fadeIn(duration: 250.ms),
                         ],
                       ),
                       if (previousTotal > 0)
@@ -81,7 +90,14 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                               delta >= 0 ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
                               size: 14,
                               color: delta >= 0 ? colors.critical : colors.good,
-                            ),
+                            )
+                                .animate()
+                                .scale(
+                                  begin: const Offset(1.2, 1.2),
+                                  end: const Offset(1.0, 1.0),
+                                  duration: 250.ms,
+                                  curve: Curves.easeOutBack,
+                                ),
                             Text(
                               '${(delta.abs() * 100).toStringAsFixed(1)}% vs last month',
                               style: TextStyle(
@@ -96,13 +112,20 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  WeeklyTrendChart(weeklyTotalsMinor: weeklyTrend, color: colors.spend),
+                  WeeklyTrendChart(weeklyTotalsMinor: weeklyTrend, color: colors.spend)
+                      .animate()
+                      .fadeIn(duration: 300.ms),
                 ],
               ),
             ),
-          ),
+          )
+              .animate()
+              .fadeIn(duration: 250.ms)
+              .slideY(begin: 0.05, end: 0, duration: 250.ms),
           const SizedBox(height: 20),
-          Text('By category', style: theme.textTheme.titleSmall),
+          Text('By category', style: theme.textTheme.titleSmall)
+              .animate(delay: 50.ms)
+              .fadeIn(duration: 250.ms),
           const SizedBox(height: 10),
           Card(
             child: Padding(
@@ -114,9 +137,13 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                     )
                   : CategoryDonutChart(breakdown: breakdown, totalMinor: total, currencyCode: currencyCode),
             ),
-          ),
+          )
+              .animate(delay: 30.ms)
+              .fadeIn(duration: 250.ms),
           const SizedBox(height: 20),
-          Text('Budget vs actual', style: theme.textTheme.titleSmall),
+          Text('Budget vs actual', style: theme.textTheme.titleSmall)
+              .animate(delay: 100.ms)
+              .fadeIn(duration: 250.ms),
           const SizedBox(height: 10),
           Card(
             child: Padding(
@@ -128,12 +155,17 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                     )
                   : Column(
                       children: [
-                        for (final progress in budgetsProgress)
-                          BudgetBar(progress: progress, currencyCode: currencyCode),
+                        for (int idx = 0; idx < budgetsProgress.length; idx++)
+                          BudgetBar(progress: budgetsProgress[idx], currencyCode: currencyCode)
+                              .animate(delay: (100 + idx * 30).ms)
+                              .fadeIn(duration: 200.ms)
+                              .slideX(begin: 0.03, end: 0, duration: 200.ms),
                       ],
                     ),
             ),
-          ),
+          )
+              .animate(delay: 80.ms)
+              .fadeIn(duration: 250.ms),
           const SizedBox(height: 20),
           Text('By payment mode', style: theme.textTheme.titleSmall),
           const SizedBox(height: 10),

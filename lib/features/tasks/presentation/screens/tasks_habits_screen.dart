@@ -8,6 +8,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/widgets/animations/index.dart';
 import '../../../habits/application/habits_providers.dart';
 import '../../../habits/presentation/widgets/habit_tile.dart';
 import '../../../habits/presentation/widgets/quick_add_habit_sheet.dart';
@@ -79,7 +80,9 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
                       filter: _taskFilter,
                       onFilterChanged: (f) => setState(() => _taskFilter = f),
                     )
-                  : _HabitsPane(showArchived: _showArchivedHabits),
+                  : _HabitsPane(
+                      showArchived: _showArchivedHabits,
+                    ),
             ),
           ],
         ),
@@ -122,7 +125,10 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
 }
 
 class _TasksPane extends ConsumerWidget {
-  const _TasksPane({required this.filter, required this.onFilterChanged});
+  const _TasksPane({
+    required this.filter,
+    required this.onFilterChanged,
+  });
 
   final _TaskFilter filter;
   final ValueChanged<_TaskFilter> onFilterChanged;
@@ -148,34 +154,50 @@ class _TasksPane extends ConsumerWidget {
         ),
         Expanded(
           child: tasksAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const SkeletonListLoader(itemCount: 6, itemHeight: 44),
             error: (e, _) => Center(child: Text('Could not load tasks: $e')),
             data: (tasks) {
               final filtered = _applyFilter(tasks, filter);
               if (filtered.isEmpty) {
-                return const _EmptyState(
-                  icon: Icons.checklist_rounded,
-                  message: 'Nothing here — add a task to get started.',
+                return RefreshIndicator(
+                  onRefresh: () => _refresh(ref),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: const [
+                      _EmptyState(
+                        icon: Icons.checklist_rounded,
+                        message: 'Nothing here — add a task to get started.',
+                      ),
+                    ],
+                  ),
                 );
               }
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final task = filtered[index];
-                  return TaskTile(
-                    key: ValueKey(task.id),
-                    task: task,
-                    onToggle: () => ref.read(tasksControllerProvider).toggleDone(task),
-                    onDelete: () => ref.read(tasksControllerProvider).deleteTask(task),
-                  ).animate().fadeIn(duration: 200.ms);
-                },
+              return RefreshIndicator(
+                onRefresh: () => _refresh(ref),
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final task = filtered[index];
+                    return TaskTile(
+                      key: ValueKey(task.id),
+                      task: task,
+                      onToggle: () => ref.read(tasksControllerProvider).toggleDone(task),
+                      onDelete: () => ref.read(tasksControllerProvider).deleteTask(task),
+                    ).animate().fadeIn(duration: 200.ms);
+                  },
+                ),
               );
             },
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _refresh(WidgetRef ref) async {
+    ref.invalidate(allTasksProvider);
+    await ref.read(allTasksProvider.future);
   }
 
   List<Task> _applyFilter(List<Task> tasks, _TaskFilter filter) {
@@ -201,7 +223,9 @@ class _TasksPane extends ConsumerWidget {
 }
 
 class _HabitsPane extends ConsumerWidget {
-  const _HabitsPane({required this.showArchived});
+  const _HabitsPane({
+    required this.showArchived,
+  });
 
   final bool showArchived;
 
@@ -298,7 +322,10 @@ class _ArchivedHabitTile extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.icon, required this.message});
+  const _EmptyState({
+    required this.icon,
+    required this.message,
+  });
 
   final IconData icon;
   final String message;
@@ -312,15 +339,26 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: colors.tasks),
-            const SizedBox(height: 12),
+            Icon(icon, size: 48, color: colors.tasks)
+                .animate()
+                .scale(
+                  begin: const Offset(0.8, 0.8),
+                  end: const Offset(1.0, 1.0),
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutBack,
+                )
+                .fadeIn(duration: const Duration(milliseconds: 250)),
+            const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-            ),
+            )
+                .animate(delay: 50.ms)
+                .fadeIn(duration: const Duration(milliseconds: 250))
+                .slideY(begin: 0.1, end: 0, duration: const Duration(milliseconds: 250)),
           ],
         ),
       ),

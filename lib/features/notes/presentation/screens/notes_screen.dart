@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../tags/application/tags_providers.dart';
@@ -30,6 +31,11 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     super.dispose();
   }
 
+  Future<void> _refresh() async {
+    ref.invalidate(notesListProvider);
+    await ref.read(notesListProvider.future);
+  }
+
   @override
   Widget build(BuildContext context) {
     final notesAsync = ref.watch(notesListProvider);
@@ -54,9 +60,15 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
             child: TextField(
               controller: _searchController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Search notes',
-                prefixIcon: Icon(Icons.search_rounded),
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: query.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: () => setState(_searchController.clear),
+                      ),
               ),
             ),
           ),
@@ -127,41 +139,63 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 }).toList();
 
                 if (filtered.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        notes.isEmpty
-                            ? 'No notes yet — add one to get started.'
-                            : 'No notes match your search.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  return RefreshIndicator(
+                    onRefresh: _refresh,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Text(
+                              notes.isEmpty
+                                  ? 'No notes yet — add one to get started.'
+                                  : 'No notes match your search.',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            )
+                                .animate()
+                                .fadeIn(duration: 250.ms)
+                                .slideY(begin: 0.1, end: 0, duration: 250.ms),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   );
                 }
 
-                return GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.95,
+                return RefreshIndicator(
+                  onRefresh: _refresh,
+                  child: GridView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.95,
+                    ),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final note = filtered[index];
+                      return NoteCard(
+                        note: note,
+                        folder: folderById[note.folderId],
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => NoteEditorScreen(note: note)),
+                        ),
+                      )
+                          .animate(delay: (index * 25).ms)
+                          .fadeIn(duration: 200.ms)
+                          .scale(
+                            begin: const Offset(0.92, 0.92),
+                            end: const Offset(1.0, 1.0),
+                            duration: 200.ms,
+                            curve: Curves.easeOutBack,
+                          );
+                    },
                   ),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final note = filtered[index];
-                    return NoteCard(
-                      note: note,
-                      folder: folderById[note.folderId],
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => NoteEditorScreen(note: note)),
-                      ),
-                    );
-                  },
                 );
               },
             ),

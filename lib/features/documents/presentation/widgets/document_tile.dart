@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/file_storage_service.dart';
+import '../../../../core/utils/haptics.dart';
 
 IconData _iconForMime(String mime) {
   if (mime.startsWith('image/')) return Icons.image_rounded;
@@ -30,7 +31,10 @@ class DocumentTile extends StatelessWidget {
     return Dismissible(
       key: ValueKey(document.id),
       direction: DismissDirection.endToStart,
-      onDismissed: (_) => onDelete(),
+      onDismissed: (_) {
+        AppHaptics.delete();
+        onDelete();
+      },
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),

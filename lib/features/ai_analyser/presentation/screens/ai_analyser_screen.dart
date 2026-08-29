@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/ai_analyser_providers.dart';
@@ -58,7 +59,10 @@ class _AiAnalyserScreenState extends ConsumerState<AiAnalyserScreen> {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
-                ),
+                )
+                    .animate()
+                    .fadeIn(duration: 250.ms)
+                    .slideY(begin: 0.1, end: 0, duration: 250.ms),
               ),
             )
           : ListView.separated(
@@ -70,7 +74,10 @@ class _AiAnalyserScreenState extends ConsumerState<AiAnalyserScreen> {
                 return InsightCard(
                   insight: insight,
                   onDismiss: () => ref.read(aiAnalyserControllerProvider).dismiss(insight.id),
-                );
+                )
+                    .animate()
+                    .fadeIn(duration: 250.ms)
+                    .slideY(begin: 0.08, end: 0, duration: 250.ms);
               },
             ),
     );

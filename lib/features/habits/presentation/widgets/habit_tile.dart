@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/utils/haptics.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../domain/habit_progress.dart';
 
@@ -81,15 +83,30 @@ class HabitTile extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             GestureDetector(
-              onTap: () => onToggleToday(!completedToday),
+              onTap: () {
+                AppHaptics.toggle();
+                onToggleToday(!completedToday);
+              },
               child: Row(
                 children: [
-                  Icon(Icons.local_fire_department_rounded, size: 15, color: accent),
+                  Icon(Icons.local_fire_department_rounded, size: 15, color: accent)
+                      .animate()
+                      .scale(
+                        begin: completedToday ? const Offset(1.2, 1.2) : const Offset(1.0, 1.0),
+                        end: const Offset(1.0, 1.0),
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOutBack,
+                      ),
                   const SizedBox(width: 3),
                   Text(
                     atRisk ? 'at risk' : '${progress.streakDays}',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: accent),
-                  ),
+                  ).animate().scale(
+                        begin: completedToday ? const Offset(1.1, 1.1) : const Offset(1.0, 1.0),
+                        end: const Offset(1.0, 1.0),
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOutBack,
+                      ),
                 ],
               ),
             ),
@@ -109,7 +126,8 @@ class _WeekDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
       width: 16,
       height: 16,
       alignment: Alignment.center,
@@ -117,14 +135,24 @@ class _WeekDot extends StatelessWidget {
         color: on ? color : Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(5),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 8,
-          fontWeight: FontWeight.w700,
-          color: on ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+      child: AnimatedCrossFade(
+        firstChild: const Icon(Icons.check, size: 10, color: Colors.white),
+        secondChild: Text(
+          label,
+          style: TextStyle(
+            fontSize: 8,
+            fontWeight: FontWeight.w700,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
+        crossFadeState: on ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+        duration: const Duration(milliseconds: 200),
       ),
-    );
+    ).animate().scale(
+          begin: on ? const Offset(0.8, 0.8) : const Offset(1.0, 1.0),
+          end: const Offset(1.0, 1.0),
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOutBack,
+        );
   }
 }

@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/utils/haptics.dart';
+import '../../../../core/widgets/animations/index.dart';
 import '../../domain/task_priority.dart';
 
 class TaskTile extends StatelessWidget {
@@ -27,58 +29,66 @@ class TaskTile extends StatelessWidget {
     return Dismissible(
       key: ValueKey(task.id),
       direction: DismissDirection.endToStart,
-      onDismissed: (_) => onDelete(),
+      onDismissed: (_) {
+        AppHaptics.delete();
+        onDelete();
+      },
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         color: colors.critical.withValues(alpha: 0.15),
         child: Icon(Icons.delete_outline_rounded, color: colors.critical),
       ),
-      child: InkWell(
-        onTap: onToggle,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _TaskCheckbox(done: done, color: colors.tasks),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.title,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        decoration: done ? TextDecoration.lineThrough : null,
-                        color: done
-                            ? theme.colorScheme.onSurfaceVariant
-                            : theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        _PriorityChip(
-                          priority: TaskPriorityX.fromValue(task.priority),
+      child: AnimatedUpdateItem(
+        child: InkWell(
+          onTap: () {
+            AppHaptics.toggle();
+            onToggle();
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _TaskCheckbox(done: done, color: colors.tasks),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.title,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          decoration: done ? TextDecoration.lineThrough : null,
+                          color: done
+                              ? theme.colorScheme.onSurfaceVariant
+                              : theme.colorScheme.onSurface,
                         ),
-                        if (task.dueDate != null)
-                          Text(
-                            _formatDue(task.dueDate!),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontFamily: 'PlexMono',
-                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          _PriorityChip(
+                            priority: TaskPriorityX.fromValue(task.priority),
                           ),
-                      ],
-                    ),
-                  ],
+                          if (task.dueDate != null)
+                            Text(
+                              _formatDue(task.dueDate!),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontFamily: 'PlexMono',
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -115,9 +125,12 @@ class _TaskCheckbox extends StatelessWidget {
           width: 2,
         ),
       ),
-      child: done
-          ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-          : null,
+      child: AnimatedCrossFade(
+        firstChild: const Icon(Icons.check_rounded, size: 14, color: Colors.white),
+        secondChild: const SizedBox.shrink(),
+        crossFadeState: done ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+        duration: const Duration(milliseconds: 200),
+      ),
     );
   }
 }

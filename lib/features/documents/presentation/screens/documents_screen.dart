@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
@@ -61,9 +62,15 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
             child: TextField(
               controller: _searchController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Search documents',
-                prefixIcon: Icon(Icons.search_rounded),
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: query.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: () => setState(_searchController.clear),
+                      ),
               ),
             ),
           ),
@@ -92,7 +99,15 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                         () => _selectedFolderId = _selectedFolderId == f.id ? null : f.id,
                       ),
                     ),
-                  );
+                  )
+                      .animate(delay: (index * 30).ms)
+                      .fadeIn(duration: 200.ms)
+                      .scale(
+                        begin: const Offset(0.9, 0.9),
+                        end: const Offset(1.0, 1.0),
+                        duration: 200.ms,
+                        curve: Curves.easeOutBack,
+                      );
                 },
               ),
             ),
@@ -140,34 +155,55 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                 }).toList();
 
                 if (filtered.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        documents.isEmpty
-                            ? 'No documents yet — add one to get started.'
-                            : 'No documents match here.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(documentsListProvider);
+                    },
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Text(
+                              documents.isEmpty
+                                  ? 'No documents yet — add one to get started.'
+                                  : 'No documents match here.',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            )
+                                .animate()
+                                .fadeIn(duration: 250.ms)
+                                .slideY(begin: 0.1, end: 0, duration: 250.ms),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   );
                 }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final d = filtered[index];
-                    return DocumentTile(
-                      document: d,
-                      onDelete: () => ref.read(documentsControllerProvider).deleteDocument(d),
-                      onTap: () => _editDocument(d),
-                    );
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(documentsListProvider);
                   },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final d = filtered[index];
+                      return DocumentTile(
+                        document: d,
+                        onDelete: () => ref.read(documentsControllerProvider).deleteDocument(d),
+                        onTap: () => _editDocument(d),
+                      )
+                          .animate(delay: (index * 20).ms)
+                          .fadeIn(duration: 200.ms)
+                          .slideY(begin: 0.05, end: 0, duration: 200.ms);
+                    },
+                  ),
                 );
               },
             ),
