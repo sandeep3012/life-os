@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/utils/icon_lookup.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../widgets/account_card.dart';
+import '../widgets/quick_add_account_sheet.dart';
 
 class AccountDetailScreen extends ConsumerStatefulWidget {
   const AccountDetailScreen({super.key, required this.accountId});
@@ -58,7 +61,7 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
                           color: colors.finance.withValues(alpha: 0.16),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(accountIconFor(account.type, accountTypes), color: colors.finance),
+                        child: IconOrEmoji(value: accountIconValueFor(account.type, accountTypes), color: colors.finance),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -74,6 +77,11 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
                             ),
                           ],
                         ),
+                      ),
+                      IconButton(
+                        tooltip: 'Edit account',
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: _busy ? null : () => _editAccount(account),
                       ),
                     ],
                   ),
@@ -150,6 +158,24 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
   Future<void> _deactivate(String accountId) async {
     setState(() => _busy = true);
     await ref.read(financeControllerProvider).deactivateAccount(accountId);
+    if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _editAccount(Account account) async {
+    final result = await showQuickAddAccountSheet(
+      context,
+      accountTypes: ref.read(accountTypesProvider).value ?? const [],
+      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+      initial: account,
+    );
+    if (result == null) return;
+    setState(() => _busy = true);
+    await ref.read(financeControllerProvider).updateAccount(
+      id: account.id,
+      name: result.name,
+      type: result.type,
+      balanceMinor: result.startingBalanceMinor,
+    );
     if (mounted) setState(() => _busy = false);
   }
 

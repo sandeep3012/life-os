@@ -76,7 +76,7 @@ FinanceReport buildFinanceReport({
   required List<Category> categories,
 }) {
   final inPeriod =
-      allTransactions.where((t) => !t.date.isBefore(period.start) && t.date.isBefore(period.end)).toList()
+      allTransactions.where((t) => t.paymentMode != 'transfer' && !t.date.isBefore(period.start) && t.date.isBefore(period.end)).toList()
         ..sort((a, b) => a.date.compareTo(b.date));
 
   final income = inPeriod.where((t) => t.amountMinor > 0).fold<int>(0, (sum, t) => sum + t.amountMinor);

@@ -9,6 +9,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../../habits/application/habits_providers.dart';
+import '../../../habits/domain/habit_progress.dart';
 import '../../../habits/presentation/widgets/habit_tile.dart';
 import '../../../habits/presentation/widgets/quick_add_habit_sheet.dart';
 import '../../application/tasks_providers.dart';
@@ -77,10 +78,10 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
+        tooltip: _section == _Section.tasks ? 'New task' : 'New habit',
         onPressed: () => _section == _Section.tasks ? _addTask() : _addHabit(),
-        icon: const Icon(Icons.add_rounded),
-        label: Text(_section == _Section.tasks ? 'New task' : 'New habit'),
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }
@@ -205,19 +206,163 @@ class _HabitsPane extends ConsumerWidget {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      itemCount: progress.length,
-      itemBuilder: (context, index) {
-        final p = progress[index];
-        return HabitTile(
-          key: ValueKey(p.habit.id),
-          progress: p,
-          onToggleToday: (completed) =>
-              ref.read(habitsControllerProvider).toggleToday(p.habit, completed),
-          onTap: () => context.push(RoutePaths.habitDetail(p.habit.id)),
-        ).animate().fadeIn(duration: 200.ms);
-      },
+    final completedThisWeek = progress.fold<int>(
+      0,
+      (sum, item) => sum + item.weekCompletion.values.where((done) => done).length,
+    );
+    final totalThisWeek = progress.length * 7;
+    final groups = <String, List<HabitProgress>>{};
+    for (final item in progress) {
+      final name = item.category?.name ?? _fallbackGroup(item.habit.name);
+      groups.putIfAbsent(name, () => []).add(item);
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      children: [
+        _WeekSummary(
+          completed: completedThisWeek,
+          total: totalThisWeek,
+          progress: progress,
+        ),
+        Column(
+          children: [
+              for (final entry in groups.entries) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+                  child: Align(alignment: Alignment.centerLeft, child: Text(entry.key, style: Theme.of(context).textTheme.labelLarge)),
+                ),
+                for (var index = 0; index < entry.value.length; index++) ...[
+                  HabitTile(
+                    key: ValueKey(entry.value[index].habit.id),
+                    progress: entry.value[index],
+                    onToggleToday: (completed) => ref.read(habitsControllerProvider).toggleToday(entry.value[index].habit, completed),
+                    onTap: () => context.push(RoutePaths.habitDetail(entry.value[index].habit.id)),
+                  ).animate().fadeIn(duration: 200.ms),
+                  if (index != entry.value.length - 1 || entry.key != groups.keys.last)
+                    const Divider(height: 1, indent: 56),
+                ],
+              ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _fallbackGroup(String name) {
+    final normalized = name.toLowerCase();
+    if (normalized.contains('read') ||
+        normalized.contains('meditat') ||
+        normalized.contains('learn') ||
+        normalized.contains('journal')) {
+      return 'Personal growth';
+    }
+    if (normalized.contains('expense') || normalized.contains('finance')) {
+      return 'Other habits';
+    }
+    return 'Daily habits';
+  }
+}
+
+class _WeekSummary extends StatelessWidget {
+  const _WeekSummary({
+    required this.completed,
+    required this.total,
+    required this.progress,
+  });
+
+  final int completed;
+  final int total;
+  final List<HabitProgress> progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ratio = total == 0 ? 0.0 : completed / total;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 64,
+              height: 64,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    value: ratio,
+                    strokeWidth: 7,
+                    color: context.appColors.habits,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  ),
+                  Text('${(ratio * 100).round()}%', style: theme.textTheme.labelLarge),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('This week’s habits', style: theme.textTheme.labelMedium),
+                  const SizedBox(height: 4),
+                  Text('$completed / $total check-ins', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 2),
+                  Text(
+                    progress.isEmpty ? 'Add a habit to get started' : 'Keep going, you’re doing great!',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      for (var day = 1; day <= 7; day++) ...[
+                        _WeekdayDot(
+                          label: const ['M', 'T', 'W', 'T', 'F', 'S', 'S'][day - 1],
+                          active: progress.any((item) => item.weekCompletion[day] ?? false),
+                        ),
+                        if (day != 7) const SizedBox(width: 4),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.local_fire_department_rounded, color: context.appColors.warning),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WeekdayDot extends StatelessWidget {
+  const _WeekdayDot({required this.label, required this.active});
+
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: 18,
+      height: 18,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: active ? colors.habits : Theme.of(context).colorScheme.surfaceContainerHighest,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          color: active ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }

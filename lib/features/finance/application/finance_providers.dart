@@ -255,6 +255,14 @@ class FinanceController {
     return _repo.createAccount(name: name, type: type, balanceMinor: balanceMinor);
   }
 
+  Future<void> updateAccount({required String id, required String name, required String type, required int balanceMinor}) {
+    return _repo.updateAccount(id: id, name: name, type: type, balanceMinor: balanceMinor);
+  }
+
+  Future<void> transfer({required String fromAccountId, required String toAccountId, required int amountMinor, required DateTime date, String? note}) {
+    return _repo.transfer(fromAccountId: fromAccountId, toAccountId: toAccountId, amountMinor: amountMinor, date: date, note: note);
+  }
+
   Future<({int transactionCount, int goalLinkCount})> checkAccountUsage(String accountId) {
     return _repo.checkAccountUsage(accountId);
   }

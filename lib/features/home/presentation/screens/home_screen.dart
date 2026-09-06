@@ -6,10 +6,15 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/utils/date_utils.dart';
 import '../../../ai_analyser/application/ai_analyser_providers.dart';
 import '../../../ai_analyser/presentation/widgets/insight_card.dart';
+import '../../../calendar/application/calendar_providers.dart';
 import '../../../calendar/presentation/widgets/calendar_item_tile.dart';
+import '../../../calendar/domain/calendar_item.dart';
+import '../../../goals/application/goals_providers.dart';
 import '../../../habits/application/habits_providers.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../../tasks/application/tasks_providers.dart';
@@ -31,9 +36,17 @@ class HomeScreen extends ConsumerWidget {
     final lastWeekSpend = ref.watch(lastWeekSpendMinorProvider);
     final todayTasks = ref.watch(todayTasksProvider);
     final habits = ref.watch(habitCheckInProvider);
-    final averageStreak = ref.watch(averageStreakDaysProvider);
     final activeGoals = ref.watch(activeGoalCountProvider);
     final upcoming = ref.watch(upcomingItemsProvider);
+    final todayAgenda = ref.watch(allCalendarItemsProvider)
+        .where((item) => isSameDay(item.date, DateTime.now()) && item.type != CalendarItemType.habit)
+        .toList()
+      ..sort((a, b) => (a.time ?? a.date).compareTo(b.time ?? b.date));
+    final activeGoalList = (ref.watch(goalsListProvider).value ?? const [])
+        .where((g) => g.status == 'active').toList();
+    final goalProgress = activeGoalList.isEmpty ? 0.0 : activeGoalList.map((g) =>
+      g.targetValue == null || g.targetValue == 0 ? 0.0 : (g.currentValue / g.targetValue!).clamp(0.0, 1.0)
+    ).reduce((a, b) => a + b) / activeGoalList.length;
     final currencyCode = ref.watch(settingsProvider).currencyCode;
 
     final spendDelta = lastWeekSpend == 0
@@ -71,8 +84,11 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ).animate().fadeIn(duration: 250.ms).slideY(begin: 0.08, end: 0),
 
+            if (todayAgenda.isNotEmpty)
+              _TodayAtAGlance(items: todayAgenda),
+
             SizedBox(
-              height: 108,
+              height: 124,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -93,6 +109,7 @@ class HomeScreen extends ConsumerWidget {
                         : (spendDelta >= 0
                               ? Icons.arrow_upward_rounded
                               : Icons.arrow_downward_rounded),
+                    progress: lastWeekSpend == 0 ? (weekSpend == 0 ? 0 : 1) : (weekSpend / lastWeekSpend).clamp(0.0, 1.0),
                     onTap: () => context.go(RoutePaths.finance),
                   ),
                   const SizedBox(width: 12),
@@ -104,15 +121,7 @@ class HomeScreen extends ConsumerWidget {
                     delta: todayTasks.remaining == 0
                         ? 'all done'
                         : '${todayTasks.remaining} remaining',
-                    onTap: () => context.go(RoutePaths.tasksHabits),
-                  ),
-                  const SizedBox(width: 12),
-                  StatTile(
-                    label: 'Habit streaks',
-                    value: '${averageStreak}d avg',
-                    icon: Icons.local_fire_department_rounded,
-                    accent: colors.habits,
-                    delta: '${habits.length} tracked',
+                    progress: todayTasks.total == 0 ? 0 : todayTasks.doneCount / todayTasks.total,
                     onTap: () => context.go(RoutePaths.tasksHabits),
                   ),
                   const SizedBox(width: 12),
@@ -121,6 +130,7 @@ class HomeScreen extends ConsumerWidget {
                     value: '$activeGoals',
                     icon: Icons.flag_rounded,
                     accent: colors.goals,
+                    progress: goalProgress,
                     onTap: () => context.go(RoutePaths.goals),
                   ),
                 ],
@@ -257,6 +267,90 @@ class _SectionHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TodayAtAGlance extends StatelessWidget {
+  const _TodayAtAGlance({required this.items});
+
+  final List<CalendarItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final visible = items.take(6).toList();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Today at a glance',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: context.appColors.warning,
+                  letterSpacing: 0.4,
+                ),
+              ),
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (var i = 0; i < visible.length; i++) ...[
+                      SizedBox(
+                        width: 82,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(children: [
+                              Container(width: 7, height: 7, decoration: BoxDecoration(
+                                color: _itemColor(context, visible[i].type), shape: BoxShape.circle)),
+                              const SizedBox(width: 4),
+                              Text(
+                                visible[i].time == null ? 'Any time' : DateFormat.jm().format(visible[i].time!),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              ),
+                            ]),
+                            const SizedBox(height: 3),
+                            Text(
+                              visible[i].title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (i != visible.length - 1)
+                        Container(
+                          width: 1,
+                          height: 30,
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _itemColor(BuildContext context, CalendarItemType type) => switch (type) {
+    CalendarItemType.event => context.appColors.tasks,
+    CalendarItemType.bill => context.appColors.warning,
+    CalendarItemType.task => context.appColors.goals,
+    CalendarItemType.habit => context.appColors.good,
+  };
 }
 
 class _EmptyDashboard extends StatelessWidget {

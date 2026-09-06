@@ -155,7 +155,7 @@ class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(resolveIcon(c.icon), size: 16),
+                        IconOrEmoji(value: c.icon, size: 16),
                         const SizedBox(width: 8),
                         Text(c.name),
                       ],

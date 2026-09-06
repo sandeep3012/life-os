@@ -22,6 +22,14 @@ IconData accountIconFor(String type, List<AccountType> types) {
   return Icons.account_balance_wallet_rounded;
 }
 
+String accountIconValueFor(String type, List<AccountType> types) {
+  final key = normalizeAccountTypeKey(type);
+  for (final t in types) {
+    if (normalizeAccountTypeKey(t.name) == key) return t.icon;
+  }
+  return 'account_balance_wallet';
+}
+
 class AccountCard extends ConsumerWidget {
   const AccountCard({super.key, required this.account, this.onTap});
 
@@ -35,7 +43,7 @@ class AccountCard extends ConsumerWidget {
     final dotColor = negative ? colors.critical : colors.finance;
     final theme = Theme.of(context);
     final types = ref.watch(accountTypesProvider).value ?? const [];
-    final icon = accountIconFor(account.type, types);
+    final iconValue = accountIconValueFor(account.type, types);
     final currencyCode = ref.watch(settingsProvider).currencyCode;
 
     return Material(
@@ -60,7 +68,7 @@ class AccountCard extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(icon, size: 16, color: dotColor),
+                    IconOrEmoji(value: iconValue, size: 16, color: dotColor),
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 6),

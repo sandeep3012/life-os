@@ -31,7 +31,7 @@ List<Transaction> _inMonth(List<Transaction> all, DateTime month) {
 
 int _expenseTotal(List<Transaction> txns) {
   return txns
-      .where((t) => t.amountMinor < 0)
+      .where((t) => t.paymentMode != 'transfer' && t.amountMinor < 0)
       .fold<int>(0, (sum, t) => sum + t.amountMinor.abs());
 }
 
@@ -57,7 +57,7 @@ final previousMonthExpenseTotalMinorProvider = Provider<int>((ref) {
 final categoryBreakdownProvider = Provider<List<CategorySpend>>((ref) {
   final txns = ref
       .watch(monthTransactionsProvider)
-      .where((t) => t.amountMinor < 0)
+      .where((t) => t.paymentMode != 'transfer' && t.amountMinor < 0)
       .toList();
   final categories = ref.watch(categoriesProvider).value ?? const [];
   final categoryById = {for (final c in categories) c.id: c};

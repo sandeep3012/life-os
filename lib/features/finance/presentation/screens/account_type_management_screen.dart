@@ -24,7 +24,7 @@ class AccountTypeManagementScreen extends ConsumerWidget {
                 final t = types[index];
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(child: Icon(resolveIcon(t.icon))),
+                  leading: CircleAvatar(child: IconOrEmoji(value: t.icon)),
                   title: Text(t.name),
                   onTap: () => _openEditor(context, ref, existing: t),
                   trailing: IconButton(
@@ -194,6 +194,20 @@ class _AccountTypeEditorSheetState extends State<_AccountTypeEditorSheet> {
                       size: 20,
                       color: _icon == name ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
                     ),
+                  ),
+                ),
+              for (final emoji in pickableEmojis)
+                InkWell(
+                  onTap: () => setState(() => _icon = emoji),
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    width: 40, height: 40, alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _icon == emoji ? theme.colorScheme.primaryContainer : Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: _icon == emoji ? theme.colorScheme.primary : theme.colorScheme.outlineVariant, width: _icon == emoji ? 2 : 1),
+                    ),
+                    child: Text(emoji, style: const TextStyle(fontSize: 20)),
                   ),
                 ),
             ],

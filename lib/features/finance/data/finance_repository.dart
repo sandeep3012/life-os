@@ -196,6 +196,12 @@ class FinanceRepository {
     );
   }
 
+  Future<void> updateAccount({required String id, required String name, required String type, required int balanceMinor}) {
+    return (_db.update(_db.accounts)..where((a) => a.id.equals(id))).write(
+      AccountsCompanion(name: Value(name), type: Value(type), balanceMinor: Value(balanceMinor), updatedAt: Value(DateTime.now())),
+    );
+  }
+
   /// How many other rows reference this account — the gate for whether it
   /// can be hard-deleted (only when both are zero) or must be deactivated
   /// instead.
@@ -255,6 +261,18 @@ class FinanceRepository {
           updatedAt: Value(DateTime.now()),
         ),
       );
+    });
+  }
+
+  Future<void> transfer({required String fromAccountId, required String toAccountId, required int amountMinor, required DateTime date, String? note}) {
+    return _db.transaction(() async {
+      if (fromAccountId == toAccountId || amountMinor <= 0) throw ArgumentError('Invalid transfer');
+      final from = await (_db.select(_db.accounts)..where((a) => a.id.equals(fromAccountId))).getSingle();
+      final to = await (_db.select(_db.accounts)..where((a) => a.id.equals(toAccountId))).getSingle();
+      await _db.into(_db.transactions).insert(TransactionsCompanion.insert(accountId: fromAccountId, merchant: 'Transfer to ${to.name}', amountMinor: -amountMinor, date: date, note: Value(note), paymentMode: const Value('transfer')));
+      await _db.into(_db.transactions).insert(TransactionsCompanion.insert(accountId: toAccountId, merchant: 'Transfer from ${from.name}', amountMinor: amountMinor, date: date, note: Value(note), paymentMode: const Value('transfer')));
+      await (_db.update(_db.accounts)..where((a) => a.id.equals(fromAccountId))).write(AccountsCompanion(balanceMinor: Value(from.balanceMinor - amountMinor), updatedAt: Value(DateTime.now())));
+      await (_db.update(_db.accounts)..where((a) => a.id.equals(toAccountId))).write(AccountsCompanion(balanceMinor: Value(to.balanceMinor + amountMinor), updatedAt: Value(DateTime.now())));
     });
   }
 
