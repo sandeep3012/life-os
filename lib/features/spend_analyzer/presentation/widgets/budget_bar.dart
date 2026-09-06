@@ -32,7 +32,7 @@ class BudgetBar extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(resolveIcon(progress.category.icon), size: 16, color: color),
+                    IconOrEmoji(value: progress.category.icon, size: 16, color: color),
                     const SizedBox(width: 6),
                     Text(
                       progress.category.name,

@@ -74,7 +74,7 @@ class CategoryManagementScreen extends ConsumerWidget {
                   leading: CircleAvatar(
                     backgroundColor: color.withValues(alpha: 0.16),
                     foregroundColor: color,
-                    child: Icon(resolveIcon(c.icon)),
+                    child: IconOrEmoji(value: c.icon),
                   ),
                   title: Text(c.name),
                   subtitle: Text(c.kind),
@@ -244,6 +244,13 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
                   color: Color(int.parse(_colorHex.replaceFirst('#', '0xFF'))),
                   onTap: () => setState(() => _icon = name),
                 ),
+              for (final emoji in pickableEmojis)
+                _IconChoice(
+                  emoji: emoji,
+                  selected: _icon == emoji,
+                  color: Color(int.parse(_colorHex.replaceFirst('#', '0xFF'))),
+                  onTap: () => setState(() => _icon = emoji),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -287,13 +294,15 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
 
 class _IconChoice extends StatelessWidget {
   const _IconChoice({
-    required this.icon,
+    this.icon,
+    this.emoji,
     required this.selected,
     required this.color,
     required this.onTap,
   });
 
-  final IconData icon;
+  final IconData? icon;
+  final String? emoji;
   final bool selected;
   final Color color;
   final VoidCallback onTap;
@@ -315,7 +324,9 @@ class _IconChoice extends StatelessWidget {
             width: selected ? 2 : 1,
           ),
         ),
-        child: Icon(icon, size: 20, color: selected ? color : Theme.of(context).colorScheme.onSurfaceVariant),
+        child: emoji != null
+            ? Text(emoji!, style: const TextStyle(fontSize: 20))
+            : Icon(icon, size: 20, color: selected ? color : Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     );
   }

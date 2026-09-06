@@ -64,4 +64,22 @@ const pickableIcons = [
   'account_balance',
 ];
 
+/// A curated set of Unicode choices that can be stored alongside Material
+/// icon names. Unicode strings are rendered as text by [IconOrEmoji].
+const pickableEmojis = ['🍽️', '🛒', '🚗', '🏠', '🎬', '💳', '🏥', '🎓', '✈️', '🏋️', '🐾', '👕', '🎮', '🎁', '🔧', '📶', '👛', '💰', '🏦', '☕', '🎵', '📚', '❤️', '⭐'];
+
 IconData resolveIcon(String? name) => _iconsByName[name] ?? Icons.label_rounded;
+
+bool isEmojiIcon(String? value) => value != null && !_iconsByName.containsKey(value);
+
+class IconOrEmoji extends StatelessWidget {
+  const IconOrEmoji({super.key, required this.value, this.size = 20, this.color});
+  final String? value;
+  final double size;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => isEmojiIcon(value)
+      ? Text(value!, style: TextStyle(fontSize: size, color: color))
+      : Icon(resolveIcon(value), size: size, color: color);
+}

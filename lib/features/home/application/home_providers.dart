@@ -15,7 +15,7 @@ final weekSpendMinorProvider = Provider<int>((ref) {
   final transactions = ref.watch(transactionsProvider).value ?? const [];
   final weekStart = startOfWeek(DateTime.now());
   return transactions
-      .where((t) => t.amountMinor < 0 && !t.date.isBefore(weekStart))
+      .where((t) => t.paymentMode != 'transfer' && t.amountMinor < 0 && !t.date.isBefore(weekStart))
       .fold<int>(0, (sum, t) => sum + t.amountMinor.abs());
 });
 
@@ -28,7 +28,7 @@ final lastWeekSpendMinorProvider = Provider<int>((ref) {
   return transactions
       .where(
         (t) =>
-            t.amountMinor < 0 &&
+            t.paymentMode != 'transfer' && t.amountMinor < 0 &&
             !t.date.isBefore(lastWeekStart) &&
             t.date.isBefore(thisWeekStart),
       )
@@ -45,15 +45,15 @@ class TodayTasks {
   int get remaining => total - doneCount;
 }
 
-/// Tasks due today plus undated open tasks — the same set the Tasks screen's
-/// "Today" filter shows, so the two views can't disagree.
+/// Tasks due today plus undated tasks — the same set the Tasks screen's
+/// "Today" filter shows, including completed tasks so the dashboard can
+/// report an accurate completed/total ratio.
 final todayTasksProvider = Provider<TodayTasks>((ref) {
   final all = ref.watch(allTasksProvider).value ?? const [];
   final now = DateTime.now();
   final tasks =
       all
           .where((t) => t.dueDate == null || isSameDay(t.dueDate!, now))
-          .where((t) => t.dueDate != null || t.status == 'open')
           .toList()
         ..sort((a, b) {
           if (a.dueDate == null && b.dueDate == null) return 0;

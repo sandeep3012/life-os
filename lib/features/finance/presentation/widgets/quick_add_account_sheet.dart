@@ -19,29 +19,33 @@ Future<QuickAddAccountResult?> showQuickAddAccountSheet(
   BuildContext context, {
   required List<AccountType> accountTypes,
   required String currencySymbol,
+  Account? initial,
 }) {
   return showModalBottomSheet<QuickAddAccountResult>(
     context: context,
     isScrollControlled: true,
     builder: (context) =>
-        _QuickAddAccountSheet(accountTypes: accountTypes, currencySymbol: currencySymbol),
+        _QuickAddAccountSheet(accountTypes: accountTypes, currencySymbol: currencySymbol, initial: initial),
   );
 }
 
 class _QuickAddAccountSheet extends StatefulWidget {
-  const _QuickAddAccountSheet({required this.accountTypes, required this.currencySymbol});
+  const _QuickAddAccountSheet({required this.accountTypes, required this.currencySymbol, this.initial});
 
   final List<AccountType> accountTypes;
   final String currencySymbol;
+  final Account? initial;
 
   @override
   State<_QuickAddAccountSheet> createState() => _QuickAddAccountSheetState();
 }
 
 class _QuickAddAccountSheetState extends State<_QuickAddAccountSheet> {
-  final _nameController = TextEditingController();
-  final _balanceController = TextEditingController();
-  late String _type = widget.accountTypes.isEmpty ? '' : widget.accountTypes.first.name;
+  late final _nameController = TextEditingController(text: widget.initial?.name);
+  late final _balanceController = TextEditingController(
+    text: widget.initial == null ? '' : (widget.initial!.balanceMinor / 100).toStringAsFixed(2),
+  );
+  late String _type = widget.initial?.type ?? (widget.accountTypes.isEmpty ? '' : widget.accountTypes.first.name);
 
   @override
   void initState() {
@@ -69,7 +73,7 @@ class _QuickAddAccountSheetState extends State<_QuickAddAccountSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('New account', style: Theme.of(context).textTheme.titleLarge),
+          Text(widget.initial == null ? 'New account' : 'Edit account', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 16),
           TextField(
             controller: _nameController,
@@ -84,7 +88,7 @@ class _QuickAddAccountSheetState extends State<_QuickAddAccountSheet> {
             children: [
               for (final t in widget.accountTypes)
                 ChoiceChip(
-                  avatar: Icon(resolveIcon(t.icon), size: 16),
+                  avatar: IconOrEmoji(value: t.icon, size: 16),
                   label: Text(t.name),
                   selected: _type == t.name,
                   onSelected: (_) => setState(() => _type = t.name),
@@ -95,7 +99,7 @@ class _QuickAddAccountSheetState extends State<_QuickAddAccountSheet> {
           TextField(
             controller: _balanceController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(hintText: 'Starting balance (${widget.currencySymbol})'),
+            decoration: InputDecoration(hintText: 'Balance (${widget.currencySymbol})'),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -113,7 +117,7 @@ class _QuickAddAccountSheetState extends State<_QuickAddAccountSheet> {
                         ),
                       );
                     },
-              child: const Text('Add account'),
+              child: Text(widget.initial == null ? 'Add account' : 'Save changes'),
             ),
           ),
         ],

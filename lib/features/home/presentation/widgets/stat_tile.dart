@@ -10,6 +10,8 @@ class StatTile extends StatelessWidget {
     this.delta,
     this.deltaColor,
     this.deltaIcon,
+    this.progress,
+    this.progressColor,
     this.onTap,
   });
 
@@ -20,6 +22,8 @@ class StatTile extends StatelessWidget {
   final String? delta;
   final Color? deltaColor;
   final IconData? deltaIcon;
+  final double? progress;
+  final Color? progressColor;
   final VoidCallback? onTap;
 
   @override
@@ -28,12 +32,13 @@ class StatTile extends StatelessWidget {
 
     return SizedBox(
       width: 152,
+      height: 124,
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -82,6 +87,18 @@ class StatTile extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                ],
+                if (progress != null) ...[
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progress!.clamp(0.0, 1.0).toDouble(),
+                      minHeight: 4,
+                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation(progressColor ?? accent),
+                    ),
                   ),
                 ],
               ],

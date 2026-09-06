@@ -35,9 +35,7 @@ class HabitTile extends StatelessWidget {
         ? null
         : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
     final iconColor = categoryColor ?? accent;
-    final icon = category == null
-        ? Icons.local_fire_department_rounded
-        : resolveIcon(category.icon);
+    final iconValue = category == null ? null : category.icon;
 
     return InkWell(
       onTap: onTap,
@@ -52,7 +50,9 @@ class HabitTile extends StatelessWidget {
                 color: iconColor.withValues(alpha: 0.16),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: iconColor, size: 20),
+              child: iconValue == null
+                  ? Icon(Icons.local_fire_department_rounded, color: iconColor, size: 20)
+                  : IconOrEmoji(value: iconValue, color: iconColor, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -92,6 +92,12 @@ class HabitTile extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            const SizedBox(width: 10),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ],
         ),

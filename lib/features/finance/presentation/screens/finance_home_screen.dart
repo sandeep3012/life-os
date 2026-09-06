@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../app/router/route_paths.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/utils/date_utils.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../../spend_analyzer/presentation/widgets/budget_bar.dart';
 import '../../application/finance_providers.dart';
@@ -47,6 +50,15 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final categoryById = {for (final c in categories) c.id: c};
     final currencyCode = ref.watch(settingsProvider).currencyCode;
+    final transactions = ref.watch(transactionsProvider).value ?? const <Transaction>[];
+    final monthStart = DateTime(DateTime.now().year, DateTime.now().month);
+    final monthEnd = DateTime(DateTime.now().year, DateTime.now().month + 1);
+    final monthIncome = transactions
+        .where((t) => t.paymentMode != 'transfer' && !t.date.isBefore(monthStart) && t.date.isBefore(monthEnd) && t.amountMinor > 0)
+        .fold<int>(0, (sum, t) => sum + t.amountMinor);
+    final monthSpend = transactions
+        .where((t) => t.paymentMode != 'transfer' && !t.date.isBefore(monthStart) && t.date.isBefore(monthEnd) && t.amountMinor < 0)
+        .fold<int>(0, (sum, t) => sum + t.amountMinor.abs());
 
     return Scaffold(
       body: SafeArea(
@@ -119,6 +131,21 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                   ),
                 ),
                 SliverToBoxAdapter(
+                  child: Card(
+                    margin: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Expanded(flex: 2, child: Text(DateFormat('MMMM yyyy').format(monthStart), style: theme.textTheme.titleSmall)),
+                          Expanded(child: _MonthAmount(label: 'Income', value: monthIncome, color: context.appColors.good, currencyCode: currencyCode)),
+                          Expanded(child: _MonthAmount(label: 'Spend', value: monthSpend, color: context.appColors.critical, currencyCode: currencyCode)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
                     child: Row(
@@ -163,15 +190,16 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
+        tooltip: _section == _FinanceSection.transactions ? 'New transaction' : 'New budget',
         onPressed: () => _handleFab(context, ref),
-        icon: const Icon(Icons.add_rounded),
-        label: Text(_fabLabel(ref)),
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }
 
   void _showFinanceMenu(BuildContext context) {
+    final hostContext = context;
     showModalBottomSheet<void>(
       context: context,
       builder: (context) => SafeArea(
@@ -211,6 +239,14 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.swap_horiz_rounded),
+              title: const Text('Transfer between accounts'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Future.microtask(() => _showTransferDialog(hostContext));
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.summarize_rounded),
               title: const Text('Reports'),
               onTap: () {
@@ -222,6 +258,41 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _showTransferDialog(BuildContext context) async {
+    final accounts = ref.read(transactableAccountsProvider);
+    if (accounts.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add at least two active accounts to transfer money.')));
+      return;
+    }
+    final amountController = TextEditingController();
+    String fromId = accounts.first.id;
+    String toId = accounts[1].id;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(builder: (context, setState) {
+        final valid = fromId != toId && (double.tryParse(amountController.text.trim()) ?? 0) > 0;
+        return AlertDialog(
+          title: const Text('Transfer money'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            DropdownButtonFormField<String>(value: fromId, decoration: const InputDecoration(labelText: 'From account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => fromId = v!)),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(value: toId, decoration: const InputDecoration(labelText: 'To account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => toId = v!)),
+            const SizedBox(height: 12),
+            TextField(controller: amountController, onChanged: (_) => setState(() {}), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Amount')),
+          ]),
+          actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')), FilledButton(onPressed: valid ? () => Navigator.pop(dialogContext, true) : null, child: const Text('Transfer'))],
+        );
+      }),
+    );
+    final amount = ((double.tryParse(amountController.text.trim()) ?? 0) * 100).round();
+    // The dialog route is still animating out when showDialog completes. Keep
+    // the controller alive until that transition has finished; disposing it
+    // immediately causes TextField to rebuild against a dead controller.
+    Future<void>.delayed(const Duration(milliseconds: 400), amountController.dispose);
+    if (confirmed != true || amount <= 0) return;
+    await ref.read(financeControllerProvider).transfer(fromAccountId: fromId, toAccountId: toId, amountMinor: amount, date: DateTime.now());
   }
 
   String _fabLabel(WidgetRef ref) {
@@ -296,9 +367,42 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
   }
 }
 
+class _MonthAmount extends StatelessWidget {
+  const _MonthAmount({required this.label, required this.value, required this.color, required this.currencyCode});
+
+  final String label;
+  final int value;
+  final Color color;
+  final String currencyCode;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelSmall),
+        Text(
+          formatMinor(value, currencyCode: currencyCode, showDecimals: false),
+          style: TextStyle(color: color, fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+}
+
 /// Delay before a swiped-away transaction/budget is actually deleted from the
 /// database, giving the snackbar's Undo button a window to cancel it.
 const _undoWindow = Duration(seconds: 4);
+
+class _DateHeader extends StatelessWidget {
+  const _DateHeader(this.label);
+  final String label;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
+    child: Text(label, style: Theme.of(context).textTheme.labelLarge),
+  );
+}
 
 class _TransactionsSliver extends ConsumerStatefulWidget {
   const _TransactionsSliver({required this.categoryById, required this.currencyCode});
@@ -340,11 +444,21 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
 
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
-      sliver: SliverList.separated(
-        itemCount: transactions.length,
-        separatorBuilder: (_, _) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final t = transactions[index];
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final entries = <Object>[];
+          DateTime? previous;
+          for (final transaction in transactions) {
+            final day = DateTime(transaction.date.year, transaction.date.month, transaction.date.day);
+            if (previous == null || !isSameDay(day, previous!)) {
+              entries.add(_DateHeader(_dateLabel(day)));
+              previous = day;
+            }
+            entries.add(transaction);
+          }
+          final entry = entries[index];
+          if (entry is _DateHeader) return entry;
+          final t = entry as Transaction;
           return Dismissible(
             key: ValueKey(t.id),
             direction: DismissDirection.endToStart,
@@ -357,9 +471,22 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
               onEdit: () => _editTransaction(t),
             ),
           );
-        },
+        }, childCount: transactions.length + _dateGroupCount(transactions)),
       ),
     );
+  }
+
+  int _dateGroupCount(List<Transaction> transactions) {
+    final days = <DateTime>{};
+    for (final t in transactions) days.add(DateTime(t.date.year, t.date.month, t.date.day));
+    return days.length;
+  }
+
+  String _dateLabel(DateTime date) {
+    final now = DateTime.now();
+    if (isSameDay(date, now)) return 'Today';
+    if (isSameDay(date, now.subtract(const Duration(days: 1)))) return 'Yesterday';
+    return DateFormat('MMM d, yyyy').format(date);
   }
 
   Future<void> _editTransaction(Transaction t) async {
