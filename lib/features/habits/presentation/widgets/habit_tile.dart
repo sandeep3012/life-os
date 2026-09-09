@@ -17,9 +17,7 @@ class HabitTile extends StatelessWidget {
   final HabitProgress progress;
   final ValueChanged<bool> onToggleToday;
 
-  /// Navigates to the habit's detail screen — kept separate from the
-  /// streak-badge tap below (which toggles today's completion), same
-  /// split-gesture convention used for calendar event tiles.
+  /// Only the trailing arrow navigates to the habit's detail screen.
   final VoidCallback onTap;
 
   @override
@@ -37,9 +35,7 @@ class HabitTile extends StatelessWidget {
     final iconColor = categoryColor ?? accent;
     final iconValue = category == null ? null : category.icon;
 
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
+    return Padding(
         padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
         child: Row(
           children: [
@@ -64,7 +60,9 @@ class HabitTile extends StatelessWidget {
                     style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
-                  Row(
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 5,
                     children: [
                       for (var i = 1; i <= 7; i++) ...[
                         _WeekDot(
@@ -72,7 +70,6 @@ class HabitTile extends StatelessWidget {
                           on: progress.weekCompletion[i] ?? false,
                           color: colors.habits,
                         ),
-                        if (i != 7) const SizedBox(width: 5),
                       ],
                     ],
                   ),
@@ -80,28 +77,46 @@ class HabitTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () => onToggleToday(!completedToday),
-              child: Row(
-                children: [
-                  Icon(Icons.local_fire_department_rounded, size: 15, color: accent),
-                  const SizedBox(width: 3),
-                  Text(
-                    atRisk ? 'at risk' : '${progress.streakDays}',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: accent),
+            Semantics(
+              button: true,
+              toggled: completedToday,
+              label: '${progress.habit.name}: ${completedToday ? 'mark incomplete today' : 'mark done today'}, ${progress.streakDays} day streak${atRisk ? ', at risk' : ''}',
+              child: Tooltip(
+                message: completedToday ? 'Mark incomplete today' : 'Mark done today',
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () => onToggleToday(!completedToday),
+                    child: SizedBox(
+                      width: 52,
+                      height: 56,
+                      child: ExcludeSemantics(child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(completedToday ? Icons.check_circle_rounded : Icons.local_fire_department_rounded,
+                            size: 24, color: completedToday ? colors.habits : accent),
+                          Text(atRisk ? 'at risk' : '${progress.streakDays}d',
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: accent)),
+                        ],
+                      )),
+                    ),
                   ),
-                ],
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: 'Open ${progress.habit.name}',
+              onPressed: onTap,
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              icon: const Icon(Icons.chevron_right_rounded),
+              iconSize: 28,
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ],
         ),
-      ),
     );
   }
 }
