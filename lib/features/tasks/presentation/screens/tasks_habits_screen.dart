@@ -192,11 +192,18 @@ class _TasksPane extends ConsumerWidget {
   }
 }
 
-class _HabitsPane extends ConsumerWidget {
+class _HabitsPane extends ConsumerStatefulWidget {
   const _HabitsPane();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_HabitsPane> createState() => _HabitsPaneState();
+}
+
+class _HabitsPaneState extends ConsumerState<_HabitsPane> {
+  String? _selectedCategory;
+
+  @override
+  Widget build(BuildContext context) {
     final progress = ref.watch(habitsWithProgressProvider);
 
     if (progress.isEmpty) {
@@ -216,6 +223,11 @@ class _HabitsPane extends ConsumerWidget {
       final name = item.category?.name ?? _fallbackGroup(item.habit.name);
       groups.putIfAbsent(name, () => []).add(item);
     }
+    // A removed/archived category must not leave an invisible active filter.
+    final selectedCategory = groups.containsKey(_selectedCategory)
+        ? _selectedCategory
+        : null;
+    final visible = selectedCategory == null ? progress : groups[selectedCategory]!;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
@@ -225,26 +237,38 @@ class _HabitsPane extends ConsumerWidget {
           total: totalThisWeek,
           progress: progress,
         ),
-        Column(
-          children: [
-              for (final entry in groups.entries) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-                  child: Align(alignment: Alignment.centerLeft, child: Text(entry.key, style: Theme.of(context).textTheme.labelLarge)),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              ChoiceChip(
+                label: const Text('All'),
+                selected: selectedCategory == null,
+                onSelected: (_) => setState(() => _selectedCategory = null),
+              ),
+              for (final category in groups.keys) ...[
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: Text(category),
+                  selected: selectedCategory == category,
+                  onSelected: (_) => setState(() => _selectedCategory = category),
                 ),
-                for (var index = 0; index < entry.value.length; index++) ...[
-                  HabitTile(
-                    key: ValueKey(entry.value[index].habit.id),
-                    progress: entry.value[index],
-                    onToggleToday: (completed) => ref.read(habitsControllerProvider).toggleToday(entry.value[index].habit, completed),
-                    onTap: () => context.push(RoutePaths.habitDetail(entry.value[index].habit.id)),
-                  ).animate().fadeIn(duration: 200.ms),
-                  if (index != entry.value.length - 1 || entry.key != groups.keys.last)
-                    const Divider(height: 1, indent: 56),
-                ],
               ],
-          ],
+            ]),
+          ),
         ),
+        for (var index = 0; index < visible.length; index++) ...[
+          HabitTile(
+            key: ValueKey(visible[index].habit.id),
+            progress: visible[index],
+            onToggleToday: (completed) => ref.read(habitsControllerProvider)
+                .toggleToday(visible[index].habit, completed),
+            onTap: () => context.push(RoutePaths.habitDetail(visible[index].habit.id)),
+          ),
+          if (index != visible.length - 1)
+            const Divider(height: 1, indent: 56),
+        ],
       ],
     );
   }

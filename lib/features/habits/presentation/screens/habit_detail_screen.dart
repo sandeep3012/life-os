@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart' hide isSameDay;
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../application/habits_providers.dart';
 import '../widgets/quick_add_habit_sheet.dart';
@@ -19,6 +21,7 @@ class HabitDetailScreen extends ConsumerStatefulWidget {
 
 class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
   bool _busy = false;
+  DateTime _focusedMonth = DateTime.now();
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +49,13 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
         : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
     final accent = categoryColor ?? colors.habits;
     final icon = category == null ? Icons.local_fire_department_rounded : resolveIcon(category.icon);
-    final history = ref.watch(habitLogHistoryProvider(widget.habitId)).value ?? const [];
+    final historyState = ref.watch(habitLogHistoryProvider(widget.habitId));
+    final history = historyState.value ?? const <HabitLog>[];
+    final today = dateOnly(DateTime.now());
+    final created = dateOnly(habit.createdAt);
+    final byDay = {for (final log in history) dateOnly(log.date): log};
+    final recentDays = [for (var i = 0; i < 7; i++) DateTime(today.year, today.month, today.day - i)]
+        .where((day) => !day.isBefore(created)).toList();
 
     return Scaffold(
       appBar: AppBar(title: Text(habit.name)),
@@ -160,21 +169,77 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
               ),
             ),
           const SizedBox(height: 24),
-          Text('History', style: theme.textTheme.titleSmall),
+          Text('Last 7 days', style: theme.textTheme.titleSmall),
           const SizedBox(height: 8),
-          if (history.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                'No logs yet.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+          if (historyState.isLoading)
+            const Center(child: CircularProgressIndicator())
+          else if (historyState.hasError)
+            const Text('Could not load habit history. Please try again.')
+          else ...[
+            for (final day in recentDays)
+              if (byDay[day] case final log?)
+                _HistoryTile(habit: habit, log: log)
+              else
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(day == today ? Icons.circle_outlined : Icons.cancel_outlined,
+                    color: day == today ? theme.colorScheme.onSurfaceVariant : colors.critical),
+                  title: Text(DateFormat.yMMMEd().format(day)),
+                  subtitle: Text(day == today ? 'Pending' : 'Absent'),
                 ),
+            const SizedBox(height: 24),
+            Text('Completion calendar', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            TableCalendar<void>(
+              firstDay: DateTime(created.year, created.month),
+              lastDay: DateTime(today.year, today.month + 1, 0),
+              focusedDay: _focusedMonth.isBefore(created) ? created : _focusedMonth,
+              startingDayOfWeek: StartingDayOfWeek.monday,
+              calendarFormat: CalendarFormat.month,
+              availableGestures: AvailableGestures.horizontalSwipe,
+              headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+              calendarStyle: const CalendarStyle(outsideDaysVisible: false),
+              onPageChanged: (day) => setState(() => _focusedMonth = day),
+              calendarBuilders: CalendarBuilders<void>(
+                defaultBuilder: (context, day, _) => _calendarDay(context, day, created, today, byDay),
+                todayBuilder: (context, day, _) => _calendarDay(context, day, created, today, byDay),
               ),
-            )
-          else
-            for (final log in history) _HistoryTile(habit: habit, log: log),
+            ),
+            const SizedBox(height: 12),
+            Wrap(spacing: 16, runSpacing: 8, children: [
+              Text('✓ Done', style: TextStyle(color: colors.habits)),
+              Text('× Absent', style: TextStyle(color: colors.critical)),
+              const Text('○ Today: pending'),
+            ]),
+            const SizedBox(height: 8),
+            Text('Dates before this habit was created and future dates are unmarked.', style: theme.textTheme.bodySmall),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _calendarDay(BuildContext context, DateTime day, DateTime created, DateTime today, Map<DateTime, HabitLog> logs) {
+    final date = dateOnly(day);
+    final eligible = !date.isBefore(created) && !date.isAfter(today);
+    final done = eligible && (logs[date]?.completed ?? false);
+    final absent = eligible && date.isBefore(today) && !done;
+    final colors = context.appColors;
+    final color = done ? colors.habits : absent ? colors.critical : Theme.of(context).colorScheme.onSurfaceVariant;
+    return Semantics(
+      label: '${DateFormat.yMMMEd().format(date)}: ${done ? 'Done' : absent ? 'Absent' : eligible ? 'Pending' : 'Not tracked'}',
+      child: Container(
+        margin: const EdgeInsets.all(3),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: done || absent ? color.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: date == today ? Border.all(color: color) : null,
+        ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text('${day.day}', style: TextStyle(color: color)),
+          if (done || absent) Icon(done ? Icons.check_rounded : Icons.close_rounded, size: 13, color: color),
+        ]),
       ),
     );
   }
@@ -236,16 +301,17 @@ class _HistoryTile extends ConsumerWidget {
     final theme = Theme.of(context);
     final colors = context.appColors;
 
+    final pending = !log.completed && isSameDay(log.date, DateTime.now());
+    final status = log.completed ? 'Done' : pending ? 'Pending' : 'Absent';
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(
-        log.completed ? Icons.check_circle_rounded : Icons.circle_outlined,
-        color: log.completed ? colors.habits : theme.colorScheme.onSurfaceVariant,
+        log.completed ? Icons.check_circle_rounded : pending ? Icons.circle_outlined : Icons.cancel_outlined,
+        color: log.completed ? colors.habits : pending ? theme.colorScheme.onSurfaceVariant : colors.critical,
       ),
       title: Text(DateFormat.yMMMEd().format(log.date)),
-      subtitle: log.notes == null || log.notes!.isEmpty
-          ? null
-          : Text(log.notes!, style: theme.textTheme.bodySmall),
+      subtitle: Text(log.notes == null || log.notes!.isEmpty ? status : '$status · ${log.notes!}',
+        style: theme.textTheme.bodySmall),
       trailing: IconButton(
         tooltip: 'Edit note',
         icon: const Icon(Icons.edit_note_rounded, size: 20),

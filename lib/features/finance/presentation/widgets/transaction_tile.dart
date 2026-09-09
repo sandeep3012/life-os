@@ -62,7 +62,7 @@ class TransactionTile extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          '${category?.name ?? 'Uncategorized'} · ${_relativeDate(transaction.date)}',
+                          '${transaction.paymentMode == 'transfer' ? 'Transfer' : category?.name ?? 'Uncategorized'} · ${_relativeDate(transaction.date)}',
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
