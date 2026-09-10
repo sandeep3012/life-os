@@ -38,7 +38,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             lastDay: DateTime(2035),
             currentDay: dateOnly(DateTime.now()),
             selectedDayPredicate: (day) => dateOnly(day) == selectedDay,
-            eventLoader: (day) => (markersByDay[dateOnly(day)] ?? const {}).toList(),
+            eventLoader: (day) =>
+                (markersByDay[dateOnly(day)] ?? const {}).toList(),
             onDaySelected: (selected, focused) {
               ref.read(selectedCalendarDayProvider.notifier).select(selected);
               setState(() => _focusedMonth = focused);
@@ -55,7 +56,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 color: theme.colorScheme.primaryContainer,
                 shape: BoxShape.circle,
               ),
-              todayTextStyle: TextStyle(color: theme.colorScheme.onPrimaryContainer),
+              todayTextStyle: TextStyle(
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
               selectedDecoration: BoxDecoration(
                 color: theme.colorScheme.primary,
                 shape: BoxShape.circle,
@@ -91,7 +94,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(DateFormat.yMMMEd().format(selectedDay), style: theme.textTheme.titleSmall),
+                Text(
+                  DateFormat.yMMMEd().format(selectedDay),
+                  style: theme.textTheme.titleSmall,
+                ),
                 Wrap(
                   spacing: 10,
                   children: [
@@ -117,19 +123,25 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
                     itemCount: dayItems.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) => _buildItemTile(context, dayItems[index]),
+                    itemBuilder: (context, index) =>
+                        _buildItemTile(context, dayItems[index]),
                   ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          final result = await showQuickAddEventSheet(context, initialDate: selectedDay);
+          final result = await showQuickAddEventSheet(
+            context,
+            initialDate: selectedDay,
+          );
           if (result == null) return;
           await ref
               .read(calendarControllerProvider)
               .addEvent(
                 title: result.title,
+                description: result.description,
+                schedule: result.schedule,
                 startTime: result.startTime,
                 endTime: result.endTime,
                 frequency: result.frequency,
@@ -160,10 +172,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
         color: Theme.of(context).colorScheme.errorContainer,
-        child: Icon(Icons.delete_outline_rounded, color: Theme.of(context).colorScheme.onErrorContainer),
+        child: Icon(
+          Icons.delete_outline_rounded,
+          color: Theme.of(context).colorScheme.onErrorContainer,
+        ),
       ),
       confirmDismiss: (_) async {
-        final choice = await _confirmDelete(context, isPartOfSeries: recurrenceId != null);
+        final choice = await _confirmDelete(
+          context,
+          isPartOfSeries: recurrenceId != null,
+        );
         switch (choice) {
           case _DeleteChoice.cancel:
             return false;
@@ -171,18 +189,26 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             await ref.read(calendarControllerProvider).deleteEvent(eventId);
             return true;
           case _DeleteChoice.allInSeries:
-            await ref.read(calendarControllerProvider).deleteEventSeries(recurrenceId!);
+            await ref
+                .read(calendarControllerProvider)
+                .deleteEventSeries(recurrenceId!);
             return true;
         }
       },
-      child: CalendarItemTile(item: item, onTap: () => _editEvent(context, eventId)),
+      child: CalendarItemTile(
+        item: item,
+        onTap: () => _editEvent(context, eventId),
+      ),
     );
   }
 
   /// Offers "delete this event" alone for a standalone event, or a third
   /// "delete all events in this series" option when the event belongs to a
   /// recurring series (see the calendar delete-series plan notes).
-  Future<_DeleteChoice> _confirmDelete(BuildContext context, {required bool isPartOfSeries}) async {
+  Future<_DeleteChoice> _confirmDelete(
+    BuildContext context, {
+    required bool isPartOfSeries,
+  }) async {
     final choice = await showDialog<_DeleteChoice>(
       context: context,
       builder: (context) => AlertDialog(
@@ -199,7 +225,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           ),
           if (isPartOfSeries)
             TextButton(
-              onPressed: () => Navigator.of(context).pop(_DeleteChoice.allInSeries),
+              onPressed: () =>
+                  Navigator.of(context).pop(_DeleteChoice.allInSeries),
               child: Text(
                 'Delete all events',
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -221,28 +248,57 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Future<void> _editEvent(BuildContext context, String eventId) async {
     final event = await ref.read(calendarRepositoryProvider).getEvent(eventId);
     if (event == null || !context.mounted) return;
+    final repo = ref.read(calendarRepositoryProvider);
+    final seriesRule = event.recurrenceId == null
+        ? null
+        : await repo.getSeriesSchedule(event);
+    if (!context.mounted) return;
     final result = await showQuickAddEventSheet(
       context,
+      seriesRule: seriesRule,
       initialDate: dateOnly(event.startTime),
       initial: event,
       onDelete: () async {
-        final choice = await _confirmDelete(context, isPartOfSeries: event.recurrenceId != null);
+        final choice = await _confirmDelete(
+          context,
+          isPartOfSeries: event.recurrenceId != null,
+        );
         switch (choice) {
           case _DeleteChoice.cancel:
             return;
           case _DeleteChoice.thisEvent:
             await ref.read(calendarControllerProvider).deleteEvent(eventId);
           case _DeleteChoice.allInSeries:
-            await ref.read(calendarControllerProvider).deleteEventSeries(event.recurrenceId!);
+            await ref
+                .read(calendarControllerProvider)
+                .deleteEventSeries(event.recurrenceId!);
         }
       },
     );
     if (result == null) return;
+    if (result.editFollowing) {
+      await ref
+          .read(calendarControllerProvider)
+          .updateFollowingEvents(
+            id: eventId,
+            title: result.title,
+            description: result.description,
+            schedule: result.schedule!,
+            startTime: result.startTime,
+            endTime: result.endTime,
+            reminderEnabled: result.reminderEnabled,
+            reminderMode: result.reminderMode,
+            reminderMinutesBefore: result.reminderMinutesBefore,
+          );
+      return;
+    }
     await ref
         .read(calendarControllerProvider)
         .updateEvent(
           id: eventId,
           title: result.title,
+          description: result.description,
+          schedule: result.schedule,
           startTime: result.startTime,
           endTime: result.endTime,
           reminderEnabled: result.reminderEnabled,
@@ -265,11 +321,18 @@ class _LegendDot extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
         const SizedBox(width: 4),
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            fontSize: 11,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );

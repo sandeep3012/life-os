@@ -33,7 +33,7 @@ class HabitTile extends StatelessWidget {
         ? null
         : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
     final iconColor = categoryColor ?? accent;
-    final iconValue = category == null ? null : category.icon;
+    final iconValue = category?.icon;
 
     return Padding(
         padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
@@ -66,7 +66,7 @@ class HabitTile extends StatelessWidget {
                     children: [
                       for (var i = 1; i <= 7; i++) ...[
                         _WeekDot(
-                          label: _weekdayLabels[i - 1],
+                          label: progress.weekCompletion.containsKey(i) ? _weekdayLabels[i - 1] : '–',
                           on: progress.weekCompletion[i] ?? false,
                           color: colors.habits,
                         ),
@@ -82,13 +82,13 @@ class HabitTile extends StatelessWidget {
               toggled: completedToday,
               label: '${progress.habit.name}: ${completedToday ? 'mark incomplete today' : 'mark done today'}, ${progress.streakDays} day streak${atRisk ? ', at risk' : ''}',
               child: Tooltip(
-                message: completedToday ? 'Mark incomplete today' : 'Mark done today',
+                message: !progress.isScheduledToday ? 'Not scheduled today' : completedToday ? 'Mark incomplete today' : 'Mark done today',
                 child: Material(
                   color: Colors.transparent,
                   borderRadius: BorderRadius.circular(14),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
-                    onTap: () => onToggleToday(!completedToday),
+                    onTap: progress.isScheduledToday ? () => onToggleToday(!completedToday) : null,
                     child: SizedBox(
                       width: 52,
                       height: 56,
@@ -96,7 +96,7 @@ class HabitTile extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(completedToday ? Icons.check_circle_rounded : Icons.local_fire_department_rounded,
-                            size: 24, color: completedToday ? colors.habits : accent),
+                            size: 24, color: !progress.isScheduledToday ? theme.disabledColor : completedToday ? colors.habits : accent),
                           Text(atRisk ? 'at risk' : '${progress.streakDays}d',
                             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: accent)),
                         ],

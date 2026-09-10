@@ -1,4 +1,5 @@
 import '../../../core/database/app_database.dart';
+import 'habit_schedule.dart';
 
 /// Derived view of a [Habit]: current streak and this-week completion, both
 /// computed from [HabitLogs] rather than stored, so they can never drift out
@@ -22,6 +23,9 @@ class HabitProgress {
 
   /// A habit with an active streak that hasn't been logged yet today —
   /// mirrors the "at risk" flag shown on the prototype's habit check-in cards.
+  bool get isScheduledToday => habit.scheduledOn(DateTime.now());
+
   bool get isAtRisk =>
+      isScheduledToday &&
       streakDays > 0 && !(weekCompletion[DateTime.now().weekday] ?? false);
 }

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/reminders/reminder_mode.dart';
+import '../../../../core/scheduling/repeat_schedule.dart';
+import '../../../../core/scheduling/schedule_fields.dart';
+import '../../domain/habit_schedule.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../../finance/presentation/screens/category_management_screen.dart';
 import '../../application/habits_providers.dart';
@@ -11,6 +15,8 @@ class QuickAddHabitResult {
   const QuickAddHabitResult({
     required this.name,
     this.categoryId,
+    this.description,
+    this.schedule,
     this.reminderEnabled = false,
     this.reminderHour,
     this.reminderMinute,
@@ -18,6 +24,8 @@ class QuickAddHabitResult {
   });
 
   final String name;
+  final String? description;
+  final RepeatSchedule? schedule;
   final String? categoryId;
   final bool reminderEnabled;
 
@@ -37,9 +45,8 @@ Future<QuickAddHabitResult?> showQuickAddHabitSheet(
   required List<Category> categories,
   Habit? initial,
 }) {
-  return showModalBottomSheet<QuickAddHabitResult>(
+  return showCompactEditorSheet<QuickAddHabitResult>(
     context: context,
-    isScrollControlled: true,
     builder: (context) => _QuickAddHabitSheet(categories: categories, initial: initial),
   );
 }
@@ -56,6 +63,9 @@ class _QuickAddHabitSheet extends ConsumerStatefulWidget {
 
 class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
   late final _nameController = TextEditingController(text: widget.initial?.name);
+  late final _descriptionController = TextEditingController(text: widget.initial?.description);
+  late RepeatSchedule _schedule = widget.initial?.repeatSchedule ??
+      RepeatSchedule(start: DateTime.now(), frequency: 'daily');
   late List<Category> _categories = List.of(widget.categories);
   late String? _categoryId = widget.initial?.categoryId;
   late bool _reminderEnabled = widget.initial?.reminderEnabled ?? false;
@@ -82,6 +92,7 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
   @override
   void dispose() {
     _nameController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -111,22 +122,10 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        ),
-        child: Column(
+    return CompactEditorSheet(title: _isEditing ? 'Edit habit' : 'New habit', child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              _isEditing ? 'Edit habit' : 'New habit',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
             const SizedBox(height: 16),
             TextField(
               controller: _nameController,
@@ -134,6 +133,13 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(hintText: 'e.g. Morning workout'),
             ),
+            const SizedBox(height: 12),
+            TextField(controller: _descriptionController, maxLines: 1,
+              decoration: const InputDecoration(labelText: 'Description (optional)')),
+            const SizedBox(height: 12),
+            const Text('Start date and time'),
+            ScheduleFields(value: _schedule, onChanged: (value) => setState(() => _schedule = value)),
+            if (_isEditing) const Text('Schedule changes apply from today; earlier history is preserved.'),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               key: ValueKey('$_categoryId#$_categoryFieldEpoch'),
@@ -175,7 +181,7 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Remind me'),
-              subtitle: const Text('Daily notification for this habit'),
+              subtitle: const Text('Reminder on scheduled days'),
               value: _reminderEnabled,
               onChanged: (v) => setState(() => _reminderEnabled = v),
             ),
@@ -205,15 +211,18 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
                   onSelectionChanged: (s) => setState(() => _reminderMode = s.first),
                 ),
               ),
+            if (!_schedule.hasOccurrence) const Text('No scheduled day falls in this date range. Change the end date or weekdays.'),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _nameController.text.trim().isEmpty
+                onPressed: _nameController.text.trim().isEmpty || !_schedule.hasOccurrence
                     ? null
                     : () => Navigator.of(context).pop(
                         QuickAddHabitResult(
                           name: _nameController.text.trim(),
+                          description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+                          schedule: _schedule,
                           categoryId: _categoryId,
                           reminderEnabled: _reminderEnabled,
                           reminderHour: _reminderEnabled ? _reminderTime.hour : null,
@@ -226,7 +235,6 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
             ),
           ],
         ),
-      ),
     );
   }
 }

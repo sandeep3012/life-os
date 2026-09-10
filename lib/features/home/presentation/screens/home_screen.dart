@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../ai_analyser/application/ai_analyser_providers.dart';
@@ -154,6 +153,8 @@ class HomeScreen extends ConsumerWidget {
                           TaskTile(
                             key: ValueKey(task.id),
                             task: task,
+                    onOpen: () => context.push(RoutePaths.taskDetail(task.id)),
+                    categoryLabel: ref.watch(taskCategoriesProvider).value?.where((c) => c.id == task.categoryId).firstOrNull?.name,
                             onToggle: () =>
                                 ref.read(tasksControllerProvider).toggleDone(task),
                             onDelete: () =>

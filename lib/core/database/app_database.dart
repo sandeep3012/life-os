@@ -52,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -170,6 +170,16 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(appSettings, appSettings.currencyCode);
         await m.addColumn(appSettings, appSettings.appLockEnabled);
         await m.addColumn(appSettings, appSettings.biometricEnabled);
+      }
+      if (from < 15) {
+        // Nullable additions preserve old rows and JSON backups unchanged.
+        await m.addColumn(tasks, tasks.schedule);
+        await m.addColumn(tasks, tasks.recurrenceId);
+        await m.addColumn(tasks, tasks.recurrenceNextGenerationDate);
+        await m.addColumn(habits, habits.schedule);
+        await m.addColumn(habits, habits.description);
+        await m.addColumn(events, events.schedule);
+        await m.addColumn(events, events.description);
       }
     },
   );

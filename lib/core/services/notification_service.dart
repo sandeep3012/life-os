@@ -7,6 +7,7 @@ import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../reminders/reminder_mode.dart';
+import '../reminders/scheduled_reminder.dart';
 
 /// Thin wrapper around `flutter_local_notifications` for the reminder kinds
 /// the app schedules: a one-off nudge at a task's due time, a single generic
@@ -133,7 +134,10 @@ class NotificationService {
   /// Notification setup is best-effort: a missing platform channel (e.g. in
   /// widget tests) or a denied/unavailable permission must never take the
   /// rest of the app down with it, so failures here are swallowed.
-  Future<void> init() async {
+  Future<void>? _initializing;
+  Future<void> init() => _initializing ??= _initialize();
+
+  Future<void> _initialize() async {
     if (_initialized) return;
     try {
       tz_data.initializeTimeZones();
@@ -375,6 +379,42 @@ class NotificationService {
 
   Future<void> cancelHabitReminder(String habitId) {
     return _plugin.cancel(id: _habitReminderId(habitId));
+  }
+
+  /// iOS has a small pending-notification limit. Keep the earliest reminders,
+  /// reserving room for unrelated bill/goal/global reminders. Opening/resuming
+  /// the app replenishes this offline queue; no background execution is assumed.
+  Future<void> replaceScheduledReminders(List<ScheduledReminder> reminders,
+      {required Set<int> legacyIds}) async {
+    await init();
+    if (!_initialized) return;
+    final pending = await _plugin.pendingNotificationRequests();
+    final ours = pending.where((p) => (p.payload?.startsWith('lifeos.schedule:') ?? false) || legacyIds.contains(p.id)).toList();
+    final otherCount = pending.length - ours.length;
+    final capacity = (60 - otherCount).clamp(0, 60).toInt();
+    final selected = reminders.take(capacity).toList();
+    final byId = {for (final r in selected) r.id: r};
+    for (final old in ours) {
+      final r = byId[old.id];
+      final payload = r == null ? null : 'lifeos.schedule:${r.key}:${r.time.toIso8601String()}:${r.mode.name}';
+      if (r == null || old.payload != payload || old.title != r.title) await _plugin.cancel(id: old.id);
+    }
+    for (final r in selected) {
+      final payload = 'lifeos.schedule:${r.key}:${r.time.toIso8601String()}:${r.mode.name}';
+      if (ours.any((p) => p.id == r.id && p.payload == payload && p.title == r.title)) continue;
+      final alarm = r.mode == ReminderMode.alarm;
+      final android = switch (r.kind) {
+        'habit' => alarm ? _habitAlarmChannel : _habitChannel,
+        'event' => alarm ? _eventAlarmChannel : _eventChannel,
+        _ => alarm ? _taskAlarmChannel : _taskChannel,
+      };
+      await _plugin.zonedSchedule(id: r.id, title: r.title,
+        body: r.kind == 'habit' ? 'Time to check in' : 'Scheduled reminder',
+        payload: payload, scheduledDate: tz.TZDateTime.from(r.time, tz.local),
+        notificationDetails: NotificationDetails(android: android,
+          iOS: alarm ? _iosAlarmDetails : const DarwinNotificationDetails()),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle);
+    }
   }
 
   int _habitReminderId(String habitId) => 'habit_reminder_$habitId'.hashCode;

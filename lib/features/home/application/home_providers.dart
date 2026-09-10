@@ -70,7 +70,7 @@ final todayTasksProvider = Provider<TodayTasks>((ref) {
 /// Habits with a live streak, worst-first so anything at risk of breaking
 /// surfaces before the healthy ones.
 final habitCheckInProvider = Provider<List<HabitProgress>>((ref) {
-  final progress = [...ref.watch(habitsWithProgressProvider)]
+  final progress = [...ref.watch(habitsWithProgressProvider).where((p) => p.isScheduledToday)]
     ..sort((a, b) {
       if (a.isAtRisk != b.isAtRisk) return a.isAtRisk ? -1 : 1;
       return b.streakDays.compareTo(a.streakDays);

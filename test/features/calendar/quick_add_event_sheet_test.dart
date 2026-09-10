@@ -83,7 +83,7 @@ void main() {
     final event = _event(frequency: 'weekly', recurrenceId: 'series-1');
     await _openSheet(tester, initialDate: today, initial: event);
 
-    expect(find.textContaining('Repeats: Weekly'), findsOneWidget);
+    expect(find.textContaining('Repeating event'), findsOneWidget);
     expect(find.byType(ChoiceChip), findsNothing);
   });
 
@@ -122,6 +122,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Delete event'), findsOneWidget);
+    await tester.ensureVisible(find.text('Delete event'));
     await tester.tap(find.text('Delete event'));
     await tester.pumpAndSettle();
 

@@ -5318,6 +5318,28 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $HabitsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _scheduleMeta = const VerificationMeta(
+    'schedule',
+  );
+  @override
+  late final GeneratedColumn<String> schedule = GeneratedColumn<String>(
+    'schedule',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -5453,6 +5475,8 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
   );
   @override
   List<GeneratedColumn> get $columns => [
+    schedule,
+    description,
     id,
     name,
     frequency,
@@ -5477,6 +5501,21 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('schedule')) {
+      context.handle(
+        _scheduleMeta,
+        schedule.isAcceptableOrUnknown(data['schedule']!, _scheduleMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
@@ -5566,6 +5605,14 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
   Habit map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Habit(
+      schedule: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}schedule'],
+      ),
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -5620,6 +5667,8 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
 }
 
 class Habit extends DataClass implements Insertable<Habit> {
+  final String? schedule;
+  final String? description;
   final String id;
   final String name;
 
@@ -5644,6 +5693,8 @@ class Habit extends DataClass implements Insertable<Habit> {
   final String reminderMode;
   final DateTime createdAt;
   const Habit({
+    this.schedule,
+    this.description,
     required this.id,
     required this.name,
     required this.frequency,
@@ -5659,6 +5710,12 @@ class Habit extends DataClass implements Insertable<Habit> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (!nullToAbsent || schedule != null) {
+      map['schedule'] = Variable<String>(schedule);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
     map['frequency'] = Variable<String>(frequency);
@@ -5681,6 +5738,12 @@ class Habit extends DataClass implements Insertable<Habit> {
 
   HabitsCompanion toCompanion(bool nullToAbsent) {
     return HabitsCompanion(
+      schedule: schedule == null && nullToAbsent
+          ? const Value.absent()
+          : Value(schedule),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
       id: Value(id),
       name: Value(name),
       frequency: Value(frequency),
@@ -5707,6 +5770,8 @@ class Habit extends DataClass implements Insertable<Habit> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Habit(
+      schedule: serializer.fromJson<String?>(json['schedule']),
+      description: serializer.fromJson<String?>(json['description']),
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       frequency: serializer.fromJson<String>(json['frequency']),
@@ -5724,6 +5789,8 @@ class Habit extends DataClass implements Insertable<Habit> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'schedule': serializer.toJson<String?>(schedule),
+      'description': serializer.toJson<String?>(description),
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'frequency': serializer.toJson<String>(frequency),
@@ -5739,6 +5806,8 @@ class Habit extends DataClass implements Insertable<Habit> {
   }
 
   Habit copyWith({
+    Value<String?> schedule = const Value.absent(),
+    Value<String?> description = const Value.absent(),
     String? id,
     String? name,
     String? frequency,
@@ -5751,6 +5820,8 @@ class Habit extends DataClass implements Insertable<Habit> {
     String? reminderMode,
     DateTime? createdAt,
   }) => Habit(
+    schedule: schedule.present ? schedule.value : this.schedule,
+    description: description.present ? description.value : this.description,
     id: id ?? this.id,
     name: name ?? this.name,
     frequency: frequency ?? this.frequency,
@@ -5767,6 +5838,10 @@ class Habit extends DataClass implements Insertable<Habit> {
   );
   Habit copyWithCompanion(HabitsCompanion data) {
     return Habit(
+      schedule: data.schedule.present ? data.schedule.value : this.schedule,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       frequency: data.frequency.present ? data.frequency.value : this.frequency,
@@ -5796,6 +5871,8 @@ class Habit extends DataClass implements Insertable<Habit> {
   @override
   String toString() {
     return (StringBuffer('Habit(')
+          ..write('schedule: $schedule, ')
+          ..write('description: $description, ')
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('frequency: $frequency, ')
@@ -5813,6 +5890,8 @@ class Habit extends DataClass implements Insertable<Habit> {
 
   @override
   int get hashCode => Object.hash(
+    schedule,
+    description,
     id,
     name,
     frequency,
@@ -5829,6 +5908,8 @@ class Habit extends DataClass implements Insertable<Habit> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Habit &&
+          other.schedule == this.schedule &&
+          other.description == this.description &&
           other.id == this.id &&
           other.name == this.name &&
           other.frequency == this.frequency &&
@@ -5843,6 +5924,8 @@ class Habit extends DataClass implements Insertable<Habit> {
 }
 
 class HabitsCompanion extends UpdateCompanion<Habit> {
+  final Value<String?> schedule;
+  final Value<String?> description;
   final Value<String> id;
   final Value<String> name;
   final Value<String> frequency;
@@ -5856,6 +5939,8 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const HabitsCompanion({
+    this.schedule = const Value.absent(),
+    this.description = const Value.absent(),
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.frequency = const Value.absent(),
@@ -5870,6 +5955,8 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.rowid = const Value.absent(),
   });
   HabitsCompanion.insert({
+    this.schedule = const Value.absent(),
+    this.description = const Value.absent(),
     this.id = const Value.absent(),
     required String name,
     this.frequency = const Value.absent(),
@@ -5884,6 +5971,8 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.rowid = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Habit> custom({
+    Expression<String>? schedule,
+    Expression<String>? description,
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? frequency,
@@ -5898,6 +5987,8 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (schedule != null) 'schedule': schedule,
+      if (description != null) 'description': description,
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (frequency != null) 'frequency': frequency,
@@ -5914,6 +6005,8 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
   }
 
   HabitsCompanion copyWith({
+    Value<String?>? schedule,
+    Value<String?>? description,
     Value<String>? id,
     Value<String>? name,
     Value<String>? frequency,
@@ -5928,6 +6021,8 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     Value<int>? rowid,
   }) {
     return HabitsCompanion(
+      schedule: schedule ?? this.schedule,
+      description: description ?? this.description,
       id: id ?? this.id,
       name: name ?? this.name,
       frequency: frequency ?? this.frequency,
@@ -5946,6 +6041,12 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (schedule.present) {
+      map['schedule'] = Variable<String>(schedule.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
@@ -5988,6 +6089,8 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
   @override
   String toString() {
     return (StringBuffer('HabitsCompanion(')
+          ..write('schedule: $schedule, ')
+          ..write('description: $description, ')
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('frequency: $frequency, ')
@@ -6375,6 +6478,39 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $TasksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _scheduleMeta = const VerificationMeta(
+    'schedule',
+  );
+  @override
+  late final GeneratedColumn<String> schedule = GeneratedColumn<String>(
+    'schedule',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _recurrenceIdMeta = const VerificationMeta(
+    'recurrenceId',
+  );
+  @override
+  late final GeneratedColumn<String> recurrenceId = GeneratedColumn<String>(
+    'recurrence_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _recurrenceNextGenerationDateMeta =
+      const VerificationMeta('recurrenceNextGenerationDate');
+  @override
+  late final GeneratedColumn<DateTime> recurrenceNextGenerationDate =
+      GeneratedColumn<DateTime>(
+        'recurrence_next_generation_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -6504,6 +6640,9 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
   );
   @override
   List<GeneratedColumn> get $columns => [
+    schedule,
+    recurrenceId,
+    recurrenceNextGenerationDate,
     id,
     title,
     description,
@@ -6528,6 +6667,30 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('schedule')) {
+      context.handle(
+        _scheduleMeta,
+        schedule.isAcceptableOrUnknown(data['schedule']!, _scheduleMeta),
+      );
+    }
+    if (data.containsKey('recurrence_id')) {
+      context.handle(
+        _recurrenceIdMeta,
+        recurrenceId.isAcceptableOrUnknown(
+          data['recurrence_id']!,
+          _recurrenceIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('recurrence_next_generation_date')) {
+      context.handle(
+        _recurrenceNextGenerationDateMeta,
+        recurrenceNextGenerationDate.isAcceptableOrUnknown(
+          data['recurrence_next_generation_date']!,
+          _recurrenceNextGenerationDateMeta,
+        ),
+      );
+    }
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
@@ -6614,6 +6777,18 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
   Task map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Task(
+      schedule: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}schedule'],
+      ),
+      recurrenceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recurrence_id'],
+      ),
+      recurrenceNextGenerationDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}recurrence_next_generation_date'],
+      ),
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -6668,6 +6843,9 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
 }
 
 class Task extends DataClass implements Insertable<Task> {
+  final String? schedule;
+  final String? recurrenceId;
+  final DateTime? recurrenceNextGenerationDate;
   final String id;
   final String title;
   final String? description;
@@ -6691,6 +6869,9 @@ class Task extends DataClass implements Insertable<Task> {
   final DateTime createdAt;
   final DateTime? completedAt;
   const Task({
+    this.schedule,
+    this.recurrenceId,
+    this.recurrenceNextGenerationDate,
     required this.id,
     required this.title,
     this.description,
@@ -6706,6 +6887,17 @@ class Task extends DataClass implements Insertable<Task> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (!nullToAbsent || schedule != null) {
+      map['schedule'] = Variable<String>(schedule);
+    }
+    if (!nullToAbsent || recurrenceId != null) {
+      map['recurrence_id'] = Variable<String>(recurrenceId);
+    }
+    if (!nullToAbsent || recurrenceNextGenerationDate != null) {
+      map['recurrence_next_generation_date'] = Variable<DateTime>(
+        recurrenceNextGenerationDate,
+      );
+    }
     map['id'] = Variable<String>(id);
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || description != null) {
@@ -6730,6 +6922,16 @@ class Task extends DataClass implements Insertable<Task> {
 
   TasksCompanion toCompanion(bool nullToAbsent) {
     return TasksCompanion(
+      schedule: schedule == null && nullToAbsent
+          ? const Value.absent()
+          : Value(schedule),
+      recurrenceId: recurrenceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceId),
+      recurrenceNextGenerationDate:
+          recurrenceNextGenerationDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceNextGenerationDate),
       id: Value(id),
       title: Value(title),
       description: description == null && nullToAbsent
@@ -6758,6 +6960,11 @@ class Task extends DataClass implements Insertable<Task> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Task(
+      schedule: serializer.fromJson<String?>(json['schedule']),
+      recurrenceId: serializer.fromJson<String?>(json['recurrenceId']),
+      recurrenceNextGenerationDate: serializer.fromJson<DateTime?>(
+        json['recurrenceNextGenerationDate'],
+      ),
       id: serializer.fromJson<String>(json['id']),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
@@ -6775,6 +6982,11 @@ class Task extends DataClass implements Insertable<Task> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'schedule': serializer.toJson<String?>(schedule),
+      'recurrenceId': serializer.toJson<String?>(recurrenceId),
+      'recurrenceNextGenerationDate': serializer.toJson<DateTime?>(
+        recurrenceNextGenerationDate,
+      ),
       'id': serializer.toJson<String>(id),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
@@ -6790,6 +7002,9 @@ class Task extends DataClass implements Insertable<Task> {
   }
 
   Task copyWith({
+    Value<String?> schedule = const Value.absent(),
+    Value<String?> recurrenceId = const Value.absent(),
+    Value<DateTime?> recurrenceNextGenerationDate = const Value.absent(),
     String? id,
     String? title,
     Value<String?> description = const Value.absent(),
@@ -6802,6 +7017,11 @@ class Task extends DataClass implements Insertable<Task> {
     DateTime? createdAt,
     Value<DateTime?> completedAt = const Value.absent(),
   }) => Task(
+    schedule: schedule.present ? schedule.value : this.schedule,
+    recurrenceId: recurrenceId.present ? recurrenceId.value : this.recurrenceId,
+    recurrenceNextGenerationDate: recurrenceNextGenerationDate.present
+        ? recurrenceNextGenerationDate.value
+        : this.recurrenceNextGenerationDate,
     id: id ?? this.id,
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
@@ -6816,6 +7036,13 @@ class Task extends DataClass implements Insertable<Task> {
   );
   Task copyWithCompanion(TasksCompanion data) {
     return Task(
+      schedule: data.schedule.present ? data.schedule.value : this.schedule,
+      recurrenceId: data.recurrenceId.present
+          ? data.recurrenceId.value
+          : this.recurrenceId,
+      recurrenceNextGenerationDate: data.recurrenceNextGenerationDate.present
+          ? data.recurrenceNextGenerationDate.value
+          : this.recurrenceNextGenerationDate,
       id: data.id.present ? data.id.value : this.id,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
@@ -6843,6 +7070,11 @@ class Task extends DataClass implements Insertable<Task> {
   @override
   String toString() {
     return (StringBuffer('Task(')
+          ..write('schedule: $schedule, ')
+          ..write('recurrenceId: $recurrenceId, ')
+          ..write(
+            'recurrenceNextGenerationDate: $recurrenceNextGenerationDate, ',
+          )
           ..write('id: $id, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
@@ -6860,6 +7092,9 @@ class Task extends DataClass implements Insertable<Task> {
 
   @override
   int get hashCode => Object.hash(
+    schedule,
+    recurrenceId,
+    recurrenceNextGenerationDate,
     id,
     title,
     description,
@@ -6876,6 +7111,10 @@ class Task extends DataClass implements Insertable<Task> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Task &&
+          other.schedule == this.schedule &&
+          other.recurrenceId == this.recurrenceId &&
+          other.recurrenceNextGenerationDate ==
+              this.recurrenceNextGenerationDate &&
           other.id == this.id &&
           other.title == this.title &&
           other.description == this.description &&
@@ -6890,6 +7129,9 @@ class Task extends DataClass implements Insertable<Task> {
 }
 
 class TasksCompanion extends UpdateCompanion<Task> {
+  final Value<String?> schedule;
+  final Value<String?> recurrenceId;
+  final Value<DateTime?> recurrenceNextGenerationDate;
   final Value<String> id;
   final Value<String> title;
   final Value<String?> description;
@@ -6903,6 +7145,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<DateTime?> completedAt;
   final Value<int> rowid;
   const TasksCompanion({
+    this.schedule = const Value.absent(),
+    this.recurrenceId = const Value.absent(),
+    this.recurrenceNextGenerationDate = const Value.absent(),
     this.id = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
@@ -6917,6 +7162,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.rowid = const Value.absent(),
   });
   TasksCompanion.insert({
+    this.schedule = const Value.absent(),
+    this.recurrenceId = const Value.absent(),
+    this.recurrenceNextGenerationDate = const Value.absent(),
     this.id = const Value.absent(),
     required String title,
     this.description = const Value.absent(),
@@ -6931,6 +7179,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.rowid = const Value.absent(),
   }) : title = Value(title);
   static Insertable<Task> custom({
+    Expression<String>? schedule,
+    Expression<String>? recurrenceId,
+    Expression<DateTime>? recurrenceNextGenerationDate,
     Expression<String>? id,
     Expression<String>? title,
     Expression<String>? description,
@@ -6945,6 +7196,10 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (schedule != null) 'schedule': schedule,
+      if (recurrenceId != null) 'recurrence_id': recurrenceId,
+      if (recurrenceNextGenerationDate != null)
+        'recurrence_next_generation_date': recurrenceNextGenerationDate,
       if (id != null) 'id': id,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
@@ -6961,6 +7216,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
   }
 
   TasksCompanion copyWith({
+    Value<String?>? schedule,
+    Value<String?>? recurrenceId,
+    Value<DateTime?>? recurrenceNextGenerationDate,
     Value<String>? id,
     Value<String>? title,
     Value<String?>? description,
@@ -6975,6 +7233,10 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<int>? rowid,
   }) {
     return TasksCompanion(
+      schedule: schedule ?? this.schedule,
+      recurrenceId: recurrenceId ?? this.recurrenceId,
+      recurrenceNextGenerationDate:
+          recurrenceNextGenerationDate ?? this.recurrenceNextGenerationDate,
       id: id ?? this.id,
       title: title ?? this.title,
       description: description ?? this.description,
@@ -6993,6 +7255,17 @@ class TasksCompanion extends UpdateCompanion<Task> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (schedule.present) {
+      map['schedule'] = Variable<String>(schedule.value);
+    }
+    if (recurrenceId.present) {
+      map['recurrence_id'] = Variable<String>(recurrenceId.value);
+    }
+    if (recurrenceNextGenerationDate.present) {
+      map['recurrence_next_generation_date'] = Variable<DateTime>(
+        recurrenceNextGenerationDate.value,
+      );
+    }
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
@@ -7035,6 +7308,11 @@ class TasksCompanion extends UpdateCompanion<Task> {
   @override
   String toString() {
     return (StringBuffer('TasksCompanion(')
+          ..write('schedule: $schedule, ')
+          ..write('recurrenceId: $recurrenceId, ')
+          ..write(
+            'recurrenceNextGenerationDate: $recurrenceNextGenerationDate, ',
+          )
           ..write('id: $id, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
@@ -8815,6 +9093,28 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $EventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _scheduleMeta = const VerificationMeta(
+    'schedule',
+  );
+  @override
+  late final GeneratedColumn<String> schedule = GeneratedColumn<String>(
+    'schedule',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
@@ -8977,6 +9277,8 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
   );
   @override
   List<GeneratedColumn> get $columns => [
+    schedule,
+    description,
     id,
     title,
     startTime,
@@ -9004,6 +9306,21 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('schedule')) {
+      context.handle(
+        _scheduleMeta,
+        schedule.isAcceptableOrUnknown(data['schedule']!, _scheduleMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
@@ -9116,6 +9433,14 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
   Event map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return Event(
+      schedule: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}schedule'],
+      ),
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}id'],
@@ -9182,6 +9507,8 @@ class $EventsTable extends Events with TableInfo<$EventsTable, Event> {
 }
 
 class Event extends DataClass implements Insertable<Event> {
+  final String? schedule;
+  final String? description;
   final String id;
   final String title;
   final DateTime startTime;
@@ -9220,6 +9547,8 @@ class Event extends DataClass implements Insertable<Event> {
   final int reminderMinutesBefore;
   final DateTime createdAt;
   const Event({
+    this.schedule,
+    this.description,
     required this.id,
     required this.title,
     required this.startTime,
@@ -9238,6 +9567,12 @@ class Event extends DataClass implements Insertable<Event> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (!nullToAbsent || schedule != null) {
+      map['schedule'] = Variable<String>(schedule);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
     map['id'] = Variable<String>(id);
     map['title'] = Variable<String>(title);
     map['start_time'] = Variable<DateTime>(startTime);
@@ -9269,6 +9604,12 @@ class Event extends DataClass implements Insertable<Event> {
 
   EventsCompanion toCompanion(bool nullToAbsent) {
     return EventsCompanion(
+      schedule: schedule == null && nullToAbsent
+          ? const Value.absent()
+          : Value(schedule),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
       id: Value(id),
       title: Value(title),
       startTime: Value(startTime),
@@ -9303,6 +9644,8 @@ class Event extends DataClass implements Insertable<Event> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return Event(
+      schedule: serializer.fromJson<String?>(json['schedule']),
+      description: serializer.fromJson<String?>(json['description']),
       id: serializer.fromJson<String>(json['id']),
       title: serializer.fromJson<String>(json['title']),
       startTime: serializer.fromJson<DateTime>(json['startTime']),
@@ -9329,6 +9672,8 @@ class Event extends DataClass implements Insertable<Event> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'schedule': serializer.toJson<String?>(schedule),
+      'description': serializer.toJson<String?>(description),
       'id': serializer.toJson<String>(id),
       'title': serializer.toJson<String>(title),
       'startTime': serializer.toJson<DateTime>(startTime),
@@ -9349,6 +9694,8 @@ class Event extends DataClass implements Insertable<Event> {
   }
 
   Event copyWith({
+    Value<String?> schedule = const Value.absent(),
+    Value<String?> description = const Value.absent(),
     String? id,
     String? title,
     DateTime? startTime,
@@ -9364,6 +9711,8 @@ class Event extends DataClass implements Insertable<Event> {
     int? reminderMinutesBefore,
     DateTime? createdAt,
   }) => Event(
+    schedule: schedule.present ? schedule.value : this.schedule,
+    description: description.present ? description.value : this.description,
     id: id ?? this.id,
     title: title ?? this.title,
     startTime: startTime ?? this.startTime,
@@ -9385,6 +9734,10 @@ class Event extends DataClass implements Insertable<Event> {
   );
   Event copyWithCompanion(EventsCompanion data) {
     return Event(
+      schedule: data.schedule.present ? data.schedule.value : this.schedule,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
       id: data.id.present ? data.id.value : this.id,
       title: data.title.present ? data.title.value : this.title,
       startTime: data.startTime.present ? data.startTime.value : this.startTime,
@@ -9419,6 +9772,8 @@ class Event extends DataClass implements Insertable<Event> {
   @override
   String toString() {
     return (StringBuffer('Event(')
+          ..write('schedule: $schedule, ')
+          ..write('description: $description, ')
           ..write('id: $id, ')
           ..write('title: $title, ')
           ..write('startTime: $startTime, ')
@@ -9441,6 +9796,8 @@ class Event extends DataClass implements Insertable<Event> {
 
   @override
   int get hashCode => Object.hash(
+    schedule,
+    description,
     id,
     title,
     startTime,
@@ -9460,6 +9817,8 @@ class Event extends DataClass implements Insertable<Event> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Event &&
+          other.schedule == this.schedule &&
+          other.description == this.description &&
           other.id == this.id &&
           other.title == this.title &&
           other.startTime == this.startTime &&
@@ -9478,6 +9837,8 @@ class Event extends DataClass implements Insertable<Event> {
 }
 
 class EventsCompanion extends UpdateCompanion<Event> {
+  final Value<String?> schedule;
+  final Value<String?> description;
   final Value<String> id;
   final Value<String> title;
   final Value<DateTime> startTime;
@@ -9494,6 +9855,8 @@ class EventsCompanion extends UpdateCompanion<Event> {
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const EventsCompanion({
+    this.schedule = const Value.absent(),
+    this.description = const Value.absent(),
     this.id = const Value.absent(),
     this.title = const Value.absent(),
     this.startTime = const Value.absent(),
@@ -9511,6 +9874,8 @@ class EventsCompanion extends UpdateCompanion<Event> {
     this.rowid = const Value.absent(),
   });
   EventsCompanion.insert({
+    this.schedule = const Value.absent(),
+    this.description = const Value.absent(),
     this.id = const Value.absent(),
     required String title,
     required DateTime startTime,
@@ -9529,6 +9894,8 @@ class EventsCompanion extends UpdateCompanion<Event> {
   }) : title = Value(title),
        startTime = Value(startTime);
   static Insertable<Event> custom({
+    Expression<String>? schedule,
+    Expression<String>? description,
     Expression<String>? id,
     Expression<String>? title,
     Expression<DateTime>? startTime,
@@ -9546,6 +9913,8 @@ class EventsCompanion extends UpdateCompanion<Event> {
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (schedule != null) 'schedule': schedule,
+      if (description != null) 'description': description,
       if (id != null) 'id': id,
       if (title != null) 'title': title,
       if (startTime != null) 'start_time': startTime,
@@ -9567,6 +9936,8 @@ class EventsCompanion extends UpdateCompanion<Event> {
   }
 
   EventsCompanion copyWith({
+    Value<String?>? schedule,
+    Value<String?>? description,
     Value<String>? id,
     Value<String>? title,
     Value<DateTime>? startTime,
@@ -9584,6 +9955,8 @@ class EventsCompanion extends UpdateCompanion<Event> {
     Value<int>? rowid,
   }) {
     return EventsCompanion(
+      schedule: schedule ?? this.schedule,
+      description: description ?? this.description,
       id: id ?? this.id,
       title: title ?? this.title,
       startTime: startTime ?? this.startTime,
@@ -9607,6 +9980,12 @@ class EventsCompanion extends UpdateCompanion<Event> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (schedule.present) {
+      map['schedule'] = Variable<String>(schedule.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
     if (id.present) {
       map['id'] = Variable<String>(id.value);
     }
@@ -9662,6 +10041,8 @@ class EventsCompanion extends UpdateCompanion<Event> {
   @override
   String toString() {
     return (StringBuffer('EventsCompanion(')
+          ..write('schedule: $schedule, ')
+          ..write('description: $description, ')
           ..write('id: $id, ')
           ..write('title: $title, ')
           ..write('startTime: $startTime, ')
@@ -16391,6 +16772,8 @@ typedef $$BudgetsTableProcessedTableManager =
     >;
 typedef $$HabitsTableCreateCompanionBuilder =
     HabitsCompanion Function({
+      Value<String?> schedule,
+      Value<String?> description,
       Value<String> id,
       required String name,
       Value<String> frequency,
@@ -16406,6 +16789,8 @@ typedef $$HabitsTableCreateCompanionBuilder =
     });
 typedef $$HabitsTableUpdateCompanionBuilder =
     HabitsCompanion Function({
+      Value<String?> schedule,
+      Value<String?> description,
       Value<String> id,
       Value<String> name,
       Value<String> frequency,
@@ -16469,6 +16854,16 @@ class $$HabitsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get schedule => $composableBuilder(
+    column: $table.schedule,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -16577,6 +16972,16 @@ class $$HabitsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get schedule => $composableBuilder(
+    column: $table.schedule,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -16660,6 +17065,14 @@ class $$HabitsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get schedule =>
+      $composableBuilder(column: $table.schedule, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -16777,6 +17190,8 @@ class $$HabitsTableTableManager
               $$HabitsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String?> schedule = const Value.absent(),
+                Value<String?> description = const Value.absent(),
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> frequency = const Value.absent(),
@@ -16790,6 +17205,8 @@ class $$HabitsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HabitsCompanion(
+                schedule: schedule,
+                description: description,
                 id: id,
                 name: name,
                 frequency: frequency,
@@ -16805,6 +17222,8 @@ class $$HabitsTableTableManager
               ),
           createCompanionCallback:
               ({
+                Value<String?> schedule = const Value.absent(),
+                Value<String?> description = const Value.absent(),
                 Value<String> id = const Value.absent(),
                 required String name,
                 Value<String> frequency = const Value.absent(),
@@ -16818,6 +17237,8 @@ class $$HabitsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HabitsCompanion.insert(
+                schedule: schedule,
+                description: description,
                 id: id,
                 name: name,
                 frequency: frequency,
@@ -17227,6 +17648,9 @@ typedef $$HabitLogsTableProcessedTableManager =
     >;
 typedef $$TasksTableCreateCompanionBuilder =
     TasksCompanion Function({
+      Value<String?> schedule,
+      Value<String?> recurrenceId,
+      Value<DateTime?> recurrenceNextGenerationDate,
       Value<String> id,
       required String title,
       Value<String?> description,
@@ -17242,6 +17666,9 @@ typedef $$TasksTableCreateCompanionBuilder =
     });
 typedef $$TasksTableUpdateCompanionBuilder =
     TasksCompanion Function({
+      Value<String?> schedule,
+      Value<String?> recurrenceId,
+      Value<DateTime?> recurrenceNextGenerationDate,
       Value<String> id,
       Value<String> title,
       Value<String?> description,
@@ -17305,6 +17732,22 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get schedule => $composableBuilder(
+    column: $table.schedule,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recurrenceId => $composableBuilder(
+    column: $table.recurrenceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get recurrenceNextGenerationDate =>
+      $composableBuilder(
+        column: $table.recurrenceNextGenerationDate,
+        builder: (column) => ColumnFilters(column),
+      );
+
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -17413,6 +17856,22 @@ class $$TasksTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get schedule => $composableBuilder(
+    column: $table.schedule,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recurrenceId => $composableBuilder(
+    column: $table.recurrenceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get recurrenceNextGenerationDate =>
+      $composableBuilder(
+        column: $table.recurrenceNextGenerationDate,
+        builder: (column) => ColumnOrderings(column),
+      );
+
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -17496,6 +17955,20 @@ class $$TasksTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get schedule =>
+      $composableBuilder(column: $table.schedule, builder: (column) => column);
+
+  GeneratedColumn<String> get recurrenceId => $composableBuilder(
+    column: $table.recurrenceId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get recurrenceNextGenerationDate =>
+      $composableBuilder(
+        column: $table.recurrenceNextGenerationDate,
+        builder: (column) => column,
+      );
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -17611,6 +18084,10 @@ class $$TasksTableTableManager
               $$TasksTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String?> schedule = const Value.absent(),
+                Value<String?> recurrenceId = const Value.absent(),
+                Value<DateTime?> recurrenceNextGenerationDate =
+                    const Value.absent(),
                 Value<String> id = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
@@ -17624,6 +18101,9 @@ class $$TasksTableTableManager
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TasksCompanion(
+                schedule: schedule,
+                recurrenceId: recurrenceId,
+                recurrenceNextGenerationDate: recurrenceNextGenerationDate,
                 id: id,
                 title: title,
                 description: description,
@@ -17639,6 +18119,10 @@ class $$TasksTableTableManager
               ),
           createCompanionCallback:
               ({
+                Value<String?> schedule = const Value.absent(),
+                Value<String?> recurrenceId = const Value.absent(),
+                Value<DateTime?> recurrenceNextGenerationDate =
+                    const Value.absent(),
                 Value<String> id = const Value.absent(),
                 required String title,
                 Value<String?> description = const Value.absent(),
@@ -17652,6 +18136,9 @@ class $$TasksTableTableManager
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TasksCompanion.insert(
+                schedule: schedule,
+                recurrenceId: recurrenceId,
+                recurrenceNextGenerationDate: recurrenceNextGenerationDate,
                 id: id,
                 title: title,
                 description: description,
@@ -19221,6 +19708,8 @@ typedef $$GoalMilestonesTableProcessedTableManager =
     >;
 typedef $$EventsTableCreateCompanionBuilder =
     EventsCompanion Function({
+      Value<String?> schedule,
+      Value<String?> description,
       Value<String> id,
       required String title,
       required DateTime startTime,
@@ -19239,6 +19728,8 @@ typedef $$EventsTableCreateCompanionBuilder =
     });
 typedef $$EventsTableUpdateCompanionBuilder =
     EventsCompanion Function({
+      Value<String?> schedule,
+      Value<String?> description,
       Value<String> id,
       Value<String> title,
       Value<DateTime> startTime,
@@ -19265,6 +19756,16 @@ class $$EventsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<String> get schedule => $composableBuilder(
+    column: $table.schedule,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -19346,6 +19847,16 @@ class $$EventsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<String> get schedule => $composableBuilder(
+    column: $table.schedule,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -19427,6 +19938,14 @@ class $$EventsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<String> get schedule =>
+      $composableBuilder(column: $table.schedule, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -19513,6 +20032,8 @@ class $$EventsTableTableManager
               $$EventsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<String?> schedule = const Value.absent(),
+                Value<String?> description = const Value.absent(),
                 Value<String> id = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<DateTime> startTime = const Value.absent(),
@@ -19530,6 +20051,8 @@ class $$EventsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EventsCompanion(
+                schedule: schedule,
+                description: description,
                 id: id,
                 title: title,
                 startTime: startTime,
@@ -19548,6 +20071,8 @@ class $$EventsTableTableManager
               ),
           createCompanionCallback:
               ({
+                Value<String?> schedule = const Value.absent(),
+                Value<String?> description = const Value.absent(),
                 Value<String> id = const Value.absent(),
                 required String title,
                 required DateTime startTime,
@@ -19565,6 +20090,8 @@ class $$EventsTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EventsCompanion.insert(
+                schedule: schedule,
+                description: description,
                 id: id,
                 title: title,
                 startTime: startTime,
