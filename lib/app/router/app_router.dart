@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import '../../features/tasks/presentation/screens/task_detail_screen.dart';
 
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/more_screen.dart';
@@ -56,6 +57,10 @@ final appRouter = GoRouter(
               GoRoute(
                 path: 'archived-habits',
                 builder: (context, state) => const ArchivedHabitsScreen(),
+              ),
+              GoRoute(
+                path: 'task/:taskId',
+                builder: (context, state) => TaskDetailScreen(taskId: state.pathParameters['taskId']!),
               ),
               GoRoute(
                 path: ':habitId',

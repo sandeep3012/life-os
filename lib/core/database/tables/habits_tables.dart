@@ -7,6 +7,8 @@ import 'categories_table.dart';
 /// derived from [HabitLogs] at query time — no separate streak counter is
 /// persisted, so it can never drift out of sync with the logged history.
 class Habits extends Table {
+  TextColumn get schedule => text().nullable()();
+  TextColumn get description => text().nullable()();
   TextColumn get id => text().clientDefault(() => const Uuid().v4())();
   TextColumn get name => text()();
 

@@ -389,7 +389,10 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
               title: const Text('Transfer between accounts'),
               onTap: () {
                 Navigator.of(context).pop();
-                Future.microtask(() => _showTransferDialog(hostContext));
+                Future.microtask(() {
+                  if (!hostContext.mounted) return;
+                  _showTransferDialog(hostContext);
+                });
               },
             ),
             ListTile(
@@ -422,9 +425,9 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         return AlertDialog(
           title: const Text('Transfer money'),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            DropdownButtonFormField<String>(value: fromId, decoration: const InputDecoration(labelText: 'From account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => fromId = v!)),
+            DropdownButtonFormField<String>(initialValue: fromId, decoration: const InputDecoration(labelText: 'From account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => fromId = v!)),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: toId, decoration: const InputDecoration(labelText: 'To account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => toId = v!)),
+            DropdownButtonFormField<String>(initialValue: toId, decoration: const InputDecoration(labelText: 'To account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => toId = v!)),
             const SizedBox(height: 12),
             TextField(controller: amountController, onChanged: (_) => setState(() {}), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Amount')),
           ]),
@@ -439,12 +442,6 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     Future<void>.delayed(const Duration(milliseconds: 400), amountController.dispose);
     if (confirmed != true || amount <= 0) return;
     await ref.read(financeControllerProvider).transfer(fromAccountId: fromId, toAccountId: toId, amountMinor: amount, date: DateTime.now());
-  }
-
-  String _fabLabel(WidgetRef ref) {
-    final accounts = ref.read(activeAccountsProvider);
-    if (accounts.isEmpty) return 'New account';
-    return _section == _FinanceSection.transactions ? 'New transaction' : 'New budget';
   }
 
   Future<void> _addAccount(BuildContext context, WidgetRef ref) async {
@@ -593,10 +590,12 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
       }
       entries.add(transaction);
     }
-    if (transactions.isEmpty) entries.add(const Padding(
-      padding: EdgeInsets.symmetric(vertical: 32),
-      child: Text('No transactions in this range. Try another date range or category.'),
-    ));
+    if (transactions.isEmpty) {
+      entries.add(const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Text('No transactions in this range. Try another date range or category.'),
+      ));
+    }
     if (!widget.history) {
       entries.add(Padding(
         padding: const EdgeInsets.only(top: 20, bottom: 24),

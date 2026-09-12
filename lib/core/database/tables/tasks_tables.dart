@@ -4,6 +4,9 @@ import 'package:uuid/uuid.dart';
 import 'categories_table.dart';
 
 class Tasks extends Table {
+  TextColumn get schedule => text().nullable()();
+  TextColumn get recurrenceId => text().nullable()();
+  DateTimeColumn get recurrenceNextGenerationDate => dateTime().nullable()();
   TextColumn get id => text().clientDefault(() => const Uuid().v4())();
   TextColumn get title => text()();
   TextColumn get description => text().nullable()();

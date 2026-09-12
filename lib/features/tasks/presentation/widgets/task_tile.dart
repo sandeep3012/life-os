@@ -12,11 +12,15 @@ class TaskTile extends StatelessWidget {
     required this.task,
     required this.onToggle,
     required this.onDelete,
+    required this.onOpen,
+    this.categoryLabel,
   });
 
   final Task task;
+  final String? categoryLabel;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -35,13 +39,14 @@ class TaskTile extends StatelessWidget {
         child: Icon(Icons.delete_outline_rounded, color: colors.critical),
       ),
       child: InkWell(
-        onTap: onToggle,
+        onTap: onOpen,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TaskCheckbox(done: done, color: colors.tasks),
+              IconButton(tooltip: done ? 'Mark incomplete' : 'Mark complete',
+                onPressed: onToggle, icon: _TaskCheckbox(done: done, color: colors.tasks)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -57,11 +62,16 @@ class TaskTile extends StatelessWidget {
                             : theme.colorScheme.onSurface,
                       ),
                     ),
+                    if (task.description?.isNotEmpty ?? false)
+                      Text(task.description!, maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall),
                     const SizedBox(height: 4),
                     Wrap(
                       spacing: 6,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
+                        if (task.recurrenceId != null) const Icon(Icons.repeat_rounded, size: 16),
+                        if (categoryLabel != null) Text(categoryLabel!, style: theme.textTheme.labelSmall),
                         _PriorityChip(
                           priority: TaskPriorityX.fromValue(task.priority),
                         ),
@@ -78,6 +88,7 @@ class TaskTile extends StatelessWidget {
                   ],
                 ),
               ),
+              IconButton(tooltip: 'Task details', onPressed: onOpen, icon: const Icon(Icons.chevron_right_rounded)),
             ],
           ),
         ),

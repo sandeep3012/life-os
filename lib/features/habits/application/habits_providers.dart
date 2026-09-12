@@ -6,8 +6,10 @@ import '../../../core/reminders/reminder_mode.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../settings/application/settings_providers.dart';
+import '../../../core/scheduling/repeat_schedule.dart';
 import '../data/habits_repository.dart';
 import '../domain/habit_progress.dart';
+import '../domain/habit_schedule.dart';
 
 final habitsRepositoryProvider = Provider<HabitsRepository>((ref) {
   return HabitsRepository(ref.watch(appDatabaseProvider));
@@ -68,35 +70,30 @@ final habitsWithProgressProvider = Provider<List<HabitProgress>>((ref) {
     for (final habit in habits)
       HabitProgress(
         habit: habit,
-        streakDays: _computeStreak(logsByHabit[habit.id] ?? const []),
-        weekCompletion: _computeWeekCompletion(logsByHabit[habit.id] ?? const []),
+        streakDays: _computeStreak(habit, logsByHabit[habit.id] ?? const []),
+        weekCompletion: _computeWeekCompletion(habit, logsByHabit[habit.id] ?? const []),
         category: habit.categoryId == null ? null : categoriesById[habit.categoryId],
       ),
   ];
 });
 
-int _computeStreak(List<HabitLog> logs) {
-  final completedDates = logs
-      .where((l) => l.completed)
-      .map((l) => dateOnly(l.date))
-      .toSet();
-
-  var cursor = dateOnly(DateTime.now());
-  // If today isn't logged yet, the streak is still "alive" through
-  // yesterday — don't zero it out just because today hasn't happened yet.
-  if (!completedDates.contains(cursor)) {
-    cursor = cursor.subtract(const Duration(days: 1));
-  }
-
+int _computeStreak(Habit habit, List<HabitLog> logs) {
+  final done = logs.where((l) => l.completed).map((l) => dateOnly(l.date)).toSet();
+  final today = dateOnly(DateTime.now());
+  var cursor = today;
   var streak = 0;
-  while (completedDates.contains(cursor)) {
-    streak++;
-    cursor = cursor.subtract(const Duration(days: 1));
+  final start = dateOnly(habit.repeatSchedule.trackingStart);
+  while (!cursor.isBefore(start)) {
+    if (habit.scheduledOn(cursor)) {
+      if (done.contains(cursor)) { streak++; }
+      else if (cursor != today) { break; }
+    }
+    cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);
   }
   return streak;
 }
 
-Map<int, bool> _computeWeekCompletion(List<HabitLog> logs) {
+Map<int, bool> _computeWeekCompletion(Habit habit, List<HabitLog> logs) {
   final completedDates = logs
       .where((l) => l.completed)
       .map((l) => dateOnly(l.date))
@@ -104,44 +101,37 @@ Map<int, bool> _computeWeekCompletion(List<HabitLog> logs) {
   final monday = startOfWeek(DateTime.now());
   return {
     for (var i = 0; i < 7; i++)
+      if (habit.scheduledOn(DateTime(monday.year, monday.month, monday.day + i)))
       monday.add(Duration(days: i)).weekday:
           completedDates.contains(monday.add(Duration(days: i))),
   };
 }
 
 class HabitsController {
-  HabitsController(this._repo, this._notifications, this._remindersEnabled);
+  HabitsController(this._repo, this._notifications, bool Function() remindersEnabled);
 
   final HabitsRepository _repo;
   final NotificationService _notifications;
 
-  /// Read at call time, same as `TasksController` — the app-wide "Habit
-  /// reminders" setting acts as a master switch over every per-habit one.
-  final bool Function() _remindersEnabled;
-
   Future<void> addHabit(
     String name, {
     String? categoryId,
+    String? description,
+    RepeatSchedule? schedule,
     bool reminderEnabled = false,
     int? reminderHour,
     int? reminderMinute,
     ReminderMode reminderMode = ReminderMode.notification,
   }) async {
-    final id = await _repo.createHabit(
+    await _repo.createHabit(
       name,
       categoryId: categoryId,
+      description: description,
+      schedule: schedule,
       reminderEnabled: reminderEnabled,
       reminderHour: reminderHour,
       reminderMinute: reminderMinute,
       reminderMode: reminderMode.storageValue,
-    );
-    await _scheduleReminder(
-      habitId: id,
-      title: name,
-      reminderEnabled: reminderEnabled,
-      reminderHour: reminderHour,
-      reminderMinute: reminderMinute,
-      reminderMode: reminderMode,
     );
   }
 
@@ -149,6 +139,8 @@ class HabitsController {
     required Habit habit,
     required String name,
     String? categoryId,
+    String? description,
+    RepeatSchedule? schedule,
     bool reminderEnabled = false,
     int? reminderHour,
     int? reminderMinute,
@@ -159,18 +151,12 @@ class HabitsController {
       id: habit.id,
       name: name,
       categoryId: categoryId,
+      description: description,
+      schedule: schedule,
       reminderEnabled: reminderEnabled,
       reminderHour: reminderHour,
       reminderMinute: reminderMinute,
       reminderMode: reminderMode.storageValue,
-    );
-    await _scheduleReminder(
-      habitId: habit.id,
-      title: name,
-      reminderEnabled: reminderEnabled,
-      reminderHour: reminderHour,
-      reminderMinute: reminderMinute,
-      reminderMode: reminderMode,
     );
   }
 
@@ -187,19 +173,9 @@ class HabitsController {
     await _repo.archiveHabit(habit.id);
   }
 
-  /// Reschedules the habit's reminder (if it had one enabled) so it doesn't
-  /// silently stay reminder-less after coming back — mirrors [addHabit]/
-  /// [updateHabit]'s scheduling.
+  /// Restoring the row triggers reminder reconciliation in ScheduleCoordinator.
   Future<void> unarchiveHabit(Habit habit) async {
     await _repo.unarchiveHabit(habit.id);
-    await _scheduleReminder(
-      habitId: habit.id,
-      title: habit.name,
-      reminderEnabled: habit.reminderEnabled,
-      reminderHour: habit.reminderHour,
-      reminderMinute: habit.reminderMinute,
-      reminderMode: ReminderMode.fromStorage(habit.reminderMode),
-    );
   }
 
   Future<void> toggleToday(Habit habit, bool completed) {
@@ -217,24 +193,6 @@ class HabitsController {
     return _repo.setCompletedForDate(habit.id, date, completed, notes: notes);
   }
 
-  Future<void> _scheduleReminder({
-    required String habitId,
-    required String title,
-    required bool reminderEnabled,
-    required int? reminderHour,
-    required int? reminderMinute,
-    required ReminderMode reminderMode,
-  }) async {
-    if (reminderEnabled && reminderHour != null && reminderMinute != null && _remindersEnabled()) {
-      await _notifications.scheduleHabitReminder(
-        habitId: habitId,
-        title: title,
-        hour: reminderHour,
-        minute: reminderMinute,
-        mode: reminderMode,
-      );
-    }
-  }
 }
 
 final habitsControllerProvider = Provider<HabitsController>((ref) {

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/services/notification_service.dart';
+import '../core/services/schedule_coordinator.dart';
 import '../features/ai_analyser/application/ai_analyser_providers.dart';
-import '../features/calendar/application/calendar_providers.dart';
 import '../features/finance/application/finance_providers.dart';
 import '../features/settings/application/app_lock_providers.dart';
 import '../features/settings/application/settings_providers.dart';
@@ -32,7 +32,7 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp> with WidgetsBindingObserv
     ref.read(financeRepositoryProvider).ensureDefaultCategories();
     ref.read(financeRepositoryProvider).ensureDefaultAccountTypes();
     ref.read(financeRepositoryProvider).generateDueRecurringTransactions();
-    ref.read(calendarRepositoryProvider).extendRecurringEvents();
+    ref.read(scheduleCoordinatorProvider).start();
     ref.read(aiAnalyserControllerProvider).refresh().catchError((_) {});
   }
 
@@ -47,6 +47,7 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp> with WidgetsBindingObserv
   /// once in a session.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) ref.read(scheduleCoordinatorProvider).requestRefresh();
     if (!ref.read(settingsProvider).appLockEnabled) return;
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       ref.read(isLockedProvider.notifier).lock();

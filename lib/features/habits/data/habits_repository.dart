@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/utils/date_utils.dart';
+import '../../../core/scheduling/repeat_schedule.dart';
+import '../domain/habit_schedule.dart';
 
 class HabitsRepository {
   HabitsRepository(this._db);
@@ -24,18 +26,12 @@ class HabitsRepository {
     return (_db.select(_db.habits)..where((h) => h.id.equals(id))).getSingleOrNull();
   }
 
-  /// 60 days is enough history for the streak calculation without watching
-  /// the whole table as habits accumulate years of logs.
+  /// Sparse monthly/yearly schedules need history beyond a 60-day window.
   Stream<List<HabitLog>> watchRecentLogs() {
-    final since = dateOnly(DateTime.now()).subtract(const Duration(days: 60));
-    return (_db.select(
-      _db.habitLogs,
-    )..where((l) => l.date.isBiggerOrEqualValue(since))).watch();
+    return _db.select(_db.habitLogs).watch();
   }
 
-  /// Full log history for one habit, newest first — unwindowed (unlike
-  /// [watchRecentLogs]'s 60-day cap) since it's scoped to a single habit's
-  /// detail screen rather than every habit's streak calculation.
+  /// Full log history for one habit, newest first.
   Stream<List<HabitLog>> watchLogsForHabit(String habitId) {
     return (_db.select(_db.habitLogs)
           ..where((l) => l.habitId.equals(habitId))
@@ -46,15 +42,21 @@ class HabitsRepository {
   Future<String> createHabit(
     String name, {
     String? categoryId,
+    String? description,
+    RepeatSchedule? schedule,
     bool reminderEnabled = false,
     int? reminderHour,
     int? reminderMinute,
     String reminderMode = 'notification',
   }) async {
+    if (schedule != null) RepeatSchedule.decode(schedule.encode());
     final row = await _db.into(_db.habits).insertReturning(
       HabitsCompanion.insert(
         name: name,
         categoryId: Value(categoryId),
+        description: Value(description),
+        schedule: Value(schedule?.encode()),
+        frequency: Value(schedule?.frequency ?? 'daily'),
         reminderEnabled: Value(reminderEnabled),
         reminderHour: Value(reminderHour),
         reminderMinute: Value(reminderMinute),
@@ -68,15 +70,32 @@ class HabitsRepository {
     required String id,
     required String name,
     String? categoryId,
+    String? description,
+    RepeatSchedule? schedule,
     bool reminderEnabled = false,
     int? reminderHour,
     int? reminderMinute,
     String reminderMode = 'notification',
-  }) {
-    return (_db.update(_db.habits)..where((h) => h.id.equals(id))).write(
+  }) async {
+    final old = await getHabit(id);
+    if (old == null) return;
+    if (schedule != null) {
+      RepeatSchedule.decode(schedule.encode());
+      if (schedule.encode() != old.repeatSchedule.encode()) {
+        schedule = RepeatSchedule(start: schedule.start, frequency: schedule.frequency,
+          weekdays: schedule.weekdays, end: schedule.end,
+          previous: old.repeatSchedule, effectiveFrom: dateOnly(DateTime.now()));
+      }
+    } else {
+      schedule = old.repeatSchedule;
+    }
+    await (_db.update(_db.habits)..where((h) => h.id.equals(id))).write(
       HabitsCompanion(
         name: Value(name),
         categoryId: Value(categoryId),
+        description: Value(description),
+        schedule: Value(schedule.encode()),
+        frequency: Value(schedule.frequency),
         reminderEnabled: Value(reminderEnabled),
         reminderHour: Value(reminderHour),
         reminderMinute: Value(reminderMinute),
@@ -131,6 +150,8 @@ class HabitsRepository {
     String? notes,
   }) async {
     final day = dateOnly(date);
+    final habit = await getHabit(habitId);
+    if (habit == null || !habit.scheduledOn(day) || day.isAfter(dateOnly(DateTime.now()))) return;
     final existing =
         await (_db.select(_db.habitLogs)..where(
           (l) => l.habitId.equals(habitId) & l.date.equals(day),

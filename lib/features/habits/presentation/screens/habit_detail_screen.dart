@@ -8,6 +8,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../application/habits_providers.dart';
+import '../../domain/habit_schedule.dart';
 import '../widgets/quick_add_habit_sheet.dart';
 
 class HabitDetailScreen extends ConsumerStatefulWidget {
@@ -52,7 +53,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
     final historyState = ref.watch(habitLogHistoryProvider(widget.habitId));
     final history = historyState.value ?? const <HabitLog>[];
     final today = dateOnly(DateTime.now());
-    final created = dateOnly(habit.createdAt);
+    final created = dateOnly(habit.repeatSchedule.trackingStart);
     final byDay = {for (final log in history) dateOnly(log.date): log};
     final recentDays = [for (var i = 0; i < 7; i++) DateTime(today.year, today.month, today.day - i)]
         .where((day) => !day.isBefore(created)).toList();
@@ -97,6 +98,11 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                       ),
                     ],
                   ),
+                  if (habit.description?.isNotEmpty ?? false) ...[
+                    const SizedBox(height: 12), Text(habit.description!),
+                  ],
+                  const SizedBox(height: 8),
+                  Text('Repeats: ${habit.repeatSchedule.frequency}'),
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -177,7 +183,10 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
             const Text('Could not load habit history. Please try again.')
           else ...[
             for (final day in recentDays)
-              if (byDay[day] case final log?)
+              if (!habit.scheduledOn(day))
+                ListTile(contentPadding: EdgeInsets.zero, title: Text(DateFormat.yMMMEd().format(day)),
+                  subtitle: const Text('Not scheduled'))
+              else if (byDay[day] case final log?)
                 _HistoryTile(habit: habit, log: log)
               else
                 ListTile(
@@ -192,7 +201,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
             const SizedBox(height: 8),
             TableCalendar<void>(
               firstDay: DateTime(created.year, created.month),
-              lastDay: DateTime(today.year, today.month + 1, 0),
+              lastDay: DateTime((created.isAfter(today) ? created : today).year, (created.isAfter(today) ? created : today).month + 1, 0),
               focusedDay: _focusedMonth.isBefore(created) ? created : _focusedMonth,
               startingDayOfWeek: StartingDayOfWeek.monday,
               calendarFormat: CalendarFormat.month,
@@ -201,8 +210,8 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
               calendarStyle: const CalendarStyle(outsideDaysVisible: false),
               onPageChanged: (day) => setState(() => _focusedMonth = day),
               calendarBuilders: CalendarBuilders<void>(
-                defaultBuilder: (context, day, _) => _calendarDay(context, day, created, today, byDay),
-                todayBuilder: (context, day, _) => _calendarDay(context, day, created, today, byDay),
+                defaultBuilder: (context, day, _) => _calendarDay(context, day, habit, today, byDay),
+                todayBuilder: (context, day, _) => _calendarDay(context, day, habit, today, byDay),
               ),
             ),
             const SizedBox(height: 12),
@@ -212,16 +221,16 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
               const Text('○ Today: pending'),
             ]),
             const SizedBox(height: 8),
-            Text('Dates before this habit was created and future dates are unmarked.', style: theme.textTheme.bodySmall),
+            Text('Unscheduled days, dates before the start and future dates are unmarked.', style: theme.textTheme.bodySmall),
           ],
         ],
       ),
     );
   }
 
-  Widget _calendarDay(BuildContext context, DateTime day, DateTime created, DateTime today, Map<DateTime, HabitLog> logs) {
+  Widget _calendarDay(BuildContext context, DateTime day, Habit habit, DateTime today, Map<DateTime, HabitLog> logs) {
     final date = dateOnly(day);
-    final eligible = !date.isBefore(created) && !date.isAfter(today);
+    final eligible = habit.scheduledOn(date) && !date.isAfter(today);
     final done = eligible && (logs[date]?.completed ?? false);
     final absent = eligible && date.isBefore(today) && !done;
     final colors = context.appColors;
@@ -251,6 +260,8 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
     await ref.read(habitsControllerProvider).updateHabit(
       habit: habit,
       name: result.name,
+      description: result.description,
+      schedule: result.schedule,
       categoryId: result.categoryId,
       reminderEnabled: result.reminderEnabled,
       reminderHour: result.reminderHour,

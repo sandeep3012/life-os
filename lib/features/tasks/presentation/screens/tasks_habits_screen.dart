@@ -7,7 +7,6 @@ import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
-import '../../../../core/utils/icon_lookup.dart';
 import '../../../habits/application/habits_providers.dart';
 import '../../../habits/domain/habit_progress.dart';
 import '../../../habits/presentation/widgets/habit_tile.dart';
@@ -91,6 +90,9 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
     if (result == null) return;
     await ref.read(tasksControllerProvider).addTask(
       title: result.title,
+      description: result.description,
+      categoryId: result.categoryId,
+      schedule: result.schedule,
       priority: result.priority,
       dueDate: result.dueDate,
       reminderEnabled: result.reminderEnabled,
@@ -104,6 +106,8 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
     if (result == null) return;
     await ref.read(habitsControllerProvider).addHabit(
       result.name,
+      description: result.description,
+      schedule: result.schedule,
       categoryId: result.categoryId,
       reminderEnabled: result.reminderEnabled,
       reminderHour: result.reminderHour,
@@ -158,6 +162,8 @@ class _TasksPane extends ConsumerWidget {
                   return TaskTile(
                     key: ValueKey(task.id),
                     task: task,
+                    onOpen: () => context.push(RoutePaths.taskDetail(task.id)),
+                    categoryLabel: ref.watch(taskCategoriesProvider).value?.where((c) => c.id == task.categoryId).firstOrNull?.name,
                     onToggle: () => ref.read(tasksControllerProvider).toggleDone(task),
                     onDelete: () => ref.read(tasksControllerProvider).deleteTask(task),
                   ).animate().fadeIn(duration: 200.ms);
@@ -217,7 +223,7 @@ class _HabitsPaneState extends ConsumerState<_HabitsPane> {
       0,
       (sum, item) => sum + item.weekCompletion.values.where((done) => done).length,
     );
-    final totalThisWeek = progress.length * 7;
+    final totalThisWeek = progress.fold<int>(0, (sum, item) => sum + item.weekCompletion.length);
     final groups = <String, List<HabitProgress>>{};
     for (final item in progress) {
       final name = item.category?.name ?? _fallbackGroup(item.habit.name);
