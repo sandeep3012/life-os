@@ -9,6 +9,7 @@ import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
 import 'package:life_manager/features/goals/data/goals_repository.dart';
 import 'package:life_manager/features/goals/presentation/screens/goal_detail_screen.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class _FakeNotificationService extends NotificationService {
   @override
@@ -52,7 +53,7 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.tap(find.byIcon(LucideIcons.pencil));
     await tester.pumpAndSettle();
 
     // The detail screen's own milestone-add row also has a TextField, so
@@ -75,7 +76,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.widgetWithText(TextField, 'Add a milestone'), 'Book flights');
-    await tester.tap(find.byIcon(Icons.add_circle_outline_rounded));
+    await tester.tap(find.byIcon(LucideIcons.circlePlus));
     await tester.pumpAndSettle();
 
     expect(find.text('Book flights'), findsOneWidget);
@@ -109,7 +110,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Book flights'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.tap(find.byIcon(LucideIcons.x));
     await tester.pumpAndSettle();
 
     expect(find.text('Book flights'), findsNothing);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/icon_lookup.dart';
@@ -33,7 +34,7 @@ class HabitTile extends StatelessWidget {
         ? null
         : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
     final iconColor = categoryColor ?? accent;
-    final iconValue = category == null ? null : category.icon;
+    final iconValue = category?.icon;
 
     return Padding(
         padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
@@ -47,7 +48,7 @@ class HabitTile extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: iconValue == null
-                  ? Icon(Icons.local_fire_department_rounded, color: iconColor, size: 20)
+                  ? Icon(LucideIcons.flame, color: iconColor, size: 20)
                   : IconOrEmoji(value: iconValue, color: iconColor, size: 20),
             ),
             const SizedBox(width: 12),
@@ -95,7 +96,7 @@ class HabitTile extends StatelessWidget {
                       child: ExcludeSemantics(child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(completedToday ? Icons.check_circle_rounded : Icons.local_fire_department_rounded,
+                          Icon(completedToday ? LucideIcons.checkCircle : LucideIcons.flame,
                             size: 24, color: completedToday ? colors.habits : accent),
                           Text(atRisk ? 'at risk' : '${progress.streakDays}d',
                             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: accent)),
@@ -111,7 +112,7 @@ class HabitTile extends StatelessWidget {
               tooltip: 'Open ${progress.habit.name}',
               onPressed: onTap,
               constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-              icon: const Icon(Icons.chevron_right_rounded),
+              icon: const Icon(LucideIcons.chevronRight),
               iconSize: 28,
               color: theme.colorScheme.onSurfaceVariant,
             ),

@@ -7,6 +7,7 @@ import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/features/goals/presentation/screens/goals_screen.dart';
 import 'package:life_manager/features/habits/data/habits_repository.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 void main() {
   late AppDatabase db;
@@ -55,7 +56,7 @@ void main() {
     await tester.tap(find.text('Run a 10K'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.tap(find.byIcon(LucideIcons.plus));
     await tester.pumpAndSettle();
 
     expect(find.text('1 / 40'), findsOneWidget);

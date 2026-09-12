@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class WeeklyTrendChart extends StatelessWidget {
   const WeeklyTrendChart({super.key, required this.weeklyTotalsMinor, required this.color});
@@ -55,7 +56,8 @@ class WeeklyTrendChart extends StatelessWidget {
                     child: Text(
                       'W${index + 1}',
                       style: TextStyle(
-                        fontFamily: 'PlexMono',
+                        fontFamily: AppFonts.numeric,
+                        fontFeatures: AppFonts.tabular,
                         fontSize: 9,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),

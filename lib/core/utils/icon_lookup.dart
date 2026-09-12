@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Maps the icon-name strings stored on [Category.icon] / [AccountType.icon]
 /// to a concrete [IconData] — the curated set offered by [pickableIcons], so
@@ -7,31 +8,31 @@ import 'package:flutter/material.dart';
 /// icon name from a future app version, or a row restored from an older
 /// backup whose icon set has since changed).
 const Map<String, IconData> _iconsByName = {
-  'label': Icons.label_rounded,
-  'category': Icons.category_rounded,
-  'restaurant': Icons.restaurant_rounded,
-  'shopping_cart': Icons.shopping_cart_rounded,
-  'directions_car': Icons.directions_car_rounded,
-  'home': Icons.home_rounded,
-  'movie': Icons.movie_rounded,
-  'autorenew': Icons.autorenew_rounded,
-  'payments': Icons.payments_rounded,
-  'local_grocery_store': Icons.local_grocery_store_rounded,
-  'local_hospital': Icons.local_hospital_rounded,
-  'school': Icons.school_rounded,
-  'flight': Icons.flight_rounded,
-  'fitness_center': Icons.fitness_center_rounded,
-  'pets': Icons.pets_rounded,
-  'checkroom': Icons.checkroom_rounded,
-  'sports_esports': Icons.sports_esports_rounded,
-  'card_giftcard': Icons.card_giftcard_rounded,
-  'build': Icons.build_rounded,
-  'wifi': Icons.wifi_rounded,
-  'account_balance_wallet': Icons.account_balance_wallet_rounded,
-  'savings': Icons.savings_rounded,
-  'credit_card': Icons.credit_card_rounded,
-  'trending_up': Icons.trending_up_rounded,
-  'account_balance': Icons.account_balance_rounded,
+  'label': LucideIcons.tag,
+  'category': LucideIcons.shapes,
+  'restaurant': LucideIcons.utensils,
+  'shopping_cart': LucideIcons.shoppingCart,
+  'directions_car': LucideIcons.car,
+  'home': LucideIcons.house,
+  'movie': LucideIcons.clapperboard,
+  'autorenew': LucideIcons.refreshCw,
+  'payments': LucideIcons.banknote,
+  'local_grocery_store': LucideIcons.shoppingCart,
+  'local_hospital': LucideIcons.cross,
+  'school': LucideIcons.school,
+  'flight': LucideIcons.plane,
+  'fitness_center': LucideIcons.dumbbell,
+  'pets': LucideIcons.pawPrint,
+  'checkroom': LucideIcons.shirt,
+  'sports_esports': LucideIcons.gamepad2,
+  'card_giftcard': LucideIcons.gift,
+  'build': LucideIcons.wrench,
+  'wifi': LucideIcons.wifi,
+  'account_balance_wallet': LucideIcons.wallet,
+  'savings': LucideIcons.piggyBank,
+  'credit_card': LucideIcons.creditCard,
+  'trending_up': LucideIcons.trendingUp,
+  'account_balance': LucideIcons.landmark,
 };
 
 /// Curated icon choices offered when creating/editing a category or account
@@ -68,7 +69,7 @@ const pickableIcons = [
 /// icon names. Unicode strings are rendered as text by [IconOrEmoji].
 const pickableEmojis = ['🍽️', '🛒', '🚗', '🏠', '🎬', '💳', '🏥', '🎓', '✈️', '🏋️', '🐾', '👕', '🎮', '🎁', '🔧', '📶', '👛', '💰', '🏦', '☕', '🎵', '📚', '❤️', '⭐'];
 
-IconData resolveIcon(String? name) => _iconsByName[name] ?? Icons.label_rounded;
+IconData resolveIcon(String? name) => _iconsByName[name] ?? LucideIcons.tag;
 
 bool isEmojiIcon(String? value) => value != null && !_iconsByName.containsKey(value);
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../application/tags_providers.dart';
 
@@ -78,7 +79,7 @@ class _TagChipRowState extends ConsumerState<TagChipRow> {
               ),
             if (!_adding)
               ActionChip(
-                avatar: const Icon(Icons.add_rounded, size: 16),
+                avatar: const Icon(LucideIcons.plus, size: 16),
                 label: const Text('Add tag'),
                 onPressed: _startAdding,
               ),

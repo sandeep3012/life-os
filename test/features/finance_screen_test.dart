@@ -53,7 +53,9 @@ void main() {
 
       expect(find.text('Add your first account to start tracking finances.'), findsOneWidget);
 
-      await tester.tap(find.text('New account'));
+      // Icon-only FAB: its label lives in the tooltip, which reflects what the
+      // button will actually open (the account sheet while there are none).
+      await tester.tap(find.byTooltip('New account'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, 'Checking');
       await tester.pump();
@@ -67,7 +69,7 @@ void main() {
       expect(find.text('Checking'), findsOneWidget);
       expect(find.textContaining('1,000.00'), findsWidgets);
 
-      await tester.tap(find.text('New transaction'));
+      await tester.tap(find.byTooltip('New transaction'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, 'Swiggy');
       await tester.pump();

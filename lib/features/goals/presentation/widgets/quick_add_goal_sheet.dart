@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/reminders/reminder_mode.dart';
@@ -167,7 +168,7 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
                 child: Row(
                   children: [
                     Icon(
-                      Icons.calendar_today_rounded,
+                      LucideIcons.calendarDays,
                       size: 16,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -180,7 +181,7 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
                       IconButton(
                         tooltip: 'Clear deadline',
                         onPressed: () => setState(() => _targetDate = null),
-                        icon: const Icon(Icons.close_rounded, size: 16),
+                        icon: const Icon(LucideIcons.x, size: 16),
                       ),
                     ],
                   ],
@@ -212,12 +213,12 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
                     ButtonSegment(
                       value: ReminderMode.notification,
                       label: Text('Notification'),
-                      icon: Icon(Icons.notifications_rounded, size: 16),
+                      icon: Icon(LucideIcons.bell, size: 16),
                     ),
                     ButtonSegment(
                       value: ReminderMode.alarm,
                       label: Text('Alarm'),
-                      icon: Icon(Icons.alarm_rounded, size: 16),
+                      icon: Icon(LucideIcons.alarmClock, size: 16),
                     ),
                   ],
                   selected: {_reminderMode},

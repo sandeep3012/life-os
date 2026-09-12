@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
@@ -95,12 +96,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.chevron_left_rounded),
+                  icon: const Icon(LucideIcons.chevronLeft),
                   onPressed: () => _shiftPeriod(-1),
                 ),
                 Text(_period.label, style: theme.textTheme.titleMedium),
                 IconButton(
-                  icon: const Icon(Icons.chevron_right_rounded),
+                  icon: const Icon(LucideIcons.chevronRight),
                   onPressed: () => _shiftPeriod(1),
                 ),
               ],
@@ -174,7 +175,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 onPressed: _exporting || report.transactions.isEmpty
                     ? null
                     : () => _export(report, categoryNameById),
-                icon: const Icon(Icons.download_rounded),
+                icon: const Icon(LucideIcons.download),
                 label: Text(_exporting ? 'Exporting…' : 'Export as CSV'),
               ),
             ),

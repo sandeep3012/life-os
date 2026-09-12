@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../application/calendar_providers.dart';
 import '../../domain/calendar_item.dart';
@@ -29,8 +32,25 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final dayItems = ref.watch(selectedDayItemsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Calendar')),
+      drawer: const AppSidebar(),
       body: Column(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
+              child: Builder(
+                builder: (context) => AppTopBar(
+                  centerText: 'Calendar',
+                  centerIsTitle: true,
+                  showTrailing: false,
+                  onMenu: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Column(
         children: [
           TableCalendar<CalendarItemType>(
             focusedDay: _focusedMonth,
@@ -88,12 +108,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // A Row can't shrink below its children's intrinsic width, and the
+            // date plus three legend labels don't fit a phone — this overflowed
+            // by ~98px at 392pt. Wrap spreads them when there's room and drops
+            // the legend to a second line when there isn't.
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 6,
               children: [
                 Text(DateFormat.yMMMEd().format(selectedDay), style: theme.textTheme.titleSmall),
                 Wrap(
                   spacing: 10,
+                  runSpacing: 4,
                   children: [
                     _LegendDot(label: 'Task', color: colors.tasks),
                     _LegendDot(label: 'Habit', color: colors.habits),
@@ -120,6 +148,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     itemBuilder: (context, index) => _buildItemTile(context, dayItems[index]),
                   ),
           ),
+              ],
+            ),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -139,7 +170,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 reminderMinutesBefore: result.reminderMinutesBefore,
               );
         },
-        icon: const Icon(Icons.add_rounded),
+        icon: const Icon(LucideIcons.plus),
         label: const Text('New event'),
       ),
     );
@@ -160,7 +191,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
         color: Theme.of(context).colorScheme.errorContainer,
-        child: Icon(Icons.delete_outline_rounded, color: Theme.of(context).colorScheme.onErrorContainer),
+        child: Icon(LucideIcons.trash2, color: Theme.of(context).colorScheme.onErrorContainer),
       ),
       confirmDismiss: (_) async {
         final choice = await _confirmDelete(context, isPartOfSeries: recurrenceId != null);

@@ -59,6 +59,10 @@ dependencies:
   collection: ^1.19.1
   drift_flutter: ^0.3.1
   archive: ^4.0.9
+  # Kit §3 mandates the Lucide icon family. It names `lucide_icons`, but that
+  # package is pinned to Dart <3.0.0 and last shipped in 2023; this is the
+  # maintained port of the same glyph set.
+  lucide_icons_flutter: ^3.1.19
   local_auth: ^2.3.0
   flutter_secure_storage: ^9.2.4
 
@@ -106,29 +110,27 @@ flutter:
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
 
+  # Manrope (UI/body, weights 400-800) and Newsreader (headings, hero numbers,
+  # section titles) are the two families the design comp specifies. Both are
+  # shipped as variable fonts — one asset each, with Flutter mapping the
+  # requested fontWeight onto the `wght` axis — so all weights the comp uses
+  # are available without bundling a file per weight. Kept as local assets
+  # rather than `google_fonts` so the app stays fully offline (see CLAUDE.md).
+  # Licences: assets/fonts/OFL-manrope.txt, assets/fonts/OFL-newsreader.txt.
   fonts:
-    - family: Figtree
+    - family: Manrope
       fonts:
-        - asset: assets/fonts/Figtree-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/Figtree-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Figtree-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Figtree-Bold.ttf
-          weight: 700
-    - family: Fraunces
+        - asset: assets/fonts/Manrope-Variable.ttf
+    - family: Newsreader
       fonts:
-        - asset: assets/fonts/Fraunces-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Fraunces-Bold.ttf
-          weight: 700
-    - family: PlexMono
+        - asset: assets/fonts/Newsreader-Variable.ttf
+        - asset: assets/fonts/Newsreader-Italic-Variable.ttf
+          style: italic
+    # Kit §2: JetBrains Mono is for IDs, file names and code only — never body
+    # text. Money uses Manrope with tabular figures, not a monospace face.
+    - family: JetBrainsMono
       fonts:
-        - asset: assets/fonts/PlexMono-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/PlexMono-SemiBold.ttf
-          weight: 600
+        - asset: assets/fonts/JetBrainsMono-Variable.ttf
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a
@@ -153,31 +155,37 @@ flutter:
   assets:
     - assets/icon/
 
+# Brand mark from ui-kit/brand. Per BRAND_AND_UI_KIT.md §1 the Android adaptive
+# foreground is the ring only, inset to 66% — handing it the full-bleed square
+# lets the OS mask and parallax clip the dot off the ring.
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: assets/icon/icon.png
   min_sdk_android: 21
-  adaptive_icon_background: "#6750E7"
+  adaptive_icon_background: assets/icon/icon_background.png
   adaptive_icon_foreground: assets/icon/icon_foreground.png
   remove_alpha_ios: true
   web:
     generate: true
     image_path: assets/icon/icon.png
-    background_color: "#6750E7"
-    theme_color: "#6750E7"
+    background_color: "#0A6E4D"
+    theme_color: "#0E9F6E"
   windows:
     generate: true
     image_path: assets/icon/icon.png
 
+# Splash plates use the brand `bg` token per theme, with the mark in the kit's
+# Paper variant on light and Ink on dark — the ring has to invert or it vanishes
+# into its own ground.
 flutter_native_splash:
-  color: "#6750E7"
+  color: "#F5F1E9"
   image: assets/icon/splash_logo.png
-  color_dark: "#14121F"
-  image_dark: assets/icon/splash_logo.png
+  color_dark: "#161512"
+  image_dark: assets/icon/splash_logo_dark.png
   android_12:
     image: assets/icon/splash_logo.png
-    icon_background_color: "#6750E7"
-    image_dark: assets/icon/splash_logo.png
-    icon_background_color_dark: "#14121F"
+    icon_background_color: "#F5F1E9"
+    image_dark: assets/icon/splash_logo_dark.png
+    icon_background_color_dark: "#161512"
   web: false

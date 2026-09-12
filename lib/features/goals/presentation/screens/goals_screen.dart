@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/currency_utils.dart';
 import '../../../finance/application/finance_providers.dart';
@@ -79,7 +80,7 @@ class GoalsScreen extends ConsumerWidget {
             );
           }
         },
-        icon: const Icon(Icons.add_rounded),
+        icon: const Icon(LucideIcons.plus),
         label: const Text('New goal'),
       ),
     );

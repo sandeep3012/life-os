@@ -9,6 +9,7 @@ import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
 import 'package:life_manager/features/habits/data/habits_repository.dart';
 import 'package:life_manager/features/habits/presentation/screens/habit_detail_screen.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class _FakeNotificationService extends NotificationService {
   @override
@@ -80,7 +81,9 @@ void main() {
 
     expect(find.text('Morning workout'), findsWidgets);
     expect(find.textContaining('day streak'), findsOneWidget);
-    expect(find.text('felt great'), findsOneWidget);
+    // The log row composes status and note into one Text ("Done · felt great"),
+    // so an exact-text finder can never match the note alone.
+    expect(find.textContaining('felt great'), findsOneWidget);
 
     await _disposeCleanly(tester);
   });
@@ -88,15 +91,15 @@ void main() {
   testWidgets('editing a log note persists the change', (tester) async {
     await openDetail(tester);
 
-    await tester.tap(find.byIcon(Icons.edit_note_rounded));
+    await tester.tap(find.byIcon(LucideIcons.squarePen));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'updated note');
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    expect(find.text('updated note'), findsOneWidget);
-    expect(find.text('felt great'), findsNothing);
+    expect(find.textContaining('updated note'), findsOneWidget);
+    expect(find.textContaining('felt great'), findsNothing);
 
     await _disposeCleanly(tester);
   });

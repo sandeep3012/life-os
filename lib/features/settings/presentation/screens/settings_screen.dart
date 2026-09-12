@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/services/demo_data_service.dart';
 import '../../../../core/services/backup_service.dart';
@@ -44,7 +45,7 @@ class SettingsScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(
-                      Icons.person_rounded,
+                      LucideIcons.user,
                       color: theme.colorScheme.onPrimaryContainer,
                     ),
                   ),
@@ -128,7 +129,7 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   title: const Text('Categories'),
                   subtitle: const Text('Add, edit, or remove transaction/budget categories'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                  trailing: const Icon(LucideIcons.chevronRight),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const CategoryManagementScreen()),
                   ),
@@ -137,7 +138,7 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   title: const Text('Account types'),
                   subtitle: const Text('Add, edit, or remove account types'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                  trailing: const Icon(LucideIcons.chevronRight),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const AccountTypeManagementScreen()),
                   ),
@@ -146,7 +147,7 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   title: const Text('Currency'),
                   subtitle: Text('${currencySymbolFor(settings.currencyCode)} · ${settings.currencyCode}'),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                  trailing: const Icon(LucideIcons.chevronRight),
                   onTap: () => _pickCurrency(context, ref, settings.currencyCode),
                 ),
               ],
@@ -319,7 +320,7 @@ class _DemoDataCardState extends ConsumerState<_DemoDataCard> {
       child: Column(
         children: [
           ListTile(
-            leading: const Icon(Icons.science_outlined),
+            leading: const Icon(LucideIcons.flaskConical),
             title: const Text('Demo history'),
             subtitle: Text(
               hasDemoData == null
@@ -337,12 +338,12 @@ class _DemoDataCardState extends ConsumerState<_DemoDataCard> {
               child: hasDemoData == true
                   ? OutlinedButton.icon(
                       onPressed: _busy ? null : _remove,
-                      icon: const Icon(Icons.delete_outline_rounded),
+                      icon: const Icon(LucideIcons.trash2),
                       label: const Text('Remove demo data'),
                     )
                   : FilledButton.icon(
                       onPressed: _busy || hasDemoData == null ? null : _generate,
-                      icon: const Icon(Icons.auto_awesome_rounded),
+                      icon: const Icon(LucideIcons.sparkles),
                       label: const Text('Generate demo data'),
                     ),
             ),
@@ -367,7 +368,7 @@ Future<void> _pickCurrency(BuildContext context, WidgetRef ref, String currentCo
                 SizedBox(width: 32, child: Text(option.symbol)),
                 Expanded(child: Text('${option.label} (${option.code})')),
                 if (option.code == currentCode)
-                  const Icon(Icons.check_rounded, size: 18),
+                  const Icon(LucideIcons.check, size: 18),
               ],
             ),
           ),
@@ -464,7 +465,7 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
             const Divider(height: 1),
             ListTile(
               title: const Text('Change PIN'),
-              trailing: const Icon(Icons.chevron_right_rounded),
+              trailing: const Icon(LucideIcons.chevronRight),
               onTap: _onChangePin,
             ),
             const Divider(height: 1),
@@ -585,7 +586,7 @@ class _BackupCardState extends ConsumerState<_BackupCard> {
             subtitle: const Text('Save everything as a backup file'),
             trailing: _op == _BackupOp.exporting
                 ? const _MiniSpinner()
-                : const Icon(Icons.chevron_right_rounded),
+                : const Icon(LucideIcons.chevronRight),
             onTap: busy ? null : _export,
           ),
           const Divider(height: 1),
@@ -594,7 +595,7 @@ class _BackupCardState extends ConsumerState<_BackupCard> {
             subtitle: const Text('Restore from a backup file'),
             trailing: _op == _BackupOp.importing
                 ? const _MiniSpinner()
-                : const Icon(Icons.chevron_right_rounded),
+                : const Icon(LucideIcons.chevronRight),
             onTap: busy ? null : _import,
           ),
         ],

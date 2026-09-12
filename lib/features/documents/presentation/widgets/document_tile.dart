@@ -2,15 +2,16 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/file_storage_service.dart';
 
 IconData _iconForMime(String mime) {
-  if (mime.startsWith('image/')) return Icons.image_rounded;
-  if (mime == 'application/pdf') return Icons.picture_as_pdf_rounded;
-  return Icons.description_rounded;
+  if (mime.startsWith('image/')) return LucideIcons.image;
+  if (mime == 'application/pdf') return LucideIcons.fileText;
+  return LucideIcons.fileText;
 }
 
 class DocumentTile extends StatelessWidget {
@@ -35,7 +36,7 @@ class DocumentTile extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         color: colors.critical.withValues(alpha: 0.15),
-        child: Icon(Icons.delete_outline_rounded, color: colors.critical),
+        child: Icon(LucideIcons.trash2, color: colors.critical),
       ),
       child: InkWell(
         onTap: onTap,

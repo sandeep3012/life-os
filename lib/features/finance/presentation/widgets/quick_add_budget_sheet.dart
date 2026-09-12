@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
@@ -172,7 +173,7 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.add_circle_outline_rounded, size: 16),
+                    Icon(LucideIcons.circlePlus, size: 16),
                     SizedBox(width: 8),
                     Text('Add new category'),
                   ],
@@ -210,7 +211,7 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
               decoration: const InputDecoration(labelText: 'Effective from'),
               child: Row(
                 children: [
-                  Icon(Icons.calendar_today_rounded, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Icon(LucideIcons.calendarDays, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   const SizedBox(width: 8),
                   Text(DateFormat.yMMMM().format(_effectiveMonth)),
                 ],

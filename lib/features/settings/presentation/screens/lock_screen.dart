@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../application/app_lock_providers.dart';
@@ -77,7 +78,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
           child: Column(
             children: [
               const Spacer(),
-              Icon(Icons.lock_rounded, size: 40, color: colors.finance),
+              Icon(LucideIcons.lock, size: 40, color: colors.finance),
               const SizedBox(height: 16),
               Text('Enter PIN', style: theme.textTheme.titleLarge),
               const SizedBox(height: 24),
@@ -114,7 +115,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
               if (settings.biometricEnabled)
                 TextButton.icon(
                   onPressed: _checkingBiometrics ? null : _tryBiometrics,
-                  icon: const Icon(Icons.fingerprint_rounded),
+                  icon: const Icon(LucideIcons.fingerprint),
                   label: const Text('Use biometrics'),
                 ),
             ],
@@ -155,7 +156,7 @@ class _Keypad extends StatelessWidget {
                       : key == '⌫'
                       ? IconButton(
                           onPressed: onBackspace,
-                          icon: const Icon(Icons.backspace_outlined),
+                          icon: const Icon(LucideIcons.delete),
                         )
                       : TextButton(
                           onPressed: () => onDigit(key),

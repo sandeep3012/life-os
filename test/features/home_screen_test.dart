@@ -78,7 +78,7 @@ void main() {
     await _disposeCleanly(tester);
   });
 
-  testWidgets('dashboard aggregates spend, tasks, habits and goals across modules', (
+  testWidgets('dashboard surfaces today\'s to-dos, habits and schedule', (
     tester,
   ) async {
     final today = dateOnly(DateTime.now());
@@ -103,7 +103,8 @@ void main() {
       ),
     );
 
-    // Habits: logged yesterday but not today, so it reads as at risk.
+    // Habits: logged yesterday but not today, so the ring shows partial
+    // week completion rather than a tick.
     final habits = HabitsRepository(db);
     await habits.createHabit('Morning workout');
     final habit = (await db.select(db.habits).get()).first;
@@ -121,15 +122,16 @@ void main() {
 
     expect(find.text('Your dashboard fills in as you go'), findsNothing);
 
-    // Stat tiles pull from four different modules.
-    expect(find.textContaining('₹640'), findsWidgets);
-    expect(find.text('0 / 1'), findsOneWidget);
-    expect(find.text('Active goals'), findsOneWidget);
-
-    // Today's task and the at-risk habit both surface.
+    // Today's to-dos and the habit grid both surface, with a live done/total.
     expect(find.text('Finish Q3 budget review'), findsOneWidget);
     expect(find.text('Morning workout'), findsOneWidget);
-    expect(find.textContaining('at risk'), findsOneWidget);
+    expect(find.text('0 of 1 done'), findsOneWidget);
+
+    // The redesign moves money figures and goal counts off the dashboard and
+    // onto Finance, per the design comp. Pinned as absent so they can't drift
+    // back in — the spend/goal aggregates are covered by the finance tests.
+    expect(find.textContaining('₹640'), findsNothing);
+    expect(find.text('Active goals'), findsNothing);
 
     await _disposeCleanly(tester);
   });
@@ -148,13 +150,12 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('0 / 1'), findsOneWidget);
+    expect(find.text('0 of 1 done'), findsOneWidget);
 
     await tester.tap(find.text('Call plumber'));
     await tester.pumpAndSettle();
 
-    expect(find.text('1 / 1'), findsOneWidget);
-    expect(find.text('all done'), findsOneWidget);
+    expect(find.text('1 of 1 done'), findsOneWidget);
 
     await _disposeCleanly(tester);
   });

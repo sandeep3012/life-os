@@ -3,15 +3,22 @@ import 'package:go_router/go_router.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/more_screen.dart';
 import '../../features/finance/presentation/screens/finance_home_screen.dart';
+import '../../features/auth/presentation/screens/sign_in_screen.dart';
+import '../../features/auth/presentation/screens/sign_up_screen.dart';
+import '../../features/finance/presentation/screens/finance_overview_screen.dart';
 import '../../features/finance/presentation/screens/recurring_transactions_screen.dart';
 import '../../features/finance/presentation/screens/bills_screen.dart';
 import '../../features/finance/presentation/screens/net_worth_screen.dart';
 import '../../features/finance/presentation/screens/reports_screen.dart';
 import '../../features/spend_analyzer/presentation/screens/spend_analyzer_screen.dart';
 import '../../features/habits/presentation/screens/habit_detail_screen.dart';
+import '../../features/habits/presentation/screens/habits_overview_screen.dart';
+import '../../features/health/presentation/screens/health_screen.dart';
 import '../../features/habits/presentation/screens/archived_habits_screen.dart';
 import '../../features/tasks/presentation/screens/tasks_habits_screen.dart';
 import '../../features/calendar/presentation/screens/calendar_screen.dart';
+import '../../features/learn/presentation/screens/learn_screen.dart';
+import '../../features/learn/presentation/screens/note_reader_screen.dart';
 import '../../features/notes/presentation/screens/notes_screen.dart';
 import '../../features/documents/presentation/screens/documents_screen.dart';
 import '../../features/goals/presentation/screens/goals_screen.dart';
@@ -35,8 +42,11 @@ final appRouter = GoRouter(
         StatefulShellBranch(routes: [
           GoRoute(
             path: RoutePaths.finance,
-            builder: (context, state) => const FinanceHomeScreen(),
+            builder: (context, state) => const FinanceOverviewScreen(),
             routes: [
+              // The pre-redesign finance screen, kept for the budget tools and
+              // filters the design comp has no slot for.
+              GoRoute(path: 'ledger', builder: (context, state) => const FinanceHomeScreen()),
               GoRoute(path: 'analyzer', builder: (context, state) => const SpendAnalyzerScreen()),
               GoRoute(
                 path: 'recurring',
@@ -73,6 +83,25 @@ final appRouter = GoRouter(
             path: RoutePaths.more,
             builder: (context, state) => const MoreScreen(),
             routes: [
+              GoRoute(
+                path: 'habits',
+                builder: (context, state) => const HabitsOverviewScreen(),
+              ),
+              GoRoute(
+                path: 'health',
+                builder: (context, state) => const HealthScreen(),
+              ),
+              GoRoute(
+                path: 'learn',
+                builder: (context, state) => const LearnScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':noteId',
+                    builder: (context, state) =>
+                        NoteReaderScreen(noteId: state.pathParameters['noteId']!),
+                  ),
+                ],
+              ),
               GoRoute(path: 'notes', builder: (context, state) => const NotesScreen()),
               GoRoute(path: 'documents', builder: (context, state) => const DocumentsScreen()),
               GoRoute(path: 'goals', builder: (context, state) => const GoalsScreen()),
@@ -83,6 +112,17 @@ final appRouter = GoRouter(
           ),
         ]),
       ],
+    ),
+
+    // Sync account, deliberately outside the shell: the design draws these
+    // full-screen with no bottom nav, and free use never reaches them.
+    GoRoute(
+      path: RoutePaths.syncSignIn,
+      builder: (context, state) => const SignInScreen(),
+    ),
+    GoRoute(
+      path: RoutePaths.syncSignUp,
+      builder: (context, state) => const SignUpScreen(),
     ),
   ],
 );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart' hide isSameDay;
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -48,7 +49,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
         ? null
         : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
     final accent = categoryColor ?? colors.habits;
-    final icon = category == null ? Icons.local_fire_department_rounded : resolveIcon(category.icon);
+    final icon = category == null ? LucideIcons.flame : resolveIcon(category.icon);
     final historyState = ref.watch(habitLogHistoryProvider(widget.habitId));
     final history = historyState.value ?? const <HabitLog>[];
     final today = dateOnly(DateTime.now());
@@ -100,7 +101,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Icon(Icons.local_fire_department_rounded, size: 16, color: accent),
+                      Icon(LucideIcons.flame, size: 16, color: accent),
                       const SizedBox(width: 4),
                       Text(
                         '${progress?.streakDays ?? 0} day streak',
@@ -120,7 +121,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                     Row(
                       children: [
                         Icon(
-                          Icons.notifications_active_rounded,
+                          LucideIcons.bellRing,
                           size: 14,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -144,7 +145,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: _busy ? null : () => _editHabit(habit),
-              icon: const Icon(Icons.edit_outlined),
+              icon: const Icon(LucideIcons.pencil),
               label: const Text('Edit habit'),
             ),
           ),
@@ -154,7 +155,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: _busy ? null : () => _unarchiveHabit(habit),
-                icon: const Icon(Icons.unarchive_outlined),
+                icon: const Icon(LucideIcons.archiveRestore),
                 label: const Text('Restore habit'),
               ),
             )
@@ -164,7 +165,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
               child: TextButton.icon(
                 onPressed: _busy ? null : () => _archiveHabit(habit),
                 style: TextButton.styleFrom(foregroundColor: colors.critical),
-                icon: const Icon(Icons.archive_outlined),
+                icon: const Icon(LucideIcons.archive),
                 label: const Text('Archive habit'),
               ),
             ),
@@ -182,7 +183,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
               else
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(day == today ? Icons.circle_outlined : Icons.cancel_outlined,
+                  leading: Icon(day == today ? LucideIcons.circle : LucideIcons.circleX,
                     color: day == today ? theme.colorScheme.onSurfaceVariant : colors.critical),
                   title: Text(DateFormat.yMMMEd().format(day)),
                   subtitle: Text(day == today ? 'Pending' : 'Absent'),
@@ -238,7 +239,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
         ),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text('${day.day}', style: TextStyle(color: color)),
-          if (done || absent) Icon(done ? Icons.check_rounded : Icons.close_rounded, size: 13, color: color),
+          if (done || absent) Icon(done ? LucideIcons.check : LucideIcons.x, size: 13, color: color),
         ]),
       ),
     );
@@ -306,7 +307,7 @@ class _HistoryTile extends ConsumerWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(
-        log.completed ? Icons.check_circle_rounded : pending ? Icons.circle_outlined : Icons.cancel_outlined,
+        log.completed ? LucideIcons.checkCircle : pending ? LucideIcons.circle : LucideIcons.circleX,
         color: log.completed ? colors.habits : pending ? theme.colorScheme.onSurfaceVariant : colors.critical,
       ),
       title: Text(DateFormat.yMMMEd().format(log.date)),
@@ -314,7 +315,7 @@ class _HistoryTile extends ConsumerWidget {
         style: theme.textTheme.bodySmall),
       trailing: IconButton(
         tooltip: 'Edit note',
-        icon: const Icon(Icons.edit_note_rounded, size: 20),
+        icon: const Icon(LucideIcons.squarePen, size: 20),
         onPressed: () => _editNote(context, ref),
       ),
     );

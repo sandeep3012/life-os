@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/goal_progress.dart';
 import 'goal_ring.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 /// Goal values are stored as whole-unit doubles (not minor-unit ints like
 /// [formatMinor] expects), so this stays a separate formatter rather than
@@ -75,7 +76,8 @@ class GoalCard extends StatelessWidget {
                     Text(
                       progressLabel,
                       style: TextStyle(
-                        fontFamily: 'PlexMono',
+                        fontFamily: AppFonts.numeric,
+                        fontFeatures: AppFonts.tabular,
                         fontSize: 12,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

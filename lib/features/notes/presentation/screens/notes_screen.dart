@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../tags/application/tags_providers.dart';
 import '../../application/notes_providers.dart';
@@ -56,7 +57,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               controller: _searchController,
               decoration: const InputDecoration(
                 hintText: 'Search notes',
-                prefixIcon: Icon(Icons.search_rounded),
+                prefixIcon: Icon(LucideIcons.search),
               ),
             ),
           ),
@@ -174,7 +175,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
             builder: (_) => NoteEditorScreen(initialFolderId: _selectedFolderId),
           ),
         ),
-        icon: const Icon(Icons.add_rounded),
+        icon: const Icon(LucideIcons.plus),
         label: const Text('New note'),
       ),
     );

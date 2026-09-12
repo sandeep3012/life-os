@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0}
+  ::-webkit-scrollbar{width:0;height:0}
+  .app-root{ font-family:'Manrope',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  .app-root[data-app-theme="light"]{
+    --stage:#E7E2D8; --bg:#F5F1E9; --surface:#FFFFFF; --surface-2:#FAF6EE; --raised:#FFFFFF;
+    --text:#1C1B18; --text-2:#6E6A61; --text-3:#9C978C; --border:rgba(28,27,24,.09); --border-2:rgba(28,27,24,.06);
+    --accent:#0E9F6E; --accent-ink:#0B7C56; --accent-soft:rgba(14,159,110,.12);
+    --btn:#0B7C56; --on-accent:#FFFFFF; --hero-a:#0A6E4D; --hero-b:#0C8058;
+    --hero-veil:rgba(255,255,255,.10); --hero-track:rgba(255,255,255,.28);
+    --chrome:#0F0F0D; --pill:#0F0F0D; --shadow:0 40px 90px -30px rgba(30,28,22,.5), 0 8px 24px -12px rgba(30,28,22,.25);
+  }
+  .app-root[data-app-theme="dark"]{
+    --stage:#0C0B09; --bg:#161512; --surface:#201E1A; --surface-2:#2A2823; --raised:#26241F;
+    --text:#F4F0E7; --text-2:#A9A499; --text-3:#736F66; --border:rgba(255,255,255,.10); --border-2:rgba(255,255,255,.05);
+    --accent:#34D399; --accent-ink:#6EE7B7; --accent-soft:rgba(52,211,153,.16);
+    --btn:#34D399; --on-accent:#0C0B09; --hero-a:#34D399; --hero-b:#6EE7B7;
+    --hero-veil:rgba(12,11,9,.10); --hero-track:rgba(12,11,9,.24);
+    --chrome:#F4F0E7; --pill:#F4F0E7; --shadow:0 40px 100px -30px rgba(0,0,0,.8), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+  @keyframes drawerIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes fadeOut{from{opacity:1}to{opacity:0}}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .scr{animation:rise .32s cubic-bezier(.2,.7,.3,1)}
+  @keyframes sheetUp{0%{transform:translateY(102%)}62%{transform:translateY(-1.2%)}100%{transform:translateY(0)}}
+  @keyframes sheetDown{from{transform:translateY(0)}to{transform:translateY(104%)}}
+  @keyframes popIn{0%{opacity:0;transform:scale(.82)}60%{transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}
+  @keyframes hapPill{0%{opacity:0;transform:translate(-50%,-8px) scale(.9)}14%{opacity:1;transform:translate(-50%,0) scale(1)}72%{opacity:1}100%{opacity:0;transform:translate(-50%,-6px)}}
+  @keyframes ringPulse{0%{opacity:.5;transform:scale(.6)}100%{opacity:0;transform:scale(2.4)}}
+  @keyframes tickDraw{from{stroke-dashoffset:36}to{stroke-dashoffset:0}}
+  @keyframes stagger{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  .tap{transition:transform .13s cubic-bezier(.2,.7,.3,1),filter .13s}
+  .tap:active{transform:scale(.94)}
+  .tile{animation:stagger .34s cubic-bezier(.2,.8,.3,1) backwards}
+  .tile:nth-child(1){animation-delay:.02s}.tile:nth-child(2){animation-delay:.06s}
+  .tile:nth-child(3){animation-delay:.10s}.tile:nth-child(4){animation-delay:.14s}
+  .tile:nth-child(5){animation-delay:.18s}.tile:nth-child(6){animation-delay:.22s}
+</style>
+</helmet>
+<div class="app-root" data-app-theme="{{ theme }}" style="min-height:100vh;display:flex;align-items:center;justify-content:center;gap:34px;flex-wrap:wrap;padding:44px 32px;background:var(--stage);transition:background .4s">
+
+  <!-- ============ PHONE ============ -->
+  <div style="position:relative;width:392px;height:844px;border-radius:52px;background:var(--chrome);padding:11px;box-shadow:var(--shadow);flex:none">
+    <div style="position:relative;width:100%;height:100%;border-radius:42px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column;transition:background .4s">
+
+      <!-- status bar -->
+      <div style="position:relative;z-index:5;height:52px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 26px;color:var(--text)">
+        <span style="font-weight:700;font-size:15px;letter-spacing:.3px">9:41</span>
+        <sc-if value="{{ isIOS }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute;left:50%;top:11px;transform:translateX(-50%);width:112px;height:32px;border-radius:20px;background:#0F0F0D"></div>
+        </sc-if>
+        <sc-if value="{{ isAndroid }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute;left:50%;top:16px;transform:translateX(-50%);width:9px;height:9px;border-radius:50%;background:#0F0F0D;border:2px solid rgba(255,255,255,.15)"></div>
+        </sc-if>
+        <div style="display:flex;align-items:center;gap:6px;color:var(--text)">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="5" y="4" width="3" height="8" rx="1"/><rect x="10" y="1.5" width="3" height="10.5" rx="1" opacity=".9"/><rect x="15" y="0" width="3" height="12" rx="1" opacity=".35"/></svg>
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor"><path d="M8.5 2.2c2.4 0 4.6.9 6.3 2.4l1.2-1.4C14 1.3 11.4.3 8.5.3S3 1.3.5 3.2l1.2 1.4C3.4 3.1 6.1 2.2 8.5 2.2z" opacity=".9"/><path d="M8.5 6c1.3 0 2.5.5 3.4 1.3l1.2-1.4C11.9 4.8 10.3 4.2 8.5 4.2S5.1 4.8 3.9 5.9l1.2 1.4C6 6.5 7.2 6 8.5 6z"/><circle cx="8.5" cy="9.8" r="1.6"/></svg>
+          <svg width="26" height="12" viewBox="0 0 26 12" fill="none"><rect x="1" y="1" width="21" height="10" rx="3" stroke="currentColor" stroke-width="1.2" opacity=".5"/><rect x="3" y="3" width="15" height="6" rx="1.5" fill="currentColor"/><rect x="23.5" y="4" width="1.6" height="4" rx="1" fill="currentColor" opacity=".6"/></svg>
+        </div>
+      </div>
+
+      <!-- ============ LOGIN ============ -->
+      <sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+      <div class="scr" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:8px 28px 34px">
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0;padding:24px 0">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:44px">
+            <div style="width:34px;height:34px;border-radius:11px;background:var(--btn);display:flex;align-items:center;justify-content:center;color:var(--on-accent);font-family:'Newsreader',serif;font-weight:600;font-size:20px">L</div>
+            <span style="font-family:'Newsreader',serif;font-size:20px;font-weight:600;color:var(--text)">LifeOS</span>
+          </div>
+          <div style="font-family:'Newsreader',serif;font-size:40px;line-height:1.02;font-weight:500;color:var(--text);letter-spacing:-.5px">Welcome<br>back<span style="color:var(--accent)">.</span></div>
+          <div style="margin-top:12px;color:var(--text-2);font-size:14.5px;line-height:1.5">Your whole life, one calm place.<br>Let's pick up where you left off.</div>
+
+          <div style="margin-top:34px;display:flex;flex-direction:column;gap:14px">
+            <label style="display:block">
+              <span style="font-size:12px;font-weight:600;color:var(--text-2);letter-spacing:.2px">Email</span>
+              <div style="margin-top:7px;display:flex;align-items:center;gap:10px;height:52px;padding:0 16px;background:var(--surface);border:1px solid var(--border);border-radius:15px">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>
+                <input value="hitesh@hiteshyadav.in" style="flex:1;border:0;outline:0;background:transparent;font-family:inherit;font-size:15px;color:var(--text)">
+              </div>
+            </label>
+            <label style="display:block">
+              <span style="font-size:12px;font-weight:600;color:var(--text-2);letter-spacing:.2px">Password</span>
+              <div style="margin-top:7px;display:flex;align-items:center;gap:10px;height:52px;padding:0 16px;background:var(--surface);border:1px solid var(--border);border-radius:15px">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                <input type="password" value="lifeos123" style="flex:1;border:0;outline:0;background:transparent;font-family:inherit;font-size:15px;color:var(--text);letter-spacing:2px">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              </div>
+            </label>
+            <div style="text-align:right;font-size:13px;font-weight:600;color:var(--accent-ink);margin-top:2px">Forgot password?</div>
+          </div>
+
+          <button onClick="{{ signIn }}" style="margin-top:24px;height:54px;border:0;border-radius:16px;background:var(--btn);color:var(--on-accent);font-family:inherit;font-weight:700;font-size:15.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px" style-hover="filter:brightness(1.05)">
+            Sign in
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="2.2"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+          </button>
+          <div style="display:flex;align-items:center;gap:12px;margin:22px 0">
+            <div style="flex:1;height:1px;background:var(--border)"></div>
+            <span style="font-size:12px;color:var(--text-3);font-weight:600">or continue with</span>
+            <div style="flex:1;height:1px;background:var(--border)"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <button style="height:50px;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+              <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.5 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.9a5 5 0 0 1-2.2 3.3v2.7h3.5c2-1.9 3.3-4.7 3.3-7.9z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.5-2.7c-1 .7-2.3 1.1-3.8 1.1-2.9 0-5.4-2-6.3-4.6H2.1v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.7 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.1a11 11 0 0 0 0 9.8l3.6-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3 .6 4.2 1.6l3.1-3.1A11 11 0 0 0 2.1 7.1l3.6 2.8C6.6 7.4 9.1 5.4 12 5.4z"/></svg>
+              Google
+            </button>
+            <button style="height:50px;border:1px solid var(--border);border-radius:14px;background:var(--surface);color:var(--text);font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+              <svg width="16" height="18" viewBox="0 0 24 24" fill="var(--text)"><path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.9-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8zM14.1 5.6c.6-.8 1-1.9.9-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-.9 2.9 1 0 2.1-.5 2.7-1.3z"/></svg>
+              Apple
+            </button>
+          </div>
+          <div style="text-align:center;margin-top:30px;font-size:14px;color:var(--text-2)">New here? <span onClick="{{ goSignup }}" style="color:var(--accent-ink);font-weight:700;cursor:pointer">Create an account</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ SIGNUP ============ -->
+      <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ true }}">
+      <div class="scr" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:8px 28px 34px">
+        <div onClick="{{ goLogin }}" style="display:flex;align-items:center;gap:6px;color:var(--text-2);font-size:14px;font-weight:600;cursor:pointer;padding:6px 0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg> Back
+        </div>
+        <div style="margin-top:14px">
+          <div style="font-family:'Newsreader',serif;font-size:38px;line-height:1.03;font-weight:500;color:var(--text);letter-spacing:-.5px">Start your<br>LifeOS<span style="color:var(--accent)">.</span></div>
+          <div style="margin-top:10px;color:var(--text-2);font-size:14.5px;line-height:1.5">Finance, habits, gym, calendar — organised from day one.</div>
+        </div>
+        <div style="margin-top:26px;display:flex;flex-direction:column;gap:13px">
+          <label style="display:block">
+            <span style="font-size:12px;font-weight:600;color:var(--text-2)">Full name</span>
+            <div style="margin-top:7px;display:flex;align-items:center;gap:10px;height:52px;padding:0 16px;background:var(--surface);border:1px solid var(--border);border-radius:15px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+              <input value="Hitesh Yadav" style="flex:1;border:0;outline:0;background:transparent;font-family:inherit;font-size:15px;color:var(--text)">
+            </div>
+          </label>
+          <label style="display:block">
+            <span style="font-size:12px;font-weight:600;color:var(--text-2)">Email</span>
+            <div style="margin-top:7px;display:flex;align-items:center;gap:10px;height:52px;padding:0 16px;background:var(--surface);border:1px solid var(--border);border-radius:15px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg>
+              <input value="hitesh@hiteshyadav.in" style="flex:1;border:0;outline:0;background:transparent;font-family:inherit;font-size:15px;color:var(--text)">
+            </div>
+          </label>
+          <label style="display:block">
+            <span style="font-size:12px;font-weight:600;color:var(--text-2)">Password</span>
+            <div style="margin-top:7px;display:flex;align-items:center;gap:10px;height:52px;padding:0 16px;background:var(--surface);border:1px solid var(--border);border-radius:15px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <input type="password" value="lifeos123" style="flex:1;border:0;outline:0;background:transparent;font-family:inherit;font-size:15px;color:var(--text);letter-spacing:2px">
+            </div>
+            <div style="display:flex;gap:5px;margin-top:9px">
+              <div style="flex:1;height:4px;border-radius:2px;background:var(--accent)"></div>
+              <div style="flex:1;height:4px;border-radius:2px;background:var(--accent)"></div>
+              <div style="flex:1;height:4px;border-radius:2px;background:var(--accent);opacity:.55"></div>
+              <div style="flex:1;height:4px;border-radius:2px;background:var(--border)"></div>
+            </div>
+          </label>
+        </div>
+        <label style="display:flex;align-items:center;gap:10px;margin-top:18px;font-size:13px;color:var(--text-2);line-height:1.4">
+          <span style="width:20px;height:20px;flex:none;border-radius:6px;background:var(--btn);display:flex;align-items:center;justify-content:center">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+          </span>
+          I agree to the <span style="color:var(--accent-ink);font-weight:700">Terms</span> &amp; <span style="color:var(--accent-ink);font-weight:700">Privacy Policy</span>
+        </label>
+        <button onClick="{{ signIn }}" style="margin-top:22px;height:54px;border:0;border-radius:16px;background:var(--btn);color:var(--on-accent);font-family:inherit;font-weight:700;font-size:15.5px;cursor:pointer">Create account</button>
+        <div style="text-align:center;margin-top:22px;font-size:14px;color:var(--text-2)">Have an account? <span onClick="{{ goLogin }}" style="color:var(--accent-ink);font-weight:700;cursor:pointer">Sign in</span></div>
+      </div>
+      </sc-if>
+
+      <!-- ============ DASHBOARD ============ -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div class="scr" style="flex:1;overflow-y:auto;padding:2px 20px 108px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 16px">
+          <button onClick="{{ openSidebar }}" style="width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M3 6h18M3 12h13M3 18h18"/></svg>
+          </button>
+          <div style="text-align:center;line-height:1.1">
+            <div style="font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.4px;text-transform:uppercase">{{ dateStr }}</div>
+          </div>
+          <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--hero-a),var(--hero-b));display:flex;align-items:center;justify-content:center;color:var(--on-accent);font-weight:700;font-size:15px;border:2px solid var(--surface)">HY</div>
+        </div>
+
+        <div style="font-family:'Newsreader',serif;font-size:30px;line-height:1.06;font-weight:500;color:var(--text);letter-spacing:-.3px">{{ greetingText }},<br>Hitesh<span style="color:var(--accent)">.</span></div>
+        <div style="margin-top:6px;color:var(--text-2);font-size:14px">{{ dashSub }}</div>
+
+        <!-- NOW / gym -->
+        <div style="margin-top:20px;border-radius:24px;padding:20px;background:linear-gradient(150deg,var(--hero-a),var(--hero-b));color:var(--on-accent);position:relative;overflow:hidden">
+          <div style="position:absolute;right:-30px;top:-30px;width:150px;height:150px;border-radius:50%;background:var(--hero-veil)"></div>
+          <div style="position:absolute;right:24px;bottom:-40px;width:110px;height:110px;border-radius:50%;background:var(--hero-veil)"></div>
+          <div style="display:flex;align-items:center;gap:8px;position:relative">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--on-accent);box-shadow:0 0 0 4px var(--hero-track)"></span>
+            <span style="font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;opacity:.92">Now · 7:00–8:00 AM</span>
+          </div>
+          <div style="margin-top:14px;position:relative">
+            <div style="font-size:12px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.6px">Push Day</div>
+            <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:500;margin-top:2px">Chest &amp; Triceps</div>
+          </div>
+          <div style="margin-top:16px;display:flex;align-items:center;justify-content:space-between;position:relative">
+            <div>
+              <div style="font-size:12.5px;opacity:.85">Up next</div>
+              <div style="font-size:15px;font-weight:700;margin-top:1px">Incline Dumbbell Press · 4×10</div>
+            </div>
+            <button style="width:46px;height:46px;border-radius:50%;border:0;background:var(--on-accent);cursor:pointer;display:flex;align-items:center;justify-content:center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--hero-a)"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+          </div>
+          <div style="margin-top:16px;position:relative">
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:600;opacity:.9;margin-bottom:6px"><span>Exercise 2 of 6</span><span>32% complete</span></div>
+            <div style="height:6px;border-radius:4px;background:var(--hero-track)"><div style="width:32%;height:100%;border-radius:4px;background:var(--on-accent)"></div></div>
+          </div>
+        </div>
+
+        <!-- Todos -->
+        <div style="margin-top:20px;display:flex;align-items:baseline;justify-content:space-between">
+          <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Today's to-dos</div>
+          <span style="font-size:12.5px;font-weight:700;color:var(--text-2)">{{ todoCount }}</span>
+        </div>
+        <div style="margin-top:11px;display:flex;flex-direction:column;gap:9px">
+          <sc-for list="{{ todos }}" as="t" hint-placeholder-count="3">
+            <div onClick="{{ t.toggle }}" style="display:flex;align-items:center;gap:13px;padding:14px 15px;background:var(--surface);border:1px solid var(--border);border-radius:16px;cursor:pointer">
+              <span style="width:23px;height:23px;flex:none;border-radius:8px;border:2px solid {{ t.boxBorder }};background:{{ t.boxBg }};display:flex;align-items:center;justify-content:center">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="3.4" style="opacity:{{ t.checkOpacity }}"><path d="M5 12l5 5L20 6"/></svg>
+              </span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:14.5px;font-weight:600;color:var(--text);text-decoration:{{ t.strike }}">{{ t.text }}</div>
+                <div style="font-size:12px;color:var(--text-3);margin-top:1px">{{ t.time }}</div>
+              </div>
+              <span style="width:7px;height:7px;border-radius:50%;background:{{ t.dot }}"></span>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- Habits -->
+        <div style="margin-top:22px;font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Habits to keep</div>
+        <div style="margin-top:11px;display:grid;grid-template-columns:1fr 1fr;gap:11px">
+          <sc-for list="{{ habits }}" as="h" hint-placeholder-count="4">
+            <div onClick="{{ h.bump }}" style="display:flex;align-items:center;gap:13px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:18px;cursor:pointer">
+              <div style="position:relative;width:48px;height:48px;flex:none">
+                <svg width="48" height="48" viewBox="0 0 48 48" style="transform:rotate(-90deg)">
+                  <circle cx="24" cy="24" r="20" fill="none" stroke="var(--border)" stroke-width="5"/>
+                  <circle cx="24" cy="24" r="20" fill="none" stroke="var(--accent)" stroke-width="5" stroke-linecap="round" stroke-dasharray="{{ h.C }}" stroke-dashoffset="{{ h.off }}"/>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text);font-size:12px;font-weight:800">{{ h.center }}</div>
+              </div>
+              <div style="min-width:0">
+                <div style="font-size:14px;font-weight:700;color:var(--text)">{{ h.name }}</div>
+                <div style="font-size:11.5px;color:var(--text-3);margin-top:1px">{{ h.sub }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- Glance -->
+        <div style="margin-top:22px;font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Coming up</div>
+        <div style="margin-top:11px;display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:center;gap:13px;padding:14px 15px;background:var(--surface);border:1px solid var(--border);border-radius:16px">
+            <div style="width:40px;height:40px;flex:none;border-radius:12px;background:rgba(75,123,166,.15);display:flex;align-items:center;justify-content:center">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4B7BA6" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+            </div>
+            <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--text)">Team standup</div><div style="font-size:12px;color:var(--text-3)">Calendar · 10:30 AM · Zoom</div></div>
+            <span style="font-size:12px;font-weight:800;color:#4B7BA6">in 1h</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:13px;padding:14px 15px;background:var(--surface);border:1px solid var(--border);border-radius:16px">
+            <div style="width:40px;height:40px;flex:none;border-radius:12px;background:rgba(217,164,65,.15);display:flex;align-items:center;justify-content:center">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#C99320" stroke-width="1.9"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg>
+            </div>
+            <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--text)">Car insurance renewal</div><div style="font-size:12px;color:var(--text-3)">Scheduled expense · ₹18,400</div></div>
+            <span style="font-size:12px;font-weight:800;color:#C99320">in 3d</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:13px;padding:14px 15px;background:var(--surface);border:1px solid var(--border);border-radius:16px">
+            <div style="width:40px;height:40px;flex:none;border-radius:12px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" stroke-width="1.9"><path d="M4 18l5-5 4 3 6-8"/><path d="M15 8h4v4"/></svg>
+            </div>
+            <div style="flex:1"><div style="font-size:14px;font-weight:700;color:var(--text)">SIP auto-debit</div><div style="font-size:12px;color:var(--text-3)">Investment · Index Fund · ₹15,000</div></div>
+            <span style="font-size:12px;font-weight:800;color:var(--accent-ink)">in 5d</span>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ EXPENSES ============ -->
+      <sc-if value="{{ isExpenses }}" hint-placeholder-val="{{ true }}">
+      <div class="scr" style="flex:1;overflow-y:auto;padding:2px 20px 108px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 14px">
+          <button onClick="{{ openSidebar }}" style="width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M3 6h18M3 12h13M3 18h18"/></svg>
+          </button>
+          <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Finance</div>
+          <button style="width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="1.9"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+          </button>
+        </div>
+
+        <div style="font-size:12px;font-weight:600;color:var(--text-3);letter-spacing:.3px">NET SAVED · AUGUST</div>
+        <div style="display:flex;align-items:flex-end;gap:10px;margin-top:2px">
+          <div style="font-family:'Newsreader',serif;font-size:42px;font-weight:500;color:var(--text);letter-spacing:-.5px;font-variant-numeric:tabular-nums">{{ fin.saved }}</div>
+          <div style="display:flex;align-items:center;gap:3px;color:var(--accent-ink);font-size:13px;font-weight:800;padding-bottom:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg>{{ fin.savedPct }}</div>
+        </div>
+
+        <!-- 3 stat pills -->
+        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px">
+          <div style="padding:13px 12px;background:var(--surface);border:1px solid var(--border);border-radius:16px">
+            <div style="width:26px;height:26px;border-radius:8px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" stroke-width="2.2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
+            <div style="font-size:11px;color:var(--text-3);font-weight:600">Income</div>
+            <div style="font-size:15px;font-weight:800;color:var(--text);margin-top:1px;font-variant-numeric:tabular-nums">{{ fin.income }}</div>
+          </div>
+          <div style="padding:13px 12px;background:var(--surface);border:1px solid var(--border);border-radius:16px">
+            <div style="width:26px;height:26px;border-radius:8px;background:rgba(194,112,61,.15);display:flex;align-items:center;justify-content:center;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C2703D" stroke-width="2.2"><path d="M12 19V5M5 12l7 7 7-7" transform="rotate(180 12 12)"/></svg></div>
+            <div style="font-size:11px;color:var(--text-3);font-weight:600">Outgoing</div>
+            <div style="font-size:15px;font-weight:800;color:var(--text);margin-top:1px;font-variant-numeric:tabular-nums">{{ fin.out }}</div>
+          </div>
+          <div style="padding:13px 12px;background:var(--surface);border:1px solid var(--border);border-radius:16px">
+            <div style="width:26px;height:26px;border-radius:8px;background:rgba(124,107,196,.15);display:flex;align-items:center;justify-content:center;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C6BC4" stroke-width="2.2"><path d="M4 18l5-5 4 3 6-8"/></svg></div>
+            <div style="font-size:11px;color:var(--text-3);font-weight:600">Invested</div>
+            <div style="font-size:15px;font-weight:800;color:var(--text);margin-top:1px;font-variant-numeric:tabular-nums">{{ fin.invest }}</div>
+          </div>
+        </div>
+
+        <!-- tabs -->
+        <div style="margin-top:18px;display:flex;gap:7px;padding:5px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:14px">
+          <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="3">
+            <button onClick="{{ tab.pick }}" style="flex:1;height:36px;border:0;border-radius:10px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;background:{{ tab.bg }};color:{{ tab.fg }};box-shadow:{{ tab.sh }}">{{ tab.label }}</button>
+          </sc-for>
+        </div>
+
+        <!-- Donut: spend by category -->
+        <div style="margin-top:16px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:22px">
+          <div style="font-family:'Newsreader',serif;font-size:17px;font-weight:600;color:var(--text)">Where it went</div>
+          <div style="display:flex;align-items:center;gap:18px;margin-top:14px">
+            <div style="position:relative;width:132px;height:132px;flex:none">
+              <svg width="132" height="132" viewBox="0 0 132 132" style="transform:rotate(-90deg)">
+                <circle cx="66" cy="66" r="52" fill="none" stroke="var(--border)" stroke-width="15"/>
+                <sc-for list="{{ donutSegs }}" as="s" hint-placeholder-count="8">
+                  <circle cx="66" cy="66" r="52" fill="none" stroke="{{ s.color }}" stroke-width="15" stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}"/>
+                </sc-for>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <div style="font-size:10.5px;color:var(--text-3);font-weight:700">SPENT</div>
+                <div style="font-size:17px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums">{{ fin.out }}</div>
+              </div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ legend }}" as="l" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="width:9px;height:9px;border-radius:3px;background:{{ l.color }};flex:none"></span>
+                  <span style="flex:1;font-size:12.5px;color:var(--text-2);font-weight:600">{{ l.name }}</span>
+                  <span style="font-size:12.5px;color:var(--text);font-weight:800">{{ l.pct }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trend bars -->
+        <div style="margin-top:14px;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:22px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <div style="font-family:'Newsreader',serif;font-size:17px;font-weight:600;color:var(--text)">Monthly spending</div>
+            <div style="font-size:12px;color:var(--text-3);font-weight:600">6 months</div>
+          </div>
+          <div style="margin-top:18px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;height:130px">
+            <sc-for list="{{ trend }}" as="b" hint-placeholder-count="6">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end">
+                <div style="font-size:10px;font-weight:800;color:{{ b.labelColor }}">{{ b.top }}</div>
+                <div style="width:100%;max-width:26px;border-radius:8px 8px 4px 4px;height:{{ b.h }}px;background:{{ b.fill }}"></div>
+                <div style="font-size:11px;color:var(--text-3);font-weight:700">{{ b.label }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- Accounts -->
+        <div style="margin-top:20px;display:flex;align-items:baseline;justify-content:space-between">
+          <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Accounts</div>
+          <span onClick="{{ openAccount }}" class="tap" style="font-size:12.5px;font-weight:700;color:var(--accent-ink);cursor:pointer">+ Add account</span>
+        </div>
+        <div style="margin-top:11px;display:flex;gap:11px;overflow-x:auto;padding-bottom:4px;margin-right:-20px;padding-right:20px">
+          <sc-for list="{{ accounts }}" as="a" hint-placeholder-count="3">
+            <div style="flex:none;width:158px;padding:15px;border-radius:20px;background:var(--surface);border:1px solid var(--border)">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="width:30px;height:30px;border-radius:10px;background:{{ a.soft }};color:{{ a.color }};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px">{{ a.ini }}</span>
+                <span style="font-size:10px;font-weight:800;letter-spacing:.5px;color:var(--text-3)">{{ a.kind }}</span>
+              </div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:11px">{{ a.name }}</div>
+              <div style="font-size:17px;font-weight:800;color:{{ a.balColor }};margin-top:2px;font-variant-numeric:tabular-nums">{{ a.bal }}</div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:3px">{{ a.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- Recurring & scheduled -->
+        <div style="margin-top:22px;display:flex;align-items:baseline;justify-content:space-between">
+          <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Recurring &amp; scheduled</div>
+          <span onClick="{{ openRecurring }}" class="tap" style="font-size:12.5px;font-weight:700;color:var(--accent-ink);cursor:pointer">+ New</span>
+        </div>
+        <div style="margin-top:5px;font-size:12.5px;color:var(--text-3);line-height:1.45">Added to your ledger automatically on each due date.</div>
+        <div style="margin-top:11px;display:flex;flex-direction:column;gap:9px">
+          <sc-for list="{{ recurring }}" as="r" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:13px;padding:14px 15px;background:var(--surface);border:1px solid var(--border);border-radius:16px">
+              <div style="width:40px;height:40px;flex:none;border-radius:13px;background:{{ r.soft }};color:{{ r.color }};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px">{{ r.ini }}</div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <span style="font-size:14.5px;font-weight:700;color:var(--text)">{{ r.name }}</span>
+                  <span style="font-size:9.5px;font-weight:800;letter-spacing:.4px;padding:2px 6px;border-radius:6px;background:{{ r.tagBg }};color:{{ r.tagFg }}">{{ r.tag }}</span>
+                </div>
+                <div style="font-size:12px;color:var(--text-3);margin-top:2px">{{ r.sub }}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:14px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums">{{ r.amt }}</div>
+                <div style="font-size:11px;color:var(--text-3);margin-top:1px">{{ r.next }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- Transactions -->
+        <div style="margin-top:22px;display:flex;align-items:baseline;justify-content:space-between">
+          <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Transactions</div>
+          <span style="font-size:12.5px;font-weight:700;color:var(--accent-ink)">See all</span>
+        </div>
+        <div style="margin-top:11px;display:flex;flex-direction:column;gap:2px">
+          <sc-for list="{{ txns }}" as="x" hint-placeholder-count="7">
+            <div style="display:flex;align-items:center;gap:13px;padding:13px 4px;border-bottom:1px solid var(--border-2)">
+              <div style="width:42px;height:42px;flex:none;border-radius:13px;background:{{ x.soft }};display:flex;align-items:center;justify-content:center;color:{{ x.color }};font-weight:800;font-size:15px">{{ x.ini }}</div>
+              <div style="flex:1;min-width:0"><div style="font-size:14.5px;font-weight:700;color:var(--text)">{{ x.name }}</div><div style="font-size:12px;color:var(--text-3);margin-top:1px">{{ x.sub }}</div></div>
+              <div style="font-size:14.5px;font-weight:800;color:{{ x.amtColor }};font-variant-numeric:tabular-nums;white-space:nowrap">{{ x.amtStr }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ HABITS ============ -->
+      <sc-if value="{{ isHabits }}" hint-placeholder-val="{{ false }}">
+      <div class="scr" data-screen-label="Habits" style="flex:1;overflow-y:auto;padding:2px 20px 108px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 14px">
+          <button onClick="{{ openSidebar }}" style="width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M3 6h18M3 12h13M3 18h18"/></svg>
+          </button>
+          <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Habits</div>
+          <div style="width:42px"></div>
+        </div>
+
+        <div style="font-size:12px;font-weight:600;color:var(--text-3);letter-spacing:.3px">CONSISTENCY · THIS WEEK</div>
+        <div style="display:flex;align-items:flex-end;gap:10px;margin-top:2px">
+          <div style="font-family:'Newsreader',serif;font-size:42px;font-weight:500;color:var(--text);letter-spacing:-.5px;font-variant-numeric:tabular-nums">{{ habitPct }}</div>
+          <div style="display:flex;align-items:center;gap:3px;color:var(--accent-ink);font-size:13px;font-weight:800;padding-bottom:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg>{{ habitDelta }}</div>
+        </div>
+        <div style="margin-top:3px;font-size:13.5px;color:var(--text-2)">{{ habitSummary }}</div>
+
+        <div style="margin-top:16px;display:flex;gap:6px;padding:14px 12px;background:var(--surface);border:1px solid var(--border);border-radius:20px">
+          <sc-for list="{{ week }}" as="d" hint-placeholder-count="7">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+              <span style="font-size:11px;font-weight:700;color:{{ d.labelColor }}">{{ d.label }}</span>
+              <span style="width:30px;height:30px;border-radius:10px;background:{{ d.bg }};border:1.5px solid {{ d.bd }};color:{{ d.fg }};display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800">{{ d.n }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="margin-top:22px;display:flex;align-items:baseline;justify-content:space-between">
+          <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Today</div>
+          <span style="font-size:12.5px;font-weight:700;color:var(--text-2)">{{ habitDone }}</span>
+        </div>
+        <div style="margin-top:11px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ habitCards }}" as="h" hint-placeholder-count="4">
+            <div class="tile" style="display:flex;align-items:center;gap:13px;padding:13px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px">
+              <div onClick="{{ h.reset }}" style="position:relative;width:46px;height:46px;flex:none;cursor:pointer">
+                <svg width="46" height="46" viewBox="0 0 48 48" style="transform:rotate(-90deg)">
+                  <circle cx="24" cy="24" r="20" fill="none" stroke="var(--border)" stroke-width="5"/>
+                  <circle cx="24" cy="24" r="20" fill="none" stroke="{{ h.color }}" stroke-width="5" stroke-linecap="round" stroke-dasharray="{{ h.C }}" stroke-dashoffset="{{ h.off }}" style="transition:stroke-dashoffset .35s cubic-bezier(.2,.8,.3,1)"/>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text);font-size:11.5px;font-weight:800">{{ h.center }}</div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <span style="font-size:14.5px;font-weight:700;color:var(--text)">{{ h.name }}</span>
+                  <span style="display:flex;align-items:center;gap:3px;height:19px;padding:0 7px;border-radius:7px;background:{{ h.soft }};color:{{ h.color }};font-size:10.5px;font-weight:800">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2c.4 4-2.5 5.2-2.5 8A3.5 3.5 0 0 0 14 13c0-2 1-3 1-3 1.9 1.6 3 3.7 3 6a6 6 0 0 1-12 0c0-5.4 5-7.6 7-14z"/></svg>{{ h.streak }}
+                  </span>
+                </div>
+                <div style="font-size:12px;color:var(--text-3);margin-top:2px">{{ h.sub }}</div>
+                <div style="display:flex;gap:4px;margin-top:8px">
+                  <sc-for list="{{ h.dots }}" as="p" hint-placeholder-count="7">
+                    <span style="width:13px;height:6px;border-radius:3px;background:{{ p.bg }}"></span>
+                  </sc-for>
+                </div>
+              </div>
+              <button onClick="{{ h.bump }}" class="tap" style="position:relative;width:44px;height:44px;flex:none;border:0;border-radius:15px;background:{{ h.btnBg }};color:{{ h.btnFg }};cursor:pointer;display:flex;align-items:center;justify-content:center">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" style="position:absolute;opacity:{{ h.plusOp }}"><path d="M12 5v14M5 12h14"/></svg>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="position:absolute;opacity:{{ h.tickOp }}"><path d="M5 12l5 5L20 6"/></svg>
+              </button>
+            </div>
+          </sc-for>
+        </div>
+
+        <button onClick="{{ addHabit }}" class="tap" style="margin-top:12px;width:100%;height:52px;border:1.5px dashed var(--border);border-radius:18px;background:transparent;color:var(--text-2);font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Build a new habit
+        </button>
+      </div>
+      </sc-if>
+
+      <!-- ============ HEALTH ============ -->
+      <sc-if value="{{ isHealth }}" hint-placeholder-val="{{ false }}">
+      <div class="scr" data-screen-label="Health" style="flex:1;overflow-y:auto;padding:2px 20px 108px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 14px">
+          <button onClick="{{ openSidebar }}" style="width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M3 6h18M3 12h13M3 18h18"/></svg>
+          </button>
+          <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Health</div>
+          <div style="width:42px"></div>
+        </div>
+
+        <div style="display:flex;gap:7px;padding:5px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:14px">
+          <sc-for list="{{ hTabs }}" as="t" hint-placeholder-count="2">
+            <button onClick="{{ t.pick }}" style="flex:1;height:38px;border:0;border-radius:10px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;background:{{ t.bg }};color:{{ t.fg }};box-shadow:{{ t.sh }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+
+        <!-- MEDICATION -->
+        <sc-if value="{{ isMeds }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-top:18px;border-radius:24px;padding:19px;background:linear-gradient(150deg,var(--hero-a),var(--hero-b));color:var(--on-accent);position:relative;overflow:hidden">
+          <div style="position:absolute;right:-34px;top:-34px;width:150px;height:150px;border-radius:50%;background:var(--hero-veil)"></div>
+          <div style="font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;opacity:.92;position:relative">Doses today</div>
+          <div style="display:flex;align-items:flex-end;gap:8px;margin-top:6px;position:relative">
+            <div style="font-family:'Newsreader',serif;font-size:36px;font-weight:500;line-height:1">{{ medTaken }}</div>
+            <div style="font-size:14px;font-weight:700;opacity:.85;padding-bottom:3px">of {{ medTotal }} taken</div>
+          </div>
+          <div style="margin-top:14px;position:relative">
+            <div style="height:6px;border-radius:4px;background:var(--hero-track)"><div style="width:{{ medPct }};height:100%;border-radius:4px;background:var(--on-accent);transition:width .35s cubic-bezier(.2,.8,.3,1)"></div></div>
+            <div style="margin-top:9px;font-size:12.5px;opacity:.9">{{ medNext }}</div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;display:flex;gap:8px">
+          <sc-for list="{{ medViews }}" as="v" hint-placeholder-count="2">
+            <button onClick="{{ v.pick }}" class="tap" style="height:34px;padding:0 15px;border-radius:11px;border:1px solid {{ v.bd }};background:{{ v.bg }};color:{{ v.fg }};font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer">{{ v.label }}</button>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ isMedToday }}" hint-placeholder-val="{{ true }}">
+        <sc-for list="{{ medGroups }}" as="g" hint-placeholder-count="3">
+          <div>
+            <div style="margin-top:20px;display:flex;align-items:center;gap:9px">
+              <span style="width:26px;height:26px;border-radius:9px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);display:flex;align-items:center;justify-content:center">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              </span>
+              <span style="font-size:13px;font-weight:800;color:var(--text);letter-spacing:.2px">{{ g.label }}</span>
+              <span style="font-size:12px;color:var(--text-3)">{{ g.time }}</span>
+            </div>
+            <div style="margin-top:10px;display:flex;flex-direction:column;gap:9px">
+              <sc-for list="{{ g.items }}" as="m" hint-placeholder-count="2">
+                <div onClick="{{ m.toggle }}" class="tap" style="display:flex;align-items:center;gap:13px;padding:13px 14px;background:var(--surface);border:1px solid {{ m.bd }};border-radius:18px;cursor:pointer">
+                  <span style="width:42px;height:42px;flex:none;border-radius:14px;background:{{ m.soft }};color:{{ m.color }};display:flex;align-items:center;justify-content:center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="2.6" y="8.4" width="18.8" height="7.2" rx="3.6" transform="rotate(-45 12 12)"/><path d="M8.5 8.5l7 7"/></svg>
+                  </span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:14.5px;font-weight:700;color:var(--text);text-decoration:{{ m.strike }}">{{ m.name }}</div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+                      <span style="font-size:10px;font-weight:800;letter-spacing:.3px;padding:2px 6px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-2);white-space:nowrap">{{ m.freqShort }}</span>
+                      <span style="font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ m.sub }}</span>
+                    </div>
+                  </div>
+                  <span style="font-size:10.5px;font-weight:800;color:{{ m.leftColor }};white-space:nowrap">{{ m.left }}</span>
+                  <span style="width:26px;height:26px;flex:none;border-radius:9px;border:2px solid {{ m.boxBd }};background:{{ m.boxBg }};display:flex;align-items:center;justify-content:center">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="3.4" style="opacity:{{ m.checkOpacity }}"><path d="M5 12l5 5L20 6"/></svg>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+
+        <div style="margin-top:18px;display:flex;align-items:center;gap:12px;padding:14px;background:rgba(217,164,65,.13);border:1px solid rgba(217,164,65,.3);border-radius:18px">
+          <span style="width:34px;height:34px;flex:none;border-radius:11px;background:rgba(217,164,65,.22);display:flex;align-items:center;justify-content:center">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A6410" stroke-width="2"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>
+          </span>
+          <div style="flex:1">
+            <div style="font-size:13.5px;font-weight:700;color:var(--text)">Metformin runs out in 4 days</div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:1px">Order a refill before Sat, 12 Sep</div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- MED SCHEDULE -->
+        <sc-if value="{{ isMedSched }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ medSchedule }}" as="m" hint-placeholder-count="5">
+            <div onClick="{{ m.edit }}" class="tap tile" style="cursor:pointer;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:20px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:38px;height:38px;flex:none;border-radius:13px;background:{{ m.soft }};color:{{ m.color }};display:flex;align-items:center;justify-content:center">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="2.6" y="8.4" width="18.8" height="7.2" rx="3.6" transform="rotate(-45 12 12)"/><path d="M8.5 8.5l7 7"/></svg>
+                </span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14.5px;font-weight:700;color:var(--text)">{{ m.name }}</div>
+                  <div style="font-size:12px;color:var(--text-3);margin-top:1px">{{ m.freqLabel }}</div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
+              <div style="margin-top:11px;display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ m.timeChips }}" as="t" hint-placeholder-count="2">
+                  <span style="display:flex;align-items:center;gap:5px;height:28px;padding:0 10px;border-radius:9px;background:var(--surface-2);border:1px solid var(--border-2);font-size:11.5px;font-weight:700;color:var(--text-2);font-variant-numeric:tabular-nums">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{{ t.label }}
+                  </span>
+                </sc-for>
+              </div>
+              <div style="margin-top:10px;display:flex;gap:5px">
+                <sc-for list="{{ m.dayDots }}" as="d" hint-placeholder-count="7">
+                  <span style="flex:1;height:22px;border-radius:7px;background:{{ d.bg }};border:1px solid {{ d.bd }};color:{{ d.fg }};font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ d.label }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ newMed }}" class="tap" style="margin-top:12px;width:100%;height:52px;border:1.5px dashed var(--border);border-radius:18px;background:transparent;color:var(--text-2);font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Add a medication
+        </button>
+        </sc-if>
+        </sc-if>
+
+        <!-- GYM -->
+        <sc-if value="{{ isGym }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:18px;border-radius:24px;padding:19px;background:linear-gradient(150deg,var(--hero-a),var(--hero-b));color:var(--on-accent);position:relative;overflow:hidden">
+          <div style="position:absolute;right:-30px;top:-40px;width:150px;height:150px;border-radius:50%;background:var(--hero-veil)"></div>
+          <div style="display:flex;align-items:center;gap:8px;position:relative">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--on-accent);box-shadow:0 0 0 4px var(--hero-track)"></span>
+            <span style="font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;opacity:.92">Today · Week 3, Day 2</span>
+          </div>
+          <div style="font-family:'Newsreader',serif;font-size:27px;font-weight:500;margin-top:11px;position:relative">Push Day</div>
+          <div style="font-size:13px;opacity:.88;margin-top:1px;position:relative">Chest · Shoulders · Triceps</div>
+          <div style="margin-top:15px;display:flex;gap:22px;position:relative">
+            <div><div style="font-size:11px;opacity:.8;font-weight:700">EXERCISES</div><div style="font-size:17px;font-weight:800;margin-top:1px">{{ exDoneStr }}</div></div>
+            <div><div style="font-size:11px;opacity:.8;font-weight:700">VOLUME</div><div style="font-size:17px;font-weight:800;margin-top:1px">{{ exVolume }}</div></div>
+            <div><div style="font-size:11px;opacity:.8;font-weight:700">EST. TIME</div><div style="font-size:17px;font-weight:800;margin-top:1px">52 min</div></div>
+          </div>
+          <div style="margin-top:15px;position:relative;height:6px;border-radius:4px;background:var(--hero-track)"><div style="width:{{ exPct }};height:100%;border-radius:4px;background:var(--on-accent);transition:width .35s cubic-bezier(.2,.8,.3,1)"></div></div>
+        </div>
+
+        <div style="margin-top:20px;display:flex;align-items:baseline;justify-content:space-between">
+          <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Today's exercises</div>
+          <span style="font-size:12.5px;font-weight:700;color:var(--text-2)">Tap to log a set</span>
+        </div>
+
+        <div style="margin-top:11px;display:flex;flex-direction:column;gap:11px">
+          <sc-for list="{{ exercises }}" as="e" hint-placeholder-count="6">
+            <div class="tile" style="display:flex;gap:13px;padding:11px;background:var(--surface);border:1px solid {{ e.bd }};border-radius:20px">
+              <div style="position:relative;width:96px;height:96px;flex:none;color:var(--text-2)">
+                <image-slot id="{{ e.slot }}" shape="rounded" radius="15" placeholder="Photo"></image-slot>
+              </div>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <span style="font-size:14.5px;font-weight:700;color:var(--text);text-decoration:{{ e.strike }}">{{ e.name }}</span>
+                </div>
+                <div style="font-size:12.5px;color:var(--text-2);margin-top:2px;font-variant-numeric:tabular-nums">{{ e.scheme }}</div>
+                <div style="font-size:11.5px;color:var(--text-3);margin-top:2px">{{ e.cue }}</div>
+                <div style="display:flex;align-items:center;gap:9px;margin-top:9px">
+                  <div style="display:flex;gap:4px">
+                    <sc-for list="{{ e.pips }}" as="p" hint-placeholder-count="4">
+                      <span style="width:16px;height:6px;border-radius:3px;background:{{ p.bg }}"></span>
+                    </sc-for>
+                  </div>
+                  <span style="font-size:11px;font-weight:800;color:var(--text-3)">{{ e.setsLabel }}</span>
+                </div>
+              </div>
+              <button onClick="{{ e.logSet }}" class="tap" style="position:relative;width:44px;height:44px;flex:none;align-self:center;border:0;border-radius:15px;background:{{ e.btnBg }};color:{{ e.btnFg }};cursor:pointer;display:flex;align-items:center;justify-content:center">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" style="position:absolute;opacity:{{ e.plusOp }}"><path d="M12 5v14M5 12h14"/></svg>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="position:absolute;opacity:{{ e.tickOp }}"><path d="M5 12l5 5L20 6"/></svg>
+              </button>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="margin-top:16px;display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:18px">
+          <span style="width:34px;height:34px;flex:none;border-radius:11px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
+          </span>
+          <div style="flex:1">
+            <div style="font-size:13.5px;font-weight:700;color:var(--text)">Rest timer · 90s between sets</div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:1px">Starts automatically when you log a set</div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">This week's split</div>
+        <div style="margin-top:11px;display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
+          <sc-for list="{{ split }}" as="d" hint-placeholder-count="6">
+            <div style="flex:none;width:96px;padding:13px 12px;border-radius:16px;background:{{ d.bg }};border:1px solid {{ d.bd }}">
+              <div style="font-size:11px;font-weight:800;color:{{ d.dayFg }};letter-spacing:.4px">{{ d.day }}</div>
+              <div style="font-size:13.5px;font-weight:700;color:{{ d.fg }};margin-top:5px">{{ d.name }}</div>
+              <div style="font-size:11px;color:{{ d.subFg }};margin-top:2px">{{ d.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <!-- ============ LEARN ============ -->
+      <sc-if value="{{ isLearn }}" hint-placeholder-val="{{ false }}">
+      <div class="scr" data-screen-label="Learn" style="flex:1;overflow-y:auto;padding:2px 20px 108px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 14px">
+          <button onClick="{{ openSidebar }}" style="width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M3 6h18M3 12h13M3 18h18"/></svg>
+          </button>
+          <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Learn</div>
+          <button onClick="{{ newNote }}" class="tap" style="width:42px;height:42px;border-radius:13px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2.1"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+
+        <div style="border-radius:24px;padding:19px;background:linear-gradient(150deg,var(--hero-a),var(--hero-b));color:var(--on-accent);position:relative;overflow:hidden">
+          <div style="position:absolute;right:-40px;top:-46px;width:160px;height:160px;border-radius:50%;background:var(--hero-veil)"></div>
+          <div style="font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;opacity:.92;position:relative">Review queue</div>
+          <div style="display:flex;align-items:flex-end;gap:8px;margin-top:6px;position:relative">
+            <div style="font-family:'Newsreader',serif;font-size:36px;font-weight:500;line-height:1">{{ dueCount }}</div>
+            <div style="font-size:14px;font-weight:700;opacity:.85;padding-bottom:3px">notes due for revision</div>
+          </div>
+          <div style="margin-top:13px;font-size:13px;opacity:.9;position:relative;line-height:1.45">{{ learnBlurb }}</div>
+          <button onClick="{{ startReview }}" class="tap" style="margin-top:15px;position:relative;height:42px;padding:0 18px;border:0;border-radius:14px;background:var(--on-accent);color:var(--accent-ink);font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer">Start a 5-min review</button>
+        </div>
+
+        <div style="margin-top:20px;display:flex;align-items:baseline;justify-content:space-between">
+          <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">Notebooks</div>
+          <span style="font-size:12.5px;font-weight:700;color:var(--text-2)">{{ noteTotal }}</span>
+        </div>
+        <div style="margin-top:11px;display:flex;gap:9px;overflow-x:auto;padding-bottom:4px">
+          <sc-for list="{{ books }}" as="b" hint-placeholder-count="4">
+            <div onClick="{{ b.pick }}" class="tap" style="cursor:pointer;flex:none;width:132px;padding:14px;border-radius:19px;background:{{ b.bg }};border:1px solid {{ b.bd }};position:relative;overflow:hidden">
+              <span style="position:absolute;left:0;top:0;bottom:0;width:4px;background:{{ b.color }}"></span>
+              <span style="width:32px;height:32px;border-radius:11px;background:{{ b.soft }};color:{{ b.color }};display:flex;align-items:center;justify-content:center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M8 3v18"/></svg>
+              </span>
+              <div style="font-size:14px;font-weight:700;color:var(--text);margin-top:10px">{{ b.name }}</div>
+              <div style="font-size:11.5px;color:var(--text-3);margin-top:2px">{{ b.count }}</div>
+              <div style="margin-top:9px;height:4px;border-radius:3px;background:var(--border-2)"><div style="width:{{ b.pct }};height:100%;border-radius:3px;background:{{ b.color }}"></div></div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="margin-top:20px;display:flex;gap:7px;padding:5px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:14px">
+          <sc-for list="{{ learnTabs }}" as="t" hint-placeholder-count="3">
+            <button onClick="{{ t.pick }}" style="flex:1;height:36px;border:0;border-radius:10px;font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer;background:{{ t.bg }};color:{{ t.fg }};box-shadow:{{ t.sh }}">{{ t.label }}</button>
+          </sc-for>
+        </div>
+
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ notes }}" as="n" hint-placeholder-count="4">
+            <div onClick="{{ n.open }}" class="tap tile" style="cursor:pointer;padding:15px;background:var(--surface);border:1px solid {{ n.bd }};border-radius:20px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:7px;height:7px;border-radius:50%;background:{{ n.color }}"></span>
+                <span style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:{{ n.color }}">{{ n.book }}</span>
+                <span style="font-size:11.5px;color:var(--text-3);margin-left:auto">{{ n.when }}</span>
+              </div>
+              <div style="font-family:'Newsreader',serif;font-size:17.5px;font-weight:600;color:var(--text);margin-top:7px;line-height:1.28;text-wrap:pretty">{{ n.title }}</div>
+              <div style="font-size:12.5px;color:var(--text-2);margin-top:5px;line-height:1.5">{{ n.excerpt }}</div>
+              <div style="margin-top:11px;display:flex;align-items:center;gap:6px">
+                <sc-for list="{{ n.tags }}" as="g" hint-placeholder-count="2">
+                  <span style="font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:7px;background:var(--surface-2);border:1px solid var(--border-2);color:var(--text-2)">{{ g.label }}</span>
+                </sc-for>
+                <span style="margin-left:auto;font-size:11px;font-weight:800;color:{{ n.dueColor }}">{{ n.dueLabel }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <button onClick="{{ newNote }}" class="tap" style="margin-top:12px;width:100%;height:52px;border:1.5px dashed var(--border);border-radius:18px;background:transparent;color:var(--text-2);font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Write a new note
+        </button>
+      </div>
+      </sc-if>
+
+      <!-- ============ NOTE READER ============ -->
+      <sc-if value="{{ noteOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:22;background:var(--bg);display:flex;flex-direction:column;animation:rise .26s cubic-bezier(.2,.8,.3,1)">
+        <div style="flex:none;display:flex;align-items:center;gap:12px;padding:10px 18px 12px;border-bottom:1px solid var(--border-2)">
+          <button onClick="{{ closeNote }}" class="tap" style="width:38px;height:38px;flex:none;border-radius:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2.3"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:{{ nvColor }}">{{ nvBook }}</div>
+            <div style="font-size:11.5px;color:var(--text-3);margin-top:1px">{{ nvMeta }}</div>
+          </div>
+          <button onClick="{{ toggleStar }}" class="tap" style="width:38px;height:38px;flex:none;border-radius:12px;border:1px solid var(--border);background:{{ nvStarBg }};color:{{ nvStarFg }};cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="{{ nvStarFill }}" stroke="currentColor" stroke-width="2"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z"/></svg>
+          </button>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:20px 22px 30px">
+          <div style="font-family:'Newsreader',serif;font-size:27px;font-weight:600;color:var(--text);line-height:1.2;letter-spacing:-.3px;text-wrap:pretty">{{ nvTitle }}</div>
+          <div style="margin-top:18px;display:flex;flex-direction:column;gap:15px">
+            <sc-for list="{{ nvBody }}" as="b" hint-placeholder-count="5">
+              <div style="border-left:{{ b.rule }};padding-left:{{ b.pad }};background:{{ b.bg }};border-radius:{{ b.radius }};padding-top:{{ b.padY }};padding-bottom:{{ b.padY }};padding-right:{{ b.padR }}">
+                <div style="font-family:{{ b.font }};font-size:{{ b.size }};font-weight:{{ b.weight }};color:{{ b.fg }};line-height:1.65;white-space:pre-wrap">{{ b.text }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:24px;padding:16px;border-radius:20px;background:var(--surface-2);border:1px solid var(--border-2)">
+            <div style="font-size:11px;font-weight:800;letter-spacing:.8px;color:var(--text-3)">RECALL PROMPT</div>
+            <div style="font-size:14.5px;font-weight:700;color:var(--text);margin-top:6px;line-height:1.45">{{ nvPrompt }}</div>
+          </div>
+        </div>
+        <div style="flex:none;display:flex;gap:9px;padding:12px 18px 26px;border-top:1px solid var(--border-2)">
+          <button onClick="{{ reviewLater }}" class="tap" style="flex:1;height:52px;border-radius:16px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);font-family:inherit;font-size:14px;font-weight:700;cursor:pointer">Review later</button>
+          <button onClick="{{ markReviewed }}" class="tap" style="flex:1.4;height:52px;border:0;border-radius:16px;background:var(--btn);color:var(--on-accent);font-family:inherit;font-size:14.5px;font-weight:800;cursor:pointer">{{ nvCta }}</button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ BOTTOM NAV ============ -->
+      <sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;left:0;right:0;bottom:0;z-index:6">
+        <div style="position:absolute;left:14px;right:14px;bottom:14px;height:66px;border-radius:24px;background:var(--raised);border:1px solid var(--border);box-shadow:0 12px 30px -12px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:space-around;padding:0 6px">
+          <button onClick="{{ goDash }}" style="border:0;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:{{ navHome }}">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+            <span style="font-size:9.5px;font-weight:700">Home</span>
+          </button>
+          <button onClick="{{ goExpenses }}" style="border:0;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:{{ navFin }}">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+            <span style="font-size:9.5px;font-weight:700">Finance</span>
+          </button>
+          <button onClick="{{ openAdd }}" class="tap" style="position:relative;border:0;background:var(--btn);cursor:pointer;width:50px;height:50px;border-radius:17px;display:flex;align-items:center;justify-content:center;margin-top:-2px;box-shadow:0 8px 18px -6px var(--accent)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="2.4" style="transition:transform .3s cubic-bezier(.2,.8,.2,1);transform:rotate({{ fabRot }})"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <button onClick="{{ goHabits }}" style="border:0;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:{{ navHabits }}">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L21 8"/><path d="M21 3.5V8h-4.5"/><path d="M20.5 12a8.5 8.5 0 0 1-14.3 6.2L3 16"/><path d="M3 20.5V16h4.5"/><path d="M9.5 12l1.9 1.9L15 10"/></svg>
+            <span style="font-size:9.5px;font-weight:700">Habits</span>
+          </button>
+          <button onClick="{{ goHealth }}" style="border:0;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:{{ navHealth }}">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.4 5.6a5 5 0 0 0-7.1 0L12 6.9l-1.3-1.3a5 5 0 1 0-7.1 7.1l1.3 1.3L12 21l7.1-7-.1.1 1.4-1.4a5 5 0 0 0 0-7.1z"/></svg>
+            <span style="font-size:9.5px;font-weight:700">Health</span>
+          </button>
+          <button onClick="{{ goLearn }}" style="border:0;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:{{ navLearn }}">
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 1 2-2h13"/></svg>
+            <span style="font-size:9.5px;font-weight:700">Learn</span>
+          </button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- home indicator -->
+      <sc-if value="{{ isIOS }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;left:50%;bottom:7px;transform:translateX(-50%);width:132px;height:5px;border-radius:3px;background:var(--text);opacity:.28;z-index:7;pointer-events:none"></div>
+      </sc-if>
+
+      <!-- ============ ADD MENU SHEET ============ -->
+      <sc-if value="{{ menuSheet }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:24">
+        <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px);animation:{{ backdropAnim }}"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-radius:30px 30px 0 0;border-top:1px solid var(--border);padding:12px 20px 26px;animation:{{ sheetAnim }}">
+          <div style="width:40px;height:4px;border-radius:3px;background:var(--border);margin:0 auto 16px"></div>
+          <div style="font-family:'Newsreader',serif;font-size:23px;font-weight:600;color:var(--text)">What are we adding?</div>
+          <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <sc-for list="{{ addTiles }}" as="t" hint-placeholder-count="6">
+              <div onClick="{{ t.go }}" class="tap tile" style="cursor:pointer;padding:15px;border-radius:19px;background:var(--surface);border:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
+                <span style="width:38px;height:38px;border-radius:12px;background:{{ t.soft }};color:{{ t.color }};display:flex;align-items:center;justify-content:center">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><sc-for list="{{ t.paths }}" as="p" hint-placeholder-count="2"><path d="{{ p.d }}"></path></sc-for></svg>
+                </span>
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text)">{{ t.label }}</div>
+                  <div style="font-size:11.5px;color:var(--text-3);margin-top:2px;line-height:1.35">{{ t.sub }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <button onClick="{{ closeSheet }}" class="tap" style="margin-top:14px;width:100%;height:50px;border-radius:15px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);font-family:inherit;font-weight:700;font-size:14.5px;cursor:pointer">Cancel</button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ ENTRY FORM SHEET ============ -->
+      <sc-if value="{{ formSheet }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:25">
+        <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px);animation:{{ backdropAnim }}"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;top:52px;background:var(--bg);border-radius:30px 30px 0 0;border-top:1px solid var(--border);display:flex;flex-direction:column;animation:{{ sheetAnim }};overflow:hidden">
+          <div style="flex:none;padding:12px 20px 0">
+            <div style="width:40px;height:4px;border-radius:3px;background:var(--border);margin:0 auto 14px"></div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="width:38px;height:38px;flex:none;border-radius:12px;background:{{ f.soft }};color:{{ f.color }};display:flex;align-items:center;justify-content:center">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><sc-for list="{{ f.paths }}" as="p" hint-placeholder-count="2"><path d="{{ p.d }}"></path></sc-for></svg>
+              </span>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">{{ f.title }}</div>
+                <div style="font-size:12px;color:var(--text-3)">{{ f.sub }}</div>
+              </div>
+              <button onClick="{{ closeSheet }}" class="tap" style="width:34px;height:34px;flex:none;border-radius:11px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div style="flex:1;overflow-y:auto;padding:16px 20px 12px">
+            <!-- amount -->
+            <div style="text-align:center;padding:6px 0 10px">
+              <div style="font-size:11px;font-weight:800;letter-spacing:.7px;color:var(--text-3)">{{ f.amountLabel }}</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-top:4px">
+                <span style="font-family:'Newsreader',serif;font-size:30px;color:var(--text-3);font-weight:400">₹</span>
+                <span style="font-family:'Newsreader',serif;font-size:46px;font-weight:500;color:{{ amtColor }};letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1">{{ amtDisplay }}</span>
+                <span style="width:2px;height:38px;background:var(--accent);animation:fadeIn .9s ease-in-out infinite alternate"></span>
+              </div>
+            </div>
+
+            <!-- name field (accounts) -->
+            <sc-if value="{{ f.showName }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:6px">
+                <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:7px">{{ f.nameLabel }}</div>
+                <div style="height:50px;padding:0 15px;background:var(--surface);border:1px solid var(--border);border-radius:15px;display:flex;align-items:center">
+                  <input value="{{ f.nameValue }}" onChange="{{ setName }}" style="flex:1;border:0;outline:0;background:transparent;font-family:inherit;font-size:15px;font-weight:600;color:var(--text)">
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- primary chip group -->
+            <sc-if value="{{ f.showChips }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px">
+                <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:9px">{{ f.chipsLabel }}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ f.chips }}" as="c" hint-placeholder-count="6">
+                    <div onClick="{{ c.pick }}" class="tap" style="cursor:pointer;display:flex;align-items:center;gap:7px;height:38px;padding:0 13px;border-radius:12px;background:{{ c.bg }};border:1px solid {{ c.bd }};color:{{ c.fg }};font-size:13px;font-weight:700">
+                      <span style="width:8px;height:8px;border-radius:3px;background:{{ c.dot }}"></span>{{ c.label }}
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- one-time vs SIP -->
+            <sc-if value="{{ f.showMode }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px">
+                <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:9px">{{ f.modeLabel }}</div>
+                <div style="display:flex;gap:7px;padding:5px;background:var(--surface-2);border:1px solid var(--border-2);border-radius:14px">
+                  <sc-for list="{{ f.modes }}" as="m" hint-placeholder-count="2">
+                    <button onClick="{{ m.pick }}" class="tap" style="flex:1;height:38px;border:0;border-radius:10px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;background:{{ m.bg }};color:{{ m.fg }};box-shadow:{{ m.sh }}">{{ m.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- account picker -->
+            <sc-if value="{{ f.showAccounts }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px">
+                <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:9px">{{ f.accountsLabel }}</div>
+                <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:3px">
+                  <sc-for list="{{ f.accountChips }}" as="a" hint-placeholder-count="3">
+                    <div onClick="{{ a.pick }}" class="tap" style="flex:none;cursor:pointer;padding:11px 14px;border-radius:14px;background:{{ a.bg }};border:1px solid {{ a.bd }}">
+                      <div style="font-size:13px;font-weight:700;color:{{ a.fg }}">{{ a.label }}</div>
+                      <div style="font-size:11px;color:var(--text-3);margin-top:1px">{{ a.sub }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- recurring toggle -->
+            <sc-if value="{{ f.showRecurring }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;padding:15px;background:var(--surface);border:1px solid var(--border);border-radius:18px">
+                <div onClick="{{ toggleRecur }}" class="tap" style="display:flex;align-items:center;gap:12px;cursor:pointer">
+                  <span style="width:34px;height:34px;flex:none;border-radius:11px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+                  </span>
+                  <div style="flex:1">
+                    <div style="font-size:14px;font-weight:700;color:var(--text)">{{ f.recurTitle }}</div>
+                    <div style="font-size:11.5px;color:var(--text-3);margin-top:1px">{{ f.recurSub }}</div>
+                  </div>
+                  <span style="width:46px;height:27px;flex:none;border-radius:20px;background:{{ recurTrackBg }};position:relative;transition:background .22s">
+                    <span style="position:absolute;top:3px;left:{{ recurKnobX }};width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:left .22s cubic-bezier(.2,.8,.2,1)"></span>
+                  </span>
+                </div>
+                <sc-if value="{{ recurOn }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border-2);animation:rise .26s cubic-bezier(.2,.8,.3,1)">
+                    <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:9px">Frequency</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:7px">
+                      <sc-for list="{{ freqChips }}" as="q" hint-placeholder-count="4">
+                        <div onClick="{{ q.pick }}" class="tap" style="cursor:pointer;height:36px;padding:0 13px;border-radius:11px;display:flex;align-items:center;background:{{ q.bg }};border:1px solid {{ q.bd }};color:{{ q.fg }};font-size:12.5px;font-weight:700">{{ q.label }}</div>
+                      </sc-for>
+                    </div>
+                    <div style="margin-top:13px;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface-2);border-radius:13px">
+                      <span style="font-size:12.5px;color:var(--text-2);font-weight:600">Auto-adds next on</span>
+                      <span style="font-size:13px;font-weight:800;color:var(--accent-ink)">{{ nextDate }}</span>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <!-- note + date -->
+            <sc-if value="{{ f.showMeta }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 15px;background:var(--surface);border:1px solid var(--border);border-radius:15px">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+                  <span style="flex:1;font-size:13.5px;font-weight:600;color:var(--text)">Today · 9 Sep 2026</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:14px 15px;background:var(--surface);border:1px solid var(--border);border-radius:15px">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.9"><path d="M4 6h16M4 12h16M4 18h9"/></svg>
+                  <input placeholder="Add a note (optional)" style="flex:1;border:0;outline:0;background:transparent;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--text)">
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- keypad -->
+          <div style="flex:none;padding:10px 16px 18px;background:var(--surface-2);border-top:1px solid var(--border-2)">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+              <sc-for list="{{ keys }}" as="k" hint-placeholder-count="12">
+                <button onClick="{{ k.press }}" class="tap" style="height:46px;border:1px solid var(--border-2);border-radius:13px;background:var(--surface);color:var(--text);font-family:'Newsreader',serif;font-size:21px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center">
+                  <sc-if value="{{ k.isDigit }}" hint-placeholder-val="{{ true }}">{{ k.label }}</sc-if>
+                  <sc-if value="{{ k.isDel }}" hint-placeholder-val="{{ false }}">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 5H9l-6 7 6 7h11a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M17 9l-5 6M12 9l5 6"/></svg>
+                  </sc-if>
+                </button>
+              </sc-for>
+            </div>
+            <button onClick="{{ save }}" class="tap" style="margin-top:10px;width:100%;height:54px;border:0;border-radius:16px;background:{{ saveBg }};color:var(--on-accent);font-family:inherit;font-weight:700;font-size:15.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;opacity:{{ saveOpacity }};transition:opacity .2s">
+              {{ f.saveLabel }}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="2.4"><path d="M5 12l5 5L20 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ SUCCESS ============ -->
+      <sc-if value="{{ saved }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;animation:fadeIn .2s">
+        <div style="width:250px;padding:30px 24px;border-radius:26px;background:var(--bg);border:1px solid var(--border);text-align:center;animation:popIn .42s cubic-bezier(.2,.8,.3,1)">
+          <div style="position:relative;width:72px;height:72px;margin:0 auto">
+            <span style="position:absolute;inset:0;border-radius:50%;background:var(--btn);animation:ringPulse .9s ease-out .1s"></span>
+            <div style="position:relative;width:72px;height:72px;border-radius:50%;background:var(--btn);display:flex;align-items:center;justify-content:center">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" stroke-width="2.6" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7" stroke-dasharray="36" style="animation:tickDraw .4s cubic-bezier(.4,0,.2,1) .12s backwards"/></svg>
+            </div>
+          </div>
+          <div style="font-family:'Newsreader',serif;font-size:21px;font-weight:600;color:var(--text);margin-top:18px">{{ savedTitle }}</div>
+          <div style="font-size:13px;color:var(--text-2);margin-top:5px;line-height:1.45">{{ savedSub }}</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ HAPTIC INDICATOR ============ -->
+      <sc-if value="{{ hapticOn }}" hint-placeholder-val="{{ false }}">
+      <div key="{{ hapKey }}" style="position:absolute;left:50%;top:60px;z-index:40;pointer-events:none;display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:20px;background:rgba(12,11,9,.86);backdrop-filter:blur(6px);animation:hapPill 1.1s cubic-bezier(.2,.8,.3,1) forwards">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.2"><path d="M9 4v16M15 4v16M5 8v8M19 8v8"/></svg>
+        <span style="font-size:11px;font-weight:800;color:#F4F0E7;letter-spacing:.3px">{{ hapLabel }}</span>
+      </div>
+      </sc-if>
+
+      <!-- ============ MEDICATION SCHEDULE SHEET ============ -->
+      <sc-if value="{{ medSheet }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:26">
+        <div onClick="{{ closeMed }}" style="position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(3px);animation:fadeIn .2s"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;top:78px;background:var(--bg);border-radius:30px 30px 0 0;border-top:1px solid var(--border);display:flex;flex-direction:column;animation:sheetUp .32s cubic-bezier(.2,.8,.2,1);overflow:hidden">
+          <div style="flex:none;padding:12px 20px 0">
+            <div style="width:40px;height:4px;border-radius:3px;background:var(--border);margin:0 auto 14px"></div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="width:38px;height:38px;flex:none;border-radius:12px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="2.6" y="8.4" width="18.8" height="7.2" rx="3.6" transform="rotate(-45 12 12)"/><path d="M8.5 8.5l7 7"/></svg>
+              </span>
+              <div style="flex:1;min-width:0">
+                <div style="font-family:'Newsreader',serif;font-size:19px;font-weight:600;color:var(--text)">{{ medTitle }}</div>
+                <div style="font-size:12px;color:var(--text-3)">Set how often and when to take it</div>
+              </div>
+              <button onClick="{{ closeMed }}" class="tap" style="width:34px;height:34px;flex:none;border-radius:11px;border:1px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div style="flex:1;overflow-y:auto;padding:16px 20px 12px">
+            <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:7px">Medicine</div>
+            <div style="height:50px;padding:0 15px;background:var(--surface);border:1px solid var(--border);border-radius:15px;display:flex;align-items:center">
+              <input value="{{ medName }}" onChange="{{ setMedName }}" placeholder="e.g. Metformin 500mg" style="flex:1;border:0;outline:0;background:transparent;font-family:inherit;font-size:15px;font-weight:600;color:var(--text)">
+            </div>
+
+            <div style="margin-top:15px;font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:7px">Dose &amp; note</div>
+            <div style="height:50px;padding:0 15px;background:var(--surface);border:1px solid var(--border);border-radius:15px;display:flex;align-items:center">
+              <input value="{{ medSub }}" onChange="{{ setMedSub }}" placeholder="1 tablet · with breakfast" style="flex:1;border:0;outline:0;background:transparent;font-family:inherit;font-size:14px;font-weight:600;color:var(--text)">
+            </div>
+
+            <div style="margin-top:18px;font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:9px">Repeats</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <sc-for list="{{ medFreqs }}" as="f" hint-placeholder-count="4">
+                <button onClick="{{ f.pick }}" class="tap" style="height:46px;border-radius:14px;border:1px solid {{ f.bd }};background:{{ f.bg }};color:{{ f.fg }};font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ f.dot }}"></span>{{ f.label }}
+                </button>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ medShowDays }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;animation:rise .26s cubic-bezier(.2,.8,.3,1)">
+                <div style="font-size:12px;font-weight:700;color:var(--text-2);margin-bottom:9px">On these days</div>
+                <div style="display:flex;gap:6px">
+                  <sc-for list="{{ medDays }}" as="d" hint-placeholder-count="7">
+                    <button onClick="{{ d.pick }}" class="tap" style="flex:1;height:42px;border-radius:13px;border:1px solid {{ d.bd }};background:{{ d.bg }};color:{{ d.fg }};font-family:inherit;font-size:12px;font-weight:800;cursor:pointer">{{ d.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <div style="margin-top:18px;display:flex;align-items:baseline;justify-content:space-between">
+              <div style="font-size:12px;font-weight:700;color:var(--text-2)">Timings</div>
+              <span style="font-size:11.5px;color:var(--text-3)">{{ medTimesCount }}</span>
+            </div>
+            <div style="margin-top:9px;display:flex;flex-wrap:wrap;gap:8px">
+              <sc-for list="{{ medTimeOptions }}" as="t" hint-placeholder-count="6">
+                <button onClick="{{ t.pick }}" class="tap" style="height:40px;padding:0 13px;border-radius:13px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.fg }};font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="opacity:{{ t.iconOp }}"><path d="M5 12l5 5L20 6"/></svg>{{ t.label }}
+                </button>
+              </sc-for>
+            </div>
+
+            <div style="margin-top:16px;display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:18px">
+              <span style="width:34px;height:34px;flex:none;border-radius:11px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8z"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+              </span>
+              <div style="flex:1">
+                <div style="font-size:13.5px;font-weight:700;color:var(--text)">Remind me</div>
+                <div style="font-size:11.5px;color:var(--text-3);margin-top:1px">{{ medRemindSub }}</div>
+              </div>
+              <span onClick="{{ toggleMedRemind }}" class="tap" style="width:46px;height:27px;flex:none;border-radius:20px;background:{{ medRemindBg }};position:relative;cursor:pointer;transition:background .22s">
+                <span style="position:absolute;top:3px;left:{{ medRemindX }};width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:left .22s cubic-bezier(.2,.8,.2,1)"></span>
+              </span>
+            </div>
+
+            <div style="margin-top:14px;padding:14px;border-radius:18px;background:var(--surface-2);border:1px solid var(--border-2)">
+              <div style="font-size:11px;font-weight:800;letter-spacing:.8px;color:var(--text-3)">SUMMARY</div>
+              <div style="font-size:14px;font-weight:700;color:var(--text);margin-top:5px;line-height:1.4">{{ medSummary }}</div>
+            </div>
+          </div>
+
+          <div style="flex:none;padding:12px 20px 22px;border-top:1px solid var(--border-2);background:var(--bg)">
+            <button onClick="{{ saveMed }}" class="tap" style="width:100%;height:54px;border:0;border-radius:17px;background:var(--btn);color:var(--on-accent);font-family:inherit;font-size:15.5px;font-weight:800;cursor:pointer">Save schedule</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ SIDEBAR ============ -->
+      <sc-if value="{{ sidebar }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:20">
+        <div onClick="{{ closeSidebar }}" style="position:absolute;inset:0;background:rgba(0,0,0,.45);animation:fadeIn .25s"></div>
+        <div style="position:absolute;left:0;top:0;bottom:0;width:290px;background:var(--bg);border-right:1px solid var(--border);animation:drawerIn .3s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;padding:22px 20px">
+          <div style="display:flex;align-items:center;gap:11px;padding:14px 6px 20px">
+            <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--hero-a),var(--hero-b));display:flex;align-items:center;justify-content:center;color:var(--on-accent);font-weight:700;font-size:16px">HY</div>
+            <div><div style="font-family:'Newsreader',serif;font-size:17px;font-weight:600;color:var(--text)">Hitesh Yadav</div><div style="font-size:12px;color:var(--text-3)">hitesh@hiteshyadav.in</div></div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:3px;overflow-y:auto">
+            <sc-for list="{{ menu }}" as="m" hint-placeholder-count="8">
+              <div onClick="{{ m.go }}" style="display:flex;align-items:center;gap:13px;padding:13px 14px;border-radius:14px;cursor:pointer;background:{{ m.bg }};color:{{ m.fg }}">
+                <span style="width:22px;display:flex">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><sc-for list="{{ m.paths }}" as="p" hint-placeholder-count="2"><path d="{{ p.d }}"></path></sc-for></svg>
+                </span>
+                <span style="font-size:14.5px;font-weight:700">{{ m.label }}</span>
+                <sc-if value="{{ m.badge }}" hint-placeholder-val="{{ false }}">
+                  <span style="margin-left:auto;font-size:11px;font-weight:800;background:var(--accent-soft);color:var(--accent-ink);padding:2px 8px;border-radius:20px">{{ m.badge }}</span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <div onClick="{{ toggleTheme }}" style="margin-top:8px;display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:14px;background:var(--surface);border:1px solid var(--border);cursor:pointer">
+            <span style="display:flex;color:var(--accent-ink)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><sc-for list="{{ themePaths }}" as="p" hint-placeholder-count="1"><path d="{{ p.d }}"></path></sc-for></svg>
+            </span>
+            <span style="font-size:14px;font-weight:700;color:var(--text)">{{ themeLabel }}</span>
+            <span style="margin-left:auto;width:42px;height:24px;border-radius:20px;background:var(--accent);position:relative"><span style="position:absolute;top:2px;left:{{ toggleX }};width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s"></span></span>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <!-- ============ REVIEW CONTROLS ============ -->
+  <div style="flex:none;width:230px;display:flex;flex-direction:column;gap:16px;color:var(--text)">
+    <div>
+      <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:500;letter-spacing:-.3px">LifeOS</div>
+      <div style="font-size:13px;color:var(--text-2);margin-top:4px;line-height:1.5">Interactive prototype — tap through it, or jump around here.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:var(--text-3);text-transform:uppercase">Screens</div>
+      <sc-for list="{{ jumpers }}" as="j" hint-placeholder-count="4">
+        <button onClick="{{ j.go }}" style="text-align:left;height:42px;padding:0 15px;border-radius:12px;border:1px solid {{ j.bd }};background:{{ j.bg }};color:{{ j.fg }};font-family:inherit;font-weight:700;font-size:14px;cursor:pointer">{{ j.label }}</button>
+      </sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:var(--text-3);text-transform:uppercase">Appearance</div>
+      <div style="display:flex;gap:7px">
+        <button onClick="{{ setLight }}" style="flex:1;height:40px;border-radius:11px;border:1px solid {{ lightBd }};background:{{ lightBg }};color:{{ lightFg }};font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">Light</button>
+        <button onClick="{{ setDark }}" style="flex:1;height:40px;border-radius:11px;border:1px solid {{ darkBd }};background:{{ darkBg }};color:{{ darkFg }};font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">Dark</button>
+      </div>
+      <div style="display:flex;gap:7px">
+        <button onClick="{{ setIOS }}" style="flex:1;height:40px;border-radius:11px;border:1px solid {{ iosBd }};background:{{ iosBg }};color:{{ iosFg }};font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">iOS</button>
+        <button onClick="{{ setAndroid }}" style="flex:1;height:40px;border-radius:11px;border:1px solid {{ andBd }};background:{{ andBg }};color:{{ andFg }};font-family:inherit;font-weight:700;font-size:13px;cursor:pointer">Android</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:720,&quot;height&quot;:940}}">
+class Component extends DCLogic {
+  state = {
+    screen: 'login', theme: 'light', plat: 'ios', sidebar: false, tab: 'overview', hTab: 'meds',
+    sheet: null, closing: false, amount: '', cat: null, mode: 'sip', acct: 0,
+    recurOn: false, freq: 'Monthly', accName: 'HDFC Salary', saved: null,
+    hap: null, hapN: 0, showHaptics: true,
+    todos: [
+      { id: 1, text: 'Finish Q3 finance review', time: 'Due 5:00 PM', dot: '#C2703D', done: false },
+      { id: 2, text: 'Call the plumber', time: 'Today', dot: '#4B7BA6', done: false },
+      { id: 3, text: 'Book flights for Goa trip', time: 'Today', dot: '#7C6BC4', done: true },
+    ],
+    habits: [
+      { id: 1, name: 'Water', val: 6, goal: 8, sub: '6 / 8 glasses', unit: 'glass', streak: 12, color: '#4B7BA6', week: [1, 1, 1, 0, 1, 1, 0] },
+      { id: 2, name: 'Read', val: 1, goal: 1, sub: '20 min · done', unit: 'session', streak: 34, color: '#7C6BC4', week: [1, 1, 1, 1, 1, 1, 1] },
+      { id: 3, name: 'Meditate', val: 1, goal: 1, sub: '10 min · done', unit: 'session', streak: 8, color: '#3FA6A0', week: [1, 0, 1, 1, 0, 1, 1] },
+      { id: 4, name: 'Steps', val: 7, goal: 10, sub: '7.2k / 10k', unit: '1k steps', streak: 5, color: '#C2703D', week: [1, 1, 0, 1, 1, 0, 0] },
+      { id: 5, name: 'No sugar', val: 0, goal: 1, sub: 'Not logged yet', unit: 'day', streak: 3, color: '#B0558E', week: [1, 1, 1, 0, 0, 1, 0] },
+    ],
+    medView: 'today', medEdit: null,
+    meds: [
+      { id: 1, name: 'Metformin 500mg', sub: '1 tablet · with breakfast', slot: 'am', taken: true, color: '#4B7BA6', left: 4, freq: 'daily', days: [0,1,2,3,4,5,6], times: ['8:00 AM'], remind: true },
+      { id: 2, name: 'Vitamin D3', sub: '1 capsule · 60,000 IU', slot: 'am', taken: true, color: '#D9A441', left: 21, freq: 'weekly', days: [0], times: ['8:00 AM'], remind: true },
+      { id: 3, name: 'Creatine 5g', sub: 'Mixed in water · pre-workout', slot: 'am', taken: false, color: '#3FA6A0', left: 45, freq: 'daily', days: [0,1,2,3,4,5,6], times: ['8:00 AM'], remind: false },
+      { id: 4, name: 'Omega-3', sub: '1 softgel · after lunch', slot: 'pm', taken: false, color: '#C2703D', left: 18, freq: 'alt', days: [0,2,4,6], times: ['2:00 PM'], remind: true },
+      { id: 5, name: 'Magnesium glycinate', sub: '2 tablets · 30 min before bed', slot: 'night', taken: false, color: '#7C6BC4', left: 26, freq: 'daily', days: [0,1,2,3,4,5,6], times: ['10:30 PM'], remind: true },
+    ],
+    learnTab: 'recent', note: null,
+    books: [
+      { id: 1, name: 'Flutter', color: '#4B7BA6', pct: 72 },
+      { id: 2, name: 'System design', color: '#7C6BC4', pct: 40 },
+      { id: 3, name: 'Investing', color: '#3E7C5A', pct: 58 },
+      { id: 4, name: 'Deutsch A1', color: '#C2703D', pct: 26 },
+    ],
+    notes: [
+      { id: 1, book: 'Flutter', title: 'Riverpod: families vs. scoped overrides', when: '2h ago', due: true, star: true,
+        excerpt: 'Families parameterise a provider; overrides swap its implementation for a subtree. Reach for overrides in tests.',
+        tags: ['state', 'architecture'], mins: 4,
+        prompt: 'When would an override beat a family — and what breaks if you pick wrong?',
+        body: [
+          { t: 'p', text: 'A family creates one provider instance per argument. Good when the argument is data (a userId, a filter). Every distinct argument keeps its own cached state, so passing an unstable object silently leaks providers.' },
+          { t: 'quote', text: 'Family = many instances of the same logic.\nOverride = the same instance, different logic.' },
+          { t: 'p', text: 'Overrides replace a provider for one part of the widget tree. This is how tests inject a fake repository, and how a preview screen runs on seeded data without touching production wiring.' },
+          { t: 'code', text: 'ProviderScope(\n  overrides: [repoProvider.overrideWithValue(FakeRepo())],\n  child: App(),\n)' },
+          { t: 'p', text: 'Rule of thumb for LifeOS: families for per-account and per-habit reads, overrides only at the ProviderScope root in tests and Storybook-style screens.' },
+        ] },
+      { id: 2, book: 'System design', title: 'Idempotency keys for money writes', when: 'Yesterday', due: true, star: false,
+        excerpt: 'Any endpoint that moves money takes a client-generated key; the server stores the first response and replays it.',
+        tags: ['payments', 'reliability'], mins: 3,
+        prompt: 'What does the server return on a retry with the same key but a different body?',
+        body: [
+          { t: 'p', text: 'The client generates a UUID before the first attempt and reuses it for every retry of that logical operation — including retries after a timeout, where the outcome is genuinely unknown.' },
+          { t: 'p', text: 'Server-side: store key → (request hash, response) in a table with a TTL. Same key + same hash returns the stored response. Same key + different hash is a 422 — the client has a bug.' },
+          { t: 'quote', text: 'Retries are not optional. Duplicates are.' },
+        ] },
+      { id: 3, book: 'Investing', title: 'Why SIP maths beats timing maths', when: 'Sat', due: false, star: true,
+        excerpt: 'Rupee-cost averaging lowers the variance of your entry price, not the expected return. Know which one you are buying.',
+        tags: ['sip', 'behaviour'], mins: 5,
+        prompt: 'Does a SIP raise expected return, lower variance, or both?',
+        body: [
+          { t: 'p', text: 'Averaging in buys more units when prices fall and fewer when they rise, so the average cost per unit lands below the average price over the period. That is an arithmetic fact, not an edge.' },
+          { t: 'p', text: 'Expected return is unchanged — lump-sum wins about two-thirds of the time historically, because markets drift up. The SIP buys you a lower spread of outcomes and, more usefully, a plan you will actually stick to.' },
+        ] },
+      { id: 4, book: 'Deutsch A1', title: 'Trennbare Verben — the split rule', when: 'Sat', due: false, star: false,
+        excerpt: 'The prefix jumps to the end of the clause in the present tense, but stays attached in the infinitive.',
+        tags: ['grammar'], mins: 2,
+        prompt: 'Say “I get up at seven” using aufstehen.',
+        body: [
+          { t: 'p', text: 'aufstehen → Ich stehe um sieben Uhr auf. The prefix auf detaches and parks at the end of the main clause.' },
+          { t: 'p', text: 'In a subordinate clause it rejoins the verb: … weil ich um sieben Uhr aufstehe.' },
+        ] },
+    ],
+    exercises: [
+      { id: 1, name: 'Barbell Bench Press', sets: 4, reps: '8–10', wt: '60 kg', done: 4, cue: 'Elbows 45°, pause on chest' },
+      { id: 2, name: 'Incline Dumbbell Press', sets: 4, reps: '10', wt: '22.5 kg', done: 2, cue: '30° bench, slow eccentric' },
+      { id: 3, name: 'Seated Shoulder Press', sets: 3, reps: '10–12', wt: '18 kg', done: 0, cue: 'Ribs down, no arching' },
+      { id: 4, name: 'Cable Chest Fly', sets: 3, reps: '12–15', wt: '15 kg', done: 0, cue: 'Squeeze 1s at the middle' },
+      { id: 5, name: 'Lateral Raise', sets: 3, reps: '15', wt: '8 kg', done: 0, cue: 'Lead with elbows, no swing' },
+      { id: 6, name: 'Rope Triceps Pushdown', sets: 3, reps: '12', wt: '25 kg', done: 0, cue: 'Split the rope at the bottom' },
+    ],
+  };
+
+  fmtIN(n) {
+    const s = Math.abs(Math.round(n)).toString();
+    let last3 = s.slice(-3), rest = s.slice(0, -3);
+    if (rest) { rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ','); last3 = ',' + last3; }
+    return rest + last3;
+  }
+  rupee(n) { return '₹' + this.fmtIN(n); }
+
+  go(screen) { this.setState({ screen, sidebar: false, medEdit: null, note: null }); }
+
+  // Maps 1:1 to Flutter's HapticFeedback API — see FLUTTER_HANDOFF.md
+  haptic(kind = 'light') {
+    const pat = { selection: 6, light: 10, medium: 18, heavy: [14, 24, 14], success: [10, 26, 14] }[kind] || 10;
+    try { if (navigator.vibrate) navigator.vibrate(pat); } catch (e) {}
+    clearTimeout(this._hapT);
+    this.setState(st => ({ hap: kind, hapN: st.hapN + 1 }));
+    this._hapT = setTimeout(() => this.setState({ hap: null }), 1050);
+  }
+
+  openSheet(kind, hap = 'medium', mode = null) {
+    this.haptic(hap);
+    this.setState(st => {
+      const m = mode || st.mode;
+      return { sheet: kind, closing: false, amount: '', cat: null, sidebar: false, mode: m,
+        recurOn: kind === 'recurring' || (kind === 'invest' && m === 'sip') };
+    });
+  }
+
+  closeSheet() {
+    this.haptic('light');
+    this.setState({ closing: true });
+    clearTimeout(this._closeT);
+    this._closeT = setTimeout(() => this.setState({ sheet: null, closing: false }), 190);
+  }
+
+  key(k) {
+    this.haptic('selection');
+    this.setState(st => {
+      let a = st.amount;
+      if (k === 'del') a = a.slice(0, -1);
+      else if (k === '.') a = a.includes('.') ? a : (a || '0') + '.';
+      else if (a.replace('.', '').length < 8) a = (a === '0' ? '' : a) + k;
+      return { amount: a };
+    });
+  }
+
+  doSave() {
+    if (!this.state.amount || parseFloat(this.state.amount) === 0) { this.haptic('heavy'); return; }
+    this.haptic('success');
+    const k = this.state.sheet, amt = this.rupee(parseFloat(this.state.amount));
+    const freq = this.state.recurOn ? this.state.freq.toLowerCase() : null;
+    const copy = {
+      expense: ['Expense saved', freq ? `${amt} · repeats ${freq}, auto-added each cycle.` : `${amt} logged to ${this.acctName()}.`],
+      income: ['Income added', `${amt} credited to ${this.acctName()}.`],
+      account: ['Account created', `${this.state.accName} opened with ${amt}.`],
+      invest: [this.state.mode === 'sip' ? 'SIP scheduled' : 'Investment added',
+        this.state.mode === 'sip' ? `${amt} auto-invests ${(freq || 'monthly')} from ${this.acctName()}.` : `${amt} invested via ${this.acctName()}.`],
+      recurring: ['Recurring set up', `${amt} will auto-add ${(freq || 'monthly')} — no reminders needed.`],
+    }[k] || ['Saved', amt];
+    this.setState({ sheet: null, closing: false, saved: { title: copy[0], sub: copy[1] } });
+    clearTimeout(this._savedT);
+    this._savedT = setTimeout(() => this.setState({ saved: null, amount: '' }), 1900);
+  }
+
+  acctList() {
+    return [
+      { label: 'HDFC Bank', sub: '₹2,48,900', ini: 'H', color: '#4B7BA6', kind: 'BANK', bal: '₹2,48,900', sub2: 'Salary account' },
+      { label: 'ICICI Credit', sub: '₹12,340 due', ini: 'I', color: '#C2703D', kind: 'CREDIT', bal: '−₹12,340', sub2: 'Due 18 Sep' },
+      { label: 'Zerodha', sub: '₹6,84,200', ini: 'Z', color: '#7C6BC4', kind: 'INVEST', bal: '₹6,84,200', sub2: 'XIRR 14.2%' },
+      { label: 'Cash', sub: '₹4,500', ini: 'C', color: '#0E9F6E', kind: 'CASH', bal: '₹4,500', sub2: 'Wallet' },
+    ];
+  }
+  acctName() { return this.acctList()[this.state.acct].label; }
+
+  renderVals() {
+    const s = this.state;
+    const acc = 'var(--accent)';
+    const mut = 'var(--text-3)';
+
+    // ---- category / donut data ----
+    const cats = [
+      ['Rent', 32000, '#C2703D'], ['Food & Dining', 14200, '#0E9F6E'],
+      ['Transport', 6800, '#4B7BA6'], ['Shopping', 9500, '#B0558E'],
+      ['Bills & Utilities', 7900, '#D9A441'], ['Entertainment / OTT', 3200, '#7C6BC4'],
+      ['Health', 4800, '#3FA6A0'], ['Misc', 14000, '#9A9384'],
+    ];
+    const outTotal = cats.reduce((a, c) => a + c[1], 0);
+    const C = 2 * Math.PI * 52;
+    let accf = 0;
+    const donutSegs = cats.map(([n, amt, color]) => {
+      const frac = amt / outTotal;
+      const seg = { color, dash: `${(frac * C).toFixed(2)} ${(C - frac * C).toFixed(2)}`, offset: (-accf * C).toFixed(2) };
+      accf += frac; return seg;
+    });
+    const legend = cats.slice(0, 5).map(([n, amt, color]) => ({ name: n, color, pct: Math.round(amt / outTotal * 100) + '%' }));
+
+    // ---- trend ----
+    const trendRaw = [['Mar', 78000], ['Apr', 84000], ['May', 71000], ['Jun', 96000], ['Jul', 88000], ['Aug', 92400]];
+    const tmax = 96000;
+    const trend = trendRaw.map(([label, amt]) => {
+      const isMax = amt === tmax;
+      return { label, h: Math.round(amt / tmax * 118) + 8, top: '₹' + Math.round(amt / 1000) + 'k',
+        fill: isMax ? acc : 'var(--surface-2)', labelColor: isMax ? 'var(--accent-ink)' : mut };
+    });
+    // dark mode bar contrast tweak
+    trend.forEach(b => { if (b.fill === 'var(--surface-2)') b.fill = 'var(--border)'; });
+
+    // ---- transactions ----
+    const txns = [
+      { name: 'Salary — TechCorp', sub: 'Income · 1 Aug', amt: 185000, pos: true, color: '#0E9F6E', ini: 'S' },
+      { name: 'SIP — Index Fund', sub: 'Investment · 3 Aug', amt: -15000, pos: false, color: '#7C6BC4', ini: 'S' },
+      { name: 'Amazon', sub: 'Shopping · 5 Aug', amt: -2340, pos: false, color: '#B0558E', ini: 'A' },
+      { name: 'Netflix', sub: 'OTT · 6 Aug', amt: -649, pos: false, color: '#7C6BC4', ini: 'N' },
+      { name: 'Zomato', sub: 'Food & Dining · 7 Aug', amt: -420, pos: false, color: '#0E9F6E', ini: 'Z' },
+      { name: 'Uber', sub: 'Transport · 7 Aug', amt: -230, pos: false, color: '#4B7BA6', ini: 'U' },
+      { name: 'Electricity bill', sub: 'Bills · 8 Aug', amt: -1890, pos: false, color: '#D9A441', ini: 'E' },
+    ].map(t => ({ ...t, soft: this.hexSoft(t.color),
+      amtStr: (t.pos ? '+ ₹' : '− ₹') + this.fmtIN(t.amt),
+      amtColor: t.pos ? 'var(--accent-ink)' : 'var(--text)' }));
+
+    // ---- finance headline ----
+    const income = 185000, out = outTotal, invest = 45000, saved = income - out - invest;
+    const fin = { income: this.rupee(income), out: this.rupee(out), invest: this.rupee(invest),
+      saved: this.rupee(saved), savedPct: Math.round(saved / income * 100) + '%' };
+
+    // ---- todos ----
+    const todos = s.todos.map(t => ({
+      text: t.text, time: t.time, dot: t.dot,
+      toggle: () => this.setState(st => ({ todos: st.todos.map(x => x.id === t.id ? { ...x, done: !x.done } : x) })),
+      boxBg: t.done ? acc : 'transparent', boxBorder: t.done ? acc : 'var(--border)',
+      checkOpacity: t.done ? 1 : 0, strike: t.done ? 'line-through' : 'none',
+    }));
+    const doneN = s.todos.filter(t => t.done).length;
+
+    // ---- habits ----
+    const HC = 2 * Math.PI * 20;
+    const habits = s.habits.slice(0, 4).map(h => ({
+      name: h.name, sub: h.sub, C: HC.toFixed(1),
+      off: (HC * (1 - Math.min(h.val, h.goal) / h.goal)).toFixed(1),
+      center: h.val >= h.goal ? '✓' : Math.round(h.val / h.goal * 100) + '%',
+      bump: () => this.setState(st => ({ habits: st.habits.map(x => x.id === h.id ? { ...x, val: x.val >= x.goal ? 0 : x.val + 1 } : x) })),
+    }));
+
+    // ---- habits screen ----
+    const weekRaw = [['M', 5], ['T', 4], ['W', 5], ['T', 3], ['F', 4], ['S', 5], ['S', 2]];
+    const week = weekRaw.map(([label, n], i) => {
+      const today = i === 6, full = n >= 5;
+      return { label, n,
+        labelColor: today ? 'var(--text)' : mut,
+        bg: full ? acc : (today ? 'var(--surface-2)' : 'transparent'),
+        bd: full ? acc : (today ? 'var(--accent)' : 'var(--border)'),
+        fg: full ? 'var(--on-accent)' : 'var(--text-2)' };
+    });
+    const habitCards = s.habits.map(h => {
+      const pct = Math.min(h.val, h.goal) / h.goal, full = h.val >= h.goal;
+      return { name: h.name, sub: h.sub, C: HC.toFixed(1), color: h.color, soft: this.hexSoft(h.color),
+        off: (HC * (1 - pct)).toFixed(1),
+        center: full ? '✓' : Math.round(pct * 100) + '%',
+        streak: h.streak + 'd',
+        dots: h.week.map(d => ({ bg: d ? h.color : 'var(--border)' })),
+        btnBg: full ? 'var(--accent-soft)' : 'var(--btn)',
+        btnFg: full ? 'var(--accent-ink)' : 'var(--on-accent)',
+        plusOp: full ? '0' : '1', tickOp: full ? '1' : '0',
+        bump: () => { this.haptic(full ? 'success' : 'light'); this.setState(st => ({ habits: st.habits.map(x => x.id === h.id ? this.reHabit({ ...x, val: Math.min(x.val + 1, x.goal) }) : x) })); },
+        reset: () => { this.haptic('medium'); this.setState(st => ({ habits: st.habits.map(x => x.id === h.id ? this.reHabit({ ...x, val: 0 }) : x) })); },
+      };
+    });
+    const habitDoneN = s.habits.filter(h => h.val >= h.goal).length;
+
+    // ---- health: medication ----
+    const slotDef = [
+      ['am', 'Morning', '8:00 AM', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19"/></svg>'],
+      ['pm', 'Afternoon', '2:00 PM', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M2 18h20M12 4v3"/></svg>'],
+      ['night', 'Night', '10:30 PM', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A8 8 0 1 1 11.2 3a6 6 0 0 0 9.8 9.8z"/></svg>'],
+    ];
+    const medGroups = slotDef.map(([k, label, time, icon]) => ({
+      label, time, icon,
+      items: s.meds.filter(m => m.slot === k).map(m => ({
+        name: m.name, sub: m.sub, color: m.color, soft: this.hexSoft(m.color),
+        freqShort: ({ daily: 'DAILY', weekly: 'WEEKLY', alt: 'ALT DAYS', prn: 'AS NEEDED' })[m.freq] || 'DAILY',
+        left: m.left + ' left', leftColor: m.left <= 5 ? '#8A6410' : 'var(--text-3)',
+        strike: m.taken ? 'line-through' : 'none',
+        bd: m.taken ? 'var(--accent)' : 'var(--border)',
+        boxBg: m.taken ? acc : 'transparent', boxBd: m.taken ? acc : 'var(--border)',
+        checkOpacity: m.taken ? 1 : 0,
+        toggle: () => { this.haptic(m.taken ? 'light' : 'success'); this.setState(st => ({ meds: st.meds.map(x => x.id === m.id ? { ...x, taken: !x.taken } : x) })); },
+      })),
+    }));
+    const medTaken = s.meds.filter(m => m.taken).length;
+
+    // ---- medication schedule ----
+    const DAY_S = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    const DAY_L = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const FREQ = [['daily', 'Every day'], ['weekly', 'Weekly'], ['alt', 'Alternate days'], ['prn', 'As needed']];
+    const TIME_OPTS = ['6:00 AM', '8:00 AM', '12:00 PM', '2:00 PM', '6:00 PM', '10:30 PM'];
+    const freqShort = { daily: 'DAILY', weekly: 'WEEKLY', alt: 'ALT DAYS', prn: 'AS NEEDED' };
+    const freqLabel = (m) => {
+      const t = (m.times || []).join(' · ') || 'no time set';
+      if (m.freq === 'prn') return 'As needed · ' + t;
+      if (m.freq === 'alt') return 'Alternate days · ' + t;
+      if (m.freq === 'weekly') return 'Weekly on ' + (m.days || []).map(i => DAY_L[i]).join(', ') + ' · ' + t;
+      return 'Every day · ' + t;
+    };
+    const medViews = [['today', 'Today'], ['schedule', 'Schedule']].map(([k, label]) => {
+      const on = s.medView === k;
+      return { label, pick: () => { this.haptic('selection'); this.setState({ medView: k }); },
+        bg: on ? 'var(--accent-soft)' : 'var(--surface)', bd: on ? 'var(--accent)' : 'var(--border)',
+        fg: on ? 'var(--accent-ink)' : 'var(--text-2)' };
+    });
+    const medSchedule = s.meds.map(m => ({
+      name: m.name, color: m.color, soft: this.hexSoft(m.color), freqLabel: freqLabel(m),
+      timeChips: (m.times || []).map(t => ({ label: t })),
+      dayDots: DAY_S.map((d, i) => {
+        const on = m.freq === 'prn' ? false : (m.freq === 'daily' ? true : (m.days || []).indexOf(i) > -1);
+        return { label: d, bg: on ? this.hexSoft(m.color) : 'var(--surface-2)',
+          bd: on ? 'transparent' : 'var(--border-2)', fg: on ? m.color : 'var(--text-3)' };
+      }),
+      edit: () => { this.haptic('light'); this.setState({ medEdit: { ...m, days: (m.days || []).slice(), times: (m.times || []).slice() } }); },
+    }));
+    const me = s.medEdit;
+    const medFreqs = FREQ.map(([k, label]) => {
+      const on = me && me.freq === k;
+      return { label, dot: on ? 'var(--accent)' : 'var(--border)',
+        bg: on ? 'var(--accent-soft)' : 'var(--surface)', bd: on ? 'var(--accent)' : 'var(--border)',
+        fg: on ? 'var(--accent-ink)' : 'var(--text-2)',
+        pick: () => { this.haptic('selection'); this.setState(st => ({ medEdit: { ...st.medEdit, freq: k,
+          days: k === 'daily' ? [0,1,2,3,4,5,6] : (k === 'alt' ? [0,2,4,6] : st.medEdit.days) } })); } };
+    });
+    const medDays = DAY_S.map((label, i) => {
+      const on = me ? me.days.indexOf(i) > -1 : false;
+      return { label, bg: on ? 'var(--accent-soft)' : 'var(--surface)', bd: on ? 'var(--accent)' : 'var(--border)',
+        fg: on ? 'var(--accent-ink)' : 'var(--text-3)',
+        pick: () => { this.haptic('selection'); this.setState(st => { const d = st.medEdit.days.slice();
+          const j = d.indexOf(i); if (j > -1) d.splice(j, 1); else d.push(i); d.sort();
+          return { medEdit: { ...st.medEdit, days: d } }; }); } };
+    });
+    const medTimeOptions = TIME_OPTS.map(label => {
+      const on = me ? me.times.indexOf(label) > -1 : false;
+      return { label, iconOp: on ? '1' : '0',
+        bg: on ? 'var(--accent-soft)' : 'var(--surface)', bd: on ? 'var(--accent)' : 'var(--border)',
+        fg: on ? 'var(--accent-ink)' : 'var(--text-2)',
+        pick: () => { this.haptic(on ? 'light' : 'selection'); this.setState(st => { const t = st.medEdit.times.slice();
+          const j = t.indexOf(label); if (j > -1) t.splice(j, 1); else t.push(label);
+          t.sort((a, b) => TIME_OPTS.indexOf(a) - TIME_OPTS.indexOf(b));
+          return { medEdit: { ...st.medEdit, times: t } }; }); } };
+    });
+
+    // ---- health: gym ----
+    const exercises = s.exercises.map(e => {
+      const full = e.done >= e.sets;
+      return { name: e.name, cue: e.cue, slot: 'ex-' + e.id, ph: e.name,
+        scheme: e.sets + ' × ' + e.reps + '  ·  ' + e.wt,
+        setsLabel: e.done + '/' + e.sets + ' sets',
+        pips: Array.from({ length: e.sets }, (_, i) => ({ bg: i < e.done ? 'var(--accent)' : 'var(--border)' })),
+        strike: full ? 'line-through' : 'none',
+        bd: full ? 'var(--accent)' : 'var(--border)',
+        btnBg: full ? 'var(--accent-soft)' : 'var(--btn)',
+        btnFg: full ? 'var(--accent-ink)' : 'var(--on-accent)',
+        plusOp: full ? '0' : '1', tickOp: full ? '1' : '0',
+        logSet: () => { const willFinish = e.done + 1 >= e.sets;
+          this.haptic(full ? 'medium' : (willFinish ? 'success' : 'light'));
+          this.setState(st => ({ exercises: st.exercises.map(x => x.id === e.id ? { ...x, done: x.done >= x.sets ? 0 : x.done + 1 } : x) })); },
+      };
+    });
+    const exDone = s.exercises.filter(e => e.done >= e.sets).length;
+    const splitDef = [['MON', 'Pull', 'Back · Biceps', false], ['TUE', 'Push', 'Chest · Tri', true],
+      ['WED', 'Legs', 'Quads · Glutes', false], ['THU', 'Rest', 'Walk 6k', false],
+      ['FRI', 'Pull', 'Back · Rear delt', false], ['SAT', 'Push', 'Shoulders', false], ['SUN', 'Rest', 'Mobility', false]];
+    const split = splitDef.map(([day, name, sub, on]) => ({ day, name, sub,
+      bg: on ? 'var(--accent-soft)' : 'var(--surface)', bd: on ? 'var(--accent)' : 'var(--border)',
+      dayFg: on ? 'var(--accent-ink)' : mut, fg: 'var(--text)', subFg: 'var(--text-3)' }));
+
+    // ---- learn ----
+    const bookColor = {}; s.books.forEach(b => { bookColor[b.name] = b.color; });
+    const learnTabs = [['recent', 'Recent'], ['due', 'Due'], ['starred', 'Starred']].map(([k, label]) => {
+      const on = s.learnTab === k;
+      return { label, pick: () => { this.haptic('selection'); this.setState({ learnTab: k }); },
+        bg: on ? 'var(--surface)' : 'transparent', fg: on ? 'var(--text)' : mut,
+        sh: on ? '0 2px 6px -2px rgba(0,0,0,.2)' : 'none' };
+    });
+    const noteList = s.notes.filter(n => s.learnTab === 'due' ? n.due : (s.learnTab === 'starred' ? n.star : true));
+    const notesV = noteList.map(n => ({
+      book: n.book, title: n.title, excerpt: n.excerpt, when: n.when,
+      color: bookColor[n.book] || acc, bd: n.due ? 'var(--accent)' : 'var(--border)',
+      tags: n.tags.map(label => ({ label })),
+      dueLabel: n.due ? 'Due for review' : n.mins + ' min read',
+      dueColor: n.due ? 'var(--accent-ink)' : 'var(--text-3)',
+      open: () => { this.haptic('light'); this.setState({ note: n.id }); },
+    }));
+    const books = s.books.map(b => ({
+      name: b.name, color: b.color, soft: this.hexSoft(b.color), pct: b.pct + '%',
+      count: (c => c + (c === 1 ? ' note' : ' notes'))(s.notes.filter(n => n.book === b.name).length),
+      bg: 'var(--surface)', bd: 'var(--border)',
+      pick: () => { this.haptic('selection'); this.setState({ learnTab: 'recent' }); },
+    }));
+    const dueCount = s.notes.filter(n => n.due).length;
+    const nv = s.notes.find(n => n.id === s.note);
+    const bodyStyle = {
+      p: { rule: '0', pad: '0', bg: 'transparent', radius: '0', padY: '0', padR: '0',
+        font: "'Manrope',system-ui,sans-serif", size: '14.5px', weight: '400', fg: 'var(--text-2)' },
+      quote: { rule: '3px solid var(--accent)', pad: '14px', bg: 'transparent', radius: '0', padY: '2px', padR: '0',
+        font: "'Newsreader',serif", size: '17px', weight: '500', fg: 'var(--text)' },
+      code: { rule: '0', pad: '14px', bg: 'var(--surface-2)', radius: '14px', padY: '13px', padR: '14px',
+        font: "ui-monospace,SFMono-Regular,Menlo,monospace", size: '12.5px', weight: '500', fg: 'var(--text)' },
+    };
+    const nvBody = nv ? nv.body.map(b => ({ text: b.text, ...(bodyStyle[b.t] || bodyStyle.p) })) : [];
+
+    const hTabs = [['meds', 'Medication'], ['gym', 'Gym']].map(([k, label]) => {
+      const on = s.hTab === k;
+      return { label, pick: () => { this.haptic('selection'); this.setState({ hTab: k }); },
+        bg: on ? 'var(--surface)' : 'transparent', fg: on ? 'var(--text)' : mut,
+        sh: on ? '0 2px 6px -2px rgba(0,0,0,.2)' : 'none' };
+    });
+
+    // ---- finance tabs ----
+    const tabDef = [['overview', 'Overview'], ['income', 'Income'], ['spend', 'Spending']];
+    const tabs = tabDef.map(([k, label]) => {
+      const on = s.tab === k;
+      return { label, pick: () => this.setState({ tab: k }),
+        bg: on ? 'var(--surface)' : 'transparent', fg: on ? 'var(--text)' : mut,
+        sh: on ? '0 2px 6px -2px rgba(0,0,0,.2)' : 'none' };
+    });
+
+    // ---- sidebar menu ----
+    const P = (arr) => arr.map(d => ({ d }));
+    const I = {
+      home: P(['M3 11l9-8 9 8', 'M5 10v10h14V10']),
+      fin: P(['M4 19V9', 'M10 19V5', 'M16 19v-7', 'M22 19H2']),
+      habit: P(['M12 21C7 17 4 13.5 4 9.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 13.5 17 17 12 21z']),
+      cal: P(['M6 4h12a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z', 'M3 9h18', 'M8 2v4', 'M16 2v4']),
+      invest: P(['M4 18l5-5 4 3 6-8', 'M15 8h4v4']),
+      book: P(['M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z', 'M4 19a2 2 0 0 1 2-2h13']),
+      gym: P(['M6.5 6.5l11 11', 'M4 15l5 5', 'M15 4l5 5', 'M2 17l2 2', 'M20 5l2 2', 'M17 2l5 5', 'M2 17l5-5']),
+      todo: P(['M4 6h16', 'M4 12h16', 'M4 18h10', 'M20 15l2 2-4 4']),
+      set: P(['M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6z', 'M19 12a7 7 0 0 0-.1-1.3l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2.3-1.3L13.5 2h-3l-.5 2.4a7 7 0 0 0-2.3 1.3L5.4 4.8l-2 3.4 2 1.5A7 7 0 0 0 5 12l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2.3 1.3l.5 2.4h3l.5-2.4a7 7 0 0 0 2.3-1.3l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.3z']),
+    };
+    const menuDef = [
+      ['dashboard', 'Home', I.home, null], ['expenses', 'Finance', I.fin, null],
+      ['habits', 'Habits', I.habit, '5'], ['learn', 'Learn & Notes', I.book, '2'],
+      [null, 'Calendar', I.cal, null],
+      [null, 'Investments', I.invest, null], ['health', 'Health & Gym', I.gym, null],
+      [null, 'To-dos & Reminders', I.todo, '2'], [null, 'Settings', I.set, null],
+    ];
+    const menu = menuDef.map(([scr, label, paths, badge]) => {
+      const on = scr && s.screen === scr;
+      return { label, paths, badge,
+        go: () => scr ? this.go(scr) : this.setState({ sidebar: false }),
+        bg: on ? 'var(--accent-soft)' : 'transparent', fg: on ? 'var(--accent-ink)' : 'var(--text)' };
+    });
+
+    // ---- review controls ----
+    const jumpDef = [['login', 'Login'], ['signup', 'Sign up'], ['dashboard', 'Dashboard'], ['expenses', 'Expenses'], ['habits', 'Habits'], ['health', 'Health'], ['learn', 'Learn']];
+    const jumpers = jumpDef.map(([k, label]) => {
+      const on = s.screen === k;
+      return { label, go: () => this.go(k),
+        bg: on ? 'var(--btn)' : 'var(--surface)', fg: on ? 'var(--on-accent)' : 'var(--text)',
+        bd: on ? 'var(--btn)' : 'var(--border)' };
+    });
+    const segBtn = (on) => ({ bg: on ? 'var(--btn)' : 'var(--surface)', fg: on ? 'var(--on-accent)' : 'var(--text-2)', bd: on ? 'var(--btn)' : 'var(--border)' });
+    const L = segBtn(s.theme === 'light'), D = segBtn(s.theme === 'dark');
+    const IOS = segBtn(s.plat === 'ios'), AND = segBtn(s.plat === 'android');
+
+    // ---- accounts + recurring ----
+    const accounts = this.acctList().map(a => ({
+      name: a.label, ini: a.ini, color: a.color, soft: this.hexSoft(a.color), kind: a.kind,
+      bal: a.bal, sub: a.sub2, balColor: a.bal.startsWith('−') ? '#C2703D' : 'var(--text)',
+    }));
+    const recurring = [
+      { name: 'Index Fund SIP', tag: 'SIP', sub: 'Zerodha · monthly · 3rd', amt: '₹15,000', next: '3 Oct', color: '#7C6BC4', ini: 'S', inv: true },
+      { name: 'Car insurance', tag: 'AUTO', sub: 'HDFC Bank · yearly', amt: '₹18,400', next: '12 Sep', color: '#D9A441', ini: 'C' },
+      { name: 'Netflix + Spotify', tag: 'AUTO', sub: 'ICICI Credit · monthly', amt: '₹1,148', next: '18 Sep', color: '#B0558E', ini: 'N' },
+      { name: 'Rent', tag: 'AUTO', sub: 'HDFC Bank · monthly · 1st', amt: '₹32,000', next: '1 Oct', color: '#C2703D', ini: 'R' },
+      { name: 'Gold ETF SIP', tag: 'SIP', sub: 'Zerodha · weekly · Mon', amt: '₹2,500', next: '14 Sep', color: '#3FA6A0', ini: 'G', inv: true },
+    ].map(r => ({ ...r, soft: this.hexSoft(r.color),
+      tagBg: r.inv ? 'var(--accent-soft)' : 'var(--surface-2)',
+      tagFg: r.inv ? 'var(--accent-ink)' : 'var(--text-3)' }));
+
+    // ---- add sheet ----
+    const AI = {
+      exp: P(['M12 5v14', 'M17 10l-5-5-5 5', 'M4 21h16']),
+      inc: P(['M12 19V5', 'M7 14l5 5 5-5', 'M4 3h16']),
+      acct: P(['M5.5 6h13a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-13a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3z', 'M2.5 10.5h19', 'M6 15h4']),
+      inv: P(['M4 18l5-5 4 3 6-8', 'M15 8h4v4']),
+      sip: P(['M3 12a9 9 0 0 1 15-6.7L21 8', 'M21 3v5h-5', 'M21 12a9 9 0 0 1-15 6.7L3 16', 'M3 21v-5h5']),
+      rec: P(['M6 4h12a3 3 0 0 1 3 3v11a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3z', 'M3 9h18', 'M12 13v4', 'M10 15h4']),
+    };
+    const tileDef = [
+      ['expense', 'Expense', 'One-off spend', AI.exp, '#C2703D', null],
+      ['income', 'Income', 'Salary, refunds', AI.inc, '#0E9F6E', null],
+      ['invest', 'Investment', 'One-time buy', AI.inv, '#7C6BC4', 'once'],
+      ['recurring', 'Recurring expense', 'Auto-adds monthly', AI.rec, '#D9A441', null],
+      ['invest', 'Recurring SIP', 'Auto-invest on schedule', AI.sip, '#3FA6A0', 'sip'],
+      ['account', 'Account', 'Bank, card, cash', AI.acct, '#4B7BA6', null],
+    ];
+    const addTiles = tileDef.map(([k, label, sub, paths, color, mode]) => ({
+      label, sub, paths, color, soft: this.hexSoft(color),
+      go: () => this.openSheet(k, 'light', mode),
+    }));
+
+    // ---- form config ----
+    const chipSet = (items) => items.map(([label, dot]) => {
+      const on = s.cat === label;
+      return { label, dot, pick: () => { this.haptic('selection'); this.setState({ cat: label }); },
+        bg: on ? 'var(--accent-soft)' : 'var(--surface)', bd: on ? 'var(--accent)' : 'var(--border)',
+        fg: on ? 'var(--accent-ink)' : 'var(--text)' };
+    });
+    const expCats = chipSet([['Food & Dining', '#0E9F6E'], ['Transport', '#4B7BA6'], ['Shopping', '#B0558E'],
+      ['Bills', '#D9A441'], ['Health', '#3FA6A0'], ['OTT', '#7C6BC4'], ['Rent', '#C2703D']]);
+    const incCats = chipSet([['Salary', '#0E9F6E'], ['Freelance', '#4B7BA6'], ['Dividend', '#7C6BC4'], ['Refund', '#D9A441']]);
+    const invCats = chipSet([['Index Fund', '#7C6BC4'], ['Stocks', '#4B7BA6'], ['Gold ETF', '#D9A441'],
+      ['PPF', '#0E9F6E'], ['Crypto', '#B0558E'], ['FD', '#3FA6A0']]);
+    const recCats = chipSet([['Rent', '#C2703D'], ['Insurance', '#D9A441'], ['OTT / Subs', '#7C6BC4'],
+      ['EMI', '#4B7BA6'], ['Utilities', '#3FA6A0'], ['School fees', '#B0558E']]);
+    const acctTypes = chipSet([['Bank', '#4B7BA6'], ['Credit card', '#C2703D'], ['Cash', '#0E9F6E'],
+      ['Wallet', '#7C6BC4'], ['Broker', '#B0558E']]);
+
+    const accountChips = this.acctList().map((a, i) => {
+      const on = s.acct === i;
+      return { label: a.label, sub: a.sub, pick: () => { this.haptic('selection'); this.setState({ acct: i }); },
+        bg: on ? 'var(--accent-soft)' : 'var(--surface)', bd: on ? 'var(--accent)' : 'var(--border)',
+        fg: on ? 'var(--accent-ink)' : 'var(--text)' };
+    });
+    const modes = [['sip', 'Recurring SIP'], ['once', 'One-time']].map(([k, label]) => {
+      const on = s.mode === k;
+      return { label, pick: () => { this.haptic('selection'); this.setState({ mode: k, recurOn: k === 'sip' }); },
+        bg: on ? 'var(--surface)' : 'transparent', fg: on ? 'var(--text)' : mut,
+        sh: on ? '0 2px 6px -2px rgba(0,0,0,.2)' : 'none' };
+    });
+    const freqChips = ['Weekly', 'Monthly', 'Quarterly', 'Yearly'].map(label => {
+      const on = s.freq === label;
+      return { label, pick: () => { this.haptic('selection'); this.setState({ freq: label }); },
+        bg: on ? 'var(--btn)' : 'var(--surface-2)', bd: on ? 'var(--btn)' : 'var(--border)',
+        fg: on ? 'var(--on-accent)' : 'var(--text-2)' };
+    });
+    const nextDateMap = { Weekly: 'Mon, 14 Sep', Monthly: '9 Oct 2026', Quarterly: '9 Dec 2026', Yearly: '9 Sep 2027' };
+
+    const FORMS = {
+      expense: { title: 'Add expense', sub: 'Where did it go?', paths: AI.exp, color: '#C2703D',
+        amountLabel: 'AMOUNT SPENT', chipsLabel: 'Category', chips: expCats, showChips: true,
+        showAccounts: true, accountsLabel: 'Paid from', showRecurring: true, showMeta: true,
+        recurTitle: 'Make it recurring', recurSub: 'Auto-add this on every cycle', saveLabel: 'Save expense' },
+      income: { title: 'Add income', sub: 'Money coming in', paths: AI.inc, color: '#0E9F6E',
+        amountLabel: 'AMOUNT RECEIVED', chipsLabel: 'Source', chips: incCats, showChips: true,
+        showAccounts: true, accountsLabel: 'Credited to', showRecurring: true, showMeta: true,
+        recurTitle: 'Repeats every month', recurSub: 'Great for salary and rent income', saveLabel: 'Save income' },
+      invest: { title: 'New investment', sub: 'One-time or a recurring SIP', paths: AI.inv, color: '#7C6BC4',
+        amountLabel: s.mode === 'sip' ? 'PER INSTALMENT' : 'AMOUNT TO INVEST',
+        chipsLabel: 'Instrument', chips: invCats, showChips: true, showMode: true, modeLabel: 'Type',
+        modes, showAccounts: true, accountsLabel: 'Auto-debit from', showRecurring: s.mode === 'sip',
+        recurTitle: 'Auto-invest on schedule', recurSub: 'We place the order and log it for you',
+        saveLabel: s.mode === 'sip' ? 'Schedule SIP' : 'Save investment' },
+      recurring: { title: 'Recurring expense', sub: 'Set once — it adds itself', paths: AI.rec, color: '#D9A441',
+        amountLabel: 'AMOUNT PER CYCLE', chipsLabel: 'What is it for?', chips: recCats, showChips: true,
+        showAccounts: true, accountsLabel: 'Charged to', showRecurring: true,
+        recurTitle: 'Auto-add to ledger', recurSub: 'No reminder needed — it just appears',
+        saveLabel: 'Create recurring' },
+      account: { title: 'New account', sub: 'Track a balance', paths: AI.acct, color: '#4B7BA6',
+        amountLabel: 'OPENING BALANCE', showName: true, nameLabel: 'Account name', nameValue: s.accName,
+        chipsLabel: 'Account type', chips: acctTypes, showChips: true, saveLabel: 'Create account' },
+    };
+    const f = FORMS[s.sheet] || FORMS.expense;
+    f.accountChips = accountChips;
+
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del'].map(k => ({
+      label: k, isDigit: k !== 'del', isDel: k === 'del', press: () => this.key(k),
+    }));
+    const amtNum = parseFloat(s.amount || '0');
+    const amtDisplay = s.amount ? (s.amount.includes('.') ? this.fmtIN(Math.floor(amtNum)) + s.amount.slice(s.amount.indexOf('.')) : this.fmtIN(amtNum)) : '0';
+    const hapNames = { selection: 'Selection click', light: 'Light impact', medium: 'Medium impact', heavy: 'Heavy impact', success: 'Success · notification' };
+
+    const greetH = { morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening' };
+
+    return {
+      accounts, recurring, addTiles, f, keys, freqChips, modes,
+      menuSheet: s.sheet === 'menu', formSheet: !!s.sheet && s.sheet !== 'menu',
+      sheetAnim: s.closing ? 'sheetDown .19s cubic-bezier(.4,0,1,1) forwards' : 'sheetUp .42s cubic-bezier(.2,.86,.3,1)',
+      backdropAnim: s.closing ? 'fadeOut .19s forwards' : 'fadeIn .22s',
+      fabRot: s.sheet ? '135deg' : '0deg',
+      openAdd: () => this.openSheet('menu', 'medium'),
+      openAccount: () => this.openSheet('account', 'light'),
+      openRecurring: () => this.openSheet('recurring', 'light'),
+      closeSheet: () => this.closeSheet(),
+      save: () => this.doSave(),
+      setName: (e) => this.setState({ accName: e.target.value }),
+      toggleRecur: () => { this.haptic('medium'); this.setState(st => ({ recurOn: !st.recurOn })); },
+      recurOn: s.recurOn, recurTrackBg: s.recurOn ? 'var(--accent)' : 'var(--border)',
+      recurKnobX: s.recurOn ? '22px' : '3px',
+      freq: s.freq, nextDate: nextDateMap[s.freq],
+      amtDisplay, amtColor: s.amount ? 'var(--text)' : 'var(--text-3)',
+      saveBg: s.amount ? 'var(--btn)' : 'var(--text-3)', saveOpacity: s.amount ? '1' : '.6',
+      saved: !!s.saved, savedTitle: s.saved ? s.saved.title : '', savedSub: s.saved ? s.saved.sub : '',
+      hapticOn: !!s.hap, hapLabel: hapNames[s.hap] || '', hapKey: 'h' + s.hapN,
+      theme: s.theme,
+      isIOS: s.plat === 'ios', isAndroid: s.plat === 'android',
+      isLogin: s.screen === 'login', isSignup: s.screen === 'signup',
+      isDashboard: s.screen === 'dashboard', isExpenses: s.screen === 'expenses',
+      isHabits: s.screen === 'habits', isHealth: s.screen === 'health',
+      isMeds: s.hTab === 'meds', isGym: s.hTab === 'gym', hTabs,
+      isLearn: s.screen === 'learn',
+      isApp: ['dashboard', 'expenses', 'habits', 'health', 'learn'].indexOf(s.screen) > -1,
+
+      medViews, isMedToday: s.medView === 'today', isMedSched: s.medView === 'schedule',
+      medSchedule, medFreqs, medDays, medTimeOptions,
+      medSheet: !!me,
+      medTitle: me ? (me.name ? 'Edit schedule' : 'New medication') : '',
+      medName: me ? me.name : '', medSub: me ? me.sub : '',
+      medShowDays: !!me && (me.freq === 'weekly' || me.freq === 'alt'),
+      medTimesCount: me ? (me.times.length ? me.times.length + ' a day' : 'pick at least one') : '',
+      medRemindBg: me && me.remind ? 'var(--accent)' : 'var(--border)',
+      medRemindX: me && me.remind ? '22px' : '3px',
+      medRemindSub: me && me.remind ? 'Push alert at each timing' : 'Silent — no notification',
+      medSummary: me ? freqLabel(me) : '',
+      setMedName: (e) => { const v = e.target.value; this.setState(st => ({ medEdit: { ...st.medEdit, name: v } })); },
+      setMedSub: (e) => { const v = e.target.value; this.setState(st => ({ medEdit: { ...st.medEdit, sub: v } })); },
+      toggleMedRemind: () => { this.haptic('light'); this.setState(st => ({ medEdit: { ...st.medEdit, remind: !st.medEdit.remind } })); },
+      closeMed: () => this.setState({ medEdit: null }),
+      newMed: () => { this.haptic('medium'); this.setState({ medEdit: { id: Date.now(), name: '', sub: '', color: '#4B7BA6',
+        left: 30, taken: false, slot: 'am', freq: 'daily', days: [0,1,2,3,4,5,6], times: ['8:00 AM'], remind: true } }); },
+      saveMed: () => { this.haptic('success'); this.setState(st => { const d = st.medEdit;
+        const slot = (d.times[0] || '').indexOf('PM') > -1 ? ((d.times[0] || '').indexOf('10') === 0 ? 'night' : 'pm') : 'am';
+        const rec = { ...d, slot, name: d.name || 'Untitled medicine' };
+        const exists = st.meds.some(m => m.id === d.id);
+        return { medEdit: null, medView: 'schedule',
+          meds: exists ? st.meds.map(m => m.id === d.id ? rec : m) : st.meds.concat([rec]) }; }); },
+
+      learnTabs, books, notes: notesV, dueCount,
+      noteTotal: s.notes.length + ' notes',
+      learnBlurb: 'Spaced repetition keeps what you read. Short passes beat long ones.',
+      startReview: () => { this.haptic('medium'); const first = s.notes.find(n => n.due);
+        this.setState({ learnTab: 'due', note: first ? first.id : null }); },
+      newNote: () => this.haptic('medium'),
+      noteOpen: !!nv, nvTitle: nv ? nv.title : '', nvBook: nv ? nv.book : '',
+      nvColor: nv ? (bookColor[nv.book] || acc) : acc,
+      nvMeta: nv ? nv.when + ' · ' + nv.mins + ' min read' : '',
+      nvBody, nvPrompt: nv ? nv.prompt : '',
+      nvStarBg: nv && nv.star ? 'var(--accent-soft)' : 'var(--surface)',
+      nvStarFg: nv && nv.star ? 'var(--accent-ink)' : 'var(--text-2)',
+      nvStarFill: nv && nv.star ? 'currentColor' : 'none',
+      nvCta: nv && nv.due ? 'Mark reviewed' : 'Reviewed again',
+      closeNote: () => this.setState({ note: null }),
+      toggleStar: () => { this.haptic('light'); this.setState(st => ({ notes: st.notes.map(n => n.id === st.note ? { ...n, star: !n.star } : n) })); },
+      reviewLater: () => { this.haptic('light'); this.setState({ note: null }); },
+      markReviewed: () => { this.haptic('success'); this.setState(st => ({ note: null,
+        notes: st.notes.map(n => n.id === st.note ? { ...n, due: false, when: 'Just now' } : n) })); },
+
+      week, habitCards, medGroups, exercises, split,
+      habitPct: Math.round(s.habits.reduce((a, h) => a + Math.min(h.val, h.goal) / h.goal, 0) / s.habits.length * 100) + '%',
+      habitDelta: '+9%', habitSummary: habitDoneN + ' of ' + s.habits.length + ' habits closed today.',
+      habitDone: habitDoneN + ' of ' + s.habits.length + ' done',
+      addHabit: () => this.haptic('medium'),
+      medTaken, medTotal: s.meds.length,
+      medPct: Math.round(medTaken / s.meds.length * 100) + '%',
+      medNext: medTaken === s.meds.length ? 'All done for today — nice.' : 'Next: ' + (s.meds.find(m => !m.taken) || {}).name,
+      exDoneStr: exDone + ' / ' + s.exercises.length, exVolume: '4,820 kg',
+      exPct: Math.round(exDone / s.exercises.length * 100) + '%',
+      sidebar: s.sidebar,
+
+      signIn: () => this.go('dashboard'),
+      goSignup: () => this.go('signup'), goLogin: () => this.go('login'),
+      goDash: () => this.go('dashboard'), goExpenses: () => this.go('expenses'),
+      goHabits: () => this.go('habits'), goHealth: () => this.go('health'),
+      goLearn: () => this.go('learn'), navLearn: s.screen === 'learn' ? acc : mut,
+      navHabits: s.screen === 'habits' ? acc : mut,
+      navHealth: s.screen === 'health' ? acc : mut,
+      openSidebar: () => this.setState({ sidebar: true }), closeSidebar: () => this.setState({ sidebar: false }),
+      toggleTheme: () => this.setState(st => ({ theme: st.theme === 'light' ? 'dark' : 'light' })),
+      setLight: () => this.setState({ theme: 'light' }), setDark: () => this.setState({ theme: 'dark' }),
+      setIOS: () => this.setState({ plat: 'ios' }), setAndroid: () => this.setState({ plat: 'android' }),
+
+      greetingText: 'Good morning', dashSub: 'You have 6 things lined up today. One deep breath — let\u2019s go.',
+      dateStr: 'Sun · 31 Aug 2026',
+      todoCount: doneN + ' of ' + s.todos.length + ' done',
+
+      todos, habits, tabs, donutSegs, legend, trend, txns, fin, menu, jumpers,
+
+      navHome: s.screen === 'dashboard' ? acc : mut,
+      navFin: s.screen === 'expenses' ? acc : mut,
+
+      themeLabel: s.theme === 'light' ? 'Dark mode' : 'Light mode',
+      themePaths: s.theme === 'light'
+        ? P(['M21 12.8A8 8 0 1 1 11.2 3a6 6 0 0 0 9.8 9.8z'])
+        : P(['M12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z', 'M12 2v2', 'M12 20v2', 'M2 12h2', 'M20 12h2', 'M5 5l1.4 1.4', 'M17.6 17.6 19 19', 'M19 5l-1.4 1.4', 'M6.4 17.6 5 19']),
+      toggleX: s.theme === 'dark' ? '20px' : '2px',
+
+      lightBg: L.bg, lightFg: L.fg, lightBd: L.bd, darkBg: D.bg, darkFg: D.fg, darkBd: D.bd,
+      iosBg: IOS.bg, iosFg: IOS.fg, iosBd: IOS.bd, andBg: AND.bg, andFg: AND.fg, andBd: AND.bd,
+    };
+  }
+
+  reHabit(h) {
+    const full = h.val >= h.goal;
+    if (h.name === 'Water') h.sub = h.val + ' / ' + h.goal + ' glasses';
+    else if (h.name === 'Steps') h.sub = h.val + 'k / 10k';
+    else h.sub = full ? 'Done today' : 'Not logged yet';
+    return h;
+  }
+
+  hexSoft(hex) {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},0.15)`;
+  }
+}
+</script>
+</body>
+</html>

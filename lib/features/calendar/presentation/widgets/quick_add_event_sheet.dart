@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/reminders/reminder_mode.dart';
@@ -186,14 +187,14 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
                 Expanded(
                   child: TextButton.icon(
                     onPressed: _pickStartTime,
-                    icon: const Icon(Icons.access_time_rounded, size: 16),
+                    icon: const Icon(LucideIcons.clock, size: 16),
                     label: Text(_startTime.format(context)),
                   ),
                 ),
                 Expanded(
                   child: TextButton.icon(
                     onPressed: _pickEndTime,
-                    icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                    icon: const Icon(LucideIcons.arrowRight, size: 16),
                     label: Text(_endTime?.format(context) ?? 'Add end time'),
                   ),
                 ),
@@ -201,7 +202,7 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
                   IconButton(
                     tooltip: 'Clear end time',
                     onPressed: () => setState(() => _endTime = null),
-                    icon: const Icon(Icons.close_rounded, size: 16),
+                    icon: const Icon(LucideIcons.x, size: 16),
                   ),
               ],
             ),
@@ -245,7 +246,7 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
                   child: Row(
                     children: [
                       Icon(
-                        Icons.event_busy_rounded,
+                        LucideIcons.calendarX,
                         size: 16,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -260,7 +261,7 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
                         IconButton(
                           tooltip: 'Clear end date',
                           onPressed: () => setState(() => _recurrenceEndDate = null),
-                          icon: const Icon(Icons.close_rounded, size: 16),
+                          icon: const Icon(LucideIcons.x, size: 16),
                         ),
                       ],
                     ],
@@ -292,12 +293,12 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
                   ButtonSegment(
                     value: ReminderMode.notification,
                     label: Text('Notification'),
-                    icon: Icon(Icons.notifications_rounded, size: 16),
+                    icon: Icon(LucideIcons.bell, size: 16),
                   ),
                   ButtonSegment(
                     value: ReminderMode.alarm,
                     label: Text('Alarm'),
-                    icon: Icon(Icons.alarm_rounded, size: 16),
+                    icon: Icon(LucideIcons.alarmClock, size: 16),
                   ),
                 ],
                 selected: {_reminderMode},
@@ -336,7 +337,7 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
                     Navigator.of(context).pop();
                     widget.onDelete!();
                   },
-                  icon: Icon(Icons.delete_outline_rounded, color: Theme.of(context).colorScheme.error),
+                  icon: Icon(LucideIcons.trash2, color: Theme.of(context).colorScheme.error),
                   label: Text(
                     'Delete event',
                     style: TextStyle(color: Theme.of(context).colorScheme.error),

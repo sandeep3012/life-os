@@ -8,8 +8,10 @@ import 'tables/documents_tables.dart';
 import 'tables/finance_tables.dart';
 import 'tables/folders_table.dart';
 import 'tables/goals_tables.dart';
+import 'tables/health_tables.dart';
 import 'tables/habits_tables.dart';
 import 'tables/insights_table.dart';
+import 'tables/learn_tables.dart';
 import 'tables/notes_tables.dart';
 import 'tables/settings_table.dart';
 import 'tables/tasks_tables.dart';
@@ -43,6 +45,14 @@ part 'app_database.g.dart';
     Notes,
     Documents,
     Insights,
+    Medications,
+    MedicationLogs,
+    WorkoutDays,
+    Exercises,
+    WorkoutLogs,
+    ExerciseSetLogs,
+    LearnBooks,
+    LearnNotes,
     AppSettings,
   ],
 )
@@ -52,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -170,6 +180,27 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(appSettings, appSettings.currencyCode);
         await m.addColumn(appSettings, appSettings.appLockEnabled);
         await m.addColumn(appSettings, appSettings.biometricEnabled);
+      }
+      if (from < 15) {
+        // v14 -> v15: the Health and Learn modules from the design comp.
+        // Purely additive — seven new tables, nothing existing is touched, so
+        // upgrading keeps every finance/habits/tasks row intact. As with habit
+        // streaks, "doses taken today", workout progress and a book's
+        // percentage are derived from the log tables rather than stored, so
+        // there is nothing to backfill.
+        await m.createTable(medications);
+        await m.createTable(medicationLogs);
+        await m.createTable(workoutDays);
+        await m.createTable(exercises);
+        await m.createTable(workoutLogs);
+        await m.createTable(learnBooks);
+        await m.createTable(learnNotes);
+      }
+      if (from < 16) {
+        // v15 -> v16: per-set gym logging (weight and reps per set per day).
+        // Additive; completion still lives in workout_logs, so nothing existing
+        // is rewritten and set history simply starts empty.
+        await m.createTable(exerciseSetLogs);
       }
     },
   );

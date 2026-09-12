@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/reminders/reminder_mode.dart';
 import '../../domain/task_priority.dart';
@@ -117,7 +118,7 @@ class _QuickAddTaskSheetState extends State<_QuickAddTaskSheet> {
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: _pickDueDate,
-            icon: const Icon(Icons.calendar_today_rounded, size: 16),
+            icon: const Icon(LucideIcons.calendarDays, size: 16),
             label: Text(
               _dueDate == null
                   ? 'Set due date'
@@ -140,12 +141,12 @@ class _QuickAddTaskSheetState extends State<_QuickAddTaskSheet> {
                   ButtonSegment(
                     value: ReminderMode.notification,
                     label: Text('Notification'),
-                    icon: Icon(Icons.notifications_rounded, size: 16),
+                    icon: Icon(LucideIcons.bell, size: 16),
                   ),
                   ButtonSegment(
                     value: ReminderMode.alarm,
                     label: Text('Alarm'),
-                    icon: Icon(Icons.alarm_rounded, size: 16),
+                    icon: Icon(LucideIcons.alarmClock, size: 16),
                   ),
                 ],
                 selected: {_reminderMode},

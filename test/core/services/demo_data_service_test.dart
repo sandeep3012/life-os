@@ -1,4 +1,6 @@
-import 'package:drift/drift.dart';
+// `isNotNull` is exported by both drift (as a query-builder expression) and
+// flutter_test (as a matcher). This file wants the matcher, so drift's is hidden.
+import 'package:drift/drift.dart' hide isNotNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_manager/core/database/app_database.dart';

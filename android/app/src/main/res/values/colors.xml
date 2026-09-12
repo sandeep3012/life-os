@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#6750E7</color>
+    <!-- Brand ground (hero-a). The adaptive icon uses @drawable/ic_launcher_background
+         for the gradient; this is kept in sync so any colour-based fallback is
+         still on-brand rather than the pre-rebrand violet. -->
+    <color name="ic_launcher_background">#0A6E4D</color>
 </resources>

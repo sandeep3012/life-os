@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/router/route_paths.dart';
+import '../../../../core/widgets/app_top_bar.dart';
+import '../../../../core/widgets/tab_rail.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
-import '../../../../core/utils/icon_lookup.dart';
 import '../../../habits/application/habits_providers.dart';
 import '../../../habits/domain/habit_progress.dart';
 import '../../../habits/presentation/widgets/habit_tile.dart';
@@ -32,38 +35,36 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
   _TaskFilter _taskFilter = _TaskFilter.today;
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
+      drawer: const AppSidebar(),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text('Tasks & Habits', style: theme.textTheme.headlineSmall),
-                  ),
-                  if (_section == _Section.habits)
-                    IconButton(
-                      tooltip: 'Archived habits',
-                      icon: const Icon(Icons.inventory_2_outlined),
-                      onPressed: () => context.push(RoutePaths.archivedHabits),
-                    ),
-                ],
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+              child: Builder(
+                builder: (context) => AppTopBar(
+                  centerText: 'Planner',
+                  centerIsTitle: true,
+                  onMenu: () => Scaffold.of(context).openDrawer(),
+                  trailingIcon: _section == _Section.habits
+                      ? LucideIcons.package
+                      : null,
+                  showTrailing: _section == _Section.habits,
+                  onTrailing: () => context.push(RoutePaths.archivedHabits),
+                ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: SegmentedButton<_Section>(
-                segments: const [
-                  ButtonSegment(value: _Section.tasks, label: Text('Tasks')),
-                  ButtonSegment(value: _Section.habits, label: Text('Habits')),
-                ],
-                selected: {_section},
-                onSelectionChanged: (s) => setState(() => _section = s.first),
+              child: AppTabRail<_Section>(
+                value: _section,
+                labels: const {
+                  _Section.tasks: 'Tasks',
+                  _Section.habits: 'Habits',
+                },
+                onChanged: (value) => setState(() => _section = value),
               ),
             ),
             const SizedBox(height: 8),
@@ -81,7 +82,7 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
       floatingActionButton: FloatingActionButton(
         tooltip: _section == _Section.tasks ? 'New task' : 'New habit',
         onPressed: () => _section == _Section.tasks ? _addTask() : _addHabit(),
-        child: const Icon(Icons.add_rounded),
+        child: const Icon(LucideIcons.plus),
       ),
     );
   }
@@ -128,14 +129,16 @@ class _TasksPane extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: SegmentedButton<_TaskFilter>(
-            segments: const [
-              ButtonSegment(value: _TaskFilter.today, label: Text('Today')),
-              ButtonSegment(value: _TaskFilter.upcoming, label: Text('Upcoming')),
-              ButtonSegment(value: _TaskFilter.all, label: Text('All')),
-            ],
-            selected: {filter},
-            onSelectionChanged: (s) => onFilterChanged(s.first),
+          child: AppTabRail<_TaskFilter>(
+            value: filter,
+            labels: const {
+              _TaskFilter.today: 'Today',
+              _TaskFilter.upcoming: 'Upcoming',
+              _TaskFilter.all: 'All',
+            },
+            height: 36,
+            fontSize: 12.5,
+            onChanged: onFilterChanged,
           ),
         ),
         Expanded(
@@ -146,7 +149,7 @@ class _TasksPane extends ConsumerWidget {
               final filtered = _applyFilter(tasks, filter);
               if (filtered.isEmpty) {
                 return const _EmptyState(
-                  icon: Icons.checklist_rounded,
+                  icon: LucideIcons.listChecks,
                   message: 'Nothing here — add a task to get started.',
                 );
               }
@@ -208,7 +211,7 @@ class _HabitsPaneState extends ConsumerState<_HabitsPane> {
 
     if (progress.isEmpty) {
       return const _EmptyState(
-        icon: Icons.local_fire_department_rounded,
+        icon: LucideIcons.flame,
         message: 'No habits yet — add one to start a streak.',
       );
     }
@@ -354,7 +357,7 @@ class _WeekSummary extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.local_fire_department_rounded, color: context.appColors.warning),
+            Icon(LucideIcons.flame, color: context.appColors.warning),
           ],
         ),
       ),

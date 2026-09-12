@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -21,6 +22,7 @@ import '../widgets/quick_add_transaction_sheet.dart';
 import '../widgets/transaction_tile.dart';
 import 'account_detail_screen.dart';
 import 'archived_accounts_screen.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 enum _FinanceSection { transactions, budgets }
 
@@ -138,13 +140,13 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.calendar_today_outlined, size: 18),
+                    const Icon(LucideIcons.calendarDays, size: 18),
                     const SizedBox(width: 8), Text(_preset),
-                    const Icon(Icons.arrow_drop_down, size: 18),
+                    const Icon(LucideIcons.chevronDown, size: 18),
                   ]),
                 ),
               ),
-              OutlinedButton.icon(onPressed: () => _selectCategories(categories), icon: const Icon(Icons.filter_list),
+              OutlinedButton.icon(onPressed: () => _selectCategories(categories), icon: const Icon(LucideIcons.listFilter),
                 label: Text(_categories.isEmpty ? 'All categories' : '${_categories.length} selected')),
             ]),
             const SizedBox(height: 8),
@@ -234,7 +236,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                               ),
                               Text(
                                 formatMinor(totalBalance, currencyCode: currencyCode),
-                                style: theme.textTheme.headlineMedium?.copyWith(fontFamily: 'Fraunces'),
+                                style: theme.textTheme.headlineMedium?.copyWith(fontFamily: AppFonts.serif),
                               ),
                             ],
                           ),
@@ -244,7 +246,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                             onPressed: () => Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => const ArchivedAccountsScreen()),
                             ),
-                            icon: const Icon(Icons.archive_outlined, size: 18),
+                            icon: const Icon(LucideIcons.archive, size: 18),
                             label: Text('Archived ($archivedCount)'),
                           ),
                       ],
@@ -315,7 +317,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                         const SizedBox(width: 8),
                         IconButton.filledTonal(
                           tooltip: 'More',
-                          icon: const Icon(Icons.more_horiz_rounded),
+                          icon: const Icon(LucideIcons.ellipsis),
                           onPressed: () => _showFinanceMenu(context),
                         ),
                       ],
@@ -337,9 +339,12 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        tooltip: _section == _FinanceSection.transactions ? 'New transaction' : 'New budget',
+        // `_fabLabel` is the label that matches what `_handleFab` actually does:
+        // with no accounts yet the button opens the *account* sheet, so an
+        // inlined "New transaction" tooltip described the wrong action.
+        tooltip: _fabLabel(ref),
         onPressed: () => _handleFab(context, ref),
-        child: const Icon(Icons.add_rounded),
+        child: const Icon(LucideIcons.plus),
       ),
     );
   }
@@ -353,7 +358,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.insights_rounded),
+              leading: const Icon(LucideIcons.chartLine),
               title: const Text('Spend Analyzer'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -361,7 +366,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.trending_up_rounded),
+              leading: const Icon(LucideIcons.trendingUp),
               title: const Text('Net worth'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -369,7 +374,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.receipt_long_rounded),
+              leading: const Icon(LucideIcons.receipt),
               title: const Text('Bills'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -377,7 +382,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.autorenew_rounded),
+              leading: const Icon(LucideIcons.refreshCw),
               title: const Text('Recurring transactions'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -385,15 +390,24 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.swap_horiz_rounded),
+              leading: const Icon(LucideIcons.arrowLeftRight),
               title: const Text('Transfer between accounts'),
               onTap: () {
                 Navigator.of(context).pop();
-                Future.microtask(() => _showTransferDialog(hostContext));
+                // Deferred so the sheet finishes closing before the dialog
+                // opens. `hostContext` is this screen's context, not the
+                // sheet's, and the `mounted` check below covers the gap — but
+                // the lint only tracks `context` itself, so a captured context
+                // can't be proven safe to it.
+                Future.microtask(() {
+                  if (!mounted) return;
+                  // ignore: use_build_context_synchronously
+                  _showTransferDialog(hostContext);
+                });
               },
             ),
             ListTile(
-              leading: const Icon(Icons.summarize_rounded),
+              leading: const Icon(LucideIcons.clipboardList),
               title: const Text('Reports'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -422,9 +436,9 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         return AlertDialog(
           title: const Text('Transfer money'),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            DropdownButtonFormField<String>(value: fromId, decoration: const InputDecoration(labelText: 'From account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => fromId = v!)),
+            DropdownButtonFormField<String>(initialValue: fromId, decoration: const InputDecoration(labelText: 'From account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => fromId = v!)),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: toId, decoration: const InputDecoration(labelText: 'To account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => toId = v!)),
+            DropdownButtonFormField<String>(initialValue: toId, decoration: const InputDecoration(labelText: 'To account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => toId = v!)),
             const SizedBox(height: 12),
             TextField(controller: amountController, onChanged: (_) => setState(() {}), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Amount')),
           ]),
@@ -593,10 +607,12 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
       }
       entries.add(transaction);
     }
-    if (transactions.isEmpty) entries.add(const Padding(
-      padding: EdgeInsets.symmetric(vertical: 32),
-      child: Text('No transactions in this range. Try another date range or category.'),
-    ));
+    if (transactions.isEmpty) {
+      entries.add(const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Text('No transactions in this range. Try another date range or category.'),
+      ));
+    }
     if (!widget.history) {
       entries.add(Padding(
         padding: const EdgeInsets.only(top: 20, bottom: 24),
@@ -604,7 +620,7 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
           onPressed: () => Navigator.of(context, rootNavigator: true).push(MaterialPageRoute<void>(
             builder: (_) => const TransactionHistoryScreen(),
           )),
-          icon: const Icon(Icons.arrow_forward_rounded),
+          icon: const Icon(LucideIcons.arrowRight),
           label: const Text('See all transactions'),
         ),
       ));
@@ -741,7 +757,7 @@ class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
       return const SliverFillRemaining(
         hasScrollBody: false,
         child: _EmptyState(
-          icon: Icons.pie_chart_rounded,
+          icon: LucideIcons.pieChart,
           message: 'No budgets yet — add one to track spending.',
         ),
       );
@@ -819,7 +835,7 @@ class _SwipeDeleteBackground extends StatelessWidget {
       alignment: Alignment.centerRight,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       color: Theme.of(context).colorScheme.error,
-      child: Icon(Icons.delete_rounded, color: Theme.of(context).colorScheme.onError),
+      child: Icon(LucideIcons.trash2, color: Theme.of(context).colorScheme.onError),
     );
   }
 }
@@ -830,7 +846,7 @@ class _EmptyAccountsState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const _EmptyState(
-      icon: Icons.account_balance_wallet_rounded,
+      icon: LucideIcons.wallet,
       message: 'Add your first account to start tracking finances.',
     );
   }

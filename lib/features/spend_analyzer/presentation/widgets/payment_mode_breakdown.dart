@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/payment_mode_spend.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class PaymentModeBreakdown extends StatelessWidget {
   const PaymentModeBreakdown({super.key, required this.breakdown, required this.currencyCode});
@@ -47,7 +48,8 @@ class PaymentModeBreakdown extends StatelessWidget {
                           Text(
                             formatMinor(entry.totalMinor, currencyCode: currencyCode, showDecimals: false),
                             style: TextStyle(
-                              fontFamily: 'PlexMono',
+                              fontFamily: AppFonts.numeric,
+                              fontFeatures: AppFonts.tabular,
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurfaceVariant,

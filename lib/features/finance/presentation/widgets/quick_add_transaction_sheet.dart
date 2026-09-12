@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/file_storage_service.dart';
@@ -216,7 +217,7 @@ class _QuickAddTransactionSheetState extends ConsumerState<_QuickAddTransactionS
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.add_circle_outline_rounded, size: 16),
+                    Icon(LucideIcons.circlePlus, size: 16),
                     SizedBox(width: 8),
                     Text('Add new category'),
                   ],
@@ -257,7 +258,7 @@ class _QuickAddTransactionSheetState extends ConsumerState<_QuickAddTransactionS
               decoration: const InputDecoration(labelText: 'Date'),
               child: Row(
                 children: [
-                  Icon(Icons.calendar_today_rounded, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Icon(LucideIcons.calendarDays, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   const SizedBox(width: 8),
                   Text(DateFormat.yMMMd().format(_date)),
                 ],
@@ -315,12 +316,12 @@ class _ReceiptSection extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_rounded),
+              leading: const Icon(LucideIcons.camera),
               title: const Text('Take photo'),
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_rounded),
+              leading: const Icon(LucideIcons.images),
               title: const Text('Choose from gallery'),
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
@@ -361,14 +362,14 @@ class _ReceiptSection extends ConsumerWidget {
             ),
             IconButton(
               tooltip: 'Remove receipt',
-              icon: const Icon(Icons.close_rounded, size: 20),
+              icon: const Icon(LucideIcons.x, size: 20),
               onPressed: () => ref.read(financeControllerProvider).removeReceipt(transactionId),
             ),
           ] else
             Expanded(
               child: TextButton.icon(
                 onPressed: () => _pickReceipt(context, ref),
-                icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+                icon: const Icon(LucideIcons.camera, size: 18),
                 label: const Text('Attach receipt'),
               ),
             ),
@@ -419,7 +420,7 @@ class _ReceiptThumbnailState extends State<_ReceiptThumbnail> {
       height: 40,
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) =>
-          const SizedBox(width: 40, height: 40, child: Icon(Icons.receipt_long_rounded, size: 18)),
+          const SizedBox(width: 40, height: 40, child: Icon(LucideIcons.receipt, size: 18)),
     );
   }
 }

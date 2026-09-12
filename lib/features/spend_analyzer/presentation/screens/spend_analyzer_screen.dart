@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
@@ -10,6 +11,7 @@ import '../widgets/budget_bar.dart';
 import '../widgets/category_donut_chart.dart';
 import '../widgets/payment_mode_breakdown.dart';
 import '../widgets/weekly_trend_chart.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class SpendAnalyzerScreen extends ConsumerWidget {
   const SpendAnalyzerScreen({super.key});
@@ -37,12 +39,12 @@ class SpendAnalyzerScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Previous month',
-            icon: const Icon(Icons.chevron_left_rounded),
+            icon: const Icon(LucideIcons.chevronLeft),
             onPressed: () => _shiftMonth(ref, -1),
           ),
           IconButton(
             tooltip: 'Next month',
-            icon: const Icon(Icons.chevron_right_rounded),
+            icon: const Icon(LucideIcons.chevronRight),
             onPressed: () => _shiftMonth(ref, 1),
           ),
         ],
@@ -72,7 +74,7 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                           Text(
                             formatMinor(total, currencyCode: currencyCode, showDecimals: false),
                             style: theme.textTheme.headlineSmall?.copyWith(
-                              fontFamily: 'Fraunces',
+                              fontFamily: AppFonts.serif,
                             ),
                           ),
                         ],
@@ -81,14 +83,15 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                         Row(
                           children: [
                             Icon(
-                              delta >= 0 ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                              delta >= 0 ? LucideIcons.arrowUp : LucideIcons.arrowDown,
                               size: 14,
                               color: delta >= 0 ? colors.critical : colors.good,
                             ),
                             Text(
                               '${(delta.abs() * 100).toStringAsFixed(1)}% vs last month',
                               style: TextStyle(
-                                fontFamily: 'PlexMono',
+                                fontFamily: AppFonts.numeric,
+                                fontFeatures: AppFonts.tabular,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: delta >= 0 ? colors.critical : colors.good,

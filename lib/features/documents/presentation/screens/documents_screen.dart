@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../tags/application/tags_providers.dart';
@@ -63,7 +64,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
               controller: _searchController,
               decoration: const InputDecoration(
                 hintText: 'Search documents',
-                prefixIcon: Icon(Icons.search_rounded),
+                prefixIcon: Icon(LucideIcons.search),
               ),
             ),
           ),
@@ -176,7 +177,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _pickImportSource,
-        icon: const Icon(Icons.add_rounded),
+        icon: const Icon(LucideIcons.plus),
         label: const Text('Add'),
       ),
     );
@@ -204,12 +205,12 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.insert_drive_file_rounded),
+              leading: const Icon(LucideIcons.file),
               title: const Text('Import file'),
               onTap: () => Navigator.of(context).pop(_ImportSource.file),
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt_rounded),
+              leading: const Icon(LucideIcons.camera),
               title: const Text('Take photo'),
               onTap: () => Navigator.of(context).pop(_ImportSource.camera),
             ),

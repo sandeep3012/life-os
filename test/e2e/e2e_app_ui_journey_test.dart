@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_manager/app/app.dart';
+import 'package:life_manager/app/router/app_shell.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class _FakeNotificationService extends NotificationService {
   @override
@@ -104,7 +106,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 1. App starts on Home dashboard
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(AppFloatingNavBar), findsOneWidget);
     expect(find.text('Your dashboard fills in as you go'), findsOneWidget);
 
     // 2. Navigate to Finance tab
@@ -122,10 +124,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(Scaffold), findsWidgets);
 
-    // 5. Navigate to More tab
-    await tester.tap(find.text('More'));
-    await tester.pumpAndSettle();
-    expect(find.byType(Scaffold), findsWidgets);
+    // 5. The redesign replaces the "More" tab with a sidebar drawer, and puts an
+    //    add button in the centre of the nav. Both should be reachable.
+    expect(find.text('More'), findsNothing);
+    // Scoped to the nav bar: screens have their own add buttons using the same
+    // icon, so a bare byIcon finder matches more than the centre FAB.
+    expect(
+      find.descendant(
+        of: find.byType(AppFloatingNavBar),
+        matching: find.byIcon(LucideIcons.plus),
+      ),
+      findsOneWidget,
+    );
 
     // 6. Navigate back to Home
     await tester.tap(find.text('Home'));

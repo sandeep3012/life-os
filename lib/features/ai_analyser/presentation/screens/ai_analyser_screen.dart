@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../application/ai_analyser_providers.dart';
 import '../widgets/insight_card.dart';
@@ -41,7 +42,7 @@ class _AiAnalyserScreenState extends ConsumerState<AiAnalyserScreen> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.refresh_rounded),
+                : const Icon(LucideIcons.refreshCw),
             onPressed: _refreshing ? null : _refresh,
           ),
         ],

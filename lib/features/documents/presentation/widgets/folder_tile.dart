@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -38,7 +39,7 @@ class FolderTile extends StatelessWidget {
                   color: colors.documents.withValues(alpha: 0.16),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.folder_rounded, color: colors.documents, size: 20),
+                child: Icon(LucideIcons.folder, color: colors.documents, size: 20),
               ),
               const SizedBox(height: 7),
               Text(

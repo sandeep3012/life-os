@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_manager/app/app.dart';
+import 'package:life_manager/app/router/app_shell.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/core/services/notification_service.dart';
@@ -40,7 +41,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(AppFloatingNavBar), findsOneWidget);
     expect(find.text('Your dashboard fills in as you go'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/reminders/reminder_mode.dart';
@@ -157,7 +158,7 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.add_circle_outline_rounded, size: 16),
+                      Icon(LucideIcons.circlePlus, size: 16),
                       SizedBox(width: 8),
                       Text('Add new category'),
                     ],
@@ -182,7 +183,7 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
             if (_reminderEnabled)
               TextButton.icon(
                 onPressed: _pickTime,
-                icon: const Icon(Icons.schedule_rounded, size: 16),
+                icon: const Icon(LucideIcons.clock, size: 16),
                 label: Text(_reminderTime.format(context)),
               ),
             if (_reminderEnabled)
@@ -193,12 +194,12 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
                     ButtonSegment(
                       value: ReminderMode.notification,
                       label: Text('Notification'),
-                      icon: Icon(Icons.notifications_rounded, size: 16),
+                      icon: Icon(LucideIcons.bell, size: 16),
                     ),
                     ButtonSegment(
                       value: ReminderMode.alarm,
                       label: Text('Alarm'),
-                      icon: Icon(Icons.alarm_rounded, size: 16),
+                      icon: Icon(LucideIcons.alarmClock, size: 16),
                     ),
                   ],
                   selected: {_reminderMode},

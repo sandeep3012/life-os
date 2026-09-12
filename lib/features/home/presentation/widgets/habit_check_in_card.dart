@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/icon_lookup.dart';
@@ -26,8 +27,8 @@ class HabitCheckInCard extends StatelessWidget {
     final iconColor = categoryColor ?? accent;
     final doneToday = progress.weekCompletion[DateTime.now().weekday] ?? false;
     final icon = doneToday
-        ? Icons.check_rounded
-        : (category == null ? Icons.local_fire_department_rounded : resolveIcon(category.icon));
+        ? LucideIcons.check
+        : (category == null ? LucideIcons.flame : resolveIcon(category.icon));
 
     return SizedBox(
       width: 140,

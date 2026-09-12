@@ -57,7 +57,9 @@ void main() {
 
     expect(find.text('Nothing here — add a task to get started.'), findsOneWidget);
 
-    await tester.tap(find.text('New task'));
+    // The screen's add affordance is an icon-only FloatingActionButton whose
+    // label lives in its tooltip, so there is no Text to match.
+    await tester.tap(find.byTooltip('New task'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).first, 'Finish Q3 budget review');
@@ -88,7 +90,7 @@ void main() {
 
     expect(find.text('No habits yet — add one to start a streak.'), findsOneWidget);
 
-    await tester.tap(find.text('New habit'));
+    await tester.tap(find.byTooltip('New habit'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).first, 'Morning workout');

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -72,7 +73,7 @@ class RecurringTransactionsScreen extends ConsumerWidget {
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addRecurring(context, ref),
-        icon: const Icon(Icons.add_rounded),
+        icon: const Icon(LucideIcons.plus),
         label: const Text('New recurring'),
       ),
     );
@@ -105,7 +106,7 @@ class _RecurringTile extends ConsumerWidget {
           height: 38,
           decoration: BoxDecoration(color: color.withValues(alpha: 0.16), shape: BoxShape.circle),
           child: Icon(
-            category != null ? resolveIcon(category!.icon) : Icons.autorenew_rounded,
+            category != null ? resolveIcon(category!.icon) : LucideIcons.refreshCw,
             size: 18,
             color: color,
           ),
@@ -127,14 +128,14 @@ class _RecurringTile extends ConsumerWidget {
             ),
             IconButton(
               tooltip: schedule.active ? 'Pause' : 'Resume',
-              icon: Icon(schedule.active ? Icons.pause_circle_outline_rounded : Icons.play_circle_outline_rounded),
+              icon: Icon(schedule.active ? LucideIcons.circlePause : LucideIcons.circlePlay),
               onPressed: () => ref
                   .read(financeControllerProvider)
                   .setRecurringTransactionActive(schedule.id, !schedule.active),
             ),
             IconButton(
               tooltip: 'Delete',
-              icon: const Icon(Icons.delete_outline_rounded),
+              icon: const Icon(LucideIcons.trash2),
               onPressed: () => _confirmDelete(context, ref),
             ),
           ],
@@ -173,7 +174,7 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.autorenew_rounded, size: 40, color: theme.colorScheme.onSurfaceVariant),
+            Icon(LucideIcons.refreshCw, size: 40, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
               'No recurring transactions yet',

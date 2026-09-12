@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../domain/task_priority.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class TaskTile extends StatelessWidget {
   const TaskTile({
@@ -32,7 +34,7 @@ class TaskTile extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         color: colors.critical.withValues(alpha: 0.15),
-        child: Icon(Icons.delete_outline_rounded, color: colors.critical),
+        child: Icon(LucideIcons.trash2, color: colors.critical),
       ),
       child: InkWell(
         onTap: onToggle,
@@ -70,7 +72,8 @@ class TaskTile extends StatelessWidget {
                             _formatDue(task.dueDate!),
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
-                              fontFamily: 'PlexMono',
+                              fontFamily: AppFonts.numeric,
+                              fontFeatures: AppFonts.tabular,
                             ),
                           ),
                       ],
@@ -116,7 +119,7 @@ class _TaskCheckbox extends StatelessWidget {
         ),
       ),
       child: done
-          ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+          ? const Icon(LucideIcons.check, size: 14, color: Colors.white)
           : null,
     );
   }

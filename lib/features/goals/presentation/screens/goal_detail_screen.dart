@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -12,6 +13,7 @@ import '../../domain/goal_progress.dart';
 import '../widgets/goal_card.dart';
 import '../widgets/goal_ring.dart';
 import '../widgets/quick_add_goal_sheet.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class GoalDetailScreen extends ConsumerStatefulWidget {
   const GoalDetailScreen({super.key, required this.goalId});
@@ -48,11 +50,11 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
         title: Text(goal.title),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_outlined),
+            icon: const Icon(LucideIcons.pencil),
             onPressed: () => _editGoal(context, goal),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline_rounded),
+            icon: const Icon(LucideIcons.trash2),
             onPressed: () async {
               await ref.read(goalsControllerProvider).deleteGoal(goal.id);
               if (context.mounted) Navigator.of(context).pop();
@@ -70,7 +72,8 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
               goal.targetValue == null
                   ? formatGoalValue(goal.type, goal.currentValue, currencyCode: currencyCode)
                   : '${formatGoalValue(goal.type, goal.currentValue, currencyCode: currencyCode)} / ${formatGoalValue(goal.type, goal.targetValue!, currencyCode: currencyCode)}',
-              style: theme.textTheme.titleMedium?.copyWith(fontFamily: 'PlexMono'),
+              style: theme.textTheme.titleMedium?.copyWith(fontFamily: AppFonts.numeric,
+                              fontFeatures: AppFonts.tabular),
             ),
           ),
           const SizedBox(height: 20),
@@ -78,14 +81,14 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton.filledTonal(
-                icon: const Icon(Icons.remove_rounded),
+                icon: const Icon(LucideIcons.minus),
                 onPressed: () => ref
                     .read(goalsControllerProvider)
                     .updateProgress(goal.id, (goal.currentValue - step).clamp(0, double.infinity)),
               ),
               const SizedBox(width: 16),
               IconButton.filledTonal(
-                icon: const Icon(Icons.add_rounded),
+                icon: const Icon(LucideIcons.plus),
                 onPressed: () => ref
                     .read(goalsControllerProvider)
                     .updateProgress(goal.id, goal.currentValue + step),
@@ -98,7 +101,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.notifications_outlined,
+                  LucideIcons.bell,
                   size: 16,
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -192,7 +195,7 @@ class _MilestonesSection extends ConsumerWidget {
               style: m.completed ? const TextStyle(decoration: TextDecoration.lineThrough) : null,
             ),
             secondary: IconButton(
-              icon: const Icon(Icons.close_rounded, size: 18),
+              icon: const Icon(LucideIcons.x, size: 18),
               onPressed: () => ref.read(goalsControllerProvider).deleteMilestone(m.id),
             ),
           ),
@@ -238,7 +241,7 @@ class _AddMilestoneRowState extends ConsumerState<_AddMilestoneRow> {
             onSubmitted: (_) => _submit(),
           ),
         ),
-        IconButton(icon: const Icon(Icons.add_circle_outline_rounded), onPressed: _submit),
+        IconButton(icon: const Icon(LucideIcons.circlePlus), onPressed: _submit),
       ],
     );
   }

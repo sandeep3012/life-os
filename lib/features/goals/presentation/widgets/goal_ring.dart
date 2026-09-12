@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class GoalRing extends StatelessWidget {
   const GoalRing({
@@ -36,7 +37,8 @@ class GoalRing extends StatelessWidget {
           Text(
             '${(ratio * 100).round()}%',
             style: const TextStyle(
-              fontFamily: 'PlexMono',
+              fontFamily: AppFonts.numeric,
+              fontFeatures: AppFonts.tabular,
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
