@@ -9,6 +9,8 @@ import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../application/habits_providers.dart';
 import '../../domain/habit_schedule.dart';
+import '../../domain/habit_statistics.dart';
+import '../widgets/habit_statistics_card.dart';
 import '../widgets/quick_add_habit_sheet.dart';
 
 class HabitDetailScreen extends ConsumerStatefulWidget {
@@ -53,6 +55,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
     final historyState = ref.watch(habitLogHistoryProvider(widget.habitId));
     final history = historyState.value ?? const <HabitLog>[];
     final today = dateOnly(DateTime.now());
+    final statistics = HabitStatistics.calculate(habit, history, today);
     final created = dateOnly(habit.repeatSchedule.trackingStart);
     final byDay = {for (final log in history) dateOnly(log.date): log};
     final recentDays = [for (var i = 0; i < 7; i++) DateTime(today.year, today.month, today.day - i)]
@@ -103,15 +106,22 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                   ],
                   const SizedBox(height: 8),
                   Text('Repeats: ${habit.repeatSchedule.frequency}'),
+                  const SizedBox(height: 8),
+                  Text('Created: ${DateFormat.yMMMd().format(habit.createdAt)}'),
+                  if (habit.repeatSchedule.end != null) ...[
+                    const SizedBox(height: 4),
+                    Text('Ends: ${DateFormat.yMMMd().format(habit.repeatSchedule.end!)}'),
+                  ],
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Icon(Icons.local_fire_department_rounded, size: 16, color: accent),
                       const SizedBox(width: 4),
-                      Text(
-                        '${progress?.streakDays ?? 0} day streak',
+                      Expanded(child: Text(
+                        historyState.isLoading ? 'Loading streak…' : historyState.hasError
+                            ? 'Streak unavailable' : '${statistics.current} scheduled completions in a row',
                         style: TextStyle(fontWeight: FontWeight.w700, color: accent),
-                      ),
+                      )),
                       if (progress?.isAtRisk ?? false) ...[
                         const SizedBox(width: 8),
                         Text(
@@ -222,6 +232,11 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
             ]),
             const SizedBox(height: 8),
             Text('Unscheduled days, dates before the start and future dates are unmarked.', style: theme.textTheme.bodySmall),
+            const SizedBox(height: 24),
+            HabitStatisticsCard(
+              stats: statistics,
+              accent: accent,
+            ),
           ],
         ],
       ),
