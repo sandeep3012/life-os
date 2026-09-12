@@ -17,11 +17,17 @@ final allTasksProvider = StreamProvider<List<Task>>((ref) {
   return ref.watch(tasksRepositoryProvider).watchAllTasks();
 });
 
-final taskCategoriesProvider = StreamProvider<List<Category>>((ref) => ref.watch(tasksRepositoryProvider).watchCategories());
+final taskCategoriesProvider = StreamProvider<List<Category>>(
+  (ref) => ref.watch(tasksRepositoryProvider).watchCategories(),
+);
 
 /// Writes task changes. ScheduleCoordinator refreshes all managed reminders.
 class TasksController {
-  TasksController(this._repo, this._notifications, bool Function() remindersEnabled);
+  TasksController(
+    this._repo,
+    this._notifications,
+    bool Function() remindersEnabled,
+  );
 
   final TasksRepository _repo;
   final NotificationService _notifications;
@@ -55,6 +61,29 @@ class TasksController {
     if (done) {
       await _notifications.cancelTaskReminder(task.id);
     }
+  }
+
+  Future<void> updateTask({
+    required Task task,
+    required String title,
+    String? description,
+    String? categoryId,
+    required DateTime? dueDate,
+    required TaskPriority priority,
+    required bool reminderEnabled,
+    required ReminderMode reminderMode,
+  }) async {
+    await _notifications.cancelTaskReminder(task.id);
+    await _repo.updateTask(
+      id: task.id,
+      title: title,
+      description: description,
+      categoryId: categoryId,
+      dueDate: dueDate,
+      priority: priority.value,
+      reminderEnabled: reminderEnabled,
+      reminderMode: reminderMode.storageValue,
+    );
   }
 
   Future<void> deleteTask(Task task) async {

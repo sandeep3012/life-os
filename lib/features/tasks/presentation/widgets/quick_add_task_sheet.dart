@@ -39,30 +39,48 @@ class QuickAddTaskResult {
   final ReminderMode reminderMode;
 }
 
-Future<QuickAddTaskResult?> showQuickAddTaskSheet(BuildContext context) {
+Future<QuickAddTaskResult?> showQuickAddTaskSheet(
+  BuildContext context, {
+  Task? initial,
+}) {
   return showCompactEditorSheet<QuickAddTaskResult>(
     context: context,
-    builder: (context) => const _QuickAddTaskSheet(),
+    builder: (context) => _QuickAddTaskSheet(initial: initial),
   );
 }
 
 class _QuickAddTaskSheet extends ConsumerStatefulWidget {
-  const _QuickAddTaskSheet();
+  const _QuickAddTaskSheet({this.initial});
+
+  final Task? initial;
 
   @override
   ConsumerState<_QuickAddTaskSheet> createState() => _QuickAddTaskSheetState();
 }
 
 class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  RepeatSchedule _schedule = RepeatSchedule(start: DateTime.now());
-  String? _categoryId;
+  late final _titleController = TextEditingController(
+    text: widget.initial?.title ?? '',
+  );
+  late final _descriptionController = TextEditingController(
+    text: widget.initial?.description ?? '',
+  );
+  late RepeatSchedule _schedule =
+      RepeatSchedule.decode(widget.initial?.schedule) ??
+      RepeatSchedule(start: widget.initial?.dueDate ?? DateTime.now());
+  late String? _categoryId = widget.initial?.categoryId;
   Category? _newCategory;
-  TaskPriority _priority = TaskPriority.medium;
-  DateTime? _dueDate;
-  bool _reminderEnabled = false;
-  ReminderMode _reminderMode = ReminderMode.notification;
+  late TaskPriority _priority = TaskPriorityX.fromValue(
+    widget.initial?.priority ?? 'medium',
+  );
+  late DateTime? _dueDate = widget.initial?.dueDate;
+  late bool _reminderEnabled = widget.initial?.reminderEnabled ?? false;
+  late ReminderMode _reminderMode = ReminderMode.fromStorage(
+    widget.initial?.reminderMode ?? 'notification',
+  );
+
+  bool get _isEditing => widget.initial != null;
+  bool get _isRecurring => widget.initial?.recurrenceId != null;
 
   @override
   void initState() {
@@ -81,41 +99,81 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
     final result = await showCategoryEditorSheet(context, fixedKind: 'task');
     if (result == null || !mounted) return;
     final db = ref.read(appDatabaseProvider);
-    final category = await db.into(db.categories).insertReturning(CategoriesCompanion.insert(
-      name: result.name, icon: Value(result.icon), colorHex: result.colorHex, kind: const Value('task')));
-    if (mounted) setState(() { _newCategory = category; _categoryId = category.id; });
+    final category = await db
+        .into(db.categories)
+        .insertReturning(
+          CategoriesCompanion.insert(
+            name: result.name,
+            icon: Value(result.icon),
+            colorHex: result.colorHex,
+            kind: const Value('task'),
+          ),
+        );
+    if (mounted) {
+      setState(() {
+        _newCategory = category;
+        _categoryId = category.id;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final categories = [...(ref.watch(taskCategoriesProvider).value ?? <Category>[])];
-    if (_newCategory != null && !categories.any((c) => c.id == _newCategory!.id)) categories.add(_newCategory!);
-    return CompactEditorSheet(title: 'New task', child: Column(
+    final categories = [
+      ...(ref.watch(taskCategoriesProvider).value ?? <Category>[]),
+    ];
+    if (_newCategory != null &&
+        !categories.any((c) => c.id == _newCategory!.id)) {
+      categories.add(_newCategory!);
+    }
+    return CompactEditorSheet(
+      title: _isEditing ? 'Edit task' : 'New task',
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),
           TextField(
             controller: _titleController,
-            autofocus: true,
+            autofocus: !_isEditing,
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(hintText: 'Task title'),
           ),
           const SizedBox(height: 12),
-          TextField(controller: _descriptionController, maxLines: 1,
-            decoration: const InputDecoration(labelText: 'Description (optional)')),
+          TextField(
+            controller: _descriptionController,
+            maxLines: 1,
+            decoration: const InputDecoration(
+              labelText: 'Description (optional)',
+            ),
+          ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            key: ValueKey(_categoryId), initialValue: _categoryId ?? '',
+            key: ValueKey(_categoryId),
+            initialValue: _categoryId ?? '',
             decoration: const InputDecoration(labelText: 'Category'),
             items: [
               const DropdownMenuItem(value: '', child: Text('Uncategorized')),
-              for (final c in categories) DropdownMenuItem(value: c.id,
-                child: Row(children: [IconOrEmoji(value: c.icon, size: 18),
-                  const SizedBox(width: 8), Text(c.name)])),
-            ], onChanged: (id) => setState(() => _categoryId = id == '' ? null : id)),
-          TextButton.icon(onPressed: _addCategory, icon: const Icon(Icons.add),
-            label: const Text('Add category')),
+              for (final c in categories)
+                DropdownMenuItem(
+                  value: c.id,
+                  child: Row(
+                    children: [
+                      IconOrEmoji(value: c.icon, size: 18),
+                      const SizedBox(width: 8),
+                      Text(c.name),
+                    ],
+                  ),
+                ),
+            ],
+            onChanged: (id) =>
+                setState(() => _categoryId = id == '' ? null : id),
+          ),
+          TextButton.icon(
+            onPressed: _addCategory,
+            icon: const Icon(Icons.add),
+            label: const Text('Add category'),
+          ),
           const Text('Priority'),
           Wrap(
             spacing: 8,
@@ -129,25 +187,49 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
             ],
           ),
           const SizedBox(height: 8),
-          SwitchListTile(contentPadding: EdgeInsets.zero,
-            title: const Text('Date and time'), value: _dueDate != null,
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Date and time'),
+            value: _dueDate != null,
             onChanged: (enabled) => setState(() {
               _dueDate = enabled ? _schedule.start : null;
               if (!enabled) {
-                _schedule = _schedule.copyWith(frequency: 'none', clearEnd: true);
+                _schedule = _schedule.copyWith(
+                  frequency: 'none',
+                  clearEnd: true,
+                );
                 _reminderEnabled = false;
               }
-            })),
-          if (_dueDate != null) ScheduleFields(value: _schedule,
-            onChanged: (value) => setState(() { _schedule = value; _dueDate = value.start; })),
-          if (_dueDate == null) const Text('Set a date and time to enable repeats and reminders.'),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Remind me'),
-              subtitle: Text(_dueDate == null ? 'Set a date and time to enable a reminder' : 'Notify at the due time'),
-              value: _reminderEnabled,
-              onChanged: _dueDate == null ? null : (v) => setState(() => _reminderEnabled = v),
+            }),
+          ),
+          if (_dueDate != null)
+            ScheduleFields(
+              value: _schedule,
+              allowRepeatChanges: !_isRecurring,
+              onChanged: (value) => setState(() {
+                _schedule = value;
+                _dueDate = value.start;
+              }),
             ),
+          if (_isRecurring)
+            const Text(
+              'Repeating task — this edit applies to this occurrence only.',
+            ),
+          if (_dueDate == null)
+            const Text('Set a date and time to enable repeats and reminders.'),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Remind me'),
+            subtitle: Text(
+              _dueDate == null
+                  ? 'Set a date and time to enable a reminder'
+                  : 'Notify at the due time',
+            ),
+            value: _reminderEnabled,
+            onChanged: _dueDate == null
+                ? null
+                : (v) => setState(() => _reminderEnabled = v),
+          ),
           if (_dueDate != null && _reminderEnabled)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -165,20 +247,26 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
                   ),
                 ],
                 selected: {_reminderMode},
-                onSelectionChanged: (s) => setState(() => _reminderMode = s.first),
+                onSelectionChanged: (s) =>
+                    setState(() => _reminderMode = s.first),
               ),
             ),
-          if (_dueDate != null && !_schedule.hasOccurrence) const Text('No scheduled day falls in this date range.'),
+          if (_dueDate != null && !_schedule.hasOccurrence)
+            const Text('No scheduled day falls in this date range.'),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _titleController.text.trim().isEmpty || (_dueDate != null && !_schedule.hasOccurrence)
+              onPressed:
+                  _titleController.text.trim().isEmpty ||
+                      (_dueDate != null && !_schedule.hasOccurrence)
                   ? null
                   : () => Navigator.of(context).pop(
                       QuickAddTaskResult(
                         title: _titleController.text.trim(),
-                        description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+                        description: _descriptionController.text.trim().isEmpty
+                            ? null
+                            : _descriptionController.text.trim(),
                         categoryId: _categoryId,
                         schedule: _dueDate == null ? null : _schedule,
                         priority: _priority,
@@ -187,7 +275,7 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
                         reminderMode: _reminderMode,
                       ),
                     ),
-              child: const Text('Add task'),
+              child: Text(_isEditing ? 'Save changes' : 'Add task'),
             ),
           ),
         ],
