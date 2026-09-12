@@ -11,6 +11,7 @@ import '../../../../core/utils/currency_utils.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../../domain/finance_report.dart';
+import '../../domain/finance_report_pdf.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -22,7 +23,7 @@ class ReportsScreen extends ConsumerStatefulWidget {
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   ReportPeriodType _periodType = ReportPeriodType.month;
   DateTime _anchor = DateTime.now();
-  bool _exporting = false;
+  final Set<String> _exportingFormats = {};
 
   ReportPeriod get _period => _periodType == ReportPeriodType.month
       ? ReportPeriod.forMonth(_anchor)
@@ -36,21 +37,39 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     });
   }
 
-  Future<void> _export(FinanceReport report, Map<String, String> categoryNameById) async {
-    setState(() => _exporting = true);
+  Future<void> _export(
+    FinanceReport report,
+    Map<String, String> categoryNameById, {
+    bool pdf = false,
+  }) async {
+    final format = pdf ? 'pdf' : 'csv';
+    if (_exportingFormats.contains(format)) return;
+    setState(() => _exportingFormats.add(format));
     try {
-      final csv = reportToCsv(report, categoryNameById: categoryNameById);
+      final bytes = pdf
+          ? await reportToPdf(
+              report,
+              categoryNameById: categoryNameById,
+              currencyCode: ref.read(settingsProvider).currencyCode,
+            )
+          : Uint8List.fromList(
+              utf8.encode(
+                reportToCsv(report, categoryNameById: categoryNameById),
+              ),
+            );
       final fileName =
-          'lifeos-report-${_periodType == ReportPeriodType.month ? DateFormat('yyyy-MM').format(_period.start) : _period.start.year}.csv';
+          'lifeos-report-${report.period.type == ReportPeriodType.month ? DateFormat('yyyy-MM').format(report.period.start) : report.period.start.year}.${pdf ? 'pdf' : 'csv'}';
       final path = await FilePicker.saveFile(
         dialogTitle: 'Save report',
         fileName: fileName,
-        bytes: Uint8List.fromList(utf8.encode(csv)),
+        bytes: bytes,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(path == null ? 'Export cancelled.' : 'Report saved.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(path == null ? 'Export cancelled.' : 'Report saved.'),
+        ),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -58,7 +77,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         ).showSnackBar(SnackBar(content: Text('Could not export report: $e')));
       }
     } finally {
-      if (mounted) setState(() => _exporting = false);
+      if (mounted) setState(() => _exportingFormats.remove(format));
     }
   }
 
@@ -84,8 +103,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           children: [
             SegmentedButton<ReportPeriodType>(
               segments: const [
-                ButtonSegment(value: ReportPeriodType.month, label: Text('Monthly')),
-                ButtonSegment(value: ReportPeriodType.year, label: Text('Yearly')),
+                ButtonSegment(
+                  value: ReportPeriodType.month,
+                  label: Text('Monthly'),
+                ),
+                ButtonSegment(
+                  value: ReportPeriodType.year,
+                  label: Text('Yearly'),
+                ),
               ],
               selected: {_periodType},
               onSelectionChanged: (s) => setState(() => _periodType = s.first),
@@ -140,7 +165,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Center(
-                  child: Text('No expenses in this period', style: theme.textTheme.bodyMedium),
+                  child: Text(
+                    'No expenses in this period',
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 ),
               )
             else ...[
@@ -160,8 +188,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        formatMinor(line.spentMinor, currencyCode: currencyCode),
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        formatMinor(
+                          line.spentMinor,
+                          currencyCode: currencyCode,
+                        ),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -171,11 +204,44 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: _exporting || report.transactions.isEmpty
+                onPressed:
+                    _exportingFormats.contains('pdf') ||
+                        report.transactions.isEmpty
+                    ? null
+                    : () => _export(report, categoryNameById, pdf: true),
+                icon: _exportingFormats.contains('pdf')
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.picture_as_pdf_outlined),
+                label: Text(
+                  _exportingFormats.contains('pdf')
+                      ? 'Exporting PDF…'
+                      : 'Export as PDF',
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed:
+                    _exportingFormats.contains('csv') ||
+                        report.transactions.isEmpty
                     ? null
                     : () => _export(report, categoryNameById),
-                icon: const Icon(Icons.download_rounded),
-                label: Text(_exporting ? 'Exporting…' : 'Export as CSV'),
+                icon: _exportingFormats.contains('csv')
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.download_rounded),
+                label: Text(
+                  _exportingFormats.contains('csv')
+                      ? 'Exporting CSV…'
+                      : 'Export as CSV',
+                ),
               ),
             ),
           ],
@@ -209,10 +275,19 @@ class _SummaryCard extends StatelessWidget {
         child: wide
             ? Row(
                 children: [
-                  Expanded(child: Text(label, style: theme.textTheme.labelMedium)),
+                  Expanded(
+                    child: Text(label, style: theme.textTheme.labelMedium),
+                  ),
                   Text(
-                    formatMinor(valueMinor, currencyCode: currencyCode, showSign: true),
-                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: color),
+                    formatMinor(
+                      valueMinor,
+                      currencyCode: currencyCode,
+                      showSign: true,
+                    ),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
                   ),
                 ],
               )
@@ -223,7 +298,10 @@ class _SummaryCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     formatMinor(valueMinor, currencyCode: currencyCode),
-                    style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: color),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
                   ),
                 ],
               ),

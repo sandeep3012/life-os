@@ -604,7 +604,7 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
             builder: (_) => const TransactionHistoryScreen(),
           )),
           icon: const Icon(Icons.arrow_forward_rounded),
-          label: const Text('See all transactions'),
+          label: const Text('See more transactions'),
         ),
       ));
     }
