@@ -13,6 +13,66 @@ import '../../domain/habit_statistics.dart';
 import '../widgets/habit_statistics_card.dart';
 import '../widgets/quick_add_habit_sheet.dart';
 
+class _AmountDialog extends StatefulWidget {
+  const _AmountDialog({required this.habit, this.initialAmount});
+  final Habit habit;
+  final double? initialAmount;
+
+  @override
+  State<_AmountDialog> createState() => _AmountDialogState();
+}
+
+class _AmountDialogState extends State<_AmountDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final _controller = TextEditingController(
+    text: widget.initialAmount?.toString() ?? '',
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text("Today's ${widget.habit.targetUnit ?? 'amount'}"),
+    content: Form(
+      key: _formKey,
+      child: TextFormField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          labelText: 'Total for today',
+          helperText: 'Replaces the previous amount',
+          hintText: 'Target: ${widget.habit.targetAmount}',
+        ),
+        validator: (text) {
+          final amount = double.tryParse(text?.trim() ?? '');
+          return amount == null || !amount.isFinite || amount < 0
+              ? 'Enter zero or a positive number'
+              : null;
+        },
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () {
+          if (_formKey.currentState!.validate()) {
+            Navigator.pop(context, double.parse(_controller.text.trim()));
+          }
+        },
+        child: const Text('Save'),
+      ),
+    ],
+  );
+}
+
 class HabitDetailScreen extends ConsumerStatefulWidget {
   const HabitDetailScreen({super.key, required this.habitId});
 
@@ -185,10 +245,10 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                           .trim(),
                     ),
                   ],
-                  if (habit.isPaused) ...[
+                  if (habit.hasPendingPause) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Paused until ${DateFormat.yMMMd().format(habit.pausedUntil!)}',
+                      '${habit.isPaused ? 'Paused' : 'Pause starts ${DateFormat.yMMMd().format(habit.pauseStartedAt!)}'} until ${DateFormat.yMMMd().format(habit.pausedUntil!)}',
                       style: TextStyle(
                         color: colors.critical,
                         fontWeight: FontWeight.w600,
@@ -226,16 +286,16 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _busy
                         ? null
-                        : () => habit.isPaused
+                        : () => habit.hasPendingPause
                               ? _resumeHabit(habit)
                               : _pauseHabit(habit),
                     icon: Icon(
-                      habit.isPaused
+                      habit.hasPendingPause
                           ? Icons.play_arrow_rounded
                           : Icons.pause_rounded,
                     ),
                     label: Text(
-                      habit.isPaused ? 'Resume habit' : 'Pause habit',
+                      habit.hasPendingPause ? 'Resume habit' : 'Pause habit',
                     ),
                   ),
                 ),
@@ -265,7 +325,9 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(DateFormat.yMMMEd().format(day)),
-                  subtitle: const Text('Not scheduled'),
+                  subtitle: Text(
+                    habit.pausedOn(day) ? 'Paused' : 'Not scheduled',
+                  ),
                 )
               else if (byDay[day] case final log?)
                 _HistoryTile(habit: habit, log: log)
@@ -284,13 +346,18 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                   subtitle: Text(day == today ? 'Pending' : 'Absent'),
                 ),
             const SizedBox(height: 24),
-            if (habit.targetAmount != null && !habit.isPaused)
+            if (habit.targetAmount != null &&
+                !habit.archived &&
+                habit.scheduledOn(today))
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.edit_rounded),
                   label: const Text("Log today's amount"),
-                  onPressed: () => _logAmount(habit),
+                  onPressed:
+                      _busy || historyState.isLoading || historyState.hasError
+                      ? null
+                      : () => _logAmount(habit, byDay[today]?.amount),
                 ),
               ),
             const SizedBox(height: 12),
@@ -356,7 +423,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
       firstDate: dateOnly(DateTime.now()),
       lastDate: DateTime(2200),
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     setState(() => _busy = true);
     try {
       await ref.read(habitsControllerProvider).pauseHabit(habit, picked);
@@ -365,38 +432,28 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
     }
   }
 
-  Future<void> _logAmount(Habit habit) async {
-    final controller = TextEditingController();
+  Future<void> _logAmount(Habit habit, double? initialAmount) async {
+    final day = dateOnly(DateTime.now());
     final amount = await showDialog<double>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Today's ${habit.targetUnit ?? 'amount'}"),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(
-            hintText: 'Target: ${_formatAmount(habit.targetAmount!)}',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.pop(context, double.tryParse(controller.text.trim())),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (context) =>
+          _AmountDialog(habit: habit, initialAmount: initialAmount),
     );
-    controller.dispose();
-    if (amount == null) return;
-    await ref
-        .read(habitsControllerProvider)
-        .logAmount(habit, DateTime.now(), amount);
+    if (amount == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(habitsControllerProvider).logAmount(habit, day, amount);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save amount. Please try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _resumeHabit(Habit habit) async {
@@ -481,6 +538,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
           reminderMinute: result.reminderMinute,
           reminderMode: result.reminderMode,
           targetAmount: result.targetAmount,
+          clearTarget: result.targetAmount == null,
           targetUnit: result.targetUnit,
         );
   }
@@ -554,8 +612,8 @@ class _HistoryTile extends ConsumerWidget {
       subtitle: Text(
         [
           status,
-          if (habit.targetAmount != null && log.amount != null)
-            '${_formatLogAmount(log.amount!)} / ${_formatLogAmount(habit.targetAmount!)} ${habit.targetUnit ?? ''}'
+          if (log.amount != null)
+            '${_formatLogAmount(log.amount!)}${log.targetAmountSnapshot == null ? '' : ' / ${_formatLogAmount(log.targetAmountSnapshot!)}'} ${log.targetUnitSnapshot ?? ''}'
                 .trim(),
           if (log.notes != null && log.notes!.isNotEmpty) log.notes!,
         ].join(' · '),

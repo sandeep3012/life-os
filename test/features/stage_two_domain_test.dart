@@ -209,6 +209,10 @@ void main() {
             'CREATE TABLE goals (id TEXT PRIMARY KEY, title TEXT NOT NULL, current_value REAL NOT NULL)',
           );
           sqlite.execute("INSERT INTO goals VALUES ('g', 'Keep goal', 25)");
+          sqlite.execute('CREATE TABLE habits (id TEXT PRIMARY KEY)');
+          sqlite.execute(
+            'CREATE TABLE habit_logs (id TEXT PRIMARY KEY, habit_id TEXT)',
+          );
           sqlite.execute('PRAGMA user_version = 15');
         },
       ),

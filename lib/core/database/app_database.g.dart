@@ -5443,6 +5443,17 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _pauseHistoryMeta = const VerificationMeta(
+    'pauseHistory',
+  );
+  @override
+  late final GeneratedColumn<String> pauseHistory = GeneratedColumn<String>(
+    'pause_history',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _categoryIdMeta = const VerificationMeta(
     'categoryId',
   );
@@ -5531,6 +5542,7 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
     archived,
     pauseStartedAt,
     pausedUntil,
+    pauseHistory,
     categoryId,
     reminderEnabled,
     reminderHour,
@@ -5627,6 +5639,15 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
         pausedUntil.isAcceptableOrUnknown(
           data['paused_until']!,
           _pausedUntilMeta,
+        ),
+      );
+    }
+    if (data.containsKey('pause_history')) {
+      context.handle(
+        _pauseHistoryMeta,
+        pauseHistory.isAcceptableOrUnknown(
+          data['pause_history']!,
+          _pauseHistoryMeta,
         ),
       );
     }
@@ -5731,6 +5752,10 @@ class $HabitsTable extends Habits with TableInfo<$HabitsTable, Habit> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}paused_until'],
       ),
+      pauseHistory: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pause_history'],
+      ),
       categoryId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}category_id'],
@@ -5781,6 +5806,9 @@ class Habit extends DataClass implements Insertable<Habit> {
   final DateTime? pauseStartedAt;
   final DateTime? pausedUntil;
 
+  /// Closed, inclusive pause ranges retained when resuming or pausing again.
+  final String? pauseHistory;
+
   /// Optional — references a [Categories] row with `kind == 'habit'`. Not a
   /// hard dependency (unlike finance, which seeds default categories on
   /// first run), so this stays nullable.
@@ -5808,6 +5836,7 @@ class Habit extends DataClass implements Insertable<Habit> {
     required this.archived,
     this.pauseStartedAt,
     this.pausedUntil,
+    this.pauseHistory,
     this.categoryId,
     required this.reminderEnabled,
     this.reminderHour,
@@ -5840,6 +5869,9 @@ class Habit extends DataClass implements Insertable<Habit> {
     }
     if (!nullToAbsent || pausedUntil != null) {
       map['paused_until'] = Variable<DateTime>(pausedUntil);
+    }
+    if (!nullToAbsent || pauseHistory != null) {
+      map['pause_history'] = Variable<String>(pauseHistory);
     }
     if (!nullToAbsent || categoryId != null) {
       map['category_id'] = Variable<String>(categoryId);
@@ -5881,6 +5913,9 @@ class Habit extends DataClass implements Insertable<Habit> {
       pausedUntil: pausedUntil == null && nullToAbsent
           ? const Value.absent()
           : Value(pausedUntil),
+      pauseHistory: pauseHistory == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pauseHistory),
       categoryId: categoryId == null && nullToAbsent
           ? const Value.absent()
           : Value(categoryId),
@@ -5913,6 +5948,7 @@ class Habit extends DataClass implements Insertable<Habit> {
       archived: serializer.fromJson<bool>(json['archived']),
       pauseStartedAt: serializer.fromJson<DateTime?>(json['pauseStartedAt']),
       pausedUntil: serializer.fromJson<DateTime?>(json['pausedUntil']),
+      pauseHistory: serializer.fromJson<String?>(json['pauseHistory']),
       categoryId: serializer.fromJson<String?>(json['categoryId']),
       reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
       reminderHour: serializer.fromJson<int?>(json['reminderHour']),
@@ -5936,6 +5972,7 @@ class Habit extends DataClass implements Insertable<Habit> {
       'archived': serializer.toJson<bool>(archived),
       'pauseStartedAt': serializer.toJson<DateTime?>(pauseStartedAt),
       'pausedUntil': serializer.toJson<DateTime?>(pausedUntil),
+      'pauseHistory': serializer.toJson<String?>(pauseHistory),
       'categoryId': serializer.toJson<String?>(categoryId),
       'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
       'reminderHour': serializer.toJson<int?>(reminderHour),
@@ -5957,6 +5994,7 @@ class Habit extends DataClass implements Insertable<Habit> {
     bool? archived,
     Value<DateTime?> pauseStartedAt = const Value.absent(),
     Value<DateTime?> pausedUntil = const Value.absent(),
+    Value<String?> pauseHistory = const Value.absent(),
     Value<String?> categoryId = const Value.absent(),
     bool? reminderEnabled,
     Value<int?> reminderHour = const Value.absent(),
@@ -5977,6 +6015,7 @@ class Habit extends DataClass implements Insertable<Habit> {
         ? pauseStartedAt.value
         : this.pauseStartedAt,
     pausedUntil: pausedUntil.present ? pausedUntil.value : this.pausedUntil,
+    pauseHistory: pauseHistory.present ? pauseHistory.value : this.pauseHistory,
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
     reminderEnabled: reminderEnabled ?? this.reminderEnabled,
     reminderHour: reminderHour.present ? reminderHour.value : this.reminderHour,
@@ -6011,6 +6050,9 @@ class Habit extends DataClass implements Insertable<Habit> {
       pausedUntil: data.pausedUntil.present
           ? data.pausedUntil.value
           : this.pausedUntil,
+      pauseHistory: data.pauseHistory.present
+          ? data.pauseHistory.value
+          : this.pauseHistory,
       categoryId: data.categoryId.present
           ? data.categoryId.value
           : this.categoryId,
@@ -6044,6 +6086,7 @@ class Habit extends DataClass implements Insertable<Habit> {
           ..write('archived: $archived, ')
           ..write('pauseStartedAt: $pauseStartedAt, ')
           ..write('pausedUntil: $pausedUntil, ')
+          ..write('pauseHistory: $pauseHistory, ')
           ..write('categoryId: $categoryId, ')
           ..write('reminderEnabled: $reminderEnabled, ')
           ..write('reminderHour: $reminderHour, ')
@@ -6067,6 +6110,7 @@ class Habit extends DataClass implements Insertable<Habit> {
     archived,
     pauseStartedAt,
     pausedUntil,
+    pauseHistory,
     categoryId,
     reminderEnabled,
     reminderHour,
@@ -6089,6 +6133,7 @@ class Habit extends DataClass implements Insertable<Habit> {
           other.archived == this.archived &&
           other.pauseStartedAt == this.pauseStartedAt &&
           other.pausedUntil == this.pausedUntil &&
+          other.pauseHistory == this.pauseHistory &&
           other.categoryId == this.categoryId &&
           other.reminderEnabled == this.reminderEnabled &&
           other.reminderHour == this.reminderHour &&
@@ -6109,6 +6154,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
   final Value<bool> archived;
   final Value<DateTime?> pauseStartedAt;
   final Value<DateTime?> pausedUntil;
+  final Value<String?> pauseHistory;
   final Value<String?> categoryId;
   final Value<bool> reminderEnabled;
   final Value<int?> reminderHour;
@@ -6128,6 +6174,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.archived = const Value.absent(),
     this.pauseStartedAt = const Value.absent(),
     this.pausedUntil = const Value.absent(),
+    this.pauseHistory = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.reminderEnabled = const Value.absent(),
     this.reminderHour = const Value.absent(),
@@ -6148,6 +6195,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     this.archived = const Value.absent(),
     this.pauseStartedAt = const Value.absent(),
     this.pausedUntil = const Value.absent(),
+    this.pauseHistory = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.reminderEnabled = const Value.absent(),
     this.reminderHour = const Value.absent(),
@@ -6168,6 +6216,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     Expression<bool>? archived,
     Expression<DateTime>? pauseStartedAt,
     Expression<DateTime>? pausedUntil,
+    Expression<String>? pauseHistory,
     Expression<String>? categoryId,
     Expression<bool>? reminderEnabled,
     Expression<int>? reminderHour,
@@ -6188,6 +6237,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
       if (archived != null) 'archived': archived,
       if (pauseStartedAt != null) 'pause_started_at': pauseStartedAt,
       if (pausedUntil != null) 'paused_until': pausedUntil,
+      if (pauseHistory != null) 'pause_history': pauseHistory,
       if (categoryId != null) 'category_id': categoryId,
       if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
       if (reminderHour != null) 'reminder_hour': reminderHour,
@@ -6210,6 +6260,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     Value<bool>? archived,
     Value<DateTime?>? pauseStartedAt,
     Value<DateTime?>? pausedUntil,
+    Value<String?>? pauseHistory,
     Value<String?>? categoryId,
     Value<bool>? reminderEnabled,
     Value<int?>? reminderHour,
@@ -6230,6 +6281,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
       archived: archived ?? this.archived,
       pauseStartedAt: pauseStartedAt ?? this.pauseStartedAt,
       pausedUntil: pausedUntil ?? this.pausedUntil,
+      pauseHistory: pauseHistory ?? this.pauseHistory,
       categoryId: categoryId ?? this.categoryId,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       reminderHour: reminderHour ?? this.reminderHour,
@@ -6276,6 +6328,9 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
     if (pausedUntil.present) {
       map['paused_until'] = Variable<DateTime>(pausedUntil.value);
     }
+    if (pauseHistory.present) {
+      map['pause_history'] = Variable<String>(pauseHistory.value);
+    }
     if (categoryId.present) {
       map['category_id'] = Variable<String>(categoryId.value);
     }
@@ -6314,6 +6369,7 @@ class HabitsCompanion extends UpdateCompanion<Habit> {
           ..write('archived: $archived, ')
           ..write('pauseStartedAt: $pauseStartedAt, ')
           ..write('pausedUntil: $pausedUntil, ')
+          ..write('pauseHistory: $pauseHistory, ')
           ..write('categoryId: $categoryId, ')
           ..write('reminderEnabled: $reminderEnabled, ')
           ..write('reminderHour: $reminderHour, ')
@@ -6389,6 +6445,28 @@ class $HabitLogsTable extends HabitLogs
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _targetAmountSnapshotMeta =
+      const VerificationMeta('targetAmountSnapshot');
+  @override
+  late final GeneratedColumn<double> targetAmountSnapshot =
+      GeneratedColumn<double>(
+        'target_amount_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _targetUnitSnapshotMeta =
+      const VerificationMeta('targetUnitSnapshot');
+  @override
+  late final GeneratedColumn<String> targetUnitSnapshot =
+      GeneratedColumn<String>(
+        'target_unit_snapshot',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _notesMeta = const VerificationMeta('notes');
   @override
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
@@ -6405,6 +6483,8 @@ class $HabitLogsTable extends HabitLogs
     date,
     completed,
     amount,
+    targetAmountSnapshot,
+    targetUnitSnapshot,
     notes,
   ];
   @override
@@ -6450,6 +6530,24 @@ class $HabitLogsTable extends HabitLogs
         amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
       );
     }
+    if (data.containsKey('target_amount_snapshot')) {
+      context.handle(
+        _targetAmountSnapshotMeta,
+        targetAmountSnapshot.isAcceptableOrUnknown(
+          data['target_amount_snapshot']!,
+          _targetAmountSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('target_unit_snapshot')) {
+      context.handle(
+        _targetUnitSnapshotMeta,
+        targetUnitSnapshot.isAcceptableOrUnknown(
+          data['target_unit_snapshot']!,
+          _targetUnitSnapshotMeta,
+        ),
+      );
+    }
     if (data.containsKey('notes')) {
       context.handle(
         _notesMeta,
@@ -6489,6 +6587,14 @@ class $HabitLogsTable extends HabitLogs
         DriftSqlType.double,
         data['${effectivePrefix}amount'],
       ),
+      targetAmountSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}target_amount_snapshot'],
+      ),
+      targetUnitSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_unit_snapshot'],
+      ),
       notes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
@@ -6512,6 +6618,8 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
 
   /// Measured amount for quantity habits; null for binary habits.
   final double? amount;
+  final double? targetAmountSnapshot;
+  final String? targetUnitSnapshot;
 
   /// Optional short note for the day (e.g. "felt great", "skipped, was
   /// sick") — completion itself stays a plain boolean, this is purely
@@ -6523,6 +6631,8 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
     required this.date,
     required this.completed,
     this.amount,
+    this.targetAmountSnapshot,
+    this.targetUnitSnapshot,
     this.notes,
   });
   @override
@@ -6534,6 +6644,12 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
     map['completed'] = Variable<bool>(completed);
     if (!nullToAbsent || amount != null) {
       map['amount'] = Variable<double>(amount);
+    }
+    if (!nullToAbsent || targetAmountSnapshot != null) {
+      map['target_amount_snapshot'] = Variable<double>(targetAmountSnapshot);
+    }
+    if (!nullToAbsent || targetUnitSnapshot != null) {
+      map['target_unit_snapshot'] = Variable<String>(targetUnitSnapshot);
     }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
@@ -6550,6 +6666,12 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
       amount: amount == null && nullToAbsent
           ? const Value.absent()
           : Value(amount),
+      targetAmountSnapshot: targetAmountSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetAmountSnapshot),
+      targetUnitSnapshot: targetUnitSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetUnitSnapshot),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
@@ -6567,6 +6689,12 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
       date: serializer.fromJson<DateTime>(json['date']),
       completed: serializer.fromJson<bool>(json['completed']),
       amount: serializer.fromJson<double?>(json['amount']),
+      targetAmountSnapshot: serializer.fromJson<double?>(
+        json['targetAmountSnapshot'],
+      ),
+      targetUnitSnapshot: serializer.fromJson<String?>(
+        json['targetUnitSnapshot'],
+      ),
       notes: serializer.fromJson<String?>(json['notes']),
     );
   }
@@ -6579,6 +6707,8 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
       'date': serializer.toJson<DateTime>(date),
       'completed': serializer.toJson<bool>(completed),
       'amount': serializer.toJson<double?>(amount),
+      'targetAmountSnapshot': serializer.toJson<double?>(targetAmountSnapshot),
+      'targetUnitSnapshot': serializer.toJson<String?>(targetUnitSnapshot),
       'notes': serializer.toJson<String?>(notes),
     };
   }
@@ -6589,6 +6719,8 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
     DateTime? date,
     bool? completed,
     Value<double?> amount = const Value.absent(),
+    Value<double?> targetAmountSnapshot = const Value.absent(),
+    Value<String?> targetUnitSnapshot = const Value.absent(),
     Value<String?> notes = const Value.absent(),
   }) => HabitLog(
     id: id ?? this.id,
@@ -6596,6 +6728,12 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
     date: date ?? this.date,
     completed: completed ?? this.completed,
     amount: amount.present ? amount.value : this.amount,
+    targetAmountSnapshot: targetAmountSnapshot.present
+        ? targetAmountSnapshot.value
+        : this.targetAmountSnapshot,
+    targetUnitSnapshot: targetUnitSnapshot.present
+        ? targetUnitSnapshot.value
+        : this.targetUnitSnapshot,
     notes: notes.present ? notes.value : this.notes,
   );
   HabitLog copyWithCompanion(HabitLogsCompanion data) {
@@ -6605,6 +6743,12 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
       date: data.date.present ? data.date.value : this.date,
       completed: data.completed.present ? data.completed.value : this.completed,
       amount: data.amount.present ? data.amount.value : this.amount,
+      targetAmountSnapshot: data.targetAmountSnapshot.present
+          ? data.targetAmountSnapshot.value
+          : this.targetAmountSnapshot,
+      targetUnitSnapshot: data.targetUnitSnapshot.present
+          ? data.targetUnitSnapshot.value
+          : this.targetUnitSnapshot,
       notes: data.notes.present ? data.notes.value : this.notes,
     );
   }
@@ -6617,13 +6761,24 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
           ..write('date: $date, ')
           ..write('completed: $completed, ')
           ..write('amount: $amount, ')
+          ..write('targetAmountSnapshot: $targetAmountSnapshot, ')
+          ..write('targetUnitSnapshot: $targetUnitSnapshot, ')
           ..write('notes: $notes')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, habitId, date, completed, amount, notes);
+  int get hashCode => Object.hash(
+    id,
+    habitId,
+    date,
+    completed,
+    amount,
+    targetAmountSnapshot,
+    targetUnitSnapshot,
+    notes,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6633,6 +6788,8 @@ class HabitLog extends DataClass implements Insertable<HabitLog> {
           other.date == this.date &&
           other.completed == this.completed &&
           other.amount == this.amount &&
+          other.targetAmountSnapshot == this.targetAmountSnapshot &&
+          other.targetUnitSnapshot == this.targetUnitSnapshot &&
           other.notes == this.notes);
 }
 
@@ -6642,6 +6799,8 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
   final Value<DateTime> date;
   final Value<bool> completed;
   final Value<double?> amount;
+  final Value<double?> targetAmountSnapshot;
+  final Value<String?> targetUnitSnapshot;
   final Value<String?> notes;
   final Value<int> rowid;
   const HabitLogsCompanion({
@@ -6650,6 +6809,8 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
     this.date = const Value.absent(),
     this.completed = const Value.absent(),
     this.amount = const Value.absent(),
+    this.targetAmountSnapshot = const Value.absent(),
+    this.targetUnitSnapshot = const Value.absent(),
     this.notes = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -6659,6 +6820,8 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
     required DateTime date,
     this.completed = const Value.absent(),
     this.amount = const Value.absent(),
+    this.targetAmountSnapshot = const Value.absent(),
+    this.targetUnitSnapshot = const Value.absent(),
     this.notes = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : habitId = Value(habitId),
@@ -6669,6 +6832,8 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
     Expression<DateTime>? date,
     Expression<bool>? completed,
     Expression<double>? amount,
+    Expression<double>? targetAmountSnapshot,
+    Expression<String>? targetUnitSnapshot,
     Expression<String>? notes,
     Expression<int>? rowid,
   }) {
@@ -6678,6 +6843,10 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
       if (date != null) 'date': date,
       if (completed != null) 'completed': completed,
       if (amount != null) 'amount': amount,
+      if (targetAmountSnapshot != null)
+        'target_amount_snapshot': targetAmountSnapshot,
+      if (targetUnitSnapshot != null)
+        'target_unit_snapshot': targetUnitSnapshot,
       if (notes != null) 'notes': notes,
       if (rowid != null) 'rowid': rowid,
     });
@@ -6689,6 +6858,8 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
     Value<DateTime>? date,
     Value<bool>? completed,
     Value<double?>? amount,
+    Value<double?>? targetAmountSnapshot,
+    Value<String?>? targetUnitSnapshot,
     Value<String?>? notes,
     Value<int>? rowid,
   }) {
@@ -6698,6 +6869,8 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
       date: date ?? this.date,
       completed: completed ?? this.completed,
       amount: amount ?? this.amount,
+      targetAmountSnapshot: targetAmountSnapshot ?? this.targetAmountSnapshot,
+      targetUnitSnapshot: targetUnitSnapshot ?? this.targetUnitSnapshot,
       notes: notes ?? this.notes,
       rowid: rowid ?? this.rowid,
     );
@@ -6721,6 +6894,14 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
     if (amount.present) {
       map['amount'] = Variable<double>(amount.value);
     }
+    if (targetAmountSnapshot.present) {
+      map['target_amount_snapshot'] = Variable<double>(
+        targetAmountSnapshot.value,
+      );
+    }
+    if (targetUnitSnapshot.present) {
+      map['target_unit_snapshot'] = Variable<String>(targetUnitSnapshot.value);
+    }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
@@ -6738,6 +6919,8 @@ class HabitLogsCompanion extends UpdateCompanion<HabitLog> {
           ..write('date: $date, ')
           ..write('completed: $completed, ')
           ..write('amount: $amount, ')
+          ..write('targetAmountSnapshot: $targetAmountSnapshot, ')
+          ..write('targetUnitSnapshot: $targetUnitSnapshot, ')
           ..write('notes: $notes, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -17110,6 +17293,7 @@ typedef $$HabitsTableCreateCompanionBuilder =
       Value<bool> archived,
       Value<DateTime?> pauseStartedAt,
       Value<DateTime?> pausedUntil,
+      Value<String?> pauseHistory,
       Value<String?> categoryId,
       Value<bool> reminderEnabled,
       Value<int?> reminderHour,
@@ -17131,6 +17315,7 @@ typedef $$HabitsTableUpdateCompanionBuilder =
       Value<bool> archived,
       Value<DateTime?> pauseStartedAt,
       Value<DateTime?> pausedUntil,
+      Value<String?> pauseHistory,
       Value<String?> categoryId,
       Value<bool> reminderEnabled,
       Value<int?> reminderHour,
@@ -17241,6 +17426,11 @@ class $$HabitsTableFilterComposer
 
   ColumnFilters<DateTime> get pausedUntil => $composableBuilder(
     column: $table.pausedUntil,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pauseHistory => $composableBuilder(
+    column: $table.pauseHistory,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17382,6 +17572,11 @@ class $$HabitsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get pauseHistory => $composableBuilder(
+    column: $table.pauseHistory,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get reminderEnabled => $composableBuilder(
     column: $table.reminderEnabled,
     builder: (column) => ColumnOrderings(column),
@@ -17482,6 +17677,11 @@ class $$HabitsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get pausedUntil => $composableBuilder(
     column: $table.pausedUntil,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get pauseHistory => $composableBuilder(
+    column: $table.pauseHistory,
     builder: (column) => column,
   );
 
@@ -17596,6 +17796,7 @@ class $$HabitsTableTableManager
                 Value<bool> archived = const Value.absent(),
                 Value<DateTime?> pauseStartedAt = const Value.absent(),
                 Value<DateTime?> pausedUntil = const Value.absent(),
+                Value<String?> pauseHistory = const Value.absent(),
                 Value<String?> categoryId = const Value.absent(),
                 Value<bool> reminderEnabled = const Value.absent(),
                 Value<int?> reminderHour = const Value.absent(),
@@ -17615,6 +17816,7 @@ class $$HabitsTableTableManager
                 archived: archived,
                 pauseStartedAt: pauseStartedAt,
                 pausedUntil: pausedUntil,
+                pauseHistory: pauseHistory,
                 categoryId: categoryId,
                 reminderEnabled: reminderEnabled,
                 reminderHour: reminderHour,
@@ -17636,6 +17838,7 @@ class $$HabitsTableTableManager
                 Value<bool> archived = const Value.absent(),
                 Value<DateTime?> pauseStartedAt = const Value.absent(),
                 Value<DateTime?> pausedUntil = const Value.absent(),
+                Value<String?> pauseHistory = const Value.absent(),
                 Value<String?> categoryId = const Value.absent(),
                 Value<bool> reminderEnabled = const Value.absent(),
                 Value<int?> reminderHour = const Value.absent(),
@@ -17655,6 +17858,7 @@ class $$HabitsTableTableManager
                 archived: archived,
                 pauseStartedAt: pauseStartedAt,
                 pausedUntil: pausedUntil,
+                pauseHistory: pauseHistory,
                 categoryId: categoryId,
                 reminderEnabled: reminderEnabled,
                 reminderHour: reminderHour,
@@ -17747,6 +17951,8 @@ typedef $$HabitLogsTableCreateCompanionBuilder =
       required DateTime date,
       Value<bool> completed,
       Value<double?> amount,
+      Value<double?> targetAmountSnapshot,
+      Value<String?> targetUnitSnapshot,
       Value<String?> notes,
       Value<int> rowid,
     });
@@ -17757,6 +17963,8 @@ typedef $$HabitLogsTableUpdateCompanionBuilder =
       Value<DateTime> date,
       Value<bool> completed,
       Value<double?> amount,
+      Value<double?> targetAmountSnapshot,
+      Value<String?> targetUnitSnapshot,
       Value<String?> notes,
       Value<int> rowid,
     });
@@ -17809,6 +18017,16 @@ class $$HabitLogsTableFilterComposer
 
   ColumnFilters<double> get amount => $composableBuilder(
     column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get targetAmountSnapshot => $composableBuilder(
+    column: $table.targetAmountSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get targetUnitSnapshot => $composableBuilder(
+    column: $table.targetUnitSnapshot,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17870,6 +18088,16 @@ class $$HabitLogsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get targetAmountSnapshot => $composableBuilder(
+    column: $table.targetAmountSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get targetUnitSnapshot => $composableBuilder(
+    column: $table.targetUnitSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get notes => $composableBuilder(
     column: $table.notes,
     builder: (column) => ColumnOrderings(column),
@@ -17919,6 +18147,16 @@ class $$HabitLogsTableAnnotationComposer
 
   GeneratedColumn<double> get amount =>
       $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<double> get targetAmountSnapshot => $composableBuilder(
+    column: $table.targetAmountSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get targetUnitSnapshot => $composableBuilder(
+    column: $table.targetUnitSnapshot,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
@@ -17980,6 +18218,8 @@ class $$HabitLogsTableTableManager
                 Value<DateTime> date = const Value.absent(),
                 Value<bool> completed = const Value.absent(),
                 Value<double?> amount = const Value.absent(),
+                Value<double?> targetAmountSnapshot = const Value.absent(),
+                Value<String?> targetUnitSnapshot = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HabitLogsCompanion(
@@ -17988,6 +18228,8 @@ class $$HabitLogsTableTableManager
                 date: date,
                 completed: completed,
                 amount: amount,
+                targetAmountSnapshot: targetAmountSnapshot,
+                targetUnitSnapshot: targetUnitSnapshot,
                 notes: notes,
                 rowid: rowid,
               ),
@@ -17998,6 +18240,8 @@ class $$HabitLogsTableTableManager
                 required DateTime date,
                 Value<bool> completed = const Value.absent(),
                 Value<double?> amount = const Value.absent(),
+                Value<double?> targetAmountSnapshot = const Value.absent(),
+                Value<String?> targetUnitSnapshot = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HabitLogsCompanion.insert(
@@ -18006,6 +18250,8 @@ class $$HabitLogsTableTableManager
                 date: date,
                 completed: completed,
                 amount: amount,
+                targetAmountSnapshot: targetAmountSnapshot,
+                targetUnitSnapshot: targetUnitSnapshot,
                 notes: notes,
                 rowid: rowid,
               ),

@@ -52,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -190,6 +190,17 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(habits, habits.pauseStartedAt);
         await m.addColumn(habits, habits.pausedUntil);
         await m.addColumn(habitLogs, habitLogs.amount);
+      }
+      if (from < 18) {
+        await m.addColumn(habits, habits.pauseHistory);
+        await m.addColumn(habitLogs, habitLogs.targetAmountSnapshot);
+        await m.addColumn(habitLogs, habitLogs.targetUnitSnapshot);
+        await customStatement('''
+          UPDATE habit_logs SET
+            target_amount_snapshot = (SELECT target_amount FROM habits WHERE habits.id = habit_logs.habit_id),
+            target_unit_snapshot = (SELECT target_unit FROM habits WHERE habits.id = habit_logs.habit_id)
+          WHERE amount IS NOT NULL
+        ''');
       }
     },
   );

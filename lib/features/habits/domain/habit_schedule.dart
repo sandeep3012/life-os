@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/scheduling/repeat_schedule.dart';
 
@@ -10,7 +12,24 @@ extension HabitSchedule on Habit {
       );
 
   bool scheduledOn(DateTime date) {
+    return !pausedOn(date) && repeatSchedule.includes(date);
+  }
+
+  List<List<DateTime>> get pastPauses => pauseHistory == null
+      ? []
+      : (jsonDecode(pauseHistory!) as List)
+            .map(
+              (range) => (range as List)
+                  .map((date) => DateTime.parse(date as String))
+                  .toList(),
+            )
+            .toList();
+
+  bool pausedOn(DateTime date) {
     final day = DateTime(date.year, date.month, date.day);
+    for (final range in pastPauses) {
+      if (!day.isBefore(range[0]) && !day.isAfter(range[1])) return true;
+    }
     final pausedFrom = pauseStartedAt == null
         ? null
         : DateTime(
@@ -25,16 +44,19 @@ extension HabitSchedule on Habit {
         pausedTo != null &&
         !day.isBefore(pausedFrom) &&
         !day.isAfter(pausedTo)) {
-      return false;
+      return true;
     }
-    return repeatSchedule.includes(day);
+    return false;
   }
 
   bool get isPaused {
-    final today = DateTime.now();
+    return pausedOn(DateTime.now());
+  }
+
+  bool get hasPendingPause {
+    final now = DateTime.now();
     return pauseStartedAt != null &&
         pausedUntil != null &&
-        !today.isBefore(pauseStartedAt!) &&
-        !today.isAfter(pausedUntil!);
+        !pausedUntil!.isBefore(DateTime(now.year, now.month, now.day));
   }
 }

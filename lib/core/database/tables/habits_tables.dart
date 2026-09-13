@@ -23,6 +23,9 @@ class Habits extends Table {
   DateTimeColumn get pauseStartedAt => dateTime().nullable()();
   DateTimeColumn get pausedUntil => dateTime().nullable()();
 
+  /// Closed, inclusive pause ranges retained when resuming or pausing again.
+  TextColumn get pauseHistory => text().nullable()();
+
   /// Optional — references a [Categories] row with `kind == 'habit'`. Not a
   /// hard dependency (unlike finance, which seeds default categories on
   /// first run), so this stays nullable.
@@ -57,6 +60,8 @@ class HabitLogs extends Table {
 
   /// Measured amount for quantity habits; null for binary habits.
   RealColumn get amount => real().nullable()();
+  RealColumn get targetAmountSnapshot => real().nullable()();
+  TextColumn get targetUnitSnapshot => text().nullable()();
 
   /// Optional short note for the day (e.g. "felt great", "skipped, was
   /// sick") — completion itself stays a plain boolean, this is purely

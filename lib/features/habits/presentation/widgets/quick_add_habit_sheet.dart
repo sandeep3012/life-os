@@ -103,10 +103,18 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
 
   bool get _isEditing => widget.initial != null;
 
+  bool get _validTarget {
+    final text = _targetController.text.trim();
+    if (text.isEmpty) return true;
+    final value = double.tryParse(text);
+    return value != null && value.isFinite && value > 0;
+  }
+
   @override
   void initState() {
     super.initState();
     _nameController.addListener(() => setState(() {}));
+    _targetController.addListener(() => setState(() {}));
   }
 
   @override
@@ -179,9 +187,10 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Target (optional)',
                     hintText: 'e.g. 20',
+                    errorText: _validTarget ? null : 'Enter a positive number',
                   ),
                 ),
               ),
@@ -292,6 +301,7 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
             child: FilledButton(
               onPressed:
                   _nameController.text.trim().isEmpty ||
+                      !_validTarget ||
                       !_schedule.hasOccurrence
                   ? null
                   : () => Navigator.of(context).pop(
@@ -313,7 +323,9 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
                         targetAmount: double.tryParse(
                           _targetController.text.trim(),
                         ),
-                        targetUnit: _unitController.text.trim().isEmpty
+                        targetUnit:
+                            _targetController.text.trim().isEmpty ||
+                                _unitController.text.trim().isEmpty
                             ? null
                             : _unitController.text.trim(),
                       ),

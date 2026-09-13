@@ -172,6 +172,7 @@ class HabitsController {
     ReminderMode reminderMode = ReminderMode.notification,
     double? targetAmount,
     String? targetUnit,
+    bool clearTarget = false,
   }) async {
     await _notifications.cancelHabitReminder(habit.id);
     await _repo.updateHabit(
@@ -186,6 +187,7 @@ class HabitsController {
       reminderMode: reminderMode.storageValue,
       targetAmount: targetAmount,
       targetUnit: targetUnit,
+      clearTarget: clearTarget,
     );
   }
 
