@@ -531,7 +531,7 @@ class _BackupCardState extends ConsumerState<_BackupCard> {
       builder: (context) => AlertDialog(
         title: const Text('Restore this backup?'),
         content: const Text(
-          'This replaces every task, habit, note, transaction, and document currently on this device with what\'s in the backup. This can\'t be undone.',
+          'This replaces all local data with what\'s in the backup. Older backups do not include bills, recurring transactions, or custom account types; those lists will be cleared. Export your current data first if you want to keep a copy. This can\'t be undone.',
         ),
         actions: [
           TextButton(

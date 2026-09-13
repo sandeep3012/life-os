@@ -25,7 +25,11 @@ Category _habitCategory(String id, String name) => Category(
   createdAt: DateTime(2026),
 );
 
-Budget _budget({required String id, required String period, required int limitMinor}) => Budget(
+Budget _budget({
+  required String id,
+  required String period,
+  required int limitMinor,
+}) => Budget(
   id: id,
   categoryId: id,
   period: period,
@@ -68,7 +72,11 @@ Goal _goal({
   createdAt: createdAt ?? DateTime(2026, 1, 1),
 );
 
-Bill _bill({required String id, required DateTime dueDate, bool active = true}) => Bill(
+Bill _bill({
+  required String id,
+  required DateTime dueDate,
+  bool active = true,
+}) => Bill(
   id: id,
   name: id,
   amountMinor: 15000,
@@ -81,16 +89,20 @@ Bill _bill({required String id, required DateTime dueDate, bool active = true}) 
   createdAt: DateTime(2026, 1, 1),
 );
 
-GoalMilestone _milestone({required String goalId, bool completed = false}) => GoalMilestone(
-  id: '$goalId-milestone-${completed ? 'done' : 'todo'}',
-  goalId: goalId,
-  title: 'Milestone',
-  completed: completed,
-  sortOrder: 0,
-  createdAt: DateTime(2026, 1, 1),
-);
+GoalMilestone _milestone({required String goalId, bool completed = false}) =>
+    GoalMilestone(
+      id: '$goalId-milestone-${completed ? 'done' : 'todo'}',
+      goalId: goalId,
+      title: 'Milestone',
+      completed: completed,
+      sortOrder: 0,
+      createdAt: DateTime(2026, 1, 1),
+    );
 
-NetWorthPoint _netWorthPoint({required DateTime date, required int netWorthMinor}) =>
+NetWorthPoint _netWorthPoint({
+  required DateTime date,
+  required int netWorthMinor,
+}) =>
     NetWorthPoint(date: date, assetsMinor: netWorthMinor, liabilitiesMinor: 0);
 
 List<InsightDraft> _compute({
@@ -103,6 +115,7 @@ List<InsightDraft> _compute({
   List<NetWorthPoint> netWorthTrend = const [],
   Map<String, List<GoalMilestone>> milestonesByGoal = const {},
   DateTime? now,
+  String currencyCode = 'INR',
 }) {
   return computeInsights(
     budgets: budgets,
@@ -114,10 +127,34 @@ List<InsightDraft> _compute({
     netWorthTrend: netWorthTrend,
     milestonesByGoal: milestonesByGoal,
     now: now,
+    currencyCode: currencyCode,
   );
 }
 
 void main() {
+  test('bill insight uses selected currency and grouped amount', () {
+    for (final currency in {
+      'INR': '₹150.00',
+      'USD': '\$150.00',
+      'EUR': '€150.00',
+    }.entries) {
+      final drafts = _compute(
+        bills: [_bill(id: 'Rent', dueDate: DateTime(2026, 9, 12))],
+        now: DateTime(2026, 9, 12),
+        currencyCode: currency.key,
+      );
+      expect(drafts.single.title, contains(currency.value));
+    }
+  });
+  test('task momentum describes counts rather than a completion rate', () {
+    final title = _compute(
+      tasksCompletedThisWeek: 3,
+      tasksCompletedLastWeek: 2,
+    ).single.title;
+    expect(title, contains('Completed tasks up 50%'));
+    expect(title, contains('same point last week'));
+    expect(title, isNot(contains('completion rate')));
+  });
   group('overspend rule', () {
     test('warning under 20% over, critical at/above 20% over', () {
       final warningBudget = BudgetProgress(
@@ -152,7 +189,11 @@ void main() {
 
   group('habit streak risk rule', () {
     test('flags a habit with an active streak not logged today', () {
-      final atRisk = HabitProgress(habit: _habit('meditate'), streakDays: 5, weekCompletion: const {});
+      final atRisk = HabitProgress(
+        habit: _habit('meditate'),
+        streakDays: 5,
+        weekCompletion: const {},
+      );
       final safe = HabitProgress(
         habit: _habit('workout'),
         streakDays: 5,
@@ -169,20 +210,33 @@ void main() {
 
   group('task momentum rule', () {
     test('up 15%+ is good, down 15%+ is info, small change is silent', () {
-      final up = _compute(tasksCompletedThisWeek: 23, tasksCompletedLastWeek: 20); // +15%
+      final up = _compute(
+        tasksCompletedThisWeek: 23,
+        tasksCompletedLastWeek: 20,
+      ); // +15%
       expect(up.single.severity, 'good');
 
-      final down = _compute(tasksCompletedThisWeek: 17, tasksCompletedLastWeek: 20); // -15%
+      final down = _compute(
+        tasksCompletedThisWeek: 17,
+        tasksCompletedLastWeek: 20,
+      ); // -15%
       expect(down.single.severity, 'info');
 
-      final flat = _compute(tasksCompletedThisWeek: 21, tasksCompletedLastWeek: 20); // +5%
+      final flat = _compute(
+        tasksCompletedThisWeek: 21,
+        tasksCompletedLastWeek: 20,
+      ); // +5%
       expect(flat, isEmpty);
     });
   });
 
   group('goal pacing rule', () {
     test('behind schedule vs on track vs no target date', () {
-      final now = DateTime(2026, 7, 21); // day 20 of a 40-day goal -> 50% expected
+      final now = DateTime(
+        2026,
+        7,
+        21,
+      ); // day 20 of a 40-day goal -> 50% expected
       final behind = GoalWithLinks(
         goal: _goal(
           id: 'g1',
@@ -206,7 +260,12 @@ void main() {
         links: const [],
       );
       final noTargetDate = GoalWithLinks(
-        goal: _goal(id: 'g3', title: 'Someday goal', targetValue: 10, currentValue: 1),
+        goal: _goal(
+          id: 'g3',
+          title: 'Someday goal',
+          targetValue: 10,
+          currentValue: 1,
+        ),
         links: const [],
       );
 
@@ -223,7 +282,10 @@ void main() {
     final today = DateTime(2026, 3, 10);
 
     test('happy path: due in 5 days is a warning', () {
-      final drafts = _compute(bills: [_bill(id: 'b1', dueDate: today.add(const Duration(days: 5)))], now: today);
+      final drafts = _compute(
+        bills: [_bill(id: 'b1', dueDate: today.add(const Duration(days: 5)))],
+        now: today,
+      );
       expect(drafts, hasLength(1));
       expect(drafts.single.severity, 'warning');
       expect(drafts.single.relatedEntityId, 'b1');
@@ -246,8 +308,15 @@ void main() {
       final drafts = _compute(
         bills: [
           _bill(id: 'far', dueDate: today.add(const Duration(days: 8))),
-          _bill(id: 'inactive', dueDate: today.add(const Duration(days: 1)), active: false),
-          _bill(id: 'overdue', dueDate: today.subtract(const Duration(days: 1))),
+          _bill(
+            id: 'inactive',
+            dueDate: today.add(const Duration(days: 1)),
+            active: false,
+          ),
+          _bill(
+            id: 'overdue',
+            dueDate: today.subtract(const Duration(days: 1)),
+          ),
         ],
         now: today,
       );
@@ -293,20 +362,25 @@ void main() {
       expect(critical.single.severity, 'critical');
     });
 
-    test('no insight with fewer than 2 points or a zero-baseline previous point', () {
-      final onePoint = _compute(
-        netWorthTrend: [_netWorthPoint(date: DateTime(2026, 1, 1), netWorthMinor: 100000)],
-      );
-      expect(onePoint, isEmpty);
+    test(
+      'no insight with fewer than 2 points or a zero-baseline previous point',
+      () {
+        final onePoint = _compute(
+          netWorthTrend: [
+            _netWorthPoint(date: DateTime(2026, 1, 1), netWorthMinor: 100000),
+          ],
+        );
+        expect(onePoint, isEmpty);
 
-      final zeroBaseline = _compute(
-        netWorthTrend: [
-          _netWorthPoint(date: DateTime(2026, 1, 1), netWorthMinor: 0),
-          _netWorthPoint(date: DateTime(2026, 2, 1), netWorthMinor: 5000),
-        ],
-      );
-      expect(zeroBaseline, isEmpty);
-    });
+        final zeroBaseline = _compute(
+          netWorthTrend: [
+            _netWorthPoint(date: DateTime(2026, 1, 1), netWorthMinor: 0),
+            _netWorthPoint(date: DateTime(2026, 2, 1), netWorthMinor: 5000),
+          ],
+        );
+        expect(zeroBaseline, isEmpty);
+      },
+    );
 
     test('a rise of 10%+ is a good-severity draft', () {
       final drafts = _compute(
@@ -322,10 +396,17 @@ void main() {
   group('goal milestone gap rule', () {
     final today = DateTime(2026, 3, 10);
 
-    GoalWithLinks goalWithDeadline(String id, DateTime targetDate) => GoalWithLinks(
-      goal: _goal(id: id, title: id, targetValue: 10, currentValue: 1, targetDate: targetDate),
-      links: const [],
-    );
+    GoalWithLinks goalWithDeadline(String id, DateTime targetDate) =>
+        GoalWithLinks(
+          goal: _goal(
+            id: id,
+            title: id,
+            targetValue: 10,
+            currentValue: 1,
+            targetDate: targetDate,
+          ),
+          links: const [],
+        );
 
     // These fixtures also satisfy _goalPacingInsights (targetValue/currentValue
     // are set), so filter to this rule's `type` rather than asserting on the
@@ -337,62 +418,94 @@ void main() {
     test('happy path: 10 days out, no milestones completed', () {
       final goal = goalWithDeadline('g1', today.add(const Duration(days: 10)));
       final drafts = gapDrafts(
-        _compute(goals: [goal], milestonesByGoal: {'g1': [_milestone(goalId: 'g1')]}, now: today),
+        _compute(
+          goals: [goal],
+          milestonesByGoal: {
+            'g1': [_milestone(goalId: 'g1')],
+          },
+          now: today,
+        ),
       );
       expect(drafts.single.severity, 'warning');
       expect(drafts.single.relatedEntityId, 'g1');
     });
 
-    test('boundary: 3 days critical, 4 days warning, 14 days present, 15 days none', () {
-      final drafts = gapDrafts(
-        _compute(
-          goals: [
-            goalWithDeadline('critical', today.add(const Duration(days: 3))),
-            goalWithDeadline('warning', today.add(const Duration(days: 4))),
-            goalWithDeadline('edge', today.add(const Duration(days: 14))),
-            goalWithDeadline('tooFar', today.add(const Duration(days: 15))),
-          ],
-          milestonesByGoal: {
-            'critical': [_milestone(goalId: 'critical')],
-            'warning': [_milestone(goalId: 'warning')],
-            'edge': [_milestone(goalId: 'edge')],
-            'tooFar': [_milestone(goalId: 'tooFar')],
-          },
-          now: today,
-        ),
-      );
-      final byId = {for (final d in drafts) d.relatedEntityId: d};
-      expect(byId['critical']!.severity, 'critical');
-      expect(byId['warning']!.severity, 'warning');
-      expect(byId.containsKey('edge'), isTrue);
-      expect(byId.containsKey('tooFar'), isFalse);
-    });
+    test(
+      'boundary: 3 days critical, 4 days warning, 14 days present, 15 days none',
+      () {
+        final drafts = gapDrafts(
+          _compute(
+            goals: [
+              goalWithDeadline('critical', today.add(const Duration(days: 3))),
+              goalWithDeadline('warning', today.add(const Duration(days: 4))),
+              goalWithDeadline('edge', today.add(const Duration(days: 14))),
+              goalWithDeadline('tooFar', today.add(const Duration(days: 15))),
+            ],
+            milestonesByGoal: {
+              'critical': [_milestone(goalId: 'critical')],
+              'warning': [_milestone(goalId: 'warning')],
+              'edge': [_milestone(goalId: 'edge')],
+              'tooFar': [_milestone(goalId: 'tooFar')],
+            },
+            now: today,
+          ),
+        );
+        final byId = {for (final d in drafts) d.relatedEntityId: d};
+        expect(byId['critical']!.severity, 'critical');
+        expect(byId['warning']!.severity, 'warning');
+        expect(byId.containsKey('edge'), isTrue);
+        expect(byId.containsKey('tooFar'), isFalse);
+      },
+    );
 
-    test('no insight with no milestones, a completed milestone, no targetDate, or overdue', () {
-      final noMilestones = goalWithDeadline('noMilestones', today.add(const Duration(days: 5)));
-      final hasCompleted = goalWithDeadline('hasCompleted', today.add(const Duration(days: 5)));
-      final noTargetDate = GoalWithLinks(
-        goal: _goal(id: 'noTargetDate', title: 'x', targetValue: 10, currentValue: 1),
-        links: const [],
-      );
-      final overdue = goalWithDeadline('overdue', today.subtract(const Duration(days: 1)));
+    test(
+      'no insight with no milestones, a completed milestone, no targetDate, or overdue',
+      () {
+        final noMilestones = goalWithDeadline(
+          'noMilestones',
+          today.add(const Duration(days: 5)),
+        );
+        final hasCompleted = goalWithDeadline(
+          'hasCompleted',
+          today.add(const Duration(days: 5)),
+        );
+        final noTargetDate = GoalWithLinks(
+          goal: _goal(
+            id: 'noTargetDate',
+            title: 'x',
+            targetValue: 10,
+            currentValue: 1,
+          ),
+          links: const [],
+        );
+        final overdue = goalWithDeadline(
+          'overdue',
+          today.subtract(const Duration(days: 1)),
+        );
 
-      final drafts = gapDrafts(
-        _compute(
-          goals: [noMilestones, hasCompleted, noTargetDate, overdue],
-          milestonesByGoal: {
-            'hasCompleted': [_milestone(goalId: 'hasCompleted', completed: true)],
-            'overdue': [_milestone(goalId: 'overdue')],
-          },
-          now: today,
-        ),
-      );
-      expect(drafts, isEmpty);
-    });
+        final drafts = gapDrafts(
+          _compute(
+            goals: [noMilestones, hasCompleted, noTargetDate, overdue],
+            milestonesByGoal: {
+              'hasCompleted': [
+                _milestone(goalId: 'hasCompleted', completed: true),
+              ],
+              'overdue': [_milestone(goalId: 'overdue')],
+            },
+            now: today,
+          ),
+        );
+        expect(drafts, isEmpty);
+      },
+    );
   });
 
   group('habit category rollup rule', () {
-    HabitProgress progressIn(String id, String categoryId, {required bool atRisk}) => HabitProgress(
+    HabitProgress progressIn(
+      String id,
+      String categoryId, {
+      required bool atRisk,
+    }) => HabitProgress(
       habit: _habit(id),
       streakDays: atRisk ? 5 : 0,
       weekCompletion: atRisk ? const {} : {DateTime.now().weekday: true},
@@ -444,24 +557,38 @@ void main() {
       expect(allAtRisk.single.severity, 'critical');
     });
 
-    test('no insight below the size-3 minimum, for uncategorized habits, or none at risk', () {
-      final tooSmall = rollupDrafts(
-        _compute(habits: [progressIn('h1', 'c', atRisk: true), progressIn('h2', 'c', atRisk: true)]),
-      );
-      expect(tooSmall, isEmpty);
+    test(
+      'no insight below the size-3 minimum, for uncategorized habits, or none at risk',
+      () {
+        final tooSmall = rollupDrafts(
+          _compute(
+            habits: [
+              progressIn('h1', 'c', atRisk: true),
+              progressIn('h2', 'c', atRisk: true),
+            ],
+          ),
+        );
+        expect(tooSmall, isEmpty);
 
-      final uncategorized = HabitProgress(habit: _habit('h1'), streakDays: 5, weekCompletion: const {});
-      final none = rollupDrafts(_compute(habits: [uncategorized, uncategorized, uncategorized]));
-      expect(none, isEmpty);
+        final uncategorized = HabitProgress(
+          habit: _habit('h1'),
+          streakDays: 5,
+          weekCompletion: const {},
+        );
+        final none = rollupDrafts(
+          _compute(habits: [uncategorized, uncategorized, uncategorized]),
+        );
+        expect(none, isEmpty);
 
-      final noneAtRisk = _compute(
-        habits: [
-          progressIn('h1', 'd', atRisk: false),
-          progressIn('h2', 'd', atRisk: false),
-          progressIn('h3', 'd', atRisk: false),
-        ],
-      );
-      expect(noneAtRisk, isEmpty);
-    });
+        final noneAtRisk = _compute(
+          habits: [
+            progressIn('h1', 'd', atRisk: false),
+            progressIn('h2', 'd', atRisk: false),
+            progressIn('h3', 'd', atRisk: false),
+          ],
+        );
+        expect(noneAtRisk, isEmpty);
+      },
+    );
   });
 }

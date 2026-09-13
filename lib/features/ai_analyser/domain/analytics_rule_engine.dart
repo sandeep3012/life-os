@@ -1,4 +1,5 @@
 import '../../../core/database/app_database.dart';
+import '../../../core/utils/currency_utils.dart';
 import '../../finance/domain/budget_progress.dart';
 import '../../finance/domain/net_worth_point.dart';
 import '../../goals/domain/goal_progress.dart';
@@ -18,15 +19,18 @@ List<InsightDraft> computeInsights({
   required List<NetWorthPoint> netWorthTrend,
   required Map<String, List<GoalMilestone>> milestonesByGoal,
   DateTime? now,
+  String currencyCode = 'INR',
 }) {
   final today = now ?? DateTime.now();
   final drafts = <InsightDraft>[];
 
   drafts.addAll(_overspendInsights(budgets));
   drafts.addAll(_habitStreakRiskInsights(habits));
-  drafts.addAll(_taskMomentumInsight(tasksCompletedThisWeek, tasksCompletedLastWeek));
+  drafts.addAll(
+    _taskMomentumInsight(tasksCompletedThisWeek, tasksCompletedLastWeek),
+  );
   drafts.addAll(_goalPacingInsights(goals, today));
-  drafts.addAll(_billDueSoonInsights(bills, today));
+  drafts.addAll(_billDueSoonInsights(bills, today, currencyCode));
   drafts.addAll(_netWorthTrendInsights(netWorthTrend));
   drafts.addAll(_goalMilestoneGapInsights(goals, milestonesByGoal, today));
   drafts.addAll(_habitCategoryRollupInsights(habits));
@@ -37,7 +41,8 @@ List<InsightDraft> computeInsights({
 Iterable<InsightDraft> _overspendInsights(List<BudgetProgress> budgets) sync* {
   for (final b in budgets) {
     if (!b.isOver || b.limitMinor == 0) continue;
-    final overPct = ((b.spentMinor - b.limitMinor) / b.limitMinor * 100).round();
+    final overPct = ((b.spentMinor - b.limitMinor) / b.limitMinor * 100)
+        .round();
     final period = b.budget.period == 'weekly' ? 'week' : 'month';
     yield InsightDraft(
       type: 'overspend',
@@ -49,7 +54,9 @@ Iterable<InsightDraft> _overspendInsights(List<BudgetProgress> budgets) sync* {
   }
 }
 
-Iterable<InsightDraft> _habitStreakRiskInsights(List<HabitProgress> habits) sync* {
+Iterable<InsightDraft> _habitStreakRiskInsights(
+  List<HabitProgress> habits,
+) sync* {
   for (final h in habits) {
     if (!h.isAtRisk) continue;
     yield InsightDraft(
@@ -69,28 +76,40 @@ Iterable<InsightDraft> _taskMomentumInsight(int thisWeek, int lastWeek) sync* {
     yield InsightDraft(
       type: 'task_momentum',
       severity: 'good',
-      title: 'Task completion rate up $changePct% this week — nice momentum',
+      title:
+          'Completed tasks up $changePct% compared with the same point last week',
       relatedModule: 'tasks',
     );
   } else if (changePct <= -15) {
     yield InsightDraft(
       type: 'task_momentum',
       severity: 'info',
-      title: 'Task completion rate down ${changePct.abs()}% this week',
+      title:
+          'Completed tasks down ${changePct.abs()}% compared with the same point last week',
       relatedModule: 'tasks',
     );
   }
 }
 
-Iterable<InsightDraft> _goalPacingInsights(List<GoalWithLinks> goals, DateTime today) sync* {
+Iterable<InsightDraft> _goalPacingInsights(
+  List<GoalWithLinks> goals,
+  DateTime today,
+) sync* {
   for (final g in goals) {
     final goal = g.goal;
     final targetDate = goal.targetDate;
-    if (targetDate == null || goal.targetValue == null || goal.targetValue == 0) continue;
+    if (targetDate == null ||
+        goal.targetValue == null ||
+        goal.targetValue == 0) {
+      continue;
+    }
 
     final totalDays = targetDate.difference(goal.createdAt).inDays;
     if (totalDays <= 0) continue;
-    final elapsedDays = today.difference(goal.createdAt).inDays.clamp(0, totalDays);
+    final elapsedDays = today
+        .difference(goal.createdAt)
+        .inDays
+        .clamp(0, totalDays);
     final expectedRatio = elapsedDays / totalDays;
     if (expectedRatio <= 0) continue;
 
@@ -116,14 +135,18 @@ Iterable<InsightDraft> _goalPacingInsights(List<GoalWithLinks> goals, DateTime t
 
 /// Approaching (not overdue) active bills within a week of their due date —
 /// overdue bills are a distinct condition, out of scope here.
-Iterable<InsightDraft> _billDueSoonInsights(List<Bill> bills, DateTime today) sync* {
+Iterable<InsightDraft> _billDueSoonInsights(
+  List<Bill> bills,
+  DateTime today,
+  String currencyCode,
+) sync* {
   final todayOnly = DateTime(today.year, today.month, today.day);
   for (final b in bills) {
     if (!b.active) continue;
     final dueOnly = DateTime(b.dueDate.year, b.dueDate.month, b.dueDate.day);
     final daysUntilDue = dueOnly.difference(todayOnly).inDays;
     if (daysUntilDue < 0 || daysUntilDue > 7) continue;
-    final amount = (b.amountMinor / 100).toStringAsFixed(2);
+    final amount = formatMinor(b.amountMinor, currencyCode: currencyCode);
     final dueDesc = switch (daysUntilDue) {
       0 => 'today',
       1 => 'tomorrow',
@@ -132,7 +155,7 @@ Iterable<InsightDraft> _billDueSoonInsights(List<Bill> bills, DateTime today) sy
     yield InsightDraft(
       type: 'bill_due_soon',
       severity: daysUntilDue <= 2 ? 'critical' : 'warning',
-      title: '${b.name} (\$$amount) is due $dueDesc',
+      title: '${b.name} ($amount) is due $dueDesc',
       relatedModule: 'finance',
       relatedEntityId: b.id,
     );
@@ -147,8 +170,11 @@ Iterable<InsightDraft> _netWorthTrendInsights(List<NetWorthPoint> trend) sync* {
   final latest = trend.last;
   final previous = trend[trend.length - 2];
   if (previous.netWorthMinor == 0) return;
-  final changePct = ((latest.netWorthMinor - previous.netWorthMinor) / previous.netWorthMinor.abs() * 100)
-      .round();
+  final changePct =
+      ((latest.netWorthMinor - previous.netWorthMinor) /
+              previous.netWorthMinor.abs() *
+              100)
+          .round();
   if (changePct <= -10) {
     yield InsightDraft(
       type: 'net_worth_decline',
@@ -190,7 +216,8 @@ Iterable<InsightDraft> _goalMilestoneGapInsights(
     yield InsightDraft(
       type: 'goal_milestone_gap',
       severity: daysUntilTarget <= 3 ? 'critical' : 'warning',
-      title: '"${goal.title}" is due in $daysUntilTarget days with no milestones completed',
+      title:
+          '"${goal.title}" is due in $daysUntilTarget days with no milestones completed',
       relatedModule: 'goals',
       relatedEntityId: goal.id,
     );
@@ -202,7 +229,9 @@ Iterable<InsightDraft> _goalMilestoneGapInsights(
 /// already surfaces individual at-risk habits; this only adds value when the
 /// pattern is category-wide. Categories under 3 habits are skipped since one
 /// missed habit would otherwise swing the percentage too much to be meaningful.
-Iterable<InsightDraft> _habitCategoryRollupInsights(List<HabitProgress> habits) sync* {
+Iterable<InsightDraft> _habitCategoryRollupInsights(
+  List<HabitProgress> habits,
+) sync* {
   final byCategory = <String, List<HabitProgress>>{};
   for (final h in habits) {
     final category = h.category;
@@ -221,7 +250,8 @@ Iterable<InsightDraft> _habitCategoryRollupInsights(List<HabitProgress> habits) 
     yield InsightDraft(
       type: 'habit_category_rollup',
       severity: atRiskFraction >= 1.0 ? 'critical' : 'warning',
-      title: '$atRiskCount of ${categoryHabits.length} "$categoryName" habits are at risk today',
+      title:
+          '$atRiskCount of ${categoryHabits.length} "$categoryName" habits are at risk today',
       relatedModule: 'habits',
       relatedEntityId: entry.key,
     );
