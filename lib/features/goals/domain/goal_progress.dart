@@ -1,7 +1,11 @@
 import '../../../core/database/app_database.dart';
 
 class GoalLinkInfo {
-  const GoalLinkInfo({required this.linkId, required this.type, required this.label});
+  const GoalLinkInfo({
+    required this.linkId,
+    required this.type,
+    required this.label,
+  });
 
   final String linkId;
 
@@ -14,14 +18,19 @@ class GoalLinkInfo {
 /// across modules — the cross-database join the single-DB design exists for)
 /// and its progress ratio.
 class GoalWithLinks {
-  const GoalWithLinks({required this.goal, required this.links});
+  const GoalWithLinks({
+    required this.goal,
+    required this.links,
+    this.progressReady = true,
+  });
 
   final Goal goal;
   final List<GoalLinkInfo> links;
+  final bool progressReady;
 
   double get ratio {
     final target = goal.targetValue;
-    if (target == null || target == 0) return 0;
+    if (!progressReady || target == null || target == 0) return 0;
     return (goal.currentValue / target).clamp(0, 1);
   }
 }

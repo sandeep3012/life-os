@@ -8,6 +8,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../reminders/reminder_mode.dart';
 import '../reminders/scheduled_reminder.dart';
+import '../reminders/reminder_status.dart';
 
 /// Thin wrapper around `flutter_local_notifications` for the reminder kinds
 /// the app schedules: a one-off nudge at a task's due time, a single generic
@@ -24,6 +25,49 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin;
   bool _initialized = false;
+
+  /// Read-only: viewing status must not trigger permission prompts.
+  Future<ReminderStatus> readStatus() async {
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    final enabled = android != null
+        ? await android.areNotificationsEnabled()
+        : (await ios?.checkPermissions())?.isEnabled;
+    final pending = await _plugin.pendingNotificationRequests();
+    final scheduled =
+        pending
+            .map((p) => QueuedReminder.fromPayload(p.payload, p.title))
+            .whereType<QueuedReminder>()
+            .where((r) => r.time.isAfter(DateTime.now()))
+            .toList()
+          ..sort((a, b) => a.time.compareTo(b.time));
+    return ReminderStatus(
+      enabled: enabled,
+      exactAlarms: await android?.canScheduleExactNotifications(),
+      pendingCount: pending.length,
+      scheduled: scheduled,
+    );
+  }
+
+  Future<void> requestReminderPermissions() async {
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await android?.requestNotificationsPermission();
+    await android?.requestExactAlarmsPermission();
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+  }
 
   static const _taskChannel = AndroidNotificationDetails(
     'task_reminders',
@@ -146,7 +190,9 @@ class NotificationService {
       // device's actual zone, silently shifting it by the UTC offset (e.g.
       // ~5.5 hours for IST) rather than firing when the user actually asked.
       try {
-        tz.setLocalLocation(tz.getLocation(await FlutterTimezone.getLocalTimezone()));
+        tz.setLocalLocation(
+          tz.getLocation(await FlutterTimezone.getLocalTimezone()),
+        );
       } catch (_) {
         // Falls back to UTC — reminders still fire, just at the wrong
         // wall-clock time, which beats not firing at all.
@@ -155,12 +201,16 @@ class NotificationService {
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
       const iosInit = DarwinInitializationSettings();
       await _plugin.initialize(
-        settings: const InitializationSettings(android: androidInit, iOS: iosInit),
+        settings: const InitializationSettings(
+          android: androidInit,
+          iOS: iosInit,
+        ),
       );
 
-      final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin
-      >();
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       await android?.requestNotificationsPermission();
       // Android 12+ requires this separately from the notification
       // permission above — without it, `exactAllowWhileIdle`/`alarmClock`
@@ -176,7 +226,12 @@ class NotificationService {
           .resolvePlatformSpecificImplementation<
             IOSFlutterLocalNotificationsPlugin
           >()
-          ?.requestPermissions(alert: true, badge: true, sound: true, critical: true);
+          ?.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+            critical: true,
+          );
 
       _initialized = true;
     } catch (_) {
@@ -322,9 +377,19 @@ class NotificationService {
 
   /// Schedules (or re-schedules) one recurring notification at [hour]:[minute]
   /// local time every day, reminding the user to check in on open habits.
-  Future<void> scheduleDailyHabitReminder({int hour = 20, int minute = 0}) async {
+  Future<void> scheduleDailyHabitReminder({
+    int hour = 20,
+    int minute = 0,
+  }) async {
     final now = tz.TZDateTime.now(tz.local);
-    var next = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    var next = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
     if (next.isBefore(now)) next = next.add(const Duration(days: 1));
 
     await _plugin.zonedSchedule(
@@ -359,7 +424,14 @@ class NotificationService {
     ReminderMode mode = ReminderMode.notification,
   }) async {
     final now = tz.TZDateTime.now(tz.local);
-    var next = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    var next = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
     if (next.isBefore(now)) next = next.add(const Duration(days: 1));
 
     final isAlarm = mode == ReminderMode.alarm;
@@ -384,36 +456,59 @@ class NotificationService {
   /// iOS has a small pending-notification limit. Keep the earliest reminders,
   /// reserving room for unrelated bill/goal/global reminders. Opening/resuming
   /// the app replenishes this offline queue; no background execution is assumed.
-  Future<void> replaceScheduledReminders(List<ScheduledReminder> reminders,
-      {required Set<int> legacyIds}) async {
+  Future<void> replaceScheduledReminders(
+    List<ScheduledReminder> reminders, {
+    required Set<int> legacyIds,
+  }) async {
     await init();
     if (!_initialized) return;
     final pending = await _plugin.pendingNotificationRequests();
-    final ours = pending.where((p) => (p.payload?.startsWith('lifeos.schedule:') ?? false) || legacyIds.contains(p.id)).toList();
+    final ours = pending
+        .where(
+          (p) =>
+              (p.payload?.startsWith('lifeos.schedule:') ?? false) ||
+              legacyIds.contains(p.id),
+        )
+        .toList();
     final otherCount = pending.length - ours.length;
     final capacity = (60 - otherCount).clamp(0, 60).toInt();
     final selected = reminders.take(capacity).toList();
     final byId = {for (final r in selected) r.id: r};
     for (final old in ours) {
       final r = byId[old.id];
-      final payload = r == null ? null : 'lifeos.schedule:${r.key}:${r.time.toIso8601String()}:${r.mode.name}';
-      if (r == null || old.payload != payload || old.title != r.title) await _plugin.cancel(id: old.id);
+      final payload = r == null
+          ? null
+          : 'lifeos.schedule:${r.key}:${r.time.toIso8601String()}:${r.mode.name}';
+      if (r == null || old.payload != payload || old.title != r.title) {
+        await _plugin.cancel(id: old.id);
+      }
     }
     for (final r in selected) {
-      final payload = 'lifeos.schedule:${r.key}:${r.time.toIso8601String()}:${r.mode.name}';
-      if (ours.any((p) => p.id == r.id && p.payload == payload && p.title == r.title)) continue;
+      final payload =
+          'lifeos.schedule:${r.key}:${r.time.toIso8601String()}:${r.mode.name}';
+      if (ours.any(
+        (p) => p.id == r.id && p.payload == payload && p.title == r.title,
+      )) {
+        continue;
+      }
       final alarm = r.mode == ReminderMode.alarm;
       final android = switch (r.kind) {
         'habit' => alarm ? _habitAlarmChannel : _habitChannel,
         'event' => alarm ? _eventAlarmChannel : _eventChannel,
         _ => alarm ? _taskAlarmChannel : _taskChannel,
       };
-      await _plugin.zonedSchedule(id: r.id, title: r.title,
+      await _plugin.zonedSchedule(
+        id: r.id,
+        title: r.title,
         body: r.kind == 'habit' ? 'Time to check in' : 'Scheduled reminder',
-        payload: payload, scheduledDate: tz.TZDateTime.from(r.time, tz.local),
-        notificationDetails: NotificationDetails(android: android,
-          iOS: alarm ? _iosAlarmDetails : const DarwinNotificationDetails()),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle);
+        payload: payload,
+        scheduledDate: tz.TZDateTime.from(r.time, tz.local),
+        notificationDetails: NotificationDetails(
+          android: android,
+          iOS: alarm ? _iosAlarmDetails : const DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
     }
   }
 

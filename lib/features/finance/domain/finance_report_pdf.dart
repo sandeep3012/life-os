@@ -92,6 +92,18 @@ Future<Uint8List> reportToPdf(
         ),
         pw.SizedBox(height: 6),
         pw.Text('${report.period.label} | Currency: $currencyCode'),
+        pw.Text(report.scopeLabel),
+        if (report.previous case final previous?) ...[
+          pw.SizedBox(height: 12),
+          pw.Text('Compared with ${previous.period.label} (full periods)'),
+          pw.Text(
+            'Income change: ${amount(report.totalIncomeMinor - previous.totalIncomeMinor)}',
+          ),
+          pw.Text(
+            'Expense change: ${amount(report.totalExpenseMinor - previous.totalExpenseMinor)}',
+          ),
+          pw.Text('Net change: ${amount(report.netMinor - previous.netMinor)}'),
+        ],
         pw.SizedBox(height: 18),
         pw.Text(
           'Income: ${amount(report.totalIncomeMinor)}    Expense: ${amount(report.totalExpenseMinor)}',

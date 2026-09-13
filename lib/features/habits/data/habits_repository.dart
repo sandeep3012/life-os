@@ -23,7 +23,9 @@ class HabitsRepository {
   }
 
   Future<Habit?> getHabit(String id) {
-    return (_db.select(_db.habits)..where((h) => h.id.equals(id))).getSingleOrNull();
+    return (_db.select(
+      _db.habits,
+    )..where((h) => h.id.equals(id))).getSingleOrNull();
   }
 
   /// Sparse monthly/yearly schedules need history beyond a 60-day window.
@@ -48,21 +50,27 @@ class HabitsRepository {
     int? reminderHour,
     int? reminderMinute,
     String reminderMode = 'notification',
+    double? targetAmount,
+    String? targetUnit,
   }) async {
     if (schedule != null) RepeatSchedule.decode(schedule.encode());
-    final row = await _db.into(_db.habits).insertReturning(
-      HabitsCompanion.insert(
-        name: name,
-        categoryId: Value(categoryId),
-        description: Value(description),
-        schedule: Value(schedule?.encode()),
-        frequency: Value(schedule?.frequency ?? 'daily'),
-        reminderEnabled: Value(reminderEnabled),
-        reminderHour: Value(reminderHour),
-        reminderMinute: Value(reminderMinute),
-        reminderMode: Value(reminderMode),
-      ),
-    );
+    final row = await _db
+        .into(_db.habits)
+        .insertReturning(
+          HabitsCompanion.insert(
+            name: name,
+            categoryId: Value(categoryId),
+            description: Value(description),
+            schedule: Value(schedule?.encode()),
+            frequency: Value(schedule?.frequency ?? 'daily'),
+            targetAmount: Value(targetAmount),
+            targetUnit: Value(targetUnit),
+            reminderEnabled: Value(reminderEnabled),
+            reminderHour: Value(reminderHour),
+            reminderMinute: Value(reminderMinute),
+            reminderMode: Value(reminderMode),
+          ),
+        );
     return row.id;
   }
 
@@ -76,15 +84,22 @@ class HabitsRepository {
     int? reminderHour,
     int? reminderMinute,
     String reminderMode = 'notification',
+    double? targetAmount,
+    String? targetUnit,
   }) async {
     final old = await getHabit(id);
     if (old == null) return;
     if (schedule != null) {
       RepeatSchedule.decode(schedule.encode());
       if (schedule.encode() != old.repeatSchedule.encode()) {
-        schedule = RepeatSchedule(start: schedule.start, frequency: schedule.frequency,
-          weekdays: schedule.weekdays, end: schedule.end,
-          previous: old.repeatSchedule, effectiveFrom: dateOnly(DateTime.now()));
+        schedule = RepeatSchedule(
+          start: schedule.start,
+          frequency: schedule.frequency,
+          weekdays: schedule.weekdays,
+          end: schedule.end,
+          previous: old.repeatSchedule,
+          effectiveFrom: dateOnly(DateTime.now()),
+        );
       }
     } else {
       schedule = old.repeatSchedule;
@@ -96,6 +111,8 @@ class HabitsRepository {
         description: Value(description),
         schedule: Value(schedule.encode()),
         frequency: Value(schedule.frequency),
+        targetAmount: Value(targetAmount),
+        targetUnit: Value(targetUnit),
         reminderEnabled: Value(reminderEnabled),
         reminderHour: Value(reminderHour),
         reminderMinute: Value(reminderMinute),
@@ -118,6 +135,24 @@ class HabitsRepository {
     );
   }
 
+  Future<void> pauseHabit(String id, DateTime until) async {
+    final start = dateOnly(DateTime.now());
+    final end = dateOnly(until);
+    if (end.isBefore(start)) return;
+    await (_db.update(_db.habits)..where((h) => h.id.equals(id))).write(
+      HabitsCompanion(pauseStartedAt: Value(start), pausedUntil: Value(end)),
+    );
+  }
+
+  Future<void> resumeHabit(String id) async {
+    await (_db.update(_db.habits)..where((h) => h.id.equals(id))).write(
+      const HabitsCompanion(
+        pauseStartedAt: Value(null),
+        pausedUntil: Value(null),
+      ),
+    );
+  }
+
   Stream<List<Category>> watchHabitCategories() {
     return (_db.select(
       _db.categories,
@@ -133,14 +168,16 @@ class HabitsRepository {
     required String icon,
     required String colorHex,
   }) {
-    return _db.into(_db.categories).insertReturning(
-      CategoriesCompanion.insert(
-        name: name,
-        icon: Value(icon),
-        colorHex: colorHex,
-        kind: const Value('habit'),
-      ),
-    );
+    return _db
+        .into(_db.categories)
+        .insertReturning(
+          CategoriesCompanion.insert(
+            name: name,
+            icon: Value(icon),
+            colorHex: colorHex,
+            kind: const Value('habit'),
+          ),
+        );
   }
 
   Future<void> setCompletedForDate(
@@ -148,30 +185,45 @@ class HabitsRepository {
     DateTime date,
     bool completed, {
     String? notes,
+    double? amount,
   }) async {
     final day = dateOnly(date);
     final habit = await getHabit(habitId);
-    if (habit == null || !habit.scheduledOn(day) || day.isAfter(dateOnly(DateTime.now()))) return;
+    if (habit == null ||
+        !habit.scheduledOn(day) ||
+        day.isAfter(dateOnly(DateTime.now()))) {
+      return;
+    }
+    final measured = habit.targetAmount == null
+        ? null
+        : amount ?? (completed ? habit.targetAmount : 0);
+    final isComplete = habit.targetAmount == null
+        ? completed
+        : (measured ?? 0) >= habit.targetAmount!;
     final existing =
-        await (_db.select(_db.habitLogs)..where(
-          (l) => l.habitId.equals(habitId) & l.date.equals(day),
-        )).getSingleOrNull();
+        await (_db.select(_db.habitLogs)
+              ..where((l) => l.habitId.equals(habitId) & l.date.equals(day)))
+            .getSingleOrNull();
 
     if (existing == null) {
-      await _db.into(_db.habitLogs).insert(
-        HabitLogsCompanion.insert(
-          habitId: habitId,
-          date: day,
-          completed: Value(completed),
-          notes: Value(notes),
-        ),
-      );
+      await _db
+          .into(_db.habitLogs)
+          .insert(
+            HabitLogsCompanion.insert(
+              habitId: habitId,
+              date: day,
+              completed: Value(isComplete),
+              amount: Value(measured),
+              notes: Value(notes),
+            ),
+          );
     } else {
       await (_db.update(
         _db.habitLogs,
       )..where((l) => l.id.equals(existing.id))).write(
         HabitLogsCompanion(
-          completed: Value(completed),
+          completed: Value(isComplete),
+          amount: Value(measured),
           // Only overwrite notes when a caller actually passed one — the
           // plain today-toggle call site never passes `notes`, and it must
           // not silently null out a note set earlier from the detail screen.

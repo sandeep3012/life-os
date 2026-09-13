@@ -39,7 +39,10 @@ class _FakeNotificationService extends NotificationService {
   Future<void> init() async {}
 
   @override
-  Future<void> scheduleDailyHabitReminder({int hour = 20, int minute = 0}) async {
+  Future<void> scheduleDailyHabitReminder({
+    int hour = 20,
+    int minute = 0,
+  }) async {
     scheduleCalls++;
   }
 
@@ -80,7 +83,9 @@ void main() {
     );
   }
 
-  testWidgets('defaults render when no settings row exists yet', (tester) async {
+  testWidgets('defaults render when no settings row exists yet', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
@@ -90,53 +95,57 @@ void main() {
     expect(settings.aiInsightAlerts, isFalse);
   });
 
-  testWidgets('changing theme persists and is reflected back through the stream', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'changing theme persists and is reflected back through the stream',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Dark'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Dark'));
+      await tester.pumpAndSettle();
 
-    expect(container.read(settingsProvider).themeMode, ThemeMode.dark);
+      expect(container.read(settingsProvider).themeMode, ThemeMode.dark);
 
-    final row = await db.select(db.appSettings).getSingle();
-    expect(row.themeMode, 'dark');
-    // Untouched settings must survive a partial upsert.
-    expect(row.taskReminders, isTrue);
+      final row = await db.select(db.appSettings).getSingle();
+      expect(row.themeMode, 'dark');
+      // Untouched settings must survive a partial upsert.
+      expect(row.taskReminders, isTrue);
 
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(milliseconds: 1));
-  });
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 1));
+    },
+  );
 
-  testWidgets('turning off habit reminders cancels the scheduled notification', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'turning off habit reminders cancels the scheduled notification',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Habit reminders'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Habit reminders'));
+      await tester.pumpAndSettle();
 
-    expect(container.read(settingsProvider).habitReminders, isFalse);
-    expect(notifications.cancelCalls, 1);
+      expect(container.read(settingsProvider).habitReminders, isFalse);
+      expect(notifications.cancelCalls, 1);
 
-    await tester.tap(find.text('Habit reminders'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Habit reminders'));
+      await tester.pumpAndSettle();
 
-    expect(container.read(settingsProvider).habitReminders, isTrue);
-    expect(notifications.scheduleCalls, 1);
+      expect(container.read(settingsProvider).habitReminders, isTrue);
+      expect(notifications.scheduleCalls, 1);
 
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(milliseconds: 1));
-  });
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 1));
+    },
+  );
 
   testWidgets('changing currency updates the displayed symbol', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(find.text('Currency'), 200);
+    await tester.ensureVisible(find.text('Currency'));
+    await tester.pumpAndSettle();
     expect(find.text('₹ · INR'), findsOneWidget);
 
     await tester.tap(find.text('Currency'));
@@ -151,11 +160,15 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1));
   });
 
-  testWidgets('enabling app lock requires setting a PIN to complete', (tester) async {
+  testWidgets('enabling app lock requires setting a PIN to complete', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(find.text('App lock'), 200);
+    await tester.ensureVisible(find.text('App lock'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('App lock'));
     await tester.pumpAndSettle();
 
@@ -165,6 +178,8 @@ void main() {
     expect(container.read(settingsProvider).appLockEnabled, isFalse);
 
     await tester.scrollUntilVisible(find.text('App lock'), 200);
+    await tester.ensureVisible(find.text('App lock'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('App lock'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '1234');
@@ -192,6 +207,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(find.text('App lock'), 200);
+    await tester.ensureVisible(find.text('App lock'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('App lock'));
     await tester.pumpAndSettle();
 

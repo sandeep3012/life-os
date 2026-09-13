@@ -62,6 +62,7 @@ class AiAnalyserController {
       _ref.listen(allTasksProvider, (_, _) {}),
       _ref.listen(goalsListProvider, (_, _) {}),
       _ref.listen(allGoalLinksProvider, (_, _) {}),
+      _ref.listen(goalHabitsProvider, (_, _) {}),
       _ref.listen(billsProvider, (_, _) {}),
       _ref.listen(allGoalMilestonesProvider, (_, _) {}),
       _ref.listen(habitCategoriesProvider, (_, _) {}),
@@ -77,6 +78,7 @@ class AiAnalyserController {
         _ref.read(allTasksProvider.future),
         _ref.read(goalsListProvider.future),
         _ref.read(allGoalLinksProvider.future),
+        _ref.read(goalHabitsProvider.future),
         _ref.read(billsProvider.future),
         _ref.read(allGoalMilestonesProvider.future),
         _ref.read(habitCategoriesProvider.future),
@@ -105,7 +107,10 @@ class AiAnalyserController {
       habits: _ref.read(habitsWithProgressProvider),
       tasksCompletedThisWeek: momentum.thisWeek,
       tasksCompletedLastWeek: momentum.lastWeek,
-      goals: _ref.read(goalsWithLinksProvider),
+      goals: _ref
+          .read(goalsWithLinksProvider)
+          .where((g) => g.progressReady)
+          .toList(),
       bills: bills,
       netWorthTrend: netWorthTrend,
       milestonesByGoal: milestonesByGoal,

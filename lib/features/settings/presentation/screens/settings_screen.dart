@@ -15,6 +15,7 @@ import '../../../finance/presentation/screens/category_management_screen.dart';
 import '../../application/app_lock_providers.dart';
 import '../../application/settings_providers.dart';
 import '../widgets/pin_setup_sheet.dart';
+import '../widgets/reminder_status_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -121,16 +122,24 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
+          const ExpansionTile(
+            title: Text('Reminder status'),
+            children: [ReminderStatusCard()],
+          ),
           const _SectionTitle('Finance'),
           Card(
             child: Column(
               children: [
                 ListTile(
                   title: const Text('Categories'),
-                  subtitle: const Text('Add, edit, or remove transaction/budget categories'),
+                  subtitle: const Text(
+                    'Add, edit, or remove transaction/budget categories',
+                  ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const CategoryManagementScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const CategoryManagementScreen(),
+                    ),
                   ),
                 ),
                 const Divider(height: 1),
@@ -139,15 +148,20 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: const Text('Add, edit, or remove account types'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AccountTypeManagementScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const AccountTypeManagementScreen(),
+                    ),
                   ),
                 ),
                 const Divider(height: 1),
                 ListTile(
                   title: const Text('Currency'),
-                  subtitle: Text('${currencySymbolFor(settings.currencyCode)} · ${settings.currencyCode}'),
+                  subtitle: Text(
+                    '${currencySymbolFor(settings.currencyCode)} · ${settings.currencyCode}',
+                  ),
                   trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => _pickCurrency(context, ref, settings.currencyCode),
+                  onTap: () =>
+                      _pickCurrency(context, ref, settings.currencyCode),
                 ),
               ],
             ),
@@ -298,9 +312,9 @@ class _DemoDataCardState extends ConsumerState<_DemoDataCard> {
       await ref.read(demoDataServiceProvider).remove();
       if (!mounted) return;
       setState(() => _hasDemoData = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Demo data removed.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Demo data removed.')));
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -325,8 +339,8 @@ class _DemoDataCardState extends ConsumerState<_DemoDataCard> {
               hasDemoData == null
                   ? 'Checking demo data…'
                   : hasDemoData
-                      ? '24 months of removable synthetic data is installed'
-                      : 'Add 24 months of synthetic data to explore the app',
+                  ? '24 months of removable synthetic data is installed'
+                  : 'Add 24 months of synthetic data to explore the app',
             ),
           ),
           if (_busy) const LinearProgressIndicator(),
@@ -341,7 +355,9 @@ class _DemoDataCardState extends ConsumerState<_DemoDataCard> {
                       label: const Text('Remove demo data'),
                     )
                   : FilledButton.icon(
-                      onPressed: _busy || hasDemoData == null ? null : _generate,
+                      onPressed: _busy || hasDemoData == null
+                          ? null
+                          : _generate,
                       icon: const Icon(Icons.auto_awesome_rounded),
                       label: const Text('Generate demo data'),
                     ),
@@ -353,7 +369,11 @@ class _DemoDataCardState extends ConsumerState<_DemoDataCard> {
   }
 }
 
-Future<void> _pickCurrency(BuildContext context, WidgetRef ref, String currentCode) async {
+Future<void> _pickCurrency(
+  BuildContext context,
+  WidgetRef ref,
+  String currentCode,
+) async {
   final picked = await showDialog<String>(
     context: context,
     builder: (context) => SimpleDialog(
@@ -419,7 +439,10 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
   Future<void> _onAppLockChanged(bool enabled) async {
     final controller = ref.read(settingsControllerProvider);
     if (enabled) {
-      final result = await showPinSetupSheet(context, mode: PinSetupMode.create);
+      final result = await showPinSetupSheet(
+        context,
+        mode: PinSetupMode.create,
+      );
       if (result != true) return;
       await controller.setAppLockEnabled(true);
       // Setting a PIN mid-session shouldn't immediately lock the user out
@@ -474,7 +497,9 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
                   ? 'Unlock with Face ID or fingerprint'
                   : 'Not available on this device',
               value: settings.biometricEnabled && canUseBiometrics,
-              onChanged: canUseBiometrics ? controller.setBiometricEnabled : null,
+              onChanged: canUseBiometrics
+                  ? controller.setBiometricEnabled
+                  : null,
             ),
           ],
         ],
@@ -499,7 +524,8 @@ class _BackupCardState extends ConsumerState<_BackupCard> {
     setState(() => _op = _BackupOp.exporting);
     try {
       final bytes = await ref.read(backupServiceProvider).exportBackup();
-      final fileName = 'lifeos-backup-${DateFormat('yyyyMMdd-HHmm').format(DateTime.now())}.zip';
+      final fileName =
+          'lifeos-backup-${DateFormat('yyyyMMdd-HHmm').format(DateTime.now())}.zip';
       final path = await FilePicker.saveFile(
         dialogTitle: 'Save LifeOS backup',
         fileName: fileName,

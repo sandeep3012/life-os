@@ -15,7 +15,13 @@ class Habits extends Table {
   /// daily | weekly | custom
   TextColumn get frequency => text().withDefault(const Constant('daily'))();
   IntColumn get targetPerWeek => integer().withDefault(const Constant(7))();
+
+  /// Optional measured target, e.g. 20 pages or 2 litres. Null means binary.
+  RealColumn get targetAmount => real().nullable()();
+  TextColumn get targetUnit => text().nullable()();
   BoolColumn get archived => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get pauseStartedAt => dateTime().nullable()();
+  DateTimeColumn get pausedUntil => dateTime().nullable()();
 
   /// Optional — references a [Categories] row with `kind == 'habit'`. Not a
   /// hard dependency (unlike finance, which seeds default categories on
@@ -25,7 +31,8 @@ class Habits extends Table {
   /// Per-habit daily reminder, independent of the app-wide "Habit reminders"
   /// generic check-in nudge in Settings — off by default (opt-in), unlike
   /// tasks, since there's no natural due-date signal implying "remind me."
-  BoolColumn get reminderEnabled => boolean().withDefault(const Constant(false))();
+  BoolColumn get reminderEnabled =>
+      boolean().withDefault(const Constant(false))();
   IntColumn get reminderHour => integer().nullable()();
   IntColumn get reminderMinute => integer().nullable()();
 
@@ -47,6 +54,9 @@ class HabitLogs extends Table {
   /// Date-only (time truncated to midnight) — one log per habit per day.
   DateTimeColumn get date => dateTime()();
   BoolColumn get completed => boolean().withDefault(const Constant(true))();
+
+  /// Measured amount for quantity habits; null for binary habits.
+  RealColumn get amount => real().nullable()();
 
   /// Optional short note for the day (e.g. "felt great", "skipped, was
   /// sick") — completion itself stays a plain boolean, this is purely

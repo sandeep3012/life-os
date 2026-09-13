@@ -33,7 +33,10 @@ final habitCategoriesProvider = StreamProvider<List<Category>>((ref) {
 
 /// All logs for one habit, newest first — feeds the detail screen's history
 /// list. A family provider so each habit's history is watched independently.
-final habitLogHistoryProvider = StreamProvider.family<List<HabitLog>, String>((ref, habitId) {
+final habitLogHistoryProvider = StreamProvider.family<List<HabitLog>, String>((
+  ref,
+  habitId,
+) {
   return ref.watch(habitsRepositoryProvider).watchLogsForHabit(habitId);
 });
 
@@ -71,22 +74,33 @@ final habitsWithProgressProvider = Provider<List<HabitProgress>>((ref) {
       HabitProgress(
         habit: habit,
         streakDays: _computeStreak(habit, logsByHabit[habit.id] ?? const []),
-        weekCompletion: _computeWeekCompletion(habit, logsByHabit[habit.id] ?? const []),
-        category: habit.categoryId == null ? null : categoriesById[habit.categoryId],
+        weekCompletion: _computeWeekCompletion(
+          habit,
+          logsByHabit[habit.id] ?? const [],
+        ),
+        category: habit.categoryId == null
+            ? null
+            : categoriesById[habit.categoryId],
       ),
   ];
 });
 
 int _computeStreak(Habit habit, List<HabitLog> logs) {
-  final done = logs.where((l) => l.completed).map((l) => dateOnly(l.date)).toSet();
+  final done = logs
+      .where((l) => l.completed)
+      .map((l) => dateOnly(l.date))
+      .toSet();
   final today = dateOnly(DateTime.now());
   var cursor = today;
   var streak = 0;
   final start = dateOnly(habit.repeatSchedule.trackingStart);
   while (!cursor.isBefore(start)) {
     if (habit.scheduledOn(cursor)) {
-      if (done.contains(cursor)) { streak++; }
-      else if (cursor != today) { break; }
+      if (done.contains(cursor)) {
+        streak++;
+      } else if (cursor != today) {
+        break;
+      }
     }
     cursor = DateTime(cursor.year, cursor.month, cursor.day - 1);
   }
@@ -101,14 +115,21 @@ Map<int, bool> _computeWeekCompletion(Habit habit, List<HabitLog> logs) {
   final monday = startOfWeek(DateTime.now());
   return {
     for (var i = 0; i < 7; i++)
-      if (habit.scheduledOn(DateTime(monday.year, monday.month, monday.day + i)))
-      monday.add(Duration(days: i)).weekday:
-          completedDates.contains(monday.add(Duration(days: i))),
+      if (habit.scheduledOn(
+        DateTime(monday.year, monday.month, monday.day + i),
+      ))
+        monday.add(Duration(days: i)).weekday: completedDates.contains(
+          monday.add(Duration(days: i)),
+        ),
   };
 }
 
 class HabitsController {
-  HabitsController(this._repo, this._notifications, bool Function() remindersEnabled);
+  HabitsController(
+    this._repo,
+    this._notifications,
+    bool Function() remindersEnabled,
+  );
 
   final HabitsRepository _repo;
   final NotificationService _notifications;
@@ -122,6 +143,8 @@ class HabitsController {
     int? reminderHour,
     int? reminderMinute,
     ReminderMode reminderMode = ReminderMode.notification,
+    double? targetAmount,
+    String? targetUnit,
   }) async {
     await _repo.createHabit(
       name,
@@ -132,6 +155,8 @@ class HabitsController {
       reminderHour: reminderHour,
       reminderMinute: reminderMinute,
       reminderMode: reminderMode.storageValue,
+      targetAmount: targetAmount,
+      targetUnit: targetUnit,
     );
   }
 
@@ -145,6 +170,8 @@ class HabitsController {
     int? reminderHour,
     int? reminderMinute,
     ReminderMode reminderMode = ReminderMode.notification,
+    double? targetAmount,
+    String? targetUnit,
   }) async {
     await _notifications.cancelHabitReminder(habit.id);
     await _repo.updateHabit(
@@ -157,6 +184,8 @@ class HabitsController {
       reminderHour: reminderHour,
       reminderMinute: reminderMinute,
       reminderMode: reminderMode.storageValue,
+      targetAmount: targetAmount,
+      targetUnit: targetUnit,
     );
   }
 
@@ -165,7 +194,11 @@ class HabitsController {
     required String icon,
     required String colorHex,
   }) {
-    return _repo.createHabitCategory(name: name, icon: icon, colorHex: colorHex);
+    return _repo.createHabitCategory(
+      name: name,
+      icon: icon,
+      colorHex: colorHex,
+    );
   }
 
   Future<void> archiveHabit(Habit habit) async {
@@ -182,6 +215,22 @@ class HabitsController {
     return _repo.setCompletedForDate(habit.id, DateTime.now(), completed);
   }
 
+  Future<void> logAmount(Habit habit, DateTime date, double amount) {
+    return _repo.setCompletedForDate(
+      habit.id,
+      date,
+      amount >= (habit.targetAmount ?? 0),
+      amount: amount,
+    );
+  }
+
+  Future<void> pauseHabit(Habit habit, DateTime until) async {
+    await _notifications.cancelHabitReminder(habit.id);
+    await _repo.pauseHabit(habit.id, until);
+  }
+
+  Future<void> resumeHabit(Habit habit) => _repo.resumeHabit(habit.id);
+
   /// Passthrough for the detail screen's history list, kept distinct from
   /// [toggleToday] (which stays "today"-only for the list screen's tap).
   Future<void> setCompletedForDate(
@@ -189,10 +238,16 @@ class HabitsController {
     DateTime date,
     bool completed, {
     String? notes,
+    double? amount,
   }) {
-    return _repo.setCompletedForDate(habit.id, date, completed, notes: notes);
+    return _repo.setCompletedForDate(
+      habit.id,
+      date,
+      completed,
+      notes: notes,
+      amount: amount,
+    );
   }
-
 }
 
 final habitsControllerProvider = Provider<HabitsController>((ref) {

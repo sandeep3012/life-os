@@ -10,7 +10,11 @@ import 'goal_ring.dart';
 /// [formatMinor] expects), so this stays a separate formatter rather than
 /// being forced through `formatMinor` — but is still driven by the same
 /// dynamic [currencyCode] rather than a hardcoded symbol/locale.
-String formatGoalValue(String type, double value, {required String currencyCode}) {
+String formatGoalValue(
+  String type,
+  double value, {
+  required String currencyCode,
+}) {
   if (type == 'financial') {
     final option = supportedCurrencies.firstWhere(
       (c) => c.code == currencyCode,
@@ -28,7 +32,12 @@ String formatGoalValue(String type, double value, {required String currencyCode}
 }
 
 class GoalCard extends StatelessWidget {
-  const GoalCard({super.key, required this.data, required this.currencyCode, required this.onTap});
+  const GoalCard({
+    super.key,
+    required this.data,
+    required this.currencyCode,
+    required this.onTap,
+  });
 
   final GoalWithLinks data;
   final String currencyCode;
@@ -46,8 +55,14 @@ class GoalCard extends StatelessWidget {
     };
 
     final target = goal.targetValue;
-    final progressLabel = target == null
-        ? formatGoalValue(goal.type, goal.currentValue, currencyCode: currencyCode)
+    final progressLabel = !data.progressReady
+        ? 'Waiting for linked data…'
+        : target == null
+        ? formatGoalValue(
+            goal.type,
+            goal.currentValue,
+            currencyCode: currencyCode,
+          )
         : '${formatGoalValue(goal.type, goal.currentValue, currencyCode: currencyCode)} / ${formatGoalValue(goal.type, target, currencyCode: currencyCode)}';
 
     return Card(
@@ -88,9 +103,13 @@ class GoalCard extends StatelessWidget {
                         children: [
                           for (final link in data.links)
                             Chip(
-                              label: Text(link.label, style: const TextStyle(fontSize: 11)),
+                              label: Text(
+                                link.label,
+                                style: const TextStyle(fontSize: 11),
+                              ),
                               visualDensity: VisualDensity.compact,
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
                               padding: EdgeInsets.zero,
                             ),
                         ],

@@ -24,8 +24,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   ReportPeriodType _periodType = ReportPeriodType.month;
   DateTime _anchor = DateTime.now();
   final Set<String> _exportingFormats = {};
+  DateTimeRange? _customRange;
+  String? _accountId;
+  String? _categoryId;
 
-  ReportPeriod get _period => _periodType == ReportPeriodType.month
+  ReportPeriod get _period => _periodType == ReportPeriodType.custom
+      ? ReportPeriod.custom(
+          _customRange?.start ?? _anchor,
+          _customRange?.end ?? _anchor,
+        )
+      : _periodType == ReportPeriodType.month
       ? ReportPeriod.forMonth(_anchor)
       : ReportPeriod.forYear(_anchor.year);
 
@@ -35,6 +43,21 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           ? DateTime(_anchor.year, _anchor.month + direction)
           : DateTime(_anchor.year + direction);
     });
+  }
+
+  Future<void> _pickRange() async {
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2200),
+      initialDateRange: _customRange,
+    );
+    if (range != null && mounted) {
+      setState(() {
+        _customRange = range;
+        _periodType = ReportPeriodType.custom;
+      });
+    }
   }
 
   Future<void> _export(
@@ -58,7 +81,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ),
             );
       final fileName =
-          'lifeos-report-${report.period.type == ReportPeriodType.month ? DateFormat('yyyy-MM').format(report.period.start) : report.period.start.year}.${pdf ? 'pdf' : 'csv'}';
+          'lifeos-report-${DateFormat('yyyy-MM-dd').format(report.period.start)}-to-${DateFormat('yyyy-MM-dd').format(report.period.end.subtract(const Duration(days: 1)))}.${pdf ? 'pdf' : 'csv'}';
       final path = await FilePicker.saveFile(
         dialogTitle: 'Save report',
         fileName: fileName,
@@ -85,14 +108,32 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.appColors;
-    final transactions = ref.watch(transactionsProvider).value ?? const [];
-    final categories = ref.watch(categoriesProvider).value ?? const [];
+    final transactionState = ref.watch(transactionsProvider);
+    final categoryState = ref.watch(categoriesProvider);
+    final transactions = transactionState.value ?? const [];
+    final categories = categoryState.value ?? const [];
+    final exportReady =
+        transactionState.hasValue &&
+        !transactionState.hasError &&
+        categoryState.hasValue &&
+        !categoryState.hasError;
     final categoryNameById = {for (final c in categories) c.id: c.name};
     final currencyCode = ref.watch(settingsProvider).currencyCode;
+    final accounts = ref.watch(accountsProvider).value ?? const [];
+    final scope =
+        '${_accountId == null ? 'All accounts' : accounts.where((a) => a.id == _accountId).firstOrNull?.name ?? 'Selected account'} · ${_categoryId == null
+            ? 'All categories'
+            : _categoryId == ''
+            ? 'Uncategorized'
+            : categoryNameById[_categoryId] ?? 'Selected category'}';
     final report = buildFinanceReport(
       period: _period,
       allTransactions: transactions,
       categories: categories,
+      accountId: _accountId,
+      categoryId: _categoryId,
+      scopeLabel: scope,
+      comparePrevious: true,
     );
 
     return Scaffold(
@@ -111,9 +152,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   value: ReportPeriodType.year,
                   label: Text('Yearly'),
                 ),
+                ButtonSegment(
+                  value: ReportPeriodType.custom,
+                  label: Text('Custom'),
+                ),
               ],
               selected: {_periodType},
-              onSelectionChanged: (s) => setState(() => _periodType = s.first),
+              onSelectionChanged: (s) {
+                if (s.first == ReportPeriodType.custom) {
+                  _pickRange();
+                } else {
+                  setState(() => _periodType = s.first);
+                }
+              },
             ),
             const SizedBox(height: 12),
             Row(
@@ -121,15 +172,108 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.chevron_left_rounded),
-                  onPressed: () => _shiftPeriod(-1),
+                  onPressed: _periodType == ReportPeriodType.custom
+                      ? null
+                      : () => _shiftPeriod(-1),
                 ),
-                Text(_period.label, style: theme.textTheme.titleMedium),
+                Expanded(
+                  child: Text(
+                    _period.label,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
                 IconButton(
                   icon: const Icon(Icons.chevron_right_rounded),
-                  onPressed: () => _shiftPeriod(1),
+                  onPressed: _periodType == ReportPeriodType.custom
+                      ? null
+                      : () => _shiftPeriod(1),
                 ),
               ],
             ),
+            if (_periodType == ReportPeriodType.custom)
+              TextButton(
+                onPressed: _pickRange,
+                child: const Text('Change dates'),
+              ),
+            DropdownButtonFormField<String>(
+              initialValue: _accountId ?? 'all',
+              decoration: const InputDecoration(labelText: 'Account'),
+              isExpanded: true,
+              items: [
+                const DropdownMenuItem(
+                  value: 'all',
+                  child: Text('All accounts'),
+                ),
+                if (_accountId != null &&
+                    !accounts.any((a) => a.id == _accountId))
+                  DropdownMenuItem(
+                    value: _accountId,
+                    child: const Text('Unavailable account'),
+                  ),
+                for (final a in accounts)
+                  DropdownMenuItem(value: a.id, child: Text(a.name)),
+              ],
+              onChanged: (value) =>
+                  setState(() => _accountId = value == 'all' ? null : value),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _categoryId ?? 'all',
+              decoration: const InputDecoration(labelText: 'Category'),
+              isExpanded: true,
+              items: [
+                const DropdownMenuItem(
+                  value: 'all',
+                  child: Text('All categories'),
+                ),
+                const DropdownMenuItem(value: '', child: Text('Uncategorized')),
+                if (_categoryId != null &&
+                    _categoryId != '' &&
+                    !categories.any((c) => c.id == _categoryId))
+                  DropdownMenuItem(
+                    value: _categoryId,
+                    child: const Text('Unavailable category'),
+                  ),
+                for (final c in categories)
+                  DropdownMenuItem(value: c.id, child: Text(c.name)),
+              ],
+              onChanged: (value) =>
+                  setState(() => _categoryId = value == 'all' ? null : value),
+            ),
+            const SizedBox(height: 16),
+            if (report.previous case final previous?)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Compared with ${previous.period.label}',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const Text(
+                        'Full selected periods; the current period may be incomplete.',
+                      ),
+                      for (final row in [
+                        (
+                          'Income',
+                          report.totalIncomeMinor - previous.totalIncomeMinor,
+                        ),
+                        (
+                          'Expense',
+                          report.totalExpenseMinor - previous.totalExpenseMinor,
+                        ),
+                        ('Net', report.netMinor - previous.netMinor),
+                      ])
+                        Text(
+                          '${row.$1} change: ${formatMinor(row.$2, currencyCode: currencyCode, showSign: true)}',
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -204,9 +348,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed:
-                    _exportingFormats.contains('pdf') ||
-                        report.transactions.isEmpty
+                onPressed: _exportingFormats.contains('pdf') || !exportReady
                     ? null
                     : () => _export(report, categoryNameById, pdf: true),
                 icon: _exportingFormats.contains('pdf')
@@ -226,9 +368,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed:
-                    _exportingFormats.contains('csv') ||
-                        report.transactions.isEmpty
+                onPressed: _exportingFormats.contains('csv') || !exportReady
                     ? null
                     : () => _export(report, categoryNameById),
                 icon: _exportingFormats.contains('csv')
