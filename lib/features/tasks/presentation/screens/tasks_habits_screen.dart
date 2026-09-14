@@ -106,6 +106,8 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
     if (result == null) return;
     await ref.read(habitsControllerProvider).addHabit(
       result.name,
+      targetAmount: result.targetAmount,
+      targetUnit: result.targetUnit,
       description: result.description,
       schedule: result.schedule,
       categoryId: result.categoryId,

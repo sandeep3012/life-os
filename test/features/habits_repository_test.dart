@@ -2,6 +2,8 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_manager/core/database/app_database.dart';
+import 'package:life_manager/core/utils/date_utils.dart';
+import 'package:life_manager/core/scheduling/repeat_schedule.dart';
 import 'package:life_manager/features/habits/data/habits_repository.dart';
 
 void main() {
@@ -51,38 +53,62 @@ void main() {
     expect((await repo.getHabit(id))!.archived, isTrue);
   });
 
-  test('setCompletedForDate persists notes, and toggling without notes keeps them', () async {
-    final id = await repo.createHabit('Journal');
-    final day = DateTime(2026, 3, 10);
+  test(
+    'setCompletedForDate persists notes, and toggling without notes keeps them',
+    () async {
+      final id = await repo.createHabit('Journal');
+      final day = DateTime.now();
 
-    await repo.setCompletedForDate(id, day, true, notes: 'felt great');
-    var logs = await repo.watchLogsForHabit(id).first;
-    expect(logs.single.notes, 'felt great');
+      await repo.setCompletedForDate(id, day, true, notes: 'felt great');
+      var logs = await repo.watchLogsForHabit(id).first;
+      expect(logs.single.notes, 'felt great');
 
-    // Toggling completion without passing `notes` must not null it out.
-    await repo.setCompletedForDate(id, day, false);
-    logs = await repo.watchLogsForHabit(id).first;
-    expect(logs.single.completed, isFalse);
-    expect(logs.single.notes, 'felt great');
+      // Toggling completion without passing `notes` must not null it out.
+      await repo.setCompletedForDate(id, day, false);
+      logs = await repo.watchLogsForHabit(id).first;
+      expect(logs.single.completed, isFalse);
+      expect(logs.single.notes, 'felt great');
 
-    // Explicitly clearing the note (empty string) does update it.
-    await repo.setCompletedForDate(id, day, true, notes: '');
-    logs = await repo.watchLogsForHabit(id).first;
-    expect(logs.single.notes, '');
-  });
+      // Explicitly clearing the note (empty string) does update it.
+      await repo.setCompletedForDate(id, day, true, notes: '');
+      logs = await repo.watchLogsForHabit(id).first;
+      expect(logs.single.notes, '');
+    },
+  );
 
   test('watchLogsForHabit scopes to one habit, newest first', () async {
-    final a = await repo.createHabit('Habit A');
-    final b = await repo.createHabit('Habit B');
-    await repo.setCompletedForDate(a, DateTime(2026, 3, 1), true);
-    await repo.setCompletedForDate(a, DateTime(2026, 3, 3), true);
-    await repo.setCompletedForDate(b, DateTime(2026, 3, 2), true);
+    final day = DateTime.now();
+    final a = await repo.createHabit(
+      'Habit A',
+      schedule: RepeatSchedule(
+        start: day.subtract(const Duration(days: 2)),
+        frequency: 'daily',
+      ),
+    );
+    final b = await repo.createHabit(
+      'Habit B',
+      schedule: RepeatSchedule(
+        start: day.subtract(const Duration(days: 1)),
+        frequency: 'daily',
+      ),
+    );
+    await repo.setCompletedForDate(
+      a,
+      day.subtract(const Duration(days: 2)),
+      true,
+    );
+    await repo.setCompletedForDate(a, day, true);
+    await repo.setCompletedForDate(
+      b,
+      day.subtract(const Duration(days: 1)),
+      true,
+    );
 
     final logsForA = await repo.watchLogsForHabit(a).first;
     expect(logsForA, hasLength(2));
     expect(logsForA.every((l) => l.habitId == a), isTrue);
-    expect(logsForA.first.date, DateTime(2026, 3, 3));
-    expect(logsForA.last.date, DateTime(2026, 3, 1));
+    expect(logsForA.first.date, dateOnly(day));
+    expect(logsForA.last.date, dateOnly(day.subtract(const Duration(days: 2))));
   });
 
   test('watchArchivedHabits returns only archived habits', () async {
@@ -98,7 +124,10 @@ void main() {
   test('unarchiveHabit moves a habit back into watchHabits', () async {
     final id = await repo.createHabit('Cold shower');
     await repo.archiveHabit(id);
-    expect((await repo.watchHabits().first).map((h) => h.id), isNot(contains(id)));
+    expect(
+      (await repo.watchHabits().first).map((h) => h.id),
+      isNot(contains(id)),
+    );
 
     await repo.unarchiveHabit(id);
 
@@ -109,7 +138,11 @@ void main() {
   });
 
   test('createHabitCategory and watchHabitCategories filter by kind', () async {
-    await repo.createHabitCategory(name: 'Fitness', icon: 'fitness_center', colorHex: '#2E9E63');
+    await repo.createHabitCategory(
+      name: 'Fitness',
+      icon: 'fitness_center',
+      colorHex: '#2E9E63',
+    );
     // A finance-kind category must not leak into the habit list.
     await db
         .into(db.categories)

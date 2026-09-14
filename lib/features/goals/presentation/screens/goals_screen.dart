@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/currency_utils.dart';
 import '../../../finance/application/finance_providers.dart';
-import '../../../habits/application/habits_providers.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../application/goals_providers.dart';
 import '../widgets/goal_card.dart';
@@ -53,30 +53,38 @@ class GoalsScreen extends ConsumerWidget {
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          final habits = ref.read(habitsListProvider).value ?? const [];
+          final habits = (ref.read(goalHabitsProvider).value ?? const <Habit>[])
+              .where((h) => !h.archived)
+              .toList();
           final accounts = ref.read(activeAccountsProvider);
           final result = await showQuickAddGoalSheet(
             context,
             habits: habits,
             accounts: accounts,
-            currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+            currencySymbol: currencySymbolFor(
+              ref.read(settingsProvider).currencyCode,
+            ),
           );
           if (result == null) return;
-          final goalId = await ref.read(goalsControllerProvider).createGoal(
-            title: result.title,
-            type: result.type,
-            targetValue: result.targetValue,
-            targetDate: result.targetDate,
-            reminderEnabled: result.reminderEnabled,
-            reminderMode: result.reminderMode,
-            reminderDaysBefore: result.reminderDaysBefore,
-          );
+          final goalId = await ref
+              .read(goalsControllerProvider)
+              .createGoal(
+                title: result.title,
+                type: result.type,
+                targetValue: result.targetValue,
+                targetDate: result.targetDate,
+                reminderEnabled: result.reminderEnabled,
+                reminderMode: result.reminderMode,
+                reminderDaysBefore: result.reminderDaysBefore,
+              );
           if (result.link != null) {
-            await ref.read(goalsControllerProvider).addLink(
-              goalId: goalId,
-              linkedType: result.link!.type,
-              linkedId: result.link!.id,
-            );
+            await ref
+                .read(goalsControllerProvider)
+                .addLink(
+                  goalId: goalId,
+                  linkedType: result.link!.type,
+                  linkedId: result.link!.id,
+                );
           }
         },
         icon: const Icon(Icons.add_rounded),

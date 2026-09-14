@@ -26,9 +26,24 @@ class ScheduleCoordinator {
   DateTime? _generatedDay;
 
   void start() {
-    _changes = db.customSelect('SELECT 1', readsFrom: {
-      db.tasks, db.habits, db.habitLogs, db.events, db.appSettings, db.bills, db.goals,
-    }).watch().listen((_) => requestRefresh(), onError: (Object e) => debugPrint('Schedule watch: $e'));
+    _changes = db
+        .customSelect(
+          'SELECT 1',
+          readsFrom: {
+            db.tasks,
+            db.habits,
+            db.habitLogs,
+            db.events,
+            db.appSettings,
+            db.bills,
+            db.goals,
+          },
+        )
+        .watch()
+        .listen(
+          (_) => requestRefresh(),
+          onError: (Object e) => debugPrint('Schedule watch: $e'),
+        );
     _clock = Timer.periodic(const Duration(minutes: 1), (_) {
       if (_generatedDay != RepeatSchedule.day(DateTime.now())) requestRefresh();
     });
@@ -43,7 +58,10 @@ class ScheduleCoordinator {
 
   Future<void> _refresh() async {
     if (_disposed) return;
-    if (_running) { _again = true; return; }
+    if (_running) {
+      _again = true;
+      return;
+    }
     _running = true;
     try {
       final today = RepeatSchedule.day(DateTime.now());
@@ -58,56 +76,125 @@ class ScheduleCoordinator {
       final habits = await db.select(db.habits).get();
       final events = await db.select(db.events).get();
       final logs = await db.select(db.habitLogs).get();
-      final completed = {for (final l in logs.where((l) => l.completed))
-        '${l.habitId}:${RepeatSchedule.day(l.date).toIso8601String()}'};
+      final completed = {
+        for (final l in logs.where((l) => l.completed))
+          '${l.habitId}:${RepeatSchedule.day(l.date).toIso8601String()}',
+      };
       final now = DateTime.now();
       final reminders = <ScheduledReminder>[];
       for (final t in tasks) {
-        if (settings.taskReminders && t.reminderEnabled && t.status != 'done' && t.dueDate != null && t.dueDate!.isAfter(now)) {
-          reminders.add(ScheduledReminder(key: 'task:${t.id}', title: t.title,
-            time: t.dueDate!, kind: 'task', mode: ReminderMode.fromStorage(t.reminderMode)));
+        if (settings.taskReminders &&
+            t.reminderEnabled &&
+            t.status != 'done' &&
+            t.dueDate != null &&
+            t.dueDate!.isAfter(now)) {
+          reminders.add(
+            ScheduledReminder(
+              key: 'task:${t.id}',
+              title: t.title,
+              time: t.dueDate!,
+              kind: 'task',
+              mode: ReminderMode.fromStorage(t.reminderMode),
+            ),
+          );
         }
       }
       for (final e in events) {
-        final time = e.startTime.subtract(Duration(minutes: e.reminderMinutesBefore));
+        final time = e.startTime.subtract(
+          Duration(minutes: e.reminderMinutesBefore),
+        );
         if (settings.taskReminders && e.reminderEnabled && time.isAfter(now)) {
-          reminders.add(ScheduledReminder(key: 'event:${e.id}', title: e.title,
-            time: time, kind: 'event', mode: ReminderMode.fromStorage(e.reminderMode)));
+          reminders.add(
+            ScheduledReminder(
+              key: 'event:${e.id}',
+              title: e.title,
+              time: time,
+              kind: 'event',
+              mode: ReminderMode.fromStorage(e.reminderMode),
+            ),
+          );
         }
       }
       for (final h in habits) {
-        if (!settings.habitReminders || h.archived || !h.reminderEnabled || h.reminderHour == null || h.reminderMinute == null) continue;
+        if (!settings.habitReminders ||
+            h.archived ||
+            !h.reminderEnabled ||
+            h.reminderHour == null ||
+            h.reminderMinute == null) {
+          continue;
+        }
         // At most 60 candidates per habit; a single global queue is selected below.
         var count = 0;
-        for (final date in h.repeatSchedule.between(today, DateTime(today.year + 2, today.month, today.day))) {
-          if (completed.contains('${h.id}:${RepeatSchedule.day(date).toIso8601String()}')) continue;
-          final time = DateTime(date.year, date.month, date.day, h.reminderHour!, h.reminderMinute!);
+        for (final date in h.repeatSchedule.between(
+          today,
+          DateTime(today.year + 2, today.month, today.day),
+        )) {
+          if (!h.scheduledOn(date)) {
+            continue;
+          }
+          if (completed.contains(
+            '${h.id}:${RepeatSchedule.day(date).toIso8601String()}',
+          )) {
+            continue;
+          }
+          final time = DateTime(
+            date.year,
+            date.month,
+            date.day,
+            h.reminderHour!,
+            h.reminderMinute!,
+          );
           if (!time.isAfter(now)) continue;
-          reminders.add(ScheduledReminder(key: 'habit:${h.id}:${RepeatSchedule.day(date).toIso8601String()}',
-            title: h.name, time: time, kind: 'habit', mode: ReminderMode.fromStorage(h.reminderMode)));
+          reminders.add(
+            ScheduledReminder(
+              key:
+                  'habit:${h.id}:${RepeatSchedule.day(date).toIso8601String()}',
+              title: h.name,
+              time: time,
+              kind: 'habit',
+              mode: ReminderMode.fromStorage(h.reminderMode),
+            ),
+          );
           if (++count >= 60) break;
         }
       }
-      reminders.sort((a, b) { final c = a.time.compareTo(b.time); return c != 0 ? c : a.key.compareTo(b.key); });
-      if (_disposed) return;
-      await notifications.replaceScheduledReminders(reminders, legacyIds: {
-        for (final t in tasks) t.id.hashCode,
-        for (final e in events) 'event_reminder_${e.id}'.hashCode,
-        for (final h in habits) 'habit_reminder_${h.id}'.hashCode,
+      reminders.sort((a, b) {
+        final c = a.time.compareTo(b.time);
+        return c != 0 ? c : a.key.compareTo(b.key);
       });
+      if (_disposed) return;
+      await notifications.replaceScheduledReminders(
+        reminders,
+        legacyIds: {
+          for (final t in tasks) t.id.hashCode,
+          for (final e in events) 'event_reminder_${e.id}'.hashCode,
+          for (final h in habits) 'habit_reminder_${h.id}'.hashCode,
+        },
+      );
     } catch (e, stack) {
       debugPrint('Schedule refresh failed: $e\n$stack');
     } finally {
       _running = false;
-      if (_again && !_disposed) { _again = false; requestRefresh(); }
+      if (_again && !_disposed) {
+        _again = false;
+        requestRefresh();
+      }
     }
   }
 
-  void dispose() { _disposed = true; _changes?.cancel(); _clock?.cancel(); _debounce?.cancel(); }
+  void dispose() {
+    _disposed = true;
+    _changes?.cancel();
+    _clock?.cancel();
+    _debounce?.cancel();
+  }
 }
 
 final scheduleCoordinatorProvider = Provider<ScheduleCoordinator>((ref) {
-  final coordinator = ScheduleCoordinator(ref.watch(appDatabaseProvider), ref.watch(notificationServiceProvider));
+  final coordinator = ScheduleCoordinator(
+    ref.watch(appDatabaseProvider),
+    ref.watch(notificationServiceProvider),
+  );
   ref.onDispose(coordinator.dispose);
   return coordinator;
 });

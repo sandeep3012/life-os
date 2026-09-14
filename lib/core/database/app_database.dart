@@ -52,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -180,6 +180,27 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(habits, habits.description);
         await m.addColumn(events, events.schedule);
         await m.addColumn(events, events.description);
+      }
+      if (from < 16) {
+        await m.addColumn(goals, goals.progressMode);
+      }
+      if (from < 17) {
+        await m.addColumn(habits, habits.targetAmount);
+        await m.addColumn(habits, habits.targetUnit);
+        await m.addColumn(habits, habits.pauseStartedAt);
+        await m.addColumn(habits, habits.pausedUntil);
+        await m.addColumn(habitLogs, habitLogs.amount);
+      }
+      if (from < 18) {
+        await m.addColumn(habits, habits.pauseHistory);
+        await m.addColumn(habitLogs, habitLogs.targetAmountSnapshot);
+        await m.addColumn(habitLogs, habitLogs.targetUnitSnapshot);
+        await customStatement('''
+          UPDATE habit_logs SET
+            target_amount_snapshot = (SELECT target_amount FROM habits WHERE habits.id = habit_logs.habit_id),
+            target_unit_snapshot = (SELECT target_unit FROM habits WHERE habits.id = habit_logs.habit_id)
+          WHERE amount IS NOT NULL
+        ''');
       }
     },
   );

@@ -21,6 +21,8 @@ class QuickAddHabitResult {
     this.reminderHour,
     this.reminderMinute,
     this.reminderMode = ReminderMode.notification,
+    this.targetAmount,
+    this.targetUnit,
   });
 
   final String name;
@@ -33,6 +35,8 @@ class QuickAddHabitResult {
   final int? reminderHour;
   final int? reminderMinute;
   final ReminderMode reminderMode;
+  final double? targetAmount;
+  final String? targetUnit;
 }
 
 /// Sentinel dropdown value for the trailing "Add new category" entry —
@@ -47,7 +51,8 @@ Future<QuickAddHabitResult?> showQuickAddHabitSheet(
 }) {
   return showCompactEditorSheet<QuickAddHabitResult>(
     context: context,
-    builder: (context) => _QuickAddHabitSheet(categories: categories, initial: initial),
+    builder: (context) =>
+        _QuickAddHabitSheet(categories: categories, initial: initial),
   );
 }
 
@@ -58,22 +63,37 @@ class _QuickAddHabitSheet extends ConsumerStatefulWidget {
   final Habit? initial;
 
   @override
-  ConsumerState<_QuickAddHabitSheet> createState() => _QuickAddHabitSheetState();
+  ConsumerState<_QuickAddHabitSheet> createState() =>
+      _QuickAddHabitSheetState();
 }
 
 class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
-  late final _nameController = TextEditingController(text: widget.initial?.name);
-  late final _descriptionController = TextEditingController(text: widget.initial?.description);
-  late RepeatSchedule _schedule = widget.initial?.repeatSchedule ??
+  late final _nameController = TextEditingController(
+    text: widget.initial?.name,
+  );
+  late final _descriptionController = TextEditingController(
+    text: widget.initial?.description,
+  );
+  late RepeatSchedule _schedule =
+      widget.initial?.repeatSchedule ??
       RepeatSchedule(start: DateTime.now(), frequency: 'daily');
   late List<Category> _categories = List.of(widget.categories);
   late String? _categoryId = widget.initial?.categoryId;
   late bool _reminderEnabled = widget.initial?.reminderEnabled ?? false;
   late TimeOfDay _reminderTime = widget.initial?.reminderHour != null
-      ? TimeOfDay(hour: widget.initial!.reminderHour!, minute: widget.initial!.reminderMinute!)
+      ? TimeOfDay(
+          hour: widget.initial!.reminderHour!,
+          minute: widget.initial!.reminderMinute!,
+        )
       : const TimeOfDay(hour: 20, minute: 0);
   late ReminderMode _reminderMode = ReminderMode.fromStorage(
     widget.initial?.reminderMode ?? 'notification',
+  );
+  late final _targetController = TextEditingController(
+    text: widget.initial?.targetAmount?.toString() ?? '',
+  );
+  late final _unitController = TextEditingController(
+    text: widget.initial?.targetUnit ?? '',
   );
 
   /// Forces the (uncontrolled) category dropdown back to `_categoryId` after
@@ -83,21 +103,34 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
 
   bool get _isEditing => widget.initial != null;
 
+  bool get _validTarget {
+    final text = _targetController.text.trim();
+    if (text.isEmpty) return true;
+    final value = double.tryParse(text);
+    return value != null && value.isFinite && value > 0;
+  }
+
   @override
   void initState() {
     super.initState();
     _nameController.addListener(() => setState(() {}));
+    _targetController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _targetController.dispose();
+    _unitController.dispose();
     super.dispose();
   }
 
   Future<void> _pickTime() async {
-    final picked = await showTimePicker(context: context, initialTime: _reminderTime);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime,
+    );
     if (picked != null) setState(() => _reminderTime = picked);
   }
 
@@ -107,11 +140,13 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
       if (mounted) setState(() => _categoryFieldEpoch++);
       return;
     }
-    final category = await ref.read(habitsControllerProvider).createHabitCategory(
-      name: result.name,
-      icon: result.icon,
-      colorHex: result.colorHex,
-    );
+    final category = await ref
+        .read(habitsControllerProvider)
+        .createHabitCategory(
+          name: result.name,
+          icon: result.icon,
+          colorHex: result.colorHex,
+        );
     if (!mounted) return;
     setState(() {
       _categories = [..._categories, category];
@@ -122,119 +157,184 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return CompactEditorSheet(title: _isEditing ? 'Edit habit' : 'New habit', child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              autofocus: !_isEditing,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(hintText: 'e.g. Morning workout'),
+    return CompactEditorSheet(
+      title: _isEditing ? 'Edit habit' : 'New habit',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 16),
+          TextField(
+            controller: _nameController,
+            autofocus: !_isEditing,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(hintText: 'e.g. Morning workout'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _descriptionController,
+            maxLines: 1,
+            decoration: const InputDecoration(
+              labelText: 'Description (optional)',
             ),
-            const SizedBox(height: 12),
-            TextField(controller: _descriptionController, maxLines: 1,
-              decoration: const InputDecoration(labelText: 'Description (optional)')),
-            const SizedBox(height: 12),
-            const Text('Start date and time'),
-            ScheduleFields(value: _schedule, onChanged: (value) => setState(() => _schedule = value)),
-            if (_isEditing) const Text('Schedule changes apply from today; earlier history is preserved.'),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              key: ValueKey('$_categoryId#$_categoryFieldEpoch'),
-              initialValue: _categoryId,
-              decoration: const InputDecoration(labelText: 'Category (optional)'),
-              items: [
-                for (final c in _categories)
-                  DropdownMenuItem(
-                    value: c.id,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconOrEmoji(value: c.icon, size: 16),
-                        const SizedBox(width: 8),
-                        Text(c.name),
-                      ],
-                    ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _targetController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
                   ),
-                const DropdownMenuItem(
-                  value: _addCategoryValue,
+                  decoration: InputDecoration(
+                    labelText: 'Target (optional)',
+                    hintText: 'e.g. 20',
+                    errorText: _validTarget ? null : 'Enter a positive number',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _unitController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Unit',
+                    hintText: 'pages, km',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text('Leave target empty for a simple done/not done habit.'),
+          const SizedBox(height: 12),
+          const Text('Start date and time'),
+          ScheduleFields(
+            value: _schedule,
+            onChanged: (value) => setState(() => _schedule = value),
+          ),
+          if (_isEditing)
+            const Text(
+              'Schedule changes apply from today; earlier history is preserved.',
+            ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            key: ValueKey('$_categoryId#$_categoryFieldEpoch'),
+            initialValue: _categoryId,
+            decoration: const InputDecoration(labelText: 'Category (optional)'),
+            items: [
+              for (final c in _categories)
+                DropdownMenuItem(
+                  value: c.id,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.add_circle_outline_rounded, size: 16),
-                      SizedBox(width: 8),
-                      Text('Add new category'),
+                      IconOrEmoji(value: c.icon, size: 16),
+                      const SizedBox(width: 8),
+                      Text(c.name),
                     ],
                   ),
                 ),
-              ],
-              onChanged: (value) {
-                if (value == _addCategoryValue) {
-                  _addCategory();
-                } else {
-                  setState(() => _categoryId = value);
-                }
-              },
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Remind me'),
-              subtitle: const Text('Reminder on scheduled days'),
-              value: _reminderEnabled,
-              onChanged: (v) => setState(() => _reminderEnabled = v),
-            ),
-            if (_reminderEnabled)
-              TextButton.icon(
-                onPressed: _pickTime,
-                icon: const Icon(Icons.schedule_rounded, size: 16),
-                label: Text(_reminderTime.format(context)),
-              ),
-            if (_reminderEnabled)
-              Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 4),
-                child: SegmentedButton<ReminderMode>(
-                  segments: const [
-                    ButtonSegment(
-                      value: ReminderMode.notification,
-                      label: Text('Notification'),
-                      icon: Icon(Icons.notifications_rounded, size: 16),
-                    ),
-                    ButtonSegment(
-                      value: ReminderMode.alarm,
-                      label: Text('Alarm'),
-                      icon: Icon(Icons.alarm_rounded, size: 16),
-                    ),
+              const DropdownMenuItem(
+                value: _addCategoryValue,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.add_circle_outline_rounded, size: 16),
+                    SizedBox(width: 8),
+                    Text('Add new category'),
                   ],
-                  selected: {_reminderMode},
-                  onSelectionChanged: (s) => setState(() => _reminderMode = s.first),
                 ),
               ),
-            if (!_schedule.hasOccurrence) const Text('No scheduled day falls in this date range. Change the end date or weekdays.'),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _nameController.text.trim().isEmpty || !_schedule.hasOccurrence
-                    ? null
-                    : () => Navigator.of(context).pop(
-                        QuickAddHabitResult(
-                          name: _nameController.text.trim(),
-                          description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
-                          schedule: _schedule,
-                          categoryId: _categoryId,
-                          reminderEnabled: _reminderEnabled,
-                          reminderHour: _reminderEnabled ? _reminderTime.hour : null,
-                          reminderMinute: _reminderEnabled ? _reminderTime.minute : null,
-                          reminderMode: _reminderMode,
-                        ),
-                      ),
-                child: Text(_isEditing ? 'Save changes' : 'Add habit'),
+            ],
+            onChanged: (value) {
+              if (value == _addCategoryValue) {
+                _addCategory();
+              } else {
+                setState(() => _categoryId = value);
+              }
+            },
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Remind me'),
+            subtitle: const Text('Reminder on scheduled days'),
+            value: _reminderEnabled,
+            onChanged: (v) => setState(() => _reminderEnabled = v),
+          ),
+          if (_reminderEnabled)
+            TextButton.icon(
+              onPressed: _pickTime,
+              icon: const Icon(Icons.schedule_rounded, size: 16),
+              label: Text(_reminderTime.format(context)),
+            ),
+          if (_reminderEnabled)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 4),
+              child: SegmentedButton<ReminderMode>(
+                segments: const [
+                  ButtonSegment(
+                    value: ReminderMode.notification,
+                    label: Text('Notification'),
+                    icon: Icon(Icons.notifications_rounded, size: 16),
+                  ),
+                  ButtonSegment(
+                    value: ReminderMode.alarm,
+                    label: Text('Alarm'),
+                    icon: Icon(Icons.alarm_rounded, size: 16),
+                  ),
+                ],
+                selected: {_reminderMode},
+                onSelectionChanged: (s) =>
+                    setState(() => _reminderMode = s.first),
               ),
             ),
-          ],
-        ),
+          if (!_schedule.hasOccurrence)
+            const Text(
+              'No scheduled day falls in this date range. Change the end date or weekdays.',
+            ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed:
+                  _nameController.text.trim().isEmpty ||
+                      !_validTarget ||
+                      !_schedule.hasOccurrence
+                  ? null
+                  : () => Navigator.of(context).pop(
+                      QuickAddHabitResult(
+                        name: _nameController.text.trim(),
+                        description: _descriptionController.text.trim().isEmpty
+                            ? null
+                            : _descriptionController.text.trim(),
+                        schedule: _schedule,
+                        categoryId: _categoryId,
+                        reminderEnabled: _reminderEnabled,
+                        reminderHour: _reminderEnabled
+                            ? _reminderTime.hour
+                            : null,
+                        reminderMinute: _reminderEnabled
+                            ? _reminderTime.minute
+                            : null,
+                        reminderMode: _reminderMode,
+                        targetAmount: double.tryParse(
+                          _targetController.text.trim(),
+                        ),
+                        targetUnit:
+                            _targetController.text.trim().isEmpty ||
+                                _unitController.text.trim().isEmpty
+                            ? null
+                            : _unitController.text.trim(),
+                      ),
+                    ),
+              child: Text(_isEditing ? 'Save changes' : 'Add habit'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

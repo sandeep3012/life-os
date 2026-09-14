@@ -79,8 +79,9 @@ void main() {
     await openDetail(tester);
 
     expect(find.text('Morning workout'), findsWidgets);
-    expect(find.textContaining('day streak'), findsOneWidget);
-    expect(find.text('felt great'), findsOneWidget);
+    expect(find.textContaining('scheduled completions'), findsWidgets);
+    await tester.scrollUntilVisible(find.textContaining('felt great'), 200);
+    expect(find.textContaining('felt great'), findsOneWidget);
 
     await _disposeCleanly(tester);
   });
@@ -88,6 +89,7 @@ void main() {
   testWidgets('editing a log note persists the change', (tester) async {
     await openDetail(tester);
 
+    await tester.scrollUntilVisible(find.byIcon(Icons.edit_note_rounded), 200);
     await tester.tap(find.byIcon(Icons.edit_note_rounded));
     await tester.pumpAndSettle();
 
@@ -95,9 +97,38 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    expect(find.text('updated note'), findsOneWidget);
-    expect(find.text('felt great'), findsNothing);
+    expect(find.textContaining('updated note'), findsOneWidget);
+    expect(find.textContaining('felt great'), findsNothing);
 
+    await _disposeCleanly(tester);
+  });
+
+  testWidgets('quantity dialog prefills total and rejects invalid amounts', (tester) async {
+    await tester.runAsync(() async {
+      final repo = HabitsRepository(db);
+      await repo.updateHabit(id: habitId, name: 'Morning workout', targetAmount: 20, targetUnit: 'minutes');
+      await repo.setCompletedForDate(habitId, DateTime.now(), false, amount: 12);
+    });
+    await openDetail(tester);
+    await tester.scrollUntilVisible(find.text("Log today's amount"), 200);
+    await tester.pumpAndSettle();
+    await Scrollable.ensureVisible(tester.element(find.text("Log today's amount")), alignment: 0.5);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Log today's amount"));
+    await tester.pumpAndSettle();
+    expect(find.text('12.0'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), '-1');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter zero or a positive number'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), '25');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      final log = (await HabitsRepository(db).watchLogsForHabit(habitId).first).single;
+      expect(log.amount, 25);
+      expect(log.completed, isTrue);
+    });
     await _disposeCleanly(tester);
   });
 

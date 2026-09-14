@@ -10,6 +10,7 @@ import '../../settings/application/settings_providers.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../data/goals_repository.dart';
 import '../domain/goal_progress.dart';
+import '../domain/automatic_goal_progress.dart';
 
 final goalsRepositoryProvider = Provider<GoalsRepository>((ref) {
   return GoalsRepository(ref.watch(appDatabaseProvider));
@@ -23,9 +24,16 @@ final allGoalLinksProvider = StreamProvider<List<GoalLink>>((ref) {
   return ref.watch(goalsRepositoryProvider).watchAllLinks();
 });
 
-final goalMilestonesProvider = StreamProvider.family<List<GoalMilestone>, String>((ref, goalId) {
-  return ref.watch(goalsRepositoryProvider).watchMilestonesForGoal(goalId);
+/// Archived habits retain their earned contribution to linked goals.
+final goalHabitsProvider = StreamProvider<List<Habit>>((ref) {
+  final db = ref.watch(appDatabaseProvider);
+  return db.select(db.habits).watch();
 });
+
+final goalMilestonesProvider =
+    StreamProvider.family<List<GoalMilestone>, String>((ref, goalId) {
+      return ref.watch(goalsRepositoryProvider).watchMilestonesForGoal(goalId);
+    });
 
 final allGoalMilestonesProvider = StreamProvider<List<GoalMilestone>>((ref) {
   return ref.watch(goalsRepositoryProvider).watchAllMilestones();
@@ -37,9 +45,32 @@ final allGoalMilestonesProvider = StreamProvider<List<GoalMilestone>>((ref) {
 final goalsWithLinksProvider = Provider<List<GoalWithLinks>>((ref) {
   final goals = ref.watch(goalsListProvider).value ?? const [];
   final links = ref.watch(allGoalLinksProvider).value ?? const [];
-  final habitById = {for (final h in ref.watch(habitsListProvider).value ?? const []) h.id: h};
-  final accountById = {for (final a in ref.watch(accountsProvider).value ?? const []) a.id: a};
-  final taskById = {for (final t in ref.watch(allTasksProvider).value ?? const []) t.id: t};
+  final habitById = <String, Habit>{
+    for (final h in ref.watch(goalHabitsProvider).value ?? const []) h.id: h,
+  };
+  final accountById = <String, Account>{
+    for (final a in ref.watch(accountsProvider).value ?? const []) a.id: a,
+  };
+  final taskById = <String, Task>{
+    for (final t in ref.watch(allTasksProvider).value ?? const []) t.id: t,
+  };
+  final logs = ref.watch(habitLogsProvider).value ?? const [];
+  final currencyCode = ref.watch(settingsProvider).currencyCode;
+  bool ready(Goal goal) {
+    if (goal.progressMode != 'automatic') return true;
+    final source = switch (goal.type) {
+      'financial' => ref.watch(accountsProvider),
+      'habit' => ref.watch(goalHabitsProvider),
+      _ => ref.watch(allTasksProvider),
+    };
+    final linksState = ref.watch(allGoalLinksProvider);
+    final logState = ref.watch(habitLogsProvider);
+    return source.hasValue &&
+        !source.hasError &&
+        linksState.hasValue &&
+        !linksState.hasError &&
+        (goal.type != 'habit' || (logState.hasValue && !logState.hasError));
+  }
 
   String? labelFor(GoalLink link) {
     return switch (link.linkedType) {
@@ -53,11 +84,29 @@ final goalsWithLinksProvider = Provider<List<GoalWithLinks>>((ref) {
   return [
     for (final goal in goals)
       GoalWithLinks(
-        goal: goal,
+        progressReady: ready(goal),
+        goal: goal.progressMode == 'automatic' && ready(goal)
+            ? goal.copyWith(
+                currentValue: automaticGoalProgress(
+                  goal: goal,
+                  links: links,
+                  accounts: accountById.values.toList(),
+                  tasks: taskById.values.toList(),
+                  habits: habitById.values.toList(),
+                  logs: logs,
+                  currencyCode: currencyCode,
+                  now: DateTime.now(),
+                ),
+              )
+            : goal,
         links: [
           for (final link in links.where((l) => l.goalId == goal.id))
             if (labelFor(link) case final label?)
-              GoalLinkInfo(linkId: link.id, type: link.linkedType, label: label),
+              GoalLinkInfo(
+                linkId: link.id,
+                type: link.linkedType,
+                label: label,
+              ),
         ],
       ),
   ];
@@ -136,8 +185,16 @@ class GoalsController {
     return _repo.updateProgress(goalId, currentValue);
   }
 
-  Future<void> addLink({required String goalId, required String linkedType, required String linkedId}) {
-    return _repo.addLink(goalId: goalId, linkedType: linkedType, linkedId: linkedId);
+  Future<void> addLink({
+    required String goalId,
+    required String linkedType,
+    required String linkedId,
+  }) {
+    return _repo.addLink(
+      goalId: goalId,
+      linkedType: linkedType,
+      linkedId: linkedId,
+    );
   }
 
   Future<void> removeLink(String linkId) => _repo.removeLink(linkId);
@@ -147,7 +204,10 @@ class GoalsController {
     await _repo.deleteGoal(id);
   }
 
-  Future<String> createMilestone({required String goalId, required String title}) {
+  Future<String> createMilestone({
+    required String goalId,
+    required String title,
+  }) {
     return _repo.createMilestone(goalId: goalId, title: title);
   }
 
@@ -166,7 +226,9 @@ class GoalsController {
     required ReminderMode mode,
   }) async {
     if (!reminderEnabled || targetDate == null || !_remindersEnabled()) return;
-    final reminderTime = targetDate.subtract(Duration(days: reminderDaysBefore));
+    final reminderTime = targetDate.subtract(
+      Duration(days: reminderDaysBefore),
+    );
     await _notifications.scheduleGoalReminder(
       goalId: goalId,
       title: '$title due',
