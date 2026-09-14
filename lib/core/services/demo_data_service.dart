@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
+import '../utils/date_utils.dart';
 
 const _demoPrefix = 'demo-';
 
@@ -31,22 +32,41 @@ class DemoDataService {
   final AppDatabase _db;
 
   Future<bool> get hasDemoData async {
-    final row = await (_db.select(_db.accounts)
-          ..where((account) => account.id.like('$_demoPrefix%'))
-          ..limit(1))
-        .getSingleOrNull();
+    final row =
+        await (_db.select(_db.accounts)
+              ..where((account) => account.id.like('$_demoPrefix%'))
+              ..limit(1))
+            .getSingleOrNull();
+    return row != null;
+  }
+
+  /// Older cleanup matched child IDs only. Manual check-ins on demo habits
+  /// have UUIDs, and could survive after their parent demo habit was removed.
+  Future<bool> get _hasOrphanedDemoRows async {
+    final row = await _db.customSelect(
+      '''
+            SELECT 1 WHERE EXISTS (SELECT 1 FROM habit_logs WHERE id LIKE ? OR habit_id LIKE ?)
+              OR EXISTS (SELECT 1 FROM habits WHERE id LIKE ?)
+              OR EXISTS (SELECT 1 FROM tasks WHERE id LIKE ?)
+              OR EXISTS (SELECT 1 FROM events WHERE id LIKE ?)
+              OR EXISTS (SELECT 1 FROM transactions WHERE id LIKE ?)
+          ''',
+      variables: List.generate(6, (_) => Variable<String>('$_demoPrefix%')),
+    ).getSingleOrNull();
     return row != null;
   }
 
   Future<DemoDataSummary> generate({int months = 24}) async {
-    if (await hasDemoData) {
-      throw StateError('Demo data already exists. Remove it before generating again.');
+    if (months < 1) {
+      throw ArgumentError.value(months, 'months', 'Must be at least 1');
     }
-
     final random = Random(20260829);
     final now = DateTime.now();
     final currentMonth = DateTime(now.year, now.month);
-    final firstMonth = DateTime(currentMonth.year, currentMonth.month - months + 1);
+    final firstMonth = DateTime(
+      currentMonth.year,
+      currentMonth.month - months + 1,
+    );
 
     var transactionCount = 0;
     var habitLogCount = 0;
@@ -54,6 +74,16 @@ class DemoDataService {
     var eventCount = 0;
 
     await _db.transaction(() async {
+      if (await hasDemoData) {
+        throw StateError(
+          'Demo data already exists. Remove it before generating again.',
+        );
+      }
+      // Recovery and insertion are atomic: a failed generation must not
+      // leave cleanup partially applied.
+      if (await _hasOrphanedDemoRows) {
+        await remove();
+      }
       final categoryIds = await _ensureCategories();
       final accountIds = await _insertAccounts(now);
 
@@ -73,8 +103,9 @@ class DemoDataService {
           String paymentMode = 'upi',
         }) {
           final safeDay = min(day, daysInMonth);
-          final id = '$_demoPrefix transaction-${month.year}-${month.month}-$transactionCount'
-              .replaceAll(' ', '');
+          final id =
+              '$_demoPrefix transaction-${month.year}-${month.month}-$transactionCount'
+                  .replaceAll(' ', '');
           transactions.add(
             TransactionsCompanion.insert(
               id: Value(id),
@@ -125,7 +156,11 @@ class DemoDataService {
         );
 
         for (var i = 0; i < 8; i++) {
-          const groceryMerchants = ['Fresh Market', 'Daily Basket', 'Supermart'];
+          const groceryMerchants = [
+            'Fresh Market',
+            'Daily Basket',
+            'Supermart',
+          ];
           addTransaction(
             account: i.isEven ? 'checking' : 'credit',
             category: 'Groceries',
@@ -136,7 +171,12 @@ class DemoDataService {
           );
         }
         for (var i = 0; i < 7; i++) {
-          const diningMerchants = ['Cafe Corner', 'Spice Kitchen', 'Office Lunch', 'Weekend Dinner'];
+          const diningMerchants = [
+            'Cafe Corner',
+            'Spice Kitchen',
+            'Office Lunch',
+            'Weekend Dinner',
+          ];
           addTransaction(
             account: i == 0 ? 'cash' : 'credit',
             category: 'Dining',
@@ -147,11 +187,17 @@ class DemoDataService {
           );
         }
         for (var i = 0; i < 5; i++) {
-          const transportMerchants = ['Metro card', 'Fuel station', 'Cab ride', 'Bus pass'];
+          const transportMerchants = [
+            'Metro card',
+            'Fuel station',
+            'Cab ride',
+            'Bus pass',
+          ];
           addTransaction(
             account: 'checking',
             category: 'Transport',
-            merchant: transportMerchants[random.nextInt(transportMerchants.length)],
+            merchant:
+                transportMerchants[random.nextInt(transportMerchants.length)],
             amountMinor: -(3000 + random.nextInt(145000)),
             day: 1 + random.nextInt(daysInMonth),
           );
@@ -256,6 +302,7 @@ class DemoDataService {
 
       final habitIds = await _insertHabits(firstMonth);
       final logs = <HabitLogsCompanion>[];
+      final loggedDays = <String>{};
       final totalDays = now.difference(firstMonth).inDays + 1;
       final probabilities = <String, double>{
         'exercise': .68,
@@ -265,15 +312,28 @@ class DemoDataService {
         'sleep': .76,
       };
       for (var dayOffset = 0; dayOffset < totalDays; dayOffset++) {
-        final day = DateTime(firstMonth.year, firstMonth.month, firstMonth.day + dayOffset);
+        final day = dateOnly(
+          DateTime(
+            firstMonth.year,
+            firstMonth.month,
+            firstMonth.day + dayOffset,
+          ),
+        );
         for (final entry in habitIds.entries) {
           if (random.nextDouble() <= probabilities[entry.key]!) {
+            // HabitLogs enforces one record per habit per local calendar day.
+            // The set makes generation robust against locale/DST date
+            // normalization and future changes to the date-range loop.
+            final key = '${entry.value}:${day.toIso8601String()}';
+            if (!loggedDays.add(key)) continue;
             logs.add(
               HabitLogsCompanion.insert(
                 id: Value('$_demoPrefix habit-log-${entry.key}-$dayOffset'),
                 habitId: entry.value,
                 date: day,
-                notes: dayOffset % 47 == 0 ? const Value('Felt good today') : const Value.absent(),
+                notes: dayOffset % 47 == 0
+                    ? const Value('Felt good today')
+                    : const Value.absent(),
               ),
             );
             habitLogCount++;
@@ -301,15 +361,24 @@ class DemoDataService {
           final done = isPast && random.nextDouble() < .84;
           tasks.add(
             TasksCompanion.insert(
-              id: Value('$_demoPrefix task-$monthIndex-$i'),
+              // Subtasks reference this exact ID; whitespace breaks the FK.
+              id: Value('${_demoPrefix}task-$monthIndex-$i'),
               title: taskTitles[i],
               description: Value('Demo task for ${month.month}/${month.year}'),
               dueDate: Value(due),
-              priority: Value(i % 4 == 0 ? 'high' : i % 3 == 0 ? 'low' : 'medium'),
+              priority: Value(
+                i % 4 == 0
+                    ? 'high'
+                    : i % 3 == 0
+                    ? 'low'
+                    : 'medium',
+              ),
               status: Value(done ? 'done' : 'open'),
               reminderEnabled: const Value(false),
               createdAt: Value(due.subtract(const Duration(days: 5))),
-              completedAt: Value(done ? due.subtract(const Duration(hours: 2)) : null),
+              completedAt: Value(
+                done ? due.subtract(const Duration(hours: 2)) : null,
+              ),
             ),
           );
           taskCount++;
@@ -384,55 +453,57 @@ class DemoDataService {
   Future<void> remove() async {
     await _db.transaction(() async {
       // Children and polymorphic links must go before their parent records.
-      await (_db.delete(_db.entityTags)..where(
-            (row) => row.entityId.like('$_demoPrefix%'),
+      await (_db.delete(
+        _db.entityTags,
+      )..where((row) => row.entityId.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.goalMilestones,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.goalLinks,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.subtasks,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(_db.habitLogs)..where(
+            (row) =>
+                row.id.like('$_demoPrefix%') |
+                row.habitId.like('$_demoPrefix%'),
           ))
           .go();
-      await (_db.delete(_db.goalMilestones)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.goalLinks)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.subtasks)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.habitLogs)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.transactions)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.budgets)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.recurringTransactions)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.bills)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.events)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.notes)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.tasks)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.goals)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.habits)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.accounts)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
-      await (_db.delete(_db.categories)
-            ..where((row) => row.id.like('$_demoPrefix%')))
-          .go();
+      await (_db.delete(
+        _db.transactions,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.budgets,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.recurringTransactions,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.bills,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.events,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.notes,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.tasks,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.goals,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.habits,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.accounts,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      await (_db.delete(
+        _db.categories,
+      )..where((row) => row.id.like('$_demoPrefix%'))).go();
     });
   }
 
@@ -449,20 +520,25 @@ class DemoDataService {
     final existing = await _db.select(_db.categories).get();
     final result = <String, String>{};
     for (final entry in definitions.entries) {
-      final match = existing.where((row) => row.name.toLowerCase() == entry.key.toLowerCase()).firstOrNull;
+      final match = existing
+          .where((row) => row.name.toLowerCase() == entry.key.toLowerCase())
+          .firstOrNull;
       if (match != null) {
         result[entry.key] = match.id;
       } else {
-        final id = '$_demoPrefix category-${entry.key.toLowerCase()}'.replaceAll(' ', '-');
-        await _db.into(_db.categories).insert(
-          CategoriesCompanion.insert(
-            id: Value(id),
-            name: entry.key,
-            icon: Value(entry.value.$1),
-            colorHex: entry.value.$2,
-            kind: Value(entry.value.$3),
-          ),
-        );
+        final id = '$_demoPrefix category-${entry.key.toLowerCase()}'
+            .replaceAll(' ', '-');
+        await _db
+            .into(_db.categories)
+            .insert(
+              CategoriesCompanion.insert(
+                id: Value(id),
+                name: entry.key,
+                icon: Value(entry.value.$1),
+                colorHex: entry.value.$2,
+                kind: Value(entry.value.$3),
+              ),
+            );
         result[entry.key] = id;
       }
     }
@@ -478,10 +554,38 @@ class DemoDataService {
     };
     await _db.batch((batch) {
       batch.insertAll(_db.accounts, [
-        AccountsCompanion.insert(id: const Value('${_demoPrefix}account-checking'), name: 'Demo Checking', type: 'Checking', balanceMinor: const Value(2450000), createdAt: Value(DateTime(now.year - 2, now.month)), updatedAt: Value(now)),
-        AccountsCompanion.insert(id: const Value('${_demoPrefix}account-savings'), name: 'Emergency Savings', type: 'Savings', balanceMinor: const Value(8650000), createdAt: Value(DateTime(now.year - 2, now.month)), updatedAt: Value(now)),
-        AccountsCompanion.insert(id: const Value('${_demoPrefix}account-credit'), name: 'Rewards Card', type: 'Credit Card', balanceMinor: const Value(-1285000), createdAt: Value(DateTime(now.year - 2, now.month)), updatedAt: Value(now)),
-        AccountsCompanion.insert(id: const Value('${_demoPrefix}account-cash'), name: 'Cash Wallet', type: 'Cash', balanceMinor: const Value(185000), createdAt: Value(DateTime(now.year - 2, now.month)), updatedAt: Value(now)),
+        AccountsCompanion.insert(
+          id: const Value('${_demoPrefix}account-checking'),
+          name: 'Demo Checking',
+          type: 'Checking',
+          balanceMinor: const Value(2450000),
+          createdAt: Value(DateTime(now.year - 2, now.month)),
+          updatedAt: Value(now),
+        ),
+        AccountsCompanion.insert(
+          id: const Value('${_demoPrefix}account-savings'),
+          name: 'Emergency Savings',
+          type: 'Savings',
+          balanceMinor: const Value(8650000),
+          createdAt: Value(DateTime(now.year - 2, now.month)),
+          updatedAt: Value(now),
+        ),
+        AccountsCompanion.insert(
+          id: const Value('${_demoPrefix}account-credit'),
+          name: 'Rewards Card',
+          type: 'Credit Card',
+          balanceMinor: const Value(-1285000),
+          createdAt: Value(DateTime(now.year - 2, now.month)),
+          updatedAt: Value(now),
+        ),
+        AccountsCompanion.insert(
+          id: const Value('${_demoPrefix}account-cash'),
+          name: 'Cash Wallet',
+          type: 'Cash',
+          balanceMinor: const Value(185000),
+          createdAt: Value(DateTime(now.year - 2, now.month)),
+          updatedAt: Value(now),
+        ),
       ]);
     });
     return ids;
@@ -497,12 +601,43 @@ class DemoDataService {
     };
     await _db.batch((batch) {
       batch.insertAll(_db.habits, [
-        HabitsCompanion.insert(id: const Value('${_demoPrefix}habit-exercise'), name: 'Morning workout', frequency: const Value('custom'), targetPerWeek: const Value(5), createdAt: Value(firstMonth)),
-        HabitsCompanion.insert(id: const Value('${_demoPrefix}habit-water'), name: 'Drink 8 glasses of water', createdAt: Value(firstMonth)),
-        HabitsCompanion.insert(id: const Value('${_demoPrefix}habit-reading'), name: 'Read for 20 minutes', frequency: const Value('custom'), targetPerWeek: const Value(5), createdAt: Value(firstMonth)),
-        HabitsCompanion.insert(id: const Value('${_demoPrefix}habit-meditation'), name: 'Meditate', frequency: const Value('custom'), targetPerWeek: const Value(4), createdAt: Value(firstMonth)),
-        HabitsCompanion.insert(id: const Value('${_demoPrefix}habit-sleep'), name: 'Sleep before 11 PM', createdAt: Value(firstMonth)),
-        HabitsCompanion.insert(id: const Value('${_demoPrefix}habit-journal-archived'), name: 'Evening journal', archived: const Value(true), createdAt: Value(firstMonth)),
+        HabitsCompanion.insert(
+          id: const Value('${_demoPrefix}habit-exercise'),
+          name: 'Morning workout',
+          frequency: const Value('custom'),
+          targetPerWeek: const Value(5),
+          createdAt: Value(firstMonth),
+        ),
+        HabitsCompanion.insert(
+          id: const Value('${_demoPrefix}habit-water'),
+          name: 'Drink 8 glasses of water',
+          createdAt: Value(firstMonth),
+        ),
+        HabitsCompanion.insert(
+          id: const Value('${_demoPrefix}habit-reading'),
+          name: 'Read for 20 minutes',
+          frequency: const Value('custom'),
+          targetPerWeek: const Value(5),
+          createdAt: Value(firstMonth),
+        ),
+        HabitsCompanion.insert(
+          id: const Value('${_demoPrefix}habit-meditation'),
+          name: 'Meditate',
+          frequency: const Value('custom'),
+          targetPerWeek: const Value(4),
+          createdAt: Value(firstMonth),
+        ),
+        HabitsCompanion.insert(
+          id: const Value('${_demoPrefix}habit-sleep'),
+          name: 'Sleep before 11 PM',
+          createdAt: Value(firstMonth),
+        ),
+        HabitsCompanion.insert(
+          id: const Value('${_demoPrefix}habit-journal-archived'),
+          name: 'Evening journal',
+          archived: const Value(true),
+          createdAt: Value(firstMonth),
+        ),
       ]);
     });
     return ids;
@@ -514,39 +649,144 @@ class DemoDataService {
     Map<String, String> habitIds,
   ) async {
     final goals = [
-      GoalsCompanion.insert(id: const Value('${_demoPrefix}goal-emergency'), title: 'Build emergency fund', description: const Value('Save six months of essential expenses'), type: const Value('financial'), targetDate: Value(DateTime(now.year + 1, 3, 31)), targetValue: const Value(1200000.0), currentValue: const Value(865000.0), createdAt: Value(DateTime(now.year - 1, 1, 10))),
-      GoalsCompanion.insert(id: const Value('${_demoPrefix}goal-fitness'), title: 'Complete 200 workouts', type: const Value('habit'), targetDate: Value(DateTime(now.year, 12, 31)), targetValue: const Value(200.0), currentValue: const Value(137.0), createdAt: Value(DateTime(now.year, 1, 1))),
-      GoalsCompanion.insert(id: const Value('${_demoPrefix}goal-reading'), title: 'Read 24 books', type: const Value('generic'), targetDate: Value(DateTime(now.year, 12, 31)), targetValue: const Value(24.0), currentValue: const Value(16.0), createdAt: Value(DateTime(now.year, 1, 1))),
-      GoalsCompanion.insert(id: const Value('${_demoPrefix}goal-trip'), title: 'Plan a family trip', type: const Value('generic'), targetDate: Value(DateTime(now.year + 1, 1, 15)), targetValue: const Value(100.0), currentValue: const Value(45.0), createdAt: Value(DateTime(now.year, 4, 1))),
-      GoalsCompanion.insert(id: const Value('${_demoPrefix}goal-course'), title: 'Finish professional course', type: const Value('generic'), status: const Value('completed'), targetValue: const Value(12.0), currentValue: const Value(12.0), createdAt: Value(DateTime(now.year - 1, 6, 1))),
+      GoalsCompanion.insert(
+        id: const Value('${_demoPrefix}goal-emergency'),
+        title: 'Build emergency fund',
+        description: const Value('Save six months of essential expenses'),
+        type: const Value('financial'),
+        targetDate: Value(DateTime(now.year + 1, 3, 31)),
+        targetValue: const Value(1200000.0),
+        currentValue: const Value(865000.0),
+        createdAt: Value(DateTime(now.year - 1, 1, 10)),
+      ),
+      GoalsCompanion.insert(
+        id: const Value('${_demoPrefix}goal-fitness'),
+        title: 'Complete 200 workouts',
+        type: const Value('habit'),
+        targetDate: Value(DateTime(now.year, 12, 31)),
+        targetValue: const Value(200.0),
+        currentValue: const Value(137.0),
+        createdAt: Value(DateTime(now.year, 1, 1)),
+      ),
+      GoalsCompanion.insert(
+        id: const Value('${_demoPrefix}goal-reading'),
+        title: 'Read 24 books',
+        type: const Value('generic'),
+        targetDate: Value(DateTime(now.year, 12, 31)),
+        targetValue: const Value(24.0),
+        currentValue: const Value(16.0),
+        createdAt: Value(DateTime(now.year, 1, 1)),
+      ),
+      GoalsCompanion.insert(
+        id: const Value('${_demoPrefix}goal-trip'),
+        title: 'Plan a family trip',
+        type: const Value('generic'),
+        targetDate: Value(DateTime(now.year + 1, 1, 15)),
+        targetValue: const Value(100.0),
+        currentValue: const Value(45.0),
+        createdAt: Value(DateTime(now.year, 4, 1)),
+      ),
+      GoalsCompanion.insert(
+        id: const Value('${_demoPrefix}goal-course'),
+        title: 'Finish professional course',
+        type: const Value('generic'),
+        status: const Value('completed'),
+        targetValue: const Value(12.0),
+        currentValue: const Value(12.0),
+        createdAt: Value(DateTime(now.year - 1, 6, 1)),
+      ),
     ];
     await _db.batch((batch) {
       batch.insertAll(_db.goals, goals);
       batch.insertAll(_db.goalLinks, [
-        GoalLinksCompanion.insert(id: const Value('${_demoPrefix}goal-link-emergency'), goalId: '${_demoPrefix}goal-emergency', linkedType: 'account', linkedId: accountIds['savings']!),
-        GoalLinksCompanion.insert(id: const Value('${_demoPrefix}goal-link-fitness'), goalId: '${_demoPrefix}goal-fitness', linkedType: 'habit', linkedId: habitIds['exercise']!),
-        GoalLinksCompanion.insert(id: const Value('${_demoPrefix}goal-link-reading'), goalId: '${_demoPrefix}goal-reading', linkedType: 'habit', linkedId: habitIds['reading']!),
+        GoalLinksCompanion.insert(
+          id: const Value('${_demoPrefix}goal-link-emergency'),
+          goalId: '${_demoPrefix}goal-emergency',
+          linkedType: 'account',
+          linkedId: accountIds['savings']!,
+        ),
+        GoalLinksCompanion.insert(
+          id: const Value('${_demoPrefix}goal-link-fitness'),
+          goalId: '${_demoPrefix}goal-fitness',
+          linkedType: 'habit',
+          linkedId: habitIds['exercise']!,
+        ),
+        GoalLinksCompanion.insert(
+          id: const Value('${_demoPrefix}goal-link-reading'),
+          goalId: '${_demoPrefix}goal-reading',
+          linkedType: 'habit',
+          linkedId: habitIds['reading']!,
+        ),
       ]);
       batch.insertAll(_db.goalMilestones, [
-        GoalMilestonesCompanion.insert(id: const Value('${_demoPrefix}milestone-emergency-1'), goalId: '${_demoPrefix}goal-emergency', title: 'Save first ₹3 lakh', completed: const Value(true), sortOrder: const Value(0)),
-        GoalMilestonesCompanion.insert(id: const Value('${_demoPrefix}milestone-emergency-2'), goalId: '${_demoPrefix}goal-emergency', title: 'Reach ₹6 lakh', completed: const Value(true), sortOrder: const Value(1)),
-        GoalMilestonesCompanion.insert(id: const Value('${_demoPrefix}milestone-emergency-3'), goalId: '${_demoPrefix}goal-emergency', title: 'Reach final target', sortOrder: const Value(2)),
-        GoalMilestonesCompanion.insert(id: const Value('${_demoPrefix}milestone-trip-1'), goalId: '${_demoPrefix}goal-trip', title: 'Choose destination', completed: const Value(true), sortOrder: const Value(0)),
-        GoalMilestonesCompanion.insert(id: const Value('${_demoPrefix}milestone-trip-2'), goalId: '${_demoPrefix}goal-trip', title: 'Book travel and hotel', sortOrder: const Value(1)),
+        GoalMilestonesCompanion.insert(
+          id: const Value('${_demoPrefix}milestone-emergency-1'),
+          goalId: '${_demoPrefix}goal-emergency',
+          title: 'Save first ₹3 lakh',
+          completed: const Value(true),
+          sortOrder: const Value(0),
+        ),
+        GoalMilestonesCompanion.insert(
+          id: const Value('${_demoPrefix}milestone-emergency-2'),
+          goalId: '${_demoPrefix}goal-emergency',
+          title: 'Reach ₹6 lakh',
+          completed: const Value(true),
+          sortOrder: const Value(1),
+        ),
+        GoalMilestonesCompanion.insert(
+          id: const Value('${_demoPrefix}milestone-emergency-3'),
+          goalId: '${_demoPrefix}goal-emergency',
+          title: 'Reach final target',
+          sortOrder: const Value(2),
+        ),
+        GoalMilestonesCompanion.insert(
+          id: const Value('${_demoPrefix}milestone-trip-1'),
+          goalId: '${_demoPrefix}goal-trip',
+          title: 'Choose destination',
+          completed: const Value(true),
+          sortOrder: const Value(0),
+        ),
+        GoalMilestonesCompanion.insert(
+          id: const Value('${_demoPrefix}milestone-trip-2'),
+          goalId: '${_demoPrefix}goal-trip',
+          title: 'Book travel and hotel',
+          sortOrder: const Value(1),
+        ),
       ]);
     });
   }
 
   Future<void> _insertNotes(DateTime now) async {
     const content = [
-      ('Annual priorities', 'Health, family, focused work, and financial resilience.'),
-      ('Books to read', 'A mix of biographies, design, psychology, and personal finance.'),
-      ('Meal ideas', 'Vegetable pulao, lentil soup, grilled paneer, overnight oats.'),
-      ('Travel checklist', 'Tickets, accommodation, documents, medicine, chargers.'),
-      ('Monthly reflection', 'What went well, what felt difficult, and what to change.'),
+      (
+        'Annual priorities',
+        'Health, family, focused work, and financial resilience.',
+      ),
+      (
+        'Books to read',
+        'A mix of biographies, design, psychology, and personal finance.',
+      ),
+      (
+        'Meal ideas',
+        'Vegetable pulao, lentil soup, grilled paneer, overnight oats.',
+      ),
+      (
+        'Travel checklist',
+        'Tickets, accommodation, documents, medicine, chargers.',
+      ),
+      (
+        'Monthly reflection',
+        'What went well, what felt difficult, and what to change.',
+      ),
       ('Gift ideas', 'Keep a running list for family and close friends.'),
-      ('Home improvements', 'Better lighting, storage shelves, and desk organisation.'),
-      ('Learning plan', 'Two focused sessions each week and one monthly project.'),
+      (
+        'Home improvements',
+        'Better lighting, storage shelves, and desk organisation.',
+      ),
+      (
+        'Learning plan',
+        'Two focused sessions each week and one monthly project.',
+      ),
       ('Emergency contacts', 'Maintain an offline list of essential contacts.'),
       ('Ideas inbox', 'A place to capture ideas before organising them.'),
     ];
