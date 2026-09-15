@@ -2,11 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/app_database_provider.dart';
-import '../../../core/utils/date_utils.dart';
 import '../../finance/application/finance_providers.dart';
 import '../../goals/application/goals_providers.dart';
 import '../../habits/application/habits_providers.dart';
 import '../../tasks/application/tasks_providers.dart';
+import '../../settings/application/settings_providers.dart';
+import '../domain/task_momentum.dart';
 import '../data/insights_repository.dart';
 import '../domain/analytics_rule_engine.dart';
 
@@ -21,7 +22,11 @@ const _severityRank = {'critical': 0, 'warning': 1, 'info': 2, 'good': 3};
 final activeInsightsProvider = Provider<List<Insight>>((ref) {
   final insights = ref.watch(_activeInsightsStreamProvider).value ?? const [];
   final sorted = [...insights]
-    ..sort((a, b) => (_severityRank[a.severity] ?? 9).compareTo(_severityRank[b.severity] ?? 9));
+    ..sort(
+      (a, b) => (_severityRank[a.severity] ?? 9).compareTo(
+        _severityRank[b.severity] ?? 9,
+      ),
+    );
   return sorted;
 });
 
@@ -35,6 +40,10 @@ class AiAnalyserController {
   final Ref _ref;
 
   Future<void> refresh() async {
+    final settings = await _ref
+        .read(settingsRepositoryProvider)
+        .watchSettings()
+        .first;
     // The aggregate providers below read watched streams' *current* value
     // synchronously — on a cold visit (nothing else has watched these
     // providers yet, e.g. refresh() running at app startup before any
@@ -53,6 +62,7 @@ class AiAnalyserController {
       _ref.listen(allTasksProvider, (_, _) {}),
       _ref.listen(goalsListProvider, (_, _) {}),
       _ref.listen(allGoalLinksProvider, (_, _) {}),
+      _ref.listen(goalHabitsProvider, (_, _) {}),
       _ref.listen(billsProvider, (_, _) {}),
       _ref.listen(allGoalMilestonesProvider, (_, _) {}),
       _ref.listen(habitCategoriesProvider, (_, _) {}),
@@ -68,6 +78,7 @@ class AiAnalyserController {
         _ref.read(allTasksProvider.future),
         _ref.read(goalsListProvider.future),
         _ref.read(allGoalLinksProvider.future),
+        _ref.read(goalHabitsProvider.future),
         _ref.read(billsProvider.future),
         _ref.read(allGoalMilestonesProvider.future),
         _ref.read(habitCategoriesProvider.future),
@@ -80,23 +91,12 @@ class AiAnalyserController {
 
     final tasks = _ref.read(allTasksProvider).value ?? const [];
     final now = DateTime.now();
-    final thisWeekStart = startOfWeek(now);
-    final lastWeekStart = thisWeekStart.subtract(const Duration(days: 7));
-
-    int completedInRange(DateTime start, DateTime end) {
-      return tasks
-          .where(
-            (t) =>
-                t.completedAt != null &&
-                !t.completedAt!.isBefore(start) &&
-                t.completedAt!.isBefore(end),
-          )
-          .length;
-    }
+    final momentum = taskMomentumCounts(tasks, now);
 
     final bills = _ref.read(billsProvider).value ?? const [];
     final netWorthTrend = _ref.read(netWorthTrendProvider);
-    final allMilestones = _ref.read(allGoalMilestonesProvider).value ?? const [];
+    final allMilestones =
+        _ref.read(allGoalMilestonesProvider).value ?? const [];
     final milestonesByGoal = <String, List<GoalMilestone>>{};
     for (final m in allMilestones) {
       milestonesByGoal.putIfAbsent(m.goalId, () => []).add(m);
@@ -105,19 +105,25 @@ class AiAnalyserController {
     final drafts = computeInsights(
       budgets: _ref.read(budgetsWithProgressProvider),
       habits: _ref.read(habitsWithProgressProvider),
-      tasksCompletedThisWeek: completedInRange(thisWeekStart, now),
-      tasksCompletedLastWeek: completedInRange(lastWeekStart, thisWeekStart),
-      goals: _ref.read(goalsWithLinksProvider),
+      tasksCompletedThisWeek: momentum.thisWeek,
+      tasksCompletedLastWeek: momentum.lastWeek,
+      goals: _ref
+          .read(goalsWithLinksProvider)
+          .where((g) => g.progressReady)
+          .toList(),
       bills: bills,
       netWorthTrend: netWorthTrend,
       milestonesByGoal: milestonesByGoal,
       now: now,
+      currencyCode:
+          settings?.currencyCode ?? ResolvedSettings.defaults.currencyCode,
     );
 
     await _ref.read(insightsRepositoryProvider).reconcile(drafts);
   }
 
-  Future<void> dismiss(String id) => _ref.read(insightsRepositoryProvider).dismiss(id);
+  Future<void> dismiss(String id) =>
+      _ref.read(insightsRepositoryProvider).dismiss(id);
 }
 
 final aiAnalyserControllerProvider = Provider<AiAnalyserController>((ref) {

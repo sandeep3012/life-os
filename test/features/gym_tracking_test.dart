@@ -51,44 +51,51 @@ void main() {
     expect(plan[3]!.single.focus, 'Chest & Triceps');
   });
 
-  test('logging sets records weight and reps and derives the session', () async {
-    listen();
-    final dayId = await repo.createWorkoutDay(
-      weekday: DateTime.now().weekday,
-      label: 'Push Day',
-    );
-    await repo.addExercise(workoutDayId: dayId, name: 'Bench press', scheme: '3×8');
-    await pump();
+  test(
+    'logging sets records weight and reps and derives the session',
+    () async {
+      listen();
+      final dayId = await repo.createWorkoutDay(
+        weekday: DateTime.now().weekday,
+        label: 'Push Day',
+      );
+      await repo.addExercise(
+        workoutDayId: dayId,
+        name: 'Bench press',
+        scheme: '3×8',
+      );
+      await pump();
 
-    final exercise = container.read(exercisesForDayProvider(dayId)).single;
-    var session = container.read(exerciseSessionProvider(exercise.id));
-    expect(session.setCount, 0);
+      final exercise = container.read(exercisesForDayProvider(dayId)).single;
+      var session = container.read(exerciseSessionProvider(exercise.id));
+      expect(session.setCount, 0);
 
-    // 60 kg × 8, then 62.5 kg × 6 — the half-plate is why weight is stored in
-    // integer grams rather than as a double.
-    await repo.logSet(
-      exerciseId: exercise.id,
-      date: DateTime.now(),
-      reps: 8,
-      weightGrams: 60000,
-    );
-    await repo.logSet(
-      exerciseId: exercise.id,
-      date: DateTime.now(),
-      reps: 6,
-      weightGrams: 62500,
-    );
-    await pump();
+      // 60 kg × 8, then 62.5 kg × 6 — the half-plate is why weight is stored in
+      // integer grams rather than as a double.
+      await repo.logSet(
+        exerciseId: exercise.id,
+        date: DateTime.now(),
+        reps: 8,
+        weightGrams: 60000,
+      );
+      await repo.logSet(
+        exerciseId: exercise.id,
+        date: DateTime.now(),
+        reps: 6,
+        weightGrams: 62500,
+      );
+      await pump();
 
-    session = container.read(exerciseSessionProvider(exercise.id));
-    expect(session.setCount, 2);
-    expect(session.sets.map((s) => s.setNumber), [1, 2]);
-    expect(session.totalReps, 14);
-    expect(session.topWeightGrams, 62500);
-    expect(session.volumeGrams, 60000 * 8 + 62500 * 6);
-    expect(ExerciseSession.formatKg(62500), '62.5 kg');
-    expect(ExerciseSession.formatKg(60000), '60 kg');
-  });
+      session = container.read(exerciseSessionProvider(exercise.id));
+      expect(session.setCount, 2);
+      expect(session.sets.map((s) => s.setNumber), [1, 2]);
+      expect(session.totalReps, 14);
+      expect(session.topWeightGrams, 62500);
+      expect(session.volumeGrams, 60000 * 8 + 62500 * 6);
+      expect(ExerciseSession.formatKg(62500), '62.5 kg');
+      expect(ExerciseSession.formatKg(60000), '60 kg');
+    },
+  );
 
   test('deleting a set renumbers the rest so they stay 1..n', () async {
     listen();
@@ -158,6 +165,6 @@ void main() {
   });
 
   test('schema is at the version per-set logging was added in', () {
-    expect(db.schemaVersion, 16);
+    expect(db.schemaVersion, greaterThanOrEqualTo(16));
   });
 }

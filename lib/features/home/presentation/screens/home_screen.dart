@@ -52,145 +52,159 @@ class HomeScreen extends ConsumerWidget {
     // draws only from what no other section owns. Without this a task due today
     // renders twice on one screen — the same duplication rule
     // `upcomingItemsProvider` follows for the "Coming up" list.
-    final todayAgenda = ref
-        .watch(allCalendarItemsProvider)
-        .where(
-          (i) =>
-              isSameDay(i.date, now) &&
-              i.type != CalendarItemType.habit &&
-              i.type != CalendarItemType.task,
-        )
-        .toList()
-      ..sort((a, b) => (a.time ?? a.date).compareTo(b.time ?? b.date));
+    final todayAgenda =
+        ref
+            .watch(allCalendarItemsProvider)
+            .where(
+              (i) =>
+                  isSameDay(i.date, now) &&
+                  i.type != CalendarItemType.habit &&
+                  i.type != CalendarItemType.task,
+            )
+            .toList()
+          ..sort((a, b) => (a.time ?? a.date).compareTo(b.time ?? b.date));
 
     return Scaffold(
       drawer: const AppSidebar(),
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 16),
-              child: Builder(
-                builder: (context) => AppTopBar(
-                  centerText: DateFormat('EEE · d MMM yyyy').format(now),
-                  onMenu: () => Scaffold.of(context).openDrawer(),
-                  onAvatar: () => context.go(RoutePaths.settings),
+        child:
+            ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 16),
+                      child: Builder(
+                        builder: (context) => AppTopBar(
+                          centerText: DateFormat(
+                            'EEE · d MMM yyyy',
+                          ).format(now),
+                          onMenu: () => Scaffold.of(context).openDrawer(),
+                          onAvatar: () => context.go(RoutePaths.settings),
+                        ),
+                      ),
+                    ),
+
+                    _Greeting(text: _greeting(now), accent: scheme.secondary),
+                    const SizedBox(height: 6),
+                    Text(
+                      _summaryLine(todayTasks, habits.length),
+                      style: TextStyle(
+                        fontFamily: AppFonts.sans,
+                        fontSize: 14,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+                    _buildNowCard(
+                      ref.watch(todayWorkoutProvider),
+                      todayAgenda,
+                      now,
+                    ),
+
+                    if (todayTasks.tasks.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      SectionHeader(
+                        title: "Today's to-dos",
+                        trailing: Text(
+                          '${todayTasks.doneCount} of ${todayTasks.total} done',
+                          style: TextStyle(
+                            fontFamily: AppFonts.sans,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 11),
+                      for (final task in todayTasks.tasks.take(4))
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 9),
+                          child: TodoRow(
+                            key: ValueKey(task.id),
+                            title: task.title,
+                            onOpen: () =>
+                                context.push(RoutePaths.taskDetail(task.id)),
+                            done: task.status == 'done',
+                            time: task.dueDate == null
+                                ? 'No date'
+                                : DateFormat('h:mm a').format(task.dueDate!),
+                            dotColor: colors.tasks,
+                            onToggle: () => ref
+                                .read(tasksControllerProvider)
+                                .toggleDone(task),
+                          ),
+                        ),
+                    ],
+
+                    if (habits.isNotEmpty) ...[
+                      const SizedBox(height: 22),
+                      const SectionHeader(title: 'Habits to keep'),
+                      const SizedBox(height: 11),
+                      const _HabitGrid(),
+                    ],
+
+                    if (upcoming.isNotEmpty) ...[
+                      const SizedBox(height: 22),
+                      const SectionHeader(title: 'Coming up'),
+                      const SizedBox(height: 11),
+                      for (final item in upcoming)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 9),
+                          child: UpcomingRow(
+                            icon: _iconFor(item.type),
+                            color: _colorFor(item.type, colors),
+                            title: item.title,
+                            subtitle: item.subtitle,
+                            trailing: _relative(item.time ?? item.date, now),
+                            onTap: () => context.go(RoutePaths.calendar),
+                          ),
+                        ),
+                    ],
+
+                    if (insights.isNotEmpty) ...[
+                      const SizedBox(height: 22),
+                      const SectionHeader(title: 'Worth knowing'),
+                      const SizedBox(height: 11),
+                      InsightCard(
+                        insight: insights.first,
+                        onDismiss: () => ref
+                            .read(aiAnalyserControllerProvider)
+                            .dismiss(insights.first.id),
+                      ),
+                    ],
+
+                    // The comp has no empty state — it's drawn with a full day of data —
+                    // but a first-run dashboard needs to say something, and the hero's
+                    // "Nothing scheduled" only speaks for the schedule.
+                    if (todayTasks.tasks.isEmpty &&
+                        habits.isEmpty &&
+                        upcoming.isEmpty &&
+                        insights.isEmpty) ...[
+                      const SizedBox(height: 22),
+                      Center(
+                        child: Text(
+                          'Your dashboard fills in as you go',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: AppFonts.sans,
+                            fontSize: 14,
+                            color: colors.text3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                )
+                .animate()
+                .fadeIn(duration: AppMotion.screenEnter)
+                .slideY(
+                  begin: 0.02,
+                  end: 0.0,
+                  duration: AppMotion.screenEnter,
+                  curve: AppMotion.standard,
                 ),
-              ),
-            ),
-
-            _Greeting(text: _greeting(now), accent: scheme.secondary),
-            const SizedBox(height: 6),
-            Text(
-              _summaryLine(todayTasks, habits.length),
-              style: TextStyle(
-                fontFamily: AppFonts.sans,
-                fontSize: 14,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-
-            const SizedBox(height: 20),
-            _buildNowCard(ref.watch(todayWorkoutProvider), todayAgenda, now),
-
-            if (todayTasks.tasks.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              SectionHeader(
-                title: "Today's to-dos",
-                trailing: Text(
-                  '${todayTasks.doneCount} of ${todayTasks.total} done',
-                  style: TextStyle(
-                    fontFamily: AppFonts.sans,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 11),
-              for (final task in todayTasks.tasks.take(4))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 9),
-                  child: TodoRow(
-                    key: ValueKey(task.id),
-                    title: task.title,
-                    done: task.status == 'done',
-                    time: task.dueDate == null
-                        ? 'No date'
-                        : DateFormat('h:mm a').format(task.dueDate!),
-                    dotColor: colors.tasks,
-                    onToggle: () =>
-                        ref.read(tasksControllerProvider).toggleDone(task),
-                  ),
-                ),
-            ],
-
-            if (habits.isNotEmpty) ...[
-              const SizedBox(height: 22),
-              const SectionHeader(title: 'Habits to keep'),
-              const SizedBox(height: 11),
-              const _HabitGrid(),
-            ],
-
-            if (upcoming.isNotEmpty) ...[
-              const SizedBox(height: 22),
-              const SectionHeader(title: 'Coming up'),
-              const SizedBox(height: 11),
-              for (final item in upcoming)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 9),
-                  child: UpcomingRow(
-                    icon: _iconFor(item.type),
-                    color: _colorFor(item.type, colors),
-                    title: item.title,
-                    subtitle: item.subtitle,
-                    trailing: _relative(item.time ?? item.date, now),
-                    onTap: () => context.go(RoutePaths.calendar),
-                  ),
-                ),
-            ],
-
-            if (insights.isNotEmpty) ...[
-              const SizedBox(height: 22),
-              const SectionHeader(title: 'Worth knowing'),
-              const SizedBox(height: 11),
-              InsightCard(
-                insight: insights.first,
-                onDismiss: () => ref
-                    .read(aiAnalyserControllerProvider)
-                    .dismiss(insights.first.id),
-              ),
-            ],
-
-            // The comp has no empty state — it's drawn with a full day of data —
-            // but a first-run dashboard needs to say something, and the hero's
-            // "Nothing scheduled" only speaks for the schedule.
-            if (todayTasks.tasks.isEmpty &&
-                habits.isEmpty &&
-                upcoming.isEmpty &&
-                insights.isEmpty) ...[
-              const SizedBox(height: 22),
-              Center(
-                child: Text(
-                  'Your dashboard fills in as you go',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: AppFonts.sans,
-                    fontSize: 14,
-                    color: colors.text3,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ).animate().fadeIn(duration: AppMotion.screenEnter).slideY(
-              begin: 0.02,
-              end: 0.0,
-              duration: AppMotion.screenEnter,
-              curve: AppMotion.standard,
-            ),
       ),
     );
   }
@@ -212,11 +226,15 @@ class HomeScreen extends ConsumerWidget {
             ? 'Now · ${fmt.format(workout.start)}–${fmt.format(workout.end)}'
             : 'Today · ${fmt.format(workout.start)}',
         kicker: workout.day.label,
-        title: workout.day.focus.isEmpty ? workout.day.label : workout.day.focus,
+        title: workout.day.focus.isEmpty
+            ? workout.day.label
+            : workout.day.focus,
         upNextLabel: next == null ? null : 'Up next',
         upNextValue: next == null
             ? null
-            : next.scheme.isEmpty ? next.name : '${next.name} · ${next.scheme}',
+            : next.scheme.isEmpty
+            ? next.name
+            : '${next.name} · ${next.scheme}',
         progress: workout.progress,
         progressLeft:
             'Exercise ${workout.doneCount + (next == null ? 0 : 1)} of ${workout.exercises.length}',
@@ -249,13 +267,16 @@ class HomeScreen extends ConsumerWidget {
     }
     final isLive = live != null;
 
-    final current = live ??
+    final current =
+        live ??
         timed.firstWhere(
           (i) => i.time!.isAfter(now),
           orElse: () => agenda.first,
         );
     final index = agenda.indexOf(current);
-    final next = index >= 0 && index + 1 < agenda.length ? agenda[index + 1] : null;
+    final next = index >= 0 && index + 1 < agenda.length
+        ? agenda[index + 1]
+        : null;
 
     final start = current.time;
     final end = current.endTime;
@@ -308,7 +329,9 @@ class HomeScreen extends ConsumerWidget {
   static String _summaryLine(TodayTasks tasks, int habitCount) {
     final parts = <String>[];
     if (tasks.remaining > 0) {
-      parts.add('${tasks.remaining} to-do${tasks.remaining == 1 ? '' : 's'} left');
+      parts.add(
+        '${tasks.remaining} to-do${tasks.remaining == 1 ? '' : 's'} left',
+      );
     }
     if (habitCount > 0) {
       parts.add('$habitCount habit${habitCount == 1 ? '' : 's'} to keep');
@@ -374,7 +397,10 @@ class _Greeting extends StatelessWidget {
         style: base,
         children: [
           TextSpan(text: text),
-          TextSpan(text: '.', style: TextStyle(color: accent)),
+          TextSpan(
+            text: '.',
+            style: TextStyle(color: accent),
+          ),
         ],
       ),
     );
@@ -422,12 +448,12 @@ class _HabitGrid extends ConsumerWidget {
 
   Widget _tile(WidgetRef ref, HabitProgress progress) {
     final habit = progress.habit;
-    final target = habit.targetPerWeek;
-    final doneThisWeek =
-        progress.weekCompletion.values.where((done) => done).length;
+    final target = progress.weekCompletion.length;
+    final doneThisWeek = progress.weekCompletion.values
+        .where((done) => done)
+        .length;
     final ratio = target <= 0 ? 0.0 : doneThisWeek / target;
-    final doneToday =
-        progress.weekCompletion[DateTime.now().weekday] ?? false;
+    final doneToday = progress.weekCompletion[DateTime.now().weekday] ?? false;
 
     return HabitRingTile(
       name: habit.name,

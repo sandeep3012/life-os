@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/date_utils.dart';
 import 'habits_providers.dart';
+import '../domain/habit_schedule.dart';
 
 /// Week-level consistency for the Habits screen's headline.
 ///
@@ -15,6 +16,7 @@ class HabitConsistency {
     required this.completedLastWeek,
     required this.targetLastWeek,
     required this.dayCounts,
+    this.dayTargets = const {},
   });
 
   final int completedThisWeek;
@@ -24,6 +26,7 @@ class HabitConsistency {
 
   /// Completions per weekday, keyed 1 = Monday … 7 = Sunday, for the week strip.
   final Map<int, int> dayCounts;
+  final Map<int, int> dayTargets;
 
   double get ratio =>
       targetThisWeek == 0 ? 0 : completedThisWeek / targetThisWeek;
@@ -48,15 +51,45 @@ final habitConsistencyProvider = Provider<HabitConsistency>((ref) {
   final lastWeekStart = thisWeekStart.subtract(const Duration(days: 7));
   final nextWeekStart = thisWeekStart.add(const Duration(days: 7));
 
-  final active = habits.map((h) => h.id).toSet();
-  final weeklyTarget = habits.fold<int>(0, (sum, h) => sum + h.targetPerWeek);
+  final active = {for (final habit in habits) habit.id: habit};
+  final dayTargets = {
+    for (var i = 0; i < 7; i++)
+      i + 1: habits
+          .where(
+            (h) => h.scheduledOn(
+              DateTime(
+                thisWeekStart.year,
+                thisWeekStart.month,
+                thisWeekStart.day + i,
+              ),
+            ),
+          )
+          .length,
+  };
+  final weeklyTarget = dayTargets.values.fold<int>(0, (a, b) => a + b);
+  var previousTarget = 0;
+  for (var i = 0; i < 7; i++) {
+    previousTarget += habits
+        .where(
+          (h) => h.scheduledOn(
+            DateTime(
+              lastWeekStart.year,
+              lastWeekStart.month,
+              lastWeekStart.day + i,
+            ),
+          ),
+        )
+        .length;
+  }
 
   var thisWeek = 0;
   var lastWeek = 0;
   final dayCounts = <int, int>{for (var d = 1; d <= 7; d++) d: 0};
 
   for (final log in logs) {
-    if (!log.completed || !active.contains(log.habitId)) continue;
+    if (!log.completed ||
+        !(active[log.habitId]?.scheduledOn(log.date) ?? false))
+      continue;
     final day = dateOnly(log.date);
     if (!day.isBefore(thisWeekStart) && day.isBefore(nextWeekStart)) {
       thisWeek++;
@@ -70,7 +103,8 @@ final habitConsistencyProvider = Provider<HabitConsistency>((ref) {
     completedThisWeek: thisWeek,
     targetThisWeek: weeklyTarget,
     completedLastWeek: lastWeek,
-    targetLastWeek: weeklyTarget,
+    targetLastWeek: previousTarget,
     dayCounts: dayCounts,
+    dayTargets: dayTargets,
   );
 });

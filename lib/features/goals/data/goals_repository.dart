@@ -15,10 +15,13 @@ class GoalsRepository {
 
   Stream<List<GoalLink>> watchAllLinks() => _db.select(_db.goalLinks).watch();
 
-  Stream<List<GoalMilestone>> watchAllMilestones() => _db.select(_db.goalMilestones).watch();
+  Stream<List<GoalMilestone>> watchAllMilestones() =>
+      _db.select(_db.goalMilestones).watch();
 
   Future<Goal?> getGoal(String id) {
-    return (_db.select(_db.goals)..where((g) => g.id.equals(id))).getSingleOrNull();
+    return (_db.select(
+      _db.goals,
+    )..where((g) => g.id.equals(id))).getSingleOrNull();
   }
 
   Future<String> createGoal({
@@ -31,18 +34,20 @@ class GoalsRepository {
     String reminderMode = 'notification',
     int reminderDaysBefore = 0,
   }) async {
-    final row = await _db.into(_db.goals).insertReturning(
-      GoalsCompanion.insert(
-        title: title,
-        type: Value(type),
-        targetValue: Value(targetValue),
-        currentValue: Value(currentValue),
-        targetDate: Value(targetDate),
-        reminderEnabled: Value(reminderEnabled),
-        reminderMode: Value(reminderMode),
-        reminderDaysBefore: Value(reminderDaysBefore),
-      ),
-    );
+    final row = await _db
+        .into(_db.goals)
+        .insertReturning(
+          GoalsCompanion.insert(
+            title: title,
+            type: Value(type),
+            targetValue: Value(targetValue),
+            currentValue: Value(currentValue),
+            targetDate: Value(targetDate),
+            reminderEnabled: Value(reminderEnabled),
+            reminderMode: Value(reminderMode),
+            reminderDaysBefore: Value(reminderDaysBefore),
+          ),
+        );
     return row.id;
   }
 
@@ -72,8 +77,17 @@ class GoalsRepository {
   }
 
   Future<void> updateProgress(String goalId, double currentValue) {
+    return (_db.update(_db.goals)..where(
+          (g) =>
+              g.id.equals(goalId) &
+              (g.progressMode.isNull() | g.progressMode.equals('manual')),
+        ))
+        .write(GoalsCompanion(currentValue: Value(currentValue)));
+  }
+
+  Future<void> setAutomaticProgress(String goalId, bool enabled) {
     return (_db.update(_db.goals)..where((g) => g.id.equals(goalId))).write(
-      GoalsCompanion(currentValue: Value(currentValue)),
+      GoalsCompanion(progressMode: Value(enabled ? 'automatic' : 'manual')),
     );
   }
 
@@ -82,9 +96,15 @@ class GoalsRepository {
     required String linkedType,
     required String linkedId,
   }) {
-    return _db.into(_db.goalLinks).insert(
-      GoalLinksCompanion.insert(goalId: goalId, linkedType: linkedType, linkedId: linkedId),
-    );
+    return _db
+        .into(_db.goalLinks)
+        .insert(
+          GoalLinksCompanion.insert(
+            goalId: goalId,
+            linkedType: linkedType,
+            linkedId: linkedId,
+          ),
+        );
   }
 
   Future<void> removeLink(String linkId) {
@@ -93,7 +113,9 @@ class GoalsRepository {
 
   Future<void> deleteGoal(String id) async {
     await (_db.delete(_db.goalLinks)..where((l) => l.goalId.equals(id))).go();
-    await (_db.delete(_db.goalMilestones)..where((m) => m.goalId.equals(id))).go();
+    await (_db.delete(
+      _db.goalMilestones,
+    )..where((m) => m.goalId.equals(id))).go();
     await (_db.delete(_db.goals)..where((g) => g.id.equals(id))).go();
   }
 
@@ -107,20 +129,28 @@ class GoalsRepository {
         .watch();
   }
 
-  Future<String> createMilestone({required String goalId, required String title}) async {
+  Future<String> createMilestone({
+    required String goalId,
+    required String title,
+  }) async {
     final count = await (_db.select(
       _db.goalMilestones,
     )..where((m) => m.goalId.equals(goalId))).get().then((rows) => rows.length);
-    final row = await _db.into(_db.goalMilestones).insertReturning(
-      GoalMilestonesCompanion.insert(goalId: goalId, title: title, sortOrder: Value(count)),
-    );
+    final row = await _db
+        .into(_db.goalMilestones)
+        .insertReturning(
+          GoalMilestonesCompanion.insert(
+            goalId: goalId,
+            title: title,
+            sortOrder: Value(count),
+          ),
+        );
     return row.id;
   }
 
   Future<void> setMilestoneCompleted(String id, bool completed) {
-    return (_db.update(_db.goalMilestones)..where((m) => m.id.equals(id))).write(
-      GoalMilestonesCompanion(completed: Value(completed)),
-    );
+    return (_db.update(_db.goalMilestones)..where((m) => m.id.equals(id)))
+        .write(GoalMilestonesCompanion(completed: Value(completed)));
   }
 
   Future<void> deleteMilestone(String id) {

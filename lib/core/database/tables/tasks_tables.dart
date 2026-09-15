@@ -4,6 +4,9 @@ import 'package:uuid/uuid.dart';
 import 'categories_table.dart';
 
 class Tasks extends Table {
+  TextColumn get schedule => text().nullable()();
+  TextColumn get recurrenceId => text().nullable()();
+  DateTimeColumn get recurrenceNextGenerationDate => dateTime().nullable()();
   TextColumn get id => text().clientDefault(() => const Uuid().v4())();
   TextColumn get title => text()();
   TextColumn get description => text().nullable()();
@@ -20,7 +23,8 @@ class Tasks extends Table {
   /// scheduled for that moment. Defaults true so existing behavior (any task
   /// with a due date got a reminder) is unchanged for tasks created before
   /// this toggle existed.
-  BoolColumn get reminderEnabled => boolean().withDefault(const Constant(true))();
+  BoolColumn get reminderEnabled =>
+      boolean().withDefault(const Constant(true))();
 
   /// notification | alarm — see `ReminderMode`.
   TextColumn get reminderMode =>

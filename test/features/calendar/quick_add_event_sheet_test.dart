@@ -58,18 +58,25 @@ Future<QuickAddEventResult?> _openSheet(
 void main() {
   final today = DateTime(2026, 3, 10);
 
-  testWidgets('create mode starts with an empty title and disabled submit', (tester) async {
+  testWidgets('create mode starts with an empty title and disabled submit', (
+    tester,
+  ) async {
     await _openSheet(tester, initialDate: today);
 
     expect(find.text('New event'), findsOneWidget);
-    final submit = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Add event'));
+    final submit = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Add event'),
+    );
     expect(submit.onPressed, isNull);
     // Frequency picker is editable (create mode, not part of a series).
     expect(find.widgetWithText(ChoiceChip, 'Does not repeat'), findsOneWidget);
   });
 
   testWidgets('edit mode prefills fields from the given event', (tester) async {
-    final event = _event(title: 'Standup', startTime: DateTime(2026, 3, 10, 9, 30));
+    final event = _event(
+      title: 'Standup',
+      startTime: DateTime(2026, 3, 10, 9, 30),
+    );
     await _openSheet(tester, initialDate: today, initial: event);
 
     expect(find.text('Edit event'), findsOneWidget);
@@ -77,30 +84,37 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Save changes'), findsOneWidget);
   });
 
-  testWidgets('frequency picker is read-only text when the event is part of a series', (
-    tester,
-  ) async {
-    final event = _event(frequency: 'weekly', recurrenceId: 'series-1');
-    await _openSheet(tester, initialDate: today, initial: event);
+  testWidgets(
+    'frequency picker is read-only text when the event is part of a series',
+    (tester) async {
+      final event = _event(frequency: 'weekly', recurrenceId: 'series-1');
+      await _openSheet(tester, initialDate: today, initial: event);
 
-    expect(find.textContaining('Repeats: Weekly'), findsOneWidget);
-    expect(find.byType(ChoiceChip), findsNothing);
-  });
+      expect(find.textContaining('Repeating event'), findsOneWidget);
+      expect(find.byType(ChoiceChip), findsNothing);
+    },
+  );
 
   testWidgets('submit is disabled until a title is entered', (tester) async {
     await _openSheet(tester, initialDate: today);
 
-    var submit = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Add event'));
+    var submit = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Add event'),
+    );
     expect(submit.onPressed, isNull);
 
     await tester.enterText(find.byType(TextField).first, 'Dentist');
     await tester.pump();
 
-    submit = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Add event'));
+    submit = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Add event'),
+    );
     expect(submit.onPressed, isNotNull);
   });
 
-  testWidgets('delete affordance appears in edit mode and invokes onDelete', (tester) async {
+  testWidgets('delete affordance appears in edit mode and invokes onDelete', (
+    tester,
+  ) async {
     var deleted = false;
     final event = _event();
     await tester.pumpWidget(
@@ -122,6 +136,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Delete event'), findsOneWidget);
+    await tester.ensureVisible(find.text('Delete event'));
     await tester.tap(find.text('Delete event'));
     await tester.pumpAndSettle();
 

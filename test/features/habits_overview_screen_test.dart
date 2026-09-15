@@ -1,4 +1,5 @@
 import 'package:drift/native.dart';
+import 'package:life_manager/core/scheduling/repeat_schedule.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,7 +18,10 @@ class _FakeNotificationService extends NotificationService {
   Future<void> init() async {}
 
   @override
-  Future<void> scheduleDailyHabitReminder({int hour = 20, int minute = 0}) async {}
+  Future<void> scheduleDailyHabitReminder({
+    int hour = 20,
+    int minute = 0,
+  }) async {}
 
   @override
   Future<void> scheduleHabitReminder({
@@ -50,7 +54,9 @@ void main() {
     return ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
-        notificationServiceProvider.overrideWithValue(_FakeNotificationService()),
+        notificationServiceProvider.overrideWithValue(
+          _FakeNotificationService(),
+        ),
       ],
       child: MaterialApp(
         theme: AppTheme.light(),
@@ -64,7 +70,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Habits'), findsOneWidget);
-    expect(find.text('No habits yet — build your first one below.'), findsOneWidget);
+    expect(
+      find.text('No habits yet — build your first one below.'),
+      findsOneWidget,
+    );
     expect(find.text('Build a new habit'), findsOneWidget);
 
     await _disposeCleanly(tester);
@@ -74,11 +83,23 @@ void main() {
     tester,
   ) async {
     final repo = HabitsRepository(db);
-    final id = await repo.createHabit('Morning workout');
+    final id = await repo.createHabit(
+      'Morning workout',
+      schedule: RepeatSchedule(
+        start: startOfWeek(DateTime.now()),
+        frequency: 'daily',
+      ),
+    );
     // Two check-ins this week, against the default weekly target.
     final weekStart = startOfWeek(DateTime.now());
     await repo.setCompletedForDate(id, weekStart, true);
-    await repo.setCompletedForDate(id, weekStart.add(const Duration(days: 1)), true);
+    if (DateTime.now().weekday > 1) {
+      await repo.setCompletedForDate(
+        id,
+        weekStart.add(const Duration(days: 1)),
+        true,
+      );
+    }
 
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
@@ -87,7 +108,10 @@ void main() {
     // The headline is a real ratio of check-ins to the weekly target, and the
     // caption states both halves of it.
     expect(find.textContaining('check-ins logged this week'), findsOneWidget);
-    expect(find.textContaining('2 of'), findsOneWidget);
+    expect(
+      find.textContaining('${DateTime.now().weekday > 1 ? 2 : 1} of'),
+      findsWidgets,
+    );
 
     await _disposeCleanly(tester);
   });

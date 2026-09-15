@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import '../../features/tasks/presentation/screens/task_detail_screen.dart';
 
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/home/presentation/screens/more_screen.dart';
@@ -34,83 +35,141 @@ final appRouter = GoRouter(
   initialLocation: RoutePaths.home,
   routes: [
     StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) => AppShell(navigationShell: navigationShell),
+      builder: (context, state, navigationShell) =>
+          AppShell(navigationShell: navigationShell),
       branches: [
-        StatefulShellBranch(routes: [
-          GoRoute(path: RoutePaths.home, builder: (context, state) => const HomeScreen()),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(
-            path: RoutePaths.finance,
-            builder: (context, state) => const FinanceOverviewScreen(),
-            routes: [
-              // The pre-redesign finance screen, kept for the budget tools and
-              // filters the design comp has no slot for.
-              GoRoute(path: 'ledger', builder: (context, state) => const FinanceHomeScreen()),
-              GoRoute(path: 'analyzer', builder: (context, state) => const SpendAnalyzerScreen()),
-              GoRoute(
-                path: 'recurring',
-                builder: (context, state) => const RecurringTransactionsScreen(),
-              ),
-              GoRoute(path: 'bills', builder: (context, state) => const BillsScreen()),
-              GoRoute(path: 'net-worth', builder: (context, state) => const NetWorthScreen()),
-              GoRoute(path: 'reports', builder: (context, state) => const ReportsScreen()),
-            ],
-          ),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(
-            path: RoutePaths.tasksHabits,
-            builder: (context, state) => const TasksHabitsScreen(),
-            routes: [
-              GoRoute(
-                path: 'archived-habits',
-                builder: (context, state) => const ArchivedHabitsScreen(),
-              ),
-              GoRoute(
-                path: ':habitId',
-                builder: (context, state) =>
-                    HabitDetailScreen(habitId: state.pathParameters['habitId']!),
-              ),
-            ],
-          ),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(path: RoutePaths.calendar, builder: (context, state) => const CalendarScreen()),
-        ]),
-        StatefulShellBranch(routes: [
-          GoRoute(
-            path: RoutePaths.more,
-            builder: (context, state) => const MoreScreen(),
-            routes: [
-              GoRoute(
-                path: 'habits',
-                builder: (context, state) => const HabitsOverviewScreen(),
-              ),
-              GoRoute(
-                path: 'health',
-                builder: (context, state) => const HealthScreen(),
-              ),
-              GoRoute(
-                path: 'learn',
-                builder: (context, state) => const LearnScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':noteId',
-                    builder: (context, state) =>
-                        NoteReaderScreen(noteId: state.pathParameters['noteId']!),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RoutePaths.home,
+              builder: (context, state) => const HomeScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RoutePaths.finance,
+              builder: (context, state) => const FinanceOverviewScreen(),
+              routes: [
+                // The pre-redesign finance screen, kept for the budget tools and
+                // filters the design comp has no slot for.
+                GoRoute(
+                  path: 'ledger',
+                  builder: (context, state) => const FinanceHomeScreen(),
+                ),
+                GoRoute(
+                  path: 'analyzer',
+                  builder: (context, state) => const SpendAnalyzerScreen(),
+                ),
+                GoRoute(
+                  path: 'recurring',
+                  builder: (context, state) =>
+                      const RecurringTransactionsScreen(),
+                ),
+                GoRoute(
+                  path: 'bills',
+                  builder: (context, state) => const BillsScreen(),
+                ),
+                GoRoute(
+                  path: 'net-worth',
+                  builder: (context, state) => const NetWorthScreen(),
+                ),
+                GoRoute(
+                  path: 'reports',
+                  builder: (context, state) => const ReportsScreen(),
+                ),
+              ],
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RoutePaths.tasksHabits,
+              builder: (context, state) => const TasksHabitsScreen(),
+              routes: [
+                GoRoute(
+                  path: 'archived-habits',
+                  builder: (context, state) => const ArchivedHabitsScreen(),
+                ),
+                GoRoute(
+                  path: 'task/:taskId',
+                  builder: (context, state) =>
+                      TaskDetailScreen(taskId: state.pathParameters['taskId']!),
+                ),
+                GoRoute(
+                  path: ':habitId',
+                  builder: (context, state) => HabitDetailScreen(
+                    habitId: state.pathParameters['habitId']!,
                   ),
-                ],
-              ),
-              GoRoute(path: 'notes', builder: (context, state) => const NotesScreen()),
-              GoRoute(path: 'documents', builder: (context, state) => const DocumentsScreen()),
-              GoRoute(path: 'goals', builder: (context, state) => const GoalsScreen()),
-              GoRoute(path: 'ai-analyser', builder: (context, state) => const AiAnalyserScreen()),
-              GoRoute(path: 'settings', builder: (context, state) => const SettingsScreen()),
-              GoRoute(path: 'search', builder: (context, state) => const SearchScreen()),
-            ],
-          ),
-        ]),
+                ),
+              ],
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RoutePaths.calendar,
+              builder: (context, state) => const CalendarScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RoutePaths.more,
+              builder: (context, state) => const MoreScreen(),
+              routes: [
+                GoRoute(
+                  path: 'habits',
+                  builder: (context, state) => const HabitsOverviewScreen(),
+                ),
+                GoRoute(
+                  path: 'health',
+                  builder: (context, state) => const HealthScreen(),
+                ),
+                GoRoute(
+                  path: 'learn',
+                  builder: (context, state) => const LearnScreen(),
+                  routes: [
+                    GoRoute(
+                      path: ':noteId',
+                      builder: (context, state) => NoteReaderScreen(
+                        noteId: state.pathParameters['noteId']!,
+                      ),
+                    ),
+                  ],
+                ),
+                GoRoute(
+                  path: 'notes',
+                  builder: (context, state) => const NotesScreen(),
+                ),
+                GoRoute(
+                  path: 'documents',
+                  builder: (context, state) => const DocumentsScreen(),
+                ),
+                GoRoute(
+                  path: 'goals',
+                  builder: (context, state) => const GoalsScreen(),
+                ),
+                GoRoute(
+                  path: 'ai-analyser',
+                  builder: (context, state) => const AiAnalyserScreen(),
+                ),
+                GoRoute(
+                  path: 'settings',
+                  builder: (context, state) => const SettingsScreen(),
+                ),
+                GoRoute(
+                  path: 'search',
+                  builder: (context, state) => const SearchScreen(),
+                ),
+              ],
+            ),
+          ],
+        ),
       ],
     ),
 

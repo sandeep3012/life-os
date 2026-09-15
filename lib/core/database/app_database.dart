@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -181,26 +181,73 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(appSettings, appSettings.appLockEnabled);
         await m.addColumn(appSettings, appSettings.biometricEnabled);
       }
-      if (from < 15) {
-        // v14 -> v15: the Health and Learn modules from the design comp.
-        // Purely additive — seven new tables, nothing existing is touched, so
-        // upgrading keeps every finance/habits/tasks row intact. As with habit
-        // streaks, "doses taken today", workout progress and a book's
-        // percentage are derived from the log tables rather than stored, so
-        // there is nothing to backfill.
-        await m.createTable(medications);
-        await m.createTable(medicationLogs);
-        await m.createTable(workoutDays);
-        await m.createTable(exercises);
-        await m.createTable(workoutLogs);
-        await m.createTable(learnBooks);
-        await m.createTable(learnNotes);
-      }
-      if (from < 16) {
-        // v15 -> v16: per-set gym logging (weight and reps per set per day).
-        // Additive; completion still lives in workout_logs, so nothing existing
-        // is rewritten and set history simply starts empty.
-        await m.createTable(exerciseSetLogs);
+      if (from < 19) {
+        // Versions 15/16 existed on two independent branches: Health/Learn
+        // tables on one, schedules/goal progress on the other. Inspect the
+        // actual schema so either lineage upgrades without losing its data.
+        final existingTables = (await customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'table'",
+        ).get()).map((row) => row.read<String>('name')).toSet();
+        for (final table in <TableInfo>[
+          medications,
+          medicationLogs,
+          workoutDays,
+          exercises,
+          workoutLogs,
+          exerciseSetLogs,
+          learnBooks,
+          learnNotes,
+        ]) {
+          if (!existingTables.contains(table.actualTableName)) {
+            await m.createTable(table);
+          }
+        }
+        final additions = <TableInfo, List<GeneratedColumn>>{
+          tasks: [
+            tasks.schedule,
+            tasks.recurrenceId,
+            tasks.recurrenceNextGenerationDate,
+          ],
+          habits: [
+            habits.schedule,
+            habits.description,
+            habits.targetAmount,
+            habits.targetUnit,
+            habits.pauseStartedAt,
+            habits.pausedUntil,
+            habits.pauseHistory,
+          ],
+          events: [events.schedule, events.description],
+          goals: [goals.progressMode],
+          habitLogs: [
+            habitLogs.amount,
+            habitLogs.targetAmountSnapshot,
+            habitLogs.targetUnitSnapshot,
+          ],
+        };
+        var needsSnapshots = false;
+        for (final entry in additions.entries) {
+          final columns = (await customSelect(
+            'PRAGMA table_info("${entry.key.actualTableName}")',
+          ).get()).map((row) => row.read<String>('name')).toSet();
+          for (final column in entry.value) {
+            if (!columns.contains(column.$name)) {
+              await m.addColumn(entry.key, column);
+              if (entry.key == habitLogs &&
+                  column == habitLogs.targetAmountSnapshot) {
+                needsSnapshots = true;
+              }
+            }
+          }
+        }
+        if (needsSnapshots) {
+          await customStatement('''
+            UPDATE habit_logs SET
+              target_amount_snapshot = (SELECT target_amount FROM habits WHERE habits.id = habit_logs.habit_id),
+              target_unit_snapshot = (SELECT target_unit FROM habits WHERE habits.id = habit_logs.habit_id)
+            WHERE amount IS NOT NULL
+          ''');
+        }
       }
     },
   );

@@ -90,27 +90,41 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
   Future<void> _addTask() async {
     final result = await showQuickAddTaskSheet(context);
     if (result == null) return;
-    await ref.read(tasksControllerProvider).addTask(
-      title: result.title,
-      priority: result.priority,
-      dueDate: result.dueDate,
-      reminderEnabled: result.reminderEnabled,
-      reminderMode: result.reminderMode,
-    );
+    await ref
+        .read(tasksControllerProvider)
+        .addTask(
+          title: result.title,
+          description: result.description,
+          categoryId: result.categoryId,
+          schedule: result.schedule,
+          priority: result.priority,
+          dueDate: result.dueDate,
+          reminderEnabled: result.reminderEnabled,
+          reminderMode: result.reminderMode,
+        );
   }
 
   Future<void> _addHabit() async {
     final categories = ref.read(habitCategoriesProvider).value ?? const [];
-    final result = await showQuickAddHabitSheet(context, categories: categories);
-    if (result == null) return;
-    await ref.read(habitsControllerProvider).addHabit(
-      result.name,
-      categoryId: result.categoryId,
-      reminderEnabled: result.reminderEnabled,
-      reminderHour: result.reminderHour,
-      reminderMinute: result.reminderMinute,
-      reminderMode: result.reminderMode,
+    final result = await showQuickAddHabitSheet(
+      context,
+      categories: categories,
     );
+    if (result == null) return;
+    await ref
+        .read(habitsControllerProvider)
+        .addHabit(
+          result.name,
+          targetAmount: result.targetAmount,
+          targetUnit: result.targetUnit,
+          description: result.description,
+          schedule: result.schedule,
+          categoryId: result.categoryId,
+          reminderEnabled: result.reminderEnabled,
+          reminderHour: result.reminderHour,
+          reminderMinute: result.reminderMinute,
+          reminderMode: result.reminderMode,
+        );
   }
 }
 
@@ -154,15 +168,27 @@ class _TasksPane extends ConsumerWidget {
                 );
               }
               return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 itemCount: filtered.length,
                 itemBuilder: (context, index) {
                   final task = filtered[index];
                   return TaskTile(
                     key: ValueKey(task.id),
                     task: task,
-                    onToggle: () => ref.read(tasksControllerProvider).toggleDone(task),
-                    onDelete: () => ref.read(tasksControllerProvider).deleteTask(task),
+                    onOpen: () => context.push(RoutePaths.taskDetail(task.id)),
+                    categoryLabel: ref
+                        .watch(taskCategoriesProvider)
+                        .value
+                        ?.where((c) => c.id == task.categoryId)
+                        .firstOrNull
+                        ?.name,
+                    onToggle: () =>
+                        ref.read(tasksControllerProvider).toggleDone(task),
+                    onDelete: () =>
+                        ref.read(tasksControllerProvider).deleteTask(task),
                   ).animate().fadeIn(duration: 200.ms);
                 },
               );
@@ -187,7 +213,12 @@ class _TasksPane extends ConsumerWidget {
       case _TaskFilter.upcoming:
         return tasks
             .where((t) => t.status == 'open')
-            .where((t) => t.dueDate != null && t.dueDate!.isAfter(now) && !isSameDay(t.dueDate!, now))
+            .where(
+              (t) =>
+                  t.dueDate != null &&
+                  t.dueDate!.isAfter(now) &&
+                  !isSameDay(t.dueDate!, now),
+            )
             .toList();
       case _TaskFilter.all:
         return tasks;
@@ -218,9 +249,13 @@ class _HabitsPaneState extends ConsumerState<_HabitsPane> {
 
     final completedThisWeek = progress.fold<int>(
       0,
-      (sum, item) => sum + item.weekCompletion.values.where((done) => done).length,
+      (sum, item) =>
+          sum + item.weekCompletion.values.where((done) => done).length,
     );
-    final totalThisWeek = progress.length * 7;
+    final totalThisWeek = progress.fold<int>(
+      0,
+      (sum, item) => sum + item.weekCompletion.length,
+    );
     final groups = <String, List<HabitProgress>>{};
     for (final item in progress) {
       final name = item.category?.name ?? _fallbackGroup(item.habit.name);
@@ -230,7 +265,9 @@ class _HabitsPaneState extends ConsumerState<_HabitsPane> {
     final selectedCategory = groups.containsKey(_selectedCategory)
         ? _selectedCategory
         : null;
-    final visible = selectedCategory == null ? progress : groups[selectedCategory]!;
+    final visible = selectedCategory == null
+        ? progress
+        : groups[selectedCategory]!;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
@@ -244,33 +281,37 @@ class _HabitsPaneState extends ConsumerState<_HabitsPane> {
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              ChoiceChip(
-                label: const Text('All'),
-                selected: selectedCategory == null,
-                onSelected: (_) => setState(() => _selectedCategory = null),
-              ),
-              for (final category in groups.keys) ...[
-                const SizedBox(width: 8),
+            child: Row(
+              children: [
                 ChoiceChip(
-                  label: Text(category),
-                  selected: selectedCategory == category,
-                  onSelected: (_) => setState(() => _selectedCategory = category),
+                  label: const Text('All'),
+                  selected: selectedCategory == null,
+                  onSelected: (_) => setState(() => _selectedCategory = null),
                 ),
+                for (final category in groups.keys) ...[
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: Text(category),
+                    selected: selectedCategory == category,
+                    onSelected: (_) =>
+                        setState(() => _selectedCategory = category),
+                  ),
+                ],
               ],
-            ]),
+            ),
           ),
         ),
         for (var index = 0; index < visible.length; index++) ...[
           HabitTile(
             key: ValueKey(visible[index].habit.id),
             progress: visible[index],
-            onToggleToday: (completed) => ref.read(habitsControllerProvider)
+            onToggleToday: (completed) => ref
+                .read(habitsControllerProvider)
                 .toggleToday(visible[index].habit, completed),
-            onTap: () => context.push(RoutePaths.habitDetail(visible[index].habit.id)),
+            onTap: () =>
+                context.push(RoutePaths.habitDetail(visible[index].habit.id)),
           ),
-          if (index != visible.length - 1)
-            const Divider(height: 1, indent: 56),
+          if (index != visible.length - 1) const Divider(height: 1, indent: 56),
         ],
       ],
     );
@@ -323,7 +364,10 @@ class _WeekSummary extends StatelessWidget {
                     color: context.appColors.habits,
                     backgroundColor: theme.colorScheme.surfaceContainerHighest,
                   ),
-                  Text('${(ratio * 100).round()}%', style: theme.textTheme.labelLarge),
+                  Text(
+                    '${(ratio * 100).round()}%',
+                    style: theme.textTheme.labelLarge,
+                  ),
                 ],
               ),
             ),
@@ -332,12 +376,20 @@ class _WeekSummary extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('This week’s habits', style: theme.textTheme.labelMedium),
+                  Text(
+                    'This week’s habits',
+                    style: theme.textTheme.labelMedium,
+                  ),
                   const SizedBox(height: 4),
-                  Text('$completed / $total check-ins', style: theme.textTheme.titleMedium),
+                  Text(
+                    '$completed / $total check-ins',
+                    style: theme.textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 2),
                   Text(
-                    progress.isEmpty ? 'Add a habit to get started' : 'Keep going, you’re doing great!',
+                    progress.isEmpty
+                        ? 'Add a habit to get started'
+                        : 'Keep going, you’re doing great!',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -347,8 +399,18 @@ class _WeekSummary extends StatelessWidget {
                     children: [
                       for (var day = 1; day <= 7; day++) ...[
                         _WeekdayDot(
-                          label: const ['M', 'T', 'W', 'T', 'F', 'S', 'S'][day - 1],
-                          active: progress.any((item) => item.weekCompletion[day] ?? false),
+                          label: const [
+                            'M',
+                            'T',
+                            'W',
+                            'T',
+                            'F',
+                            'S',
+                            'S',
+                          ][day - 1],
+                          active: progress.any(
+                            (item) => item.weekCompletion[day] ?? false,
+                          ),
                         ),
                         if (day != 7) const SizedBox(width: 4),
                       ],
@@ -379,7 +441,9 @@ class _WeekdayDot extends StatelessWidget {
       height: 18,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: active ? colors.habits : Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: active
+            ? colors.habits
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
         shape: BoxShape.circle,
       ),
       child: Text(
@@ -387,7 +451,9 @@ class _WeekdayDot extends StatelessWidget {
         style: TextStyle(
           fontSize: 9,
           fontWeight: FontWeight.w700,
-          color: active ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+          color: active
+              ? Colors.white
+              : Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );

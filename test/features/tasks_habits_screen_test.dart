@@ -40,7 +40,9 @@ void main() {
     return ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
-        notificationServiceProvider.overrideWithValue(_FakeNotificationService()),
+        notificationServiceProvider.overrideWithValue(
+          _FakeNotificationService(),
+        ),
       ],
       child: MaterialApp(
         theme: AppTheme.light(),
@@ -49,62 +51,77 @@ void main() {
     );
   }
 
-  testWidgets('adding a task shows it in the Today list and can be checked off', (
+  testWidgets(
+    'adding a task shows it in the Today list and can be checked off',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Nothing here — add a task to get started.'),
+        findsOneWidget,
+      );
+
+      // The screen's add affordance is an icon-only FloatingActionButton whose
+      // label lives in its tooltip, so there is no Text to match.
+      await tester.tap(find.byTooltip('New task'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Finish Q3 budget review',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Add task'));
+      await tester.tap(find.text('Add task'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Finish Q3 budget review'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Mark complete'));
+      await tester.pumpAndSettle();
+
+      final text = tester.widget<Text>(find.text('Finish Q3 budget review'));
+      expect(text.style?.decoration, TextDecoration.lineThrough);
+
+      await _disposeCleanly(tester);
+    },
+  );
+
+  testWidgets(
+    'switching to Habits and adding one shows it with a 0-day streak',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Habits'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('No habits yet — add one to start a streak.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byTooltip('New habit'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'Morning workout');
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text('Add habit'));
+      await tester.tap(find.text('Add habit'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Morning workout'), findsOneWidget);
+
+      await _disposeCleanly(tester);
+    },
+  );
+
+  testWidgets('archived habits have a titled screen and a Back button', (
     tester,
   ) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Nothing here — add a task to get started.'), findsOneWidget);
-
-    // The screen's add affordance is an icon-only FloatingActionButton whose
-    // label lives in its tooltip, so there is no Text to match.
-    await tester.tap(find.byTooltip('New task'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byType(TextField).first, 'Finish Q3 budget review');
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Add task'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Finish Q3 budget review'), findsOneWidget);
-
-    await tester.tap(find.text('Finish Q3 budget review'));
-    await tester.pumpAndSettle();
-
-    final text = tester.widget<Text>(find.text('Finish Q3 budget review'));
-    expect(text.style?.decoration, TextDecoration.lineThrough);
-
-    await _disposeCleanly(tester);
-  });
-
-  testWidgets('switching to Habits and adding one shows it with a 0-day streak', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Habits'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('No habits yet — add one to start a streak.'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('New habit'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byType(TextField).first, 'Morning workout');
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Add habit'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Morning workout'), findsOneWidget);
-
-    await _disposeCleanly(tester);
-  });
-
-  testWidgets('archived habits have a titled screen and a Back button', (tester) async {
     final repository = HabitsRepository(db);
     await repository.createHabit('Read daily');
     final habit = (await db.select(db.habits).getSingle());

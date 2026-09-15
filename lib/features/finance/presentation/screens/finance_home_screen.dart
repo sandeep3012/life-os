@@ -28,17 +28,31 @@ enum _FinanceSection { transactions, budgets }
 
 DateTimeRange _lastThirtyDays() {
   final today = dateOnly(DateTime.now());
-  return DateTimeRange(start: DateTime(today.year, today.month, today.day - 29), end: today);
+  return DateTimeRange(
+    start: DateTime(today.year, today.month, today.day - 29),
+    end: today,
+  );
 }
 
 String _rangeLabel(DateTimeRange range) =>
     '${DateFormat.yMMMd().format(range.start)} – ${DateFormat.yMMMd().format(range.end)}';
 
-List<Transaction> _filterTransactions(List<Transaction> source, DateTimeRange? range, Set<String> categories) {
-  final endExclusive = range == null ? null : DateTime(range.end.year, range.end.month, range.end.day + 1);
+List<Transaction> _filterTransactions(
+  List<Transaction> source,
+  DateTimeRange? range,
+  Set<String> categories,
+) {
+  final endExclusive = range == null
+      ? null
+      : DateTime(range.end.year, range.end.month, range.end.day + 1);
   return source.where((t) {
-    if (range != null && (t.date.isBefore(dateOnly(range.start)) || !t.date.isBefore(endExclusive!))) return false;
-    final category = t.paymentMode == 'transfer' ? '__transfer__' : t.categoryId ?? '__uncategorized__';
+    if (range != null &&
+        (t.date.isBefore(dateOnly(range.start)) ||
+            !t.date.isBefore(endExclusive!)))
+      return false;
+    final category = t.paymentMode == 'transfer'
+        ? '__transfer__'
+        : t.categoryId ?? '__uncategorized__';
     return categories.isEmpty || categories.contains(category);
   }).toList()..sort((a, b) => b.date.compareTo(a.date));
 }
@@ -47,10 +61,12 @@ class TransactionHistoryScreen extends ConsumerStatefulWidget {
   const TransactionHistoryScreen({super.key});
 
   @override
-  ConsumerState<TransactionHistoryScreen> createState() => _TransactionHistoryScreenState();
+  ConsumerState<TransactionHistoryScreen> createState() =>
+      _TransactionHistoryScreenState();
 }
 
-class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScreen> {
+class _TransactionHistoryScreenState
+    extends ConsumerState<TransactionHistoryScreen> {
   DateTimeRange? _range = _lastThirtyDays();
   String _preset = 'Last 30 days';
   Set<String> _categories = {};
@@ -63,111 +79,252 @@ class _TransactionHistoryScreenState extends ConsumerState<TransactionHistoryScr
         range = _lastThirtyDays();
         break;
       case 'This month':
-        range = DateTimeRange(start: DateTime(today.year, today.month), end: today);
+        range = DateTimeRange(
+          start: DateTime(today.year, today.month),
+          end: today,
+        );
         break;
       case 'Last month':
-        range = DateTimeRange(start: DateTime(today.year, today.month - 1), end: DateTime(today.year, today.month, 0));
+        range = DateTimeRange(
+          start: DateTime(today.year, today.month - 1),
+          end: DateTime(today.year, today.month, 0),
+        );
         break;
       case 'This year':
         range = DateTimeRange(start: DateTime(today.year), end: today);
         break;
       case 'Custom range':
-        final transactions = ref.read(transactionsProvider).value ?? const <Transaction>[];
+        final transactions =
+            ref.read(transactionsProvider).value ?? const <Transaction>[];
         var first = DateTime(1900);
         var last = DateTime(today.year + 10, 12, 31);
         for (final t in transactions) {
           if (t.date.isBefore(first)) first = dateOnly(t.date);
           if (t.date.isAfter(last)) last = dateOnly(t.date);
         }
-        range = await showDateRangePicker(context: context, firstDate: first, lastDate: last, initialDateRange: _range);
+        range = await showDateRangePicker(
+          context: context,
+          firstDate: first,
+          lastDate: last,
+          initialDateRange: _range,
+        );
         if (range == null || !mounted) return;
         break;
       case 'All time':
         range = null;
         break;
     }
-    if (mounted) setState(() { _range = range; _preset = preset; });
+    if (mounted)
+      setState(() {
+        _range = range;
+        _preset = preset;
+      });
   }
 
   Future<void> _selectCategories(List<Category> categories) async {
     final selected = {..._categories};
-    final choices = <String, String>{for (final c in categories) c.id: c.name,
-      '__uncategorized__': 'Uncategorized', '__transfer__': 'Transfers'};
+    final choices = <String, String>{
+      for (final c in categories) c.id: c.name,
+      '__uncategorized__': 'Uncategorized',
+      '__transfer__': 'Transfers',
+    };
     final result = await showModalBottomSheet<Set<String>>(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) => StatefulBuilder(builder: (context, update) => SafeArea(
-        child: SizedBox(height: MediaQuery.sizeOf(context).height * 0.65, child: Column(children: [
-          Padding(padding: const EdgeInsets.all(16), child: Text('Filter categories', style: Theme.of(context).textTheme.titleLarge)),
-          CheckboxListTile(title: const Text('All categories'), value: selected.isEmpty, onChanged: (_) => update(selected.clear)),
-          Expanded(child: ListView(children: [for (final entry in choices.entries)
-            CheckboxListTile(title: Text(entry.value), value: selected.contains(entry.key), onChanged: (checked) => update(() {
-              if (checked == true) { selected.add(entry.key); } else { selected.remove(entry.key); }
-            })),
-          ])),
-          Padding(padding: const EdgeInsets.all(16), child: SizedBox(width: double.infinity, child: FilledButton(
-            onPressed: () => Navigator.pop(sheetContext, selected), child: const Text('Apply filters'),
-          ))),
-        ])),
-      )),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, update) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.65,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Filter categories',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                CheckboxListTile(
+                  title: const Text('All categories'),
+                  value: selected.isEmpty,
+                  onChanged: (_) => update(selected.clear),
+                ),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      for (final entry in choices.entries)
+                        CheckboxListTile(
+                          title: Text(entry.value),
+                          value: selected.contains(entry.key),
+                          onChanged: (checked) => update(() {
+                            if (checked == true) {
+                              selected.add(entry.key);
+                            } else {
+                              selected.remove(entry.key);
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(sheetContext, selected),
+                      child: const Text('Apply filters'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
     if (result != null && mounted) setState(() => _categories = result);
   }
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(categoriesProvider).value ?? const <Category>[];
+    final categories =
+        ref.watch(categoriesProvider).value ?? const <Category>[];
     final data = ref.watch(transactionsProvider);
     final currency = ref.watch(settingsProvider).currencyCode;
-    final filtered = _filterTransactions(data.value ?? const [], _range, _categories);
+    final filtered = _filterTransactions(
+      data.value ?? const [],
+      _range,
+      _categories,
+    );
     final ordinary = filtered.where((t) => t.paymentMode != 'transfer');
-    final income = ordinary.where((t) => t.amountMinor > 0).fold<int>(0, (sum, t) => sum + t.amountMinor);
-    final spend = ordinary.where((t) => t.amountMinor < 0).fold<int>(0, (sum, t) => sum - t.amountMinor);
+    final income = ordinary
+        .where((t) => t.amountMinor > 0)
+        .fold<int>(0, (sum, t) => sum + t.amountMinor);
+    final spend = ordinary
+        .where((t) => t.amountMinor < 0)
+        .fold<int>(0, (sum, t) => sum - t.amountMinor);
     return Scaffold(
       appBar: AppBar(title: const Text('Transaction history')),
-      body: SafeArea(top: false, child: CustomScrollView(slivers: [
-        SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.fromLTRB(20, 12, 20, 8), child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(spacing: 12, runSpacing: 8, children: [
-              PopupMenuButton<String>(onSelected: _selectRange,
-                itemBuilder: (_) => [for (final label in ['Last 30 days', 'This month', 'Last month', 'This year', 'All time', 'Custom range'])
-                  PopupMenuItem(value: label, child: Text(label))],
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(LucideIcons.calendarDays, size: 18),
-                    const SizedBox(width: 8), Text(_preset),
-                    const Icon(LucideIcons.chevronDown, size: 18),
-                  ]),
+      body: SafeArea(
+        top: false,
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        PopupMenuButton<String>(
+                          onSelected: _selectRange,
+                          itemBuilder: (_) => [
+                            for (final label in [
+                              'Last 30 days',
+                              'This month',
+                              'Last month',
+                              'This year',
+                              'All time',
+                              'Custom range',
+                            ])
+                              PopupMenuItem(value: label, child: Text(label)),
+                          ],
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(LucideIcons.calendarDays, size: 18),
+                                const SizedBox(width: 8),
+                                Text(_preset),
+                                const Icon(LucideIcons.chevronDown, size: 18),
+                              ],
+                            ),
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => _selectCategories(categories),
+                          icon: const Icon(LucideIcons.listFilter),
+                          label: Text(
+                            _categories.isEmpty
+                                ? 'All categories'
+                                : '${_categories.length} selected',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(_range == null ? 'All dates' : _rangeLabel(_range!)),
+                    const SizedBox(height: 16),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _MonthAmount(
+                                label: 'Income',
+                                value: income,
+                                color: context.appColors.good,
+                                currencyCode: currency,
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: _MonthAmount(
+                                label: 'Spending',
+                                value: spend,
+                                color: context.appColors.critical,
+                                currencyCode: currency,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Transfers excluded from totals',
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                    const SizedBox(height: 20),
+                    Text('${filtered.length} transactions'),
+                  ],
                 ),
               ),
-              OutlinedButton.icon(onPressed: () => _selectCategories(categories), icon: const Icon(LucideIcons.listFilter),
-                label: Text(_categories.isEmpty ? 'All categories' : '${_categories.length} selected')),
-            ]),
-            const SizedBox(height: 8),
-            Text(_range == null ? 'All dates' : _rangeLabel(_range!)),
-            const SizedBox(height: 16),
-            Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
-              Expanded(child: _MonthAmount(label: 'Income', value: income, color: context.appColors.good, currencyCode: currency)),
-              const SizedBox(width: 24),
-              Expanded(child: _MonthAmount(label: 'Spending', value: spend, color: context.appColors.critical, currencyCode: currency)),
-            ]))),
-            const SizedBox(height: 8),
-            Text('Transfers excluded from totals', style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: 20),
-            Text('${filtered.length} transactions'),
+            ),
+            if (data.isLoading)
+              const SliverToBoxAdapter(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (data.hasError)
+              const SliverToBoxAdapter(
+                child: Center(child: Text('Could not load transactions.')),
+              )
+            else
+              _TransactionsSliver(
+                history: true,
+                range: _range,
+                categoryIds: _categories,
+                categoryById: {for (final c in categories) c.id: c},
+                currencyCode: currency,
+              ),
           ],
-        ))),
-        if (data.isLoading) const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()))
-        else if (data.hasError) const SliverToBoxAdapter(child: Center(child: Text('Could not load transactions.')))
-        else _TransactionsSliver(history: true, range: _range, categoryIds: _categories,
-          categoryById: {for (final c in categories) c.id: c}, currencyCode: currency),
-      ])),
+        ),
+      ),
     );
   }
 }
@@ -198,14 +355,27 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final categoryById = {for (final c in categories) c.id: c};
     final currencyCode = ref.watch(settingsProvider).currencyCode;
-    final transactions = ref.watch(transactionsProvider).value ?? const <Transaction>[];
+    final transactions =
+        ref.watch(transactionsProvider).value ?? const <Transaction>[];
     final monthStart = DateTime(DateTime.now().year, DateTime.now().month);
     final monthEnd = DateTime(DateTime.now().year, DateTime.now().month + 1);
     final monthIncome = transactions
-        .where((t) => t.paymentMode != 'transfer' && !t.date.isBefore(monthStart) && t.date.isBefore(monthEnd) && t.amountMinor > 0)
+        .where(
+          (t) =>
+              t.paymentMode != 'transfer' &&
+              !t.date.isBefore(monthStart) &&
+              t.date.isBefore(monthEnd) &&
+              t.amountMinor > 0,
+        )
         .fold<int>(0, (sum, t) => sum + t.amountMinor);
     final monthSpend = transactions
-        .where((t) => t.paymentMode != 'transfer' && !t.date.isBefore(monthStart) && t.date.isBefore(monthEnd) && t.amountMinor < 0)
+        .where(
+          (t) =>
+              t.paymentMode != 'transfer' &&
+              !t.date.isBefore(monthStart) &&
+              t.date.isBefore(monthEnd) &&
+              t.amountMinor < 0,
+        )
         .fold<int>(0, (sum, t) => sum + t.amountMinor.abs());
 
     return Scaffold(
@@ -235,8 +405,13 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                                 ),
                               ),
                               Text(
-                                formatMinor(totalBalance, currencyCode: currencyCode),
-                                style: theme.textTheme.headlineMedium?.copyWith(fontFamily: AppFonts.serif),
+                                formatMinor(
+                                  totalBalance,
+                                  currencyCode: currencyCode,
+                                ),
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  fontFamily: AppFonts.serif,
+                                ),
                               ),
                             ],
                           ),
@@ -244,7 +419,9 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                         if (archivedCount > 0)
                           TextButton.icon(
                             onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const ArchivedAccountsScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const ArchivedAccountsScreen(),
+                              ),
                             ),
                             icon: const Icon(LucideIcons.archive, size: 18),
                             label: Text('Archived ($archivedCount)'),
@@ -258,19 +435,25 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                     height: 100,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
                       itemCount: activeAccounts.length + 1,
                       separatorBuilder: (_, _) => const SizedBox(width: 12),
                       itemBuilder: (context, index) {
                         if (index == activeAccounts.length) {
-                          return AddAccountCard(onTap: () => _addAccount(context, ref));
+                          return AddAccountCard(
+                            onTap: () => _addAccount(context, ref),
+                          );
                         }
                         final account = activeAccounts[index];
                         return AccountCard(
                           account: account,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => AccountDetailScreen(accountId: account.id),
+                              builder: (_) =>
+                                  AccountDetailScreen(accountId: account.id),
                             ),
                           ),
                         );
@@ -282,12 +465,35 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                   child: Card(
                     margin: const EdgeInsets.fromLTRB(20, 4, 20, 4),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
-                          Expanded(flex: 2, child: Text(DateFormat('MMMM yyyy').format(monthStart), style: theme.textTheme.titleSmall)),
-                          Expanded(child: _MonthAmount(label: 'Income', value: monthIncome, color: context.appColors.good, currencyCode: currencyCode)),
-                          Expanded(child: _MonthAmount(label: 'Spend', value: monthSpend, color: context.appColors.critical, currencyCode: currencyCode)),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              DateFormat('MMMM yyyy').format(monthStart),
+                              style: theme.textTheme.titleSmall,
+                            ),
+                          ),
+                          Expanded(
+                            child: _MonthAmount(
+                              label: 'Income',
+                              value: monthIncome,
+                              color: context.appColors.good,
+                              currencyCode: currencyCode,
+                            ),
+                          ),
+                          Expanded(
+                            child: _MonthAmount(
+                              label: 'Spend',
+                              value: monthSpend,
+                              color: context.appColors.critical,
+                              currencyCode: currencyCode,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -311,7 +517,8 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                               ),
                             ],
                             selected: {_section},
-                            onSelectionChanged: (s) => setState(() => _section = s.first),
+                            onSelectionChanged: (s) =>
+                                setState(() => _section = s.first),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -330,7 +537,10 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                     child: _EmptyAccountsState(),
                   )
                 else if (_section == _FinanceSection.transactions)
-                  _TransactionsSliver(categoryById: categoryById, currencyCode: currencyCode)
+                  _TransactionsSliver(
+                    categoryById: categoryById,
+                    currencyCode: currencyCode,
+                  )
                 else
                   _BudgetsSliver(),
               ],
@@ -347,6 +557,14 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         child: const Icon(LucideIcons.plus),
       ),
     );
+  }
+
+  String _fabLabel(WidgetRef ref) {
+    final accounts = ref.read(activeAccountsProvider);
+    if (accounts.isEmpty) return 'New account';
+    return _section == _FinanceSection.transactions
+        ? 'New transaction'
+        : 'New budget';
   }
 
   void _showFinanceMenu(BuildContext context) {
@@ -394,14 +612,8 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
               title: const Text('Transfer between accounts'),
               onTap: () {
                 Navigator.of(context).pop();
-                // Deferred so the sheet finishes closing before the dialog
-                // opens. `hostContext` is this screen's context, not the
-                // sheet's, and the `mounted` check below covers the gap — but
-                // the lint only tracks `context` itself, so a captured context
-                // can't be proven safe to it.
                 Future.microtask(() {
-                  if (!mounted) return;
-                  // ignore: use_build_context_synchronously
+                  if (!hostContext.mounted) return;
                   _showTransferDialog(hostContext);
                 });
               },
@@ -423,7 +635,11 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
   Future<void> _showTransferDialog(BuildContext context) async {
     final accounts = ref.read(transactableAccountsProvider);
     if (accounts.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add at least two active accounts to transfer money.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add at least two active accounts to transfer money.'),
+        ),
+      );
       return;
     }
     final amountController = TextEditingController();
@@ -431,34 +647,80 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     String toId = accounts[1].id;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => StatefulBuilder(builder: (context, setState) {
-        final valid = fromId != toId && (double.tryParse(amountController.text.trim()) ?? 0) > 0;
-        return AlertDialog(
-          title: const Text('Transfer money'),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            DropdownButtonFormField<String>(initialValue: fromId, decoration: const InputDecoration(labelText: 'From account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => fromId = v!)),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(initialValue: toId, decoration: const InputDecoration(labelText: 'To account'), items: [for (final a in accounts) DropdownMenuItem(value: a.id, child: Text(a.name))], onChanged: (v) => setState(() => toId = v!)),
-            const SizedBox(height: 12),
-            TextField(controller: amountController, onChanged: (_) => setState(() {}), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Amount')),
-          ]),
-          actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')), FilledButton(onPressed: valid ? () => Navigator.pop(dialogContext, true) : null, child: const Text('Transfer'))],
-        );
-      }),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          final valid =
+              fromId != toId &&
+              (double.tryParse(amountController.text.trim()) ?? 0) > 0;
+          return AlertDialog(
+            title: const Text('Transfer money'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: fromId,
+                  decoration: const InputDecoration(labelText: 'From account'),
+                  items: [
+                    for (final a in accounts)
+                      DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  ],
+                  onChanged: (v) => setState(() => fromId = v!),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: toId,
+                  decoration: const InputDecoration(labelText: 'To account'),
+                  items: [
+                    for (final a in accounts)
+                      DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  ],
+                  onChanged: (v) => setState(() => toId = v!),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: amountController,
+                  onChanged: (_) => setState(() {}),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(labelText: 'Amount'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: valid
+                    ? () => Navigator.pop(dialogContext, true)
+                    : null,
+                child: const Text('Transfer'),
+              ),
+            ],
+          );
+        },
+      ),
     );
-    final amount = ((double.tryParse(amountController.text.trim()) ?? 0) * 100).round();
+    final amount = ((double.tryParse(amountController.text.trim()) ?? 0) * 100)
+        .round();
     // The dialog route is still animating out when showDialog completes. Keep
     // the controller alive until that transition has finished; disposing it
     // immediately causes TextField to rebuild against a dead controller.
-    Future<void>.delayed(const Duration(milliseconds: 400), amountController.dispose);
+    Future<void>.delayed(
+      const Duration(milliseconds: 400),
+      amountController.dispose,
+    );
     if (confirmed != true || amount <= 0) return;
-    await ref.read(financeControllerProvider).transfer(fromAccountId: fromId, toAccountId: toId, amountMinor: amount, date: DateTime.now());
-  }
-
-  String _fabLabel(WidgetRef ref) {
-    final accounts = ref.read(activeAccountsProvider);
-    if (accounts.isEmpty) return 'New account';
-    return _section == _FinanceSection.transactions ? 'New transaction' : 'New budget';
+    await ref
+        .read(financeControllerProvider)
+        .transfer(
+          fromAccountId: fromId,
+          toAccountId: toId,
+          amountMinor: amount,
+          date: DateTime.now(),
+        );
   }
 
   Future<void> _addAccount(BuildContext context, WidgetRef ref) async {
@@ -466,14 +728,18 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     final result = await showQuickAddAccountSheet(
       context,
       accountTypes: accountTypes,
-      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+      currencySymbol: currencySymbolFor(
+        ref.read(settingsProvider).currencyCode,
+      ),
     );
     if (result == null) return;
-    await ref.read(financeControllerProvider).addAccount(
-      name: result.name,
-      type: result.type,
-      balanceMinor: result.startingBalanceMinor,
-    );
+    await ref
+        .read(financeControllerProvider)
+        .addAccount(
+          name: result.name,
+          type: result.type,
+          balanceMinor: result.startingBalanceMinor,
+        );
   }
 
   Future<void> _handleFab(BuildContext context, WidgetRef ref) async {
@@ -488,7 +754,9 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
       if (transactableAccounts.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Add a non-investment account first to record transactions.'),
+            content: Text(
+              'Add a non-investment account first to record transactions.',
+            ),
           ),
         );
         return;
@@ -498,37 +766,50 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         context,
         accounts: transactableAccounts,
         categories: categories,
-        currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+        currencySymbol: currencySymbolFor(
+          ref.read(settingsProvider).currencyCode,
+        ),
       );
       if (result == null) return;
-      await ref.read(financeControllerProvider).addTransaction(
-        accountId: result.accountId,
-        categoryId: result.categoryId,
-        merchant: result.merchant,
-        amountMinor: result.amountMinor,
-        date: result.date,
-        paymentMode: result.paymentMode,
-      );
+      await ref
+          .read(financeControllerProvider)
+          .addTransaction(
+            accountId: result.accountId,
+            categoryId: result.categoryId,
+            merchant: result.merchant,
+            amountMinor: result.amountMinor,
+            date: result.date,
+            paymentMode: result.paymentMode,
+          );
     } else {
       final categories = ref.read(categoriesProvider).value ?? const [];
       final result = await showQuickAddBudgetSheet(
         context,
         categories: categories,
-        currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+        currencySymbol: currencySymbolFor(
+          ref.read(settingsProvider).currencyCode,
+        ),
       );
       if (result == null) return;
-      await ref.read(financeControllerProvider).addBudget(
-        categoryId: result.categoryId,
-        limitMinor: result.limitMinor,
-        period: result.period,
-        effectiveMonth: result.effectiveMonth,
-      );
+      await ref
+          .read(financeControllerProvider)
+          .addBudget(
+            categoryId: result.categoryId,
+            limitMinor: result.limitMinor,
+            period: result.period,
+            effectiveMonth: result.effectiveMonth,
+          );
     }
   }
 }
 
 class _MonthAmount extends StatelessWidget {
-  const _MonthAmount({required this.label, required this.value, required this.color, required this.currencyCode});
+  const _MonthAmount({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.currencyCode,
+  });
 
   final String label;
   final int value;
@@ -565,7 +846,13 @@ class _DateHeader extends StatelessWidget {
 }
 
 class _TransactionsSliver extends ConsumerStatefulWidget {
-  const _TransactionsSliver({required this.categoryById, required this.currencyCode, this.history = false, this.range, this.categoryIds = const {}});
+  const _TransactionsSliver({
+    required this.categoryById,
+    required this.currencyCode,
+    this.history = false,
+    this.range,
+    this.categoryIds = const {},
+  });
 
   final Map<String, Category> categoryById;
   final String currencyCode;
@@ -574,7 +861,8 @@ class _TransactionsSliver extends ConsumerStatefulWidget {
   final Set<String> categoryIds;
 
   @override
-  ConsumerState<_TransactionsSliver> createState() => _TransactionsSliverState();
+  ConsumerState<_TransactionsSliver> createState() =>
+      _TransactionsSliverState();
 }
 
 class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
@@ -593,10 +881,10 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
   Widget build(BuildContext context) {
     final range = widget.history ? widget.range : _lastThirtyDays();
     final transactions = _filterTransactions(
-        ref.watch(transactionsProvider).value ?? const <Transaction>[],
-        range, widget.categoryIds)
-        .where((t) => !_pendingDeleteIds.contains(t.id))
-        .toList();
+      ref.watch(transactionsProvider).value ?? const <Transaction>[],
+      range,
+      widget.categoryIds,
+    ).where((t) => !_pendingDeleteIds.contains(t.id)).toList();
     final entries = <Object>[];
     DateTime? previous;
     for (final transaction in transactions) {
@@ -608,22 +896,30 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
       entries.add(transaction);
     }
     if (transactions.isEmpty) {
-      entries.add(const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
-        child: Text('No transactions in this range. Try another date range or category.'),
-      ));
+      entries.add(
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 32),
+          child: Text(
+            'No transactions in this range. Try another date range or category.',
+          ),
+        ),
+      );
     }
     if (!widget.history) {
-      entries.add(Padding(
-        padding: const EdgeInsets.only(top: 20, bottom: 24),
-        child: OutlinedButton.icon(
-          onPressed: () => Navigator.of(context, rootNavigator: true).push(MaterialPageRoute<void>(
-            builder: (_) => const TransactionHistoryScreen(),
-          )),
-          icon: const Icon(LucideIcons.arrowRight),
-          label: const Text('See all transactions'),
+      entries.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 20, bottom: 24),
+          child: OutlinedButton.icon(
+            onPressed: () => Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const TransactionHistoryScreen(),
+              ),
+            ),
+            icon: const Icon(LucideIcons.arrowRight),
+            label: const Text('See more transactions'),
+          ),
         ),
-      ));
+      );
     }
 
     return SliverPadding(
@@ -653,7 +949,8 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
   String _dateLabel(DateTime date) {
     final now = DateTime.now();
     if (isSameDay(date, now)) return 'Today';
-    if (isSameDay(date, now.subtract(const Duration(days: 1)))) return 'Yesterday';
+    if (isSameDay(date, now.subtract(const Duration(days: 1))))
+      return 'Yesterday';
     return DateFormat('MMM d, yyyy').format(date);
   }
 
@@ -670,7 +967,8 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
         .firstOrNull;
     final accounts = [
       ...transactableAccounts,
-      if (currentAccount != null && !transactableAccounts.any((a) => a.id == currentAccount.id))
+      if (currentAccount != null &&
+          !transactableAccounts.any((a) => a.id == currentAccount.id))
         currentAccount,
     ];
     final categories = ref.read(categoriesProvider).value ?? const [];
@@ -678,19 +976,23 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
       context,
       accounts: accounts,
       categories: categories,
-      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+      currencySymbol: currencySymbolFor(
+        ref.read(settingsProvider).currencyCode,
+      ),
       initial: t,
     );
     if (result == null) return;
-    await ref.read(financeControllerProvider).updateTransaction(
-      id: t.id,
-      accountId: result.accountId,
-      categoryId: result.categoryId,
-      merchant: result.merchant,
-      amountMinor: result.amountMinor,
-      date: result.date,
-      paymentMode: result.paymentMode,
-    );
+    await ref
+        .read(financeControllerProvider)
+        .updateTransaction(
+          id: t.id,
+          accountId: result.accountId,
+          categoryId: result.categoryId,
+          merchant: result.merchant,
+          amountMinor: result.amountMinor,
+          date: result.date,
+          paymentMode: result.paymentMode,
+        );
   }
 
   void _scheduleDelete(Transaction t) {
@@ -773,7 +1075,11 @@ class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
               direction: DismissDirection.endToStart,
               background: const _SwipeDeleteBackground(),
               onDismissed: (_) => _scheduleDelete(p),
-              child: BudgetBar(progress: p, currencyCode: currencyCode, onEdit: () => _editBudget(p)),
+              child: BudgetBar(
+                progress: p,
+                currencyCode: currencyCode,
+                onEdit: () => _editBudget(p),
+              ),
             ),
         ],
       ),
@@ -785,17 +1091,21 @@ class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
     final result = await showQuickAddBudgetSheet(
       context,
       categories: categories,
-      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+      currencySymbol: currencySymbolFor(
+        ref.read(settingsProvider).currencyCode,
+      ),
       initial: p.budget,
     );
     if (result == null) return;
-    await ref.read(financeControllerProvider).updateBudget(
-      id: p.budget.id,
-      categoryId: result.categoryId,
-      limitMinor: result.limitMinor,
-      period: result.period,
-      effectiveMonth: result.effectiveMonth,
-    );
+    await ref
+        .read(financeControllerProvider)
+        .updateBudget(
+          id: p.budget.id,
+          categoryId: result.categoryId,
+          limitMinor: result.limitMinor,
+          period: result.period,
+          effectiveMonth: result.effectiveMonth,
+        );
   }
 
   void _scheduleDelete(BudgetProgress p) {
@@ -835,7 +1145,10 @@ class _SwipeDeleteBackground extends StatelessWidget {
       alignment: Alignment.centerRight,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       color: Theme.of(context).colorScheme.error,
-      child: Icon(LucideIcons.trash2, color: Theme.of(context).colorScheme.onError),
+      child: Icon(
+        LucideIcons.trash2,
+        color: Theme.of(context).colorScheme.onError,
+      ),
     );
   }
 }

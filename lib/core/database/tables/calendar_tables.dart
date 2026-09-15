@@ -8,6 +8,8 @@ import 'package:uuid/uuid.dart';
 /// tables) instead of duplicating that data here. `sourceType == manual`
 /// means the row is a standalone event with no backing record.
 class Events extends Table {
+  TextColumn get schedule => text().nullable()();
+  TextColumn get description => text().nullable()();
   TextColumn get id => text().clientDefault(() => const Uuid().v4())();
   TextColumn get title => text()();
   DateTimeColumn get startTime => dateTime()();

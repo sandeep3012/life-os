@@ -15,7 +15,12 @@ final weekSpendMinorProvider = Provider<int>((ref) {
   final transactions = ref.watch(transactionsProvider).value ?? const [];
   final weekStart = startOfWeek(DateTime.now());
   return transactions
-      .where((t) => t.paymentMode != 'transfer' && t.amountMinor < 0 && !t.date.isBefore(weekStart))
+      .where(
+        (t) =>
+            t.paymentMode != 'transfer' &&
+            t.amountMinor < 0 &&
+            !t.date.isBefore(weekStart),
+      )
       .fold<int>(0, (sum, t) => sum + t.amountMinor.abs());
 });
 
@@ -28,7 +33,8 @@ final lastWeekSpendMinorProvider = Provider<int>((ref) {
   return transactions
       .where(
         (t) =>
-            t.paymentMode != 'transfer' && t.amountMinor < 0 &&
+            t.paymentMode != 'transfer' &&
+            t.amountMinor < 0 &&
             !t.date.isBefore(lastWeekStart) &&
             t.date.isBefore(thisWeekStart),
       )
@@ -52,9 +58,7 @@ final todayTasksProvider = Provider<TodayTasks>((ref) {
   final all = ref.watch(allTasksProvider).value ?? const [];
   final now = DateTime.now();
   final tasks =
-      all
-          .where((t) => t.dueDate == null || isSameDay(t.dueDate!, now))
-          .toList()
+      all.where((t) => t.dueDate == null || isSameDay(t.dueDate!, now)).toList()
         ..sort((a, b) {
           if (a.dueDate == null && b.dueDate == null) return 0;
           if (a.dueDate == null) return 1;
@@ -70,11 +74,15 @@ final todayTasksProvider = Provider<TodayTasks>((ref) {
 /// Habits with a live streak, worst-first so anything at risk of breaking
 /// surfaces before the healthy ones.
 final habitCheckInProvider = Provider<List<HabitProgress>>((ref) {
-  final progress = [...ref.watch(habitsWithProgressProvider)]
-    ..sort((a, b) {
-      if (a.isAtRisk != b.isAtRisk) return a.isAtRisk ? -1 : 1;
-      return b.streakDays.compareTo(a.streakDays);
-    });
+  final progress =
+      [
+        ...ref
+            .watch(habitsWithProgressProvider)
+            .where((p) => p.isScheduledToday),
+      ]..sort((a, b) {
+        if (a.isAtRisk != b.isAtRisk) return a.isAtRisk ? -1 : 1;
+        return b.streakDays.compareTo(a.streakDays);
+      });
   return progress;
 });
 

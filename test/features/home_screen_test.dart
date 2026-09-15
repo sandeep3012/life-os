@@ -54,22 +54,38 @@ void main() {
       initialLocation: '/home',
       routes: [
         GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
-        GoRoute(path: '/finance', builder: (context, state) => const SizedBox()),
-        GoRoute(path: '/tasks-habits', builder: (context, state) => const SizedBox()),
-        GoRoute(path: '/calendar', builder: (context, state) => const SizedBox()),
-        GoRoute(path: '/more/goals', builder: (context, state) => const SizedBox()),
+        GoRoute(
+          path: '/finance',
+          builder: (context, state) => const SizedBox(),
+        ),
+        GoRoute(
+          path: '/tasks-habits',
+          builder: (context, state) => const SizedBox(),
+        ),
+        GoRoute(
+          path: '/calendar',
+          builder: (context, state) => const SizedBox(),
+        ),
+        GoRoute(
+          path: '/more/goals',
+          builder: (context, state) => const SizedBox(),
+        ),
       ],
     );
     return ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
-        notificationServiceProvider.overrideWithValue(_FakeNotificationService()),
+        notificationServiceProvider.overrideWithValue(
+          _FakeNotificationService(),
+        ),
       ],
       child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
     );
   }
 
-  testWidgets('empty install shows the onboarding dashboard state', (tester) async {
+  testWidgets('empty install shows the onboarding dashboard state', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
@@ -86,7 +102,11 @@ void main() {
     // Finance: one expense logged this week.
     final finance = FinanceRepository(db, FileStorageService());
     await finance.ensureDefaultCategories();
-    await finance.createAccount(name: 'Checking', type: 'checking', balanceMinor: 500000);
+    await finance.createAccount(
+      name: 'Checking',
+      type: 'checking',
+      balanceMinor: 500000,
+    );
     final accountId = (await db.select(db.accounts).get()).first.id;
     await finance.createTransaction(
       accountId: accountId,
@@ -96,12 +116,14 @@ void main() {
     );
 
     // Tasks: one due today, still open.
-    await db.into(db.tasks).insert(
-      TasksCompanion.insert(
-        title: 'Finish Q3 budget review',
-        dueDate: Value(today.add(const Duration(hours: 17))),
-      ),
-    );
+    await db
+        .into(db.tasks)
+        .insert(
+          TasksCompanion.insert(
+            title: 'Finish Q3 budget review',
+            dueDate: Value(today.add(const Duration(hours: 17))),
+          ),
+        );
 
     // Habits: logged yesterday but not today, so the ring shows partial
     // week completion rather than a tick.
@@ -115,7 +137,9 @@ void main() {
     );
 
     // Goals: one active.
-    await db.into(db.goals).insert(GoalsCompanion.insert(title: 'Emergency Fund'));
+    await db
+        .into(db.goals)
+        .insert(GoalsCompanion.insert(title: 'Emergency Fund'));
 
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
@@ -140,19 +164,21 @@ void main() {
     tester,
   ) async {
     final today = dateOnly(DateTime.now());
-    await db.into(db.tasks).insert(
-      TasksCompanion.insert(
-        title: 'Call plumber',
-        dueDate: Value(today.add(const Duration(hours: 11))),
-      ),
-    );
+    await db
+        .into(db.tasks)
+        .insert(
+          TasksCompanion.insert(
+            title: 'Call plumber',
+            dueDate: Value(today.add(const Duration(hours: 11))),
+          ),
+        );
 
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
     expect(find.text('0 of 1 done'), findsOneWidget);
 
-    await tester.tap(find.text('Call plumber'));
+    await tester.tap(find.bySemanticsLabel('Complete task'));
     await tester.pumpAndSettle();
 
     expect(find.text('1 of 1 done'), findsOneWidget);

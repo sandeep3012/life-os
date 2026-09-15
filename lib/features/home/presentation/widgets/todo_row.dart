@@ -9,14 +9,14 @@ import '../../../../core/widgets/tappable.dart';
 /// radius 8 and a 2px border that fills with the accent when checked, a
 /// strikethrough title, and a 7px category dot on the trailing edge.
 ///
-/// The whole row is the hit target, not just the box — the comp toggles on row
-/// tap with a selection haptic.
+/// Open details from the row; only the checkbox changes completion.
 class TodoRow extends StatelessWidget {
   const TodoRow({
     super.key,
     required this.title,
     required this.done,
     required this.onToggle,
+    this.onOpen,
     this.time,
     this.dotColor,
   });
@@ -24,6 +24,7 @@ class TodoRow extends StatelessWidget {
   final String title;
   final bool done;
   final VoidCallback onToggle;
+  final VoidCallback? onOpen;
 
   /// Comp: the 12px caption under the title — a due time, or a fallback label.
   final String? time;
@@ -36,14 +37,19 @@ class TodoRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Tappable(
-      onTap: onToggle,
+      onTap: onOpen ?? onToggle,
       haptic: TapHaptic.selection,
       semanticLabel: title,
       selected: done,
       child: SurfaceCard.row(
         child: Row(
           children: [
-            _Checkbox(checked: done),
+            Tappable(
+              onTap: onToggle,
+              enforceMinTouchTarget: true,
+              semanticLabel: done ? 'Mark as open' : 'Complete task',
+              child: _Checkbox(checked: done),
+            ),
             const SizedBox(width: 13),
             Expanded(
               child: Column(
@@ -82,7 +88,10 @@ class TodoRow extends StatelessWidget {
               Container(
                 width: 7,
                 height: 7,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: dotColor),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: dotColor,
+                ),
               ),
             ],
           ],

@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 class Goals extends Table {
+  /// Null/manual preserves user-entered progress. Automatic is derived from links.
+  TextColumn get progressMode => text().nullable()();
   TextColumn get id => text().clientDefault(() => const Uuid().v4())();
   TextColumn get title => text()();
   TextColumn get description => text().nullable()();
@@ -29,7 +31,8 @@ class Goals extends Table {
   /// How many days before [targetDate] the reminder fires. 0 = on the
   /// deadline itself. Mirrors Bills' `reminderDaysBefore` shape, since a
   /// goal deadline is date-only like a bill's due date.
-  IntColumn get reminderDaysBefore => integer().withDefault(const Constant(0))();
+  IntColumn get reminderDaysBefore =>
+      integer().withDefault(const Constant(0))();
 
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();

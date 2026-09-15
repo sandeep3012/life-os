@@ -9,7 +9,70 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../application/habits_providers.dart';
+import '../../domain/habit_schedule.dart';
+import '../../domain/habit_statistics.dart';
+import '../widgets/habit_statistics_card.dart';
 import '../widgets/quick_add_habit_sheet.dart';
+
+class _AmountDialog extends StatefulWidget {
+  const _AmountDialog({required this.habit, this.initialAmount});
+  final Habit habit;
+  final double? initialAmount;
+
+  @override
+  State<_AmountDialog> createState() => _AmountDialogState();
+}
+
+class _AmountDialogState extends State<_AmountDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final _controller = TextEditingController(
+    text: widget.initialAmount?.toString() ?? '',
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text("Today's ${widget.habit.targetUnit ?? 'amount'}"),
+    content: Form(
+      key: _formKey,
+      child: TextFormField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          labelText: 'Total for today',
+          helperText: 'Replaces the previous amount',
+          hintText: 'Target: ${widget.habit.targetAmount}',
+        ),
+        validator: (text) {
+          final amount = double.tryParse(text?.trim() ?? '');
+          return amount == null || !amount.isFinite || amount < 0
+              ? 'Enter zero or a positive number'
+              : null;
+        },
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () {
+          if (_formKey.currentState!.validate()) {
+            Navigator.pop(context, double.parse(_controller.text.trim()));
+          }
+        },
+        child: const Text('Save'),
+      ),
+    ],
+  );
+}
 
 class HabitDetailScreen extends ConsumerStatefulWidget {
   const HabitDetailScreen({super.key, required this.habitId});
@@ -49,14 +112,19 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
         ? null
         : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
     final accent = categoryColor ?? colors.habits;
-    final icon = category == null ? LucideIcons.flame : resolveIcon(category.icon);
+    final icon = category == null
+        ? LucideIcons.flame
+        : resolveIcon(category.icon);
     final historyState = ref.watch(habitLogHistoryProvider(widget.habitId));
     final history = historyState.value ?? const <HabitLog>[];
     final today = dateOnly(DateTime.now());
-    final created = dateOnly(habit.createdAt);
+    final statistics = HabitStatistics.calculate(habit, history, today);
+    final created = dateOnly(habit.repeatSchedule.trackingStart);
     final byDay = {for (final log in history) dateOnly(log.date): log};
-    final recentDays = [for (var i = 0; i < 7; i++) DateTime(today.year, today.month, today.day - i)]
-        .where((day) => !day.isBefore(created)).toList();
+    final recentDays = [
+      for (var i = 0; i < 7; i++)
+        DateTime(today.year, today.month, today.day - i),
+    ].where((day) => !day.isBefore(created)).toList();
 
     return Scaffold(
       appBar: AppBar(title: Text(habit.name)),
@@ -86,7 +154,10 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(habit.name, style: theme.textTheme.titleMedium),
+                            Text(
+                              habit.name,
+                              style: theme.textTheme.titleMedium,
+                            ),
                             Text(
                               category?.name ?? 'Uncategorized',
                               style: theme.textTheme.bodySmall?.copyWith(
@@ -98,20 +169,48 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                       ),
                     ],
                   ),
+                  if (habit.description?.isNotEmpty ?? false) ...[
+                    const SizedBox(height: 12),
+                    Text(habit.description!),
+                  ],
+                  const SizedBox(height: 8),
+                  Text('Repeats: ${habit.repeatSchedule.frequency}'),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Created: ${DateFormat.yMMMd().format(habit.createdAt)}',
+                  ),
+                  if (habit.repeatSchedule.end != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Ends: ${DateFormat.yMMMd().format(habit.repeatSchedule.end!)}',
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Icon(LucideIcons.flame, size: 16, color: accent),
                       const SizedBox(width: 4),
-                      Text(
-                        '${progress?.streakDays ?? 0} day streak',
-                        style: TextStyle(fontWeight: FontWeight.w700, color: accent),
+                      Expanded(
+                        child: Text(
+                          historyState.isLoading
+                              ? 'Loading streak…'
+                              : historyState.hasError
+                              ? 'Streak unavailable'
+                              : '${statistics.current} scheduled completions in a row',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: accent,
+                          ),
+                        ),
                       ),
                       if (progress?.isAtRisk ?? false) ...[
                         const SizedBox(width: 8),
                         Text(
                           '· at risk',
-                          style: TextStyle(color: colors.critical, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: colors.critical,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ],
@@ -134,6 +233,23 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  ],
+                  if (habit.targetAmount != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Target: ${_formatAmount(habit.targetAmount!)} ${habit.targetUnit ?? ''}'
+                          .trim(),
+                    ),
+                  ],
+                  if (habit.hasPendingPause) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '${habit.isPaused ? 'Paused' : 'Pause starts ${DateFormat.yMMMd().format(habit.pauseStartedAt!)}'} until ${DateFormat.yMMMd().format(habit.pausedUntil!)}',
+                      style: TextStyle(
+                        color: colors.critical,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ],
@@ -160,14 +276,38 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
               ),
             )
           else
-            SizedBox(
-              width: double.infinity,
-              child: TextButton.icon(
-                onPressed: _busy ? null : () => _archiveHabit(habit),
-                style: TextButton.styleFrom(foregroundColor: colors.critical),
-                icon: const Icon(LucideIcons.archive),
-                label: const Text('Archive habit'),
-              ),
+            Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => habit.hasPendingPause
+                              ? _resumeHabit(habit)
+                              : _pauseHabit(habit),
+                    icon: Icon(
+                      habit.hasPendingPause
+                          ? LucideIcons.play
+                          : LucideIcons.pause,
+                    ),
+                    label: Text(
+                      habit.hasPendingPause ? 'Resume habit' : 'Pause habit',
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: _busy ? null : () => _archiveHabit(habit),
+                    style: TextButton.styleFrom(
+                      foregroundColor: colors.critical,
+                    ),
+                    icon: const Icon(LucideIcons.archive),
+                    label: const Text('Archive habit'),
+                  ),
+                ),
+              ],
             ),
           const SizedBox(height: 24),
           Text('Last 7 days', style: theme.textTheme.titleSmall),
@@ -178,86 +318,224 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
             const Text('Could not load habit history. Please try again.')
           else ...[
             for (final day in recentDays)
-              if (byDay[day] case final log?)
+              if (!habit.scheduledOn(day))
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(DateFormat.yMMMEd().format(day)),
+                  subtitle: Text(
+                    habit.pausedOn(day) ? 'Paused' : 'Not scheduled',
+                  ),
+                )
+              else if (byDay[day] case final log?)
                 _HistoryTile(habit: habit, log: log)
               else
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(day == today ? LucideIcons.circle : LucideIcons.circleX,
-                    color: day == today ? theme.colorScheme.onSurfaceVariant : colors.critical),
+                  leading: Icon(
+                    day == today ? LucideIcons.circle : LucideIcons.circleX,
+                    color: day == today
+                        ? theme.colorScheme.onSurfaceVariant
+                        : colors.critical,
+                  ),
                   title: Text(DateFormat.yMMMEd().format(day)),
                   subtitle: Text(day == today ? 'Pending' : 'Absent'),
                 ),
             const SizedBox(height: 24),
+            if (habit.targetAmount != null &&
+                !habit.archived &&
+                habit.scheduledOn(today))
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(LucideIcons.pencil),
+                  label: const Text("Log today's amount"),
+                  onPressed:
+                      _busy || historyState.isLoading || historyState.hasError
+                      ? null
+                      : () => _logAmount(habit, byDay[today]?.amount),
+                ),
+              ),
+            const SizedBox(height: 12),
             Text('Completion calendar', style: theme.textTheme.titleSmall),
             const SizedBox(height: 8),
             TableCalendar<void>(
               firstDay: DateTime(created.year, created.month),
-              lastDay: DateTime(today.year, today.month + 1, 0),
-              focusedDay: _focusedMonth.isBefore(created) ? created : _focusedMonth,
+              lastDay: DateTime(
+                (created.isAfter(today) ? created : today).year,
+                (created.isAfter(today) ? created : today).month + 1,
+                0,
+              ),
+              focusedDay: _focusedMonth.isBefore(created)
+                  ? created
+                  : _focusedMonth,
               startingDayOfWeek: StartingDayOfWeek.monday,
               calendarFormat: CalendarFormat.month,
               availableGestures: AvailableGestures.horizontalSwipe,
-              headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+              ),
               calendarStyle: const CalendarStyle(outsideDaysVisible: false),
               onPageChanged: (day) => setState(() => _focusedMonth = day),
               calendarBuilders: CalendarBuilders<void>(
-                defaultBuilder: (context, day, _) => _calendarDay(context, day, created, today, byDay),
-                todayBuilder: (context, day, _) => _calendarDay(context, day, created, today, byDay),
+                defaultBuilder: (context, day, _) =>
+                    _calendarDay(context, day, habit, today, byDay),
+                todayBuilder: (context, day, _) =>
+                    _calendarDay(context, day, habit, today, byDay),
               ),
             ),
             const SizedBox(height: 12),
-            Wrap(spacing: 16, runSpacing: 8, children: [
-              Text('✓ Done', style: TextStyle(color: colors.habits)),
-              Text('× Absent', style: TextStyle(color: colors.critical)),
-              const Text('○ Today: pending'),
-            ]),
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              children: [
+                Text('✓ Done', style: TextStyle(color: colors.habits)),
+                Text('× Absent', style: TextStyle(color: colors.critical)),
+                const Text('○ Today: pending'),
+              ],
+            ),
             const SizedBox(height: 8),
-            Text('Dates before this habit was created and future dates are unmarked.', style: theme.textTheme.bodySmall),
+            Text(
+              'Unscheduled days, dates before the start and future dates are unmarked.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 24),
+            HabitStatisticsCard(stats: statistics, accent: accent),
           ],
         ],
       ),
     );
   }
 
-  Widget _calendarDay(BuildContext context, DateTime day, DateTime created, DateTime today, Map<DateTime, HabitLog> logs) {
+  String _formatAmount(double amount) => amount == amount.roundToDouble()
+      ? amount.toInt().toString()
+      : amount.toStringAsFixed(2);
+
+  Future<void> _pauseHabit(Habit habit) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 7)),
+      firstDate: dateOnly(DateTime.now()),
+      lastDate: DateTime(2200),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(habitsControllerProvider).pauseHabit(habit, picked);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _logAmount(Habit habit, double? initialAmount) async {
+    final day = dateOnly(DateTime.now());
+    final amount = await showDialog<double>(
+      context: context,
+      builder: (context) =>
+          _AmountDialog(habit: habit, initialAmount: initialAmount),
+    );
+    if (amount == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(habitsControllerProvider).logAmount(habit, day, amount);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save amount. Please try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _resumeHabit(Habit habit) async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(habitsControllerProvider).resumeHabit(habit);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Widget _calendarDay(
+    BuildContext context,
+    DateTime day,
+    Habit habit,
+    DateTime today,
+    Map<DateTime, HabitLog> logs,
+  ) {
     final date = dateOnly(day);
-    final eligible = !date.isBefore(created) && !date.isAfter(today);
+    final eligible = habit.scheduledOn(date) && !date.isAfter(today);
     final done = eligible && (logs[date]?.completed ?? false);
     final absent = eligible && date.isBefore(today) && !done;
     final colors = context.appColors;
-    final color = done ? colors.habits : absent ? colors.critical : Theme.of(context).colorScheme.onSurfaceVariant;
+    final color = done
+        ? colors.habits
+        : absent
+        ? colors.critical
+        : Theme.of(context).colorScheme.onSurfaceVariant;
     return Semantics(
-      label: '${DateFormat.yMMMEd().format(date)}: ${done ? 'Done' : absent ? 'Absent' : eligible ? 'Pending' : 'Not tracked'}',
+      label:
+          '${DateFormat.yMMMEd().format(date)}: ${done
+              ? 'Done'
+              : absent
+              ? 'Absent'
+              : eligible
+              ? 'Pending'
+              : 'Not tracked'}',
       child: Container(
         margin: const EdgeInsets.all(3),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: done || absent ? color.withValues(alpha: 0.12) : Colors.transparent,
+          color: done || absent
+              ? color.withValues(alpha: 0.12)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: date == today ? Border.all(color: color) : null,
         ),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text('${day.day}', style: TextStyle(color: color)),
-          if (done || absent) Icon(done ? LucideIcons.check : LucideIcons.x, size: 13, color: color),
-        ]),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('${day.day}', style: TextStyle(color: color)),
+            if (done || absent)
+              Icon(
+                done ? LucideIcons.check : LucideIcons.x,
+                size: 13,
+                color: color,
+              ),
+          ],
+        ),
       ),
     );
   }
 
   Future<void> _editHabit(Habit habit) async {
     final categories = ref.read(habitCategoriesProvider).value ?? const [];
-    final result = await showQuickAddHabitSheet(context, categories: categories, initial: habit);
-    if (result == null) return;
-    await ref.read(habitsControllerProvider).updateHabit(
-      habit: habit,
-      name: result.name,
-      categoryId: result.categoryId,
-      reminderEnabled: result.reminderEnabled,
-      reminderHour: result.reminderHour,
-      reminderMinute: result.reminderMinute,
-      reminderMode: result.reminderMode,
+    final result = await showQuickAddHabitSheet(
+      context,
+      categories: categories,
+      initial: habit,
     );
+    if (result == null) return;
+    await ref
+        .read(habitsControllerProvider)
+        .updateHabit(
+          habit: habit,
+          name: result.name,
+          description: result.description,
+          schedule: result.schedule,
+          categoryId: result.categoryId,
+          reminderEnabled: result.reminderEnabled,
+          reminderHour: result.reminderHour,
+          reminderMinute: result.reminderMinute,
+          reminderMode: result.reminderMode,
+          targetAmount: result.targetAmount,
+          clearTarget: result.targetAmount == null,
+          targetUnit: result.targetUnit,
+        );
   }
 
   Future<void> _archiveHabit(Habit habit) async {
@@ -269,7 +547,10 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
           "It's hidden from the Tasks & Habits list and its reminder is cancelled. Its log history is kept.",
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Archive'),
@@ -303,16 +584,36 @@ class _HistoryTile extends ConsumerWidget {
     final colors = context.appColors;
 
     final pending = !log.completed && isSameDay(log.date, DateTime.now());
-    final status = log.completed ? 'Done' : pending ? 'Pending' : 'Absent';
+    final status = log.completed
+        ? 'Done'
+        : pending
+        ? 'Pending'
+        : 'Absent';
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(
-        log.completed ? LucideIcons.checkCircle : pending ? LucideIcons.circle : LucideIcons.circleX,
-        color: log.completed ? colors.habits : pending ? theme.colorScheme.onSurfaceVariant : colors.critical,
+        log.completed
+            ? LucideIcons.checkCircle
+            : pending
+            ? LucideIcons.circle
+            : LucideIcons.circleX,
+        color: log.completed
+            ? colors.habits
+            : pending
+            ? theme.colorScheme.onSurfaceVariant
+            : colors.critical,
       ),
       title: Text(DateFormat.yMMMEd().format(log.date)),
-      subtitle: Text(log.notes == null || log.notes!.isEmpty ? status : '$status · ${log.notes!}',
-        style: theme.textTheme.bodySmall),
+      subtitle: Text(
+        [
+          status,
+          if (log.amount != null)
+            '${_formatLogAmount(log.amount!)}${log.targetAmountSnapshot == null ? '' : ' / ${_formatLogAmount(log.targetAmountSnapshot!)}'} ${log.targetUnitSnapshot ?? ''}'
+                .trim(),
+          if (log.notes != null && log.notes!.isNotEmpty) log.notes!,
+        ].join(' · '),
+        style: theme.textTheme.bodySmall,
+      ),
       trailing: IconButton(
         tooltip: 'Edit note',
         icon: const Icon(LucideIcons.squarePen, size: 20),
@@ -346,11 +647,17 @@ class _HistoryTile extends ConsumerWidget {
       ),
     );
     if (result == null) return;
-    await ref.read(habitsControllerProvider).setCompletedForDate(
-      habit,
-      log.date,
-      log.completed,
-      notes: result.isEmpty ? '' : result,
-    );
+    await ref
+        .read(habitsControllerProvider)
+        .setCompletedForDate(
+          habit,
+          log.date,
+          log.completed,
+          notes: result.isEmpty ? '' : result,
+        );
   }
 }
+
+String _formatLogAmount(double value) => value == value.roundToDouble()
+    ? value.toInt().toString()
+    : value.toStringAsFixed(2);

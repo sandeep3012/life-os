@@ -36,7 +36,12 @@ void main() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     final repo = HabitsRepository(db);
     habitId = await repo.createHabit('Morning workout');
-    await repo.setCompletedForDate(habitId, DateTime.now(), true, notes: 'felt great');
+    await repo.setCompletedForDate(
+      habitId,
+      DateTime.now(),
+      true,
+      notes: 'felt great',
+    );
   });
 
   tearDown(() => db.close());
@@ -49,7 +54,9 @@ void main() {
     return ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
-        notificationServiceProvider.overrideWithValue(_FakeNotificationService()),
+        notificationServiceProvider.overrideWithValue(
+          _FakeNotificationService(),
+        ),
       ],
       child: MaterialApp(
         theme: AppTheme.light(),
@@ -58,7 +65,9 @@ void main() {
             body: Center(
               child: ElevatedButton(
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => HabitDetailScreen(habitId: habitId)),
+                  MaterialPageRoute(
+                    builder: (_) => HabitDetailScreen(habitId: habitId),
+                  ),
                 ),
                 child: const Text('open detail'),
               ),
@@ -76,13 +85,14 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('renders habit name, streak, and seeded log history', (tester) async {
+  testWidgets('renders habit name, streak, and seeded log history', (
+    tester,
+  ) async {
     await openDetail(tester);
 
     expect(find.text('Morning workout'), findsWidgets);
-    expect(find.textContaining('day streak'), findsOneWidget);
-    // The log row composes status and note into one Text ("Done · felt great"),
-    // so an exact-text finder can never match the note alone.
+    expect(find.textContaining('scheduled completions'), findsWidgets);
+    await tester.scrollUntilVisible(find.textContaining('felt great'), 200);
     expect(find.textContaining('felt great'), findsOneWidget);
 
     await _disposeCleanly(tester);
@@ -91,6 +101,7 @@ void main() {
   testWidgets('editing a log note persists the change', (tester) async {
     await openDetail(tester);
 
+    await tester.scrollUntilVisible(find.byIcon(LucideIcons.squarePen), 200);
     await tester.tap(find.byIcon(LucideIcons.squarePen));
     await tester.pumpAndSettle();
 
@@ -104,7 +115,55 @@ void main() {
     await _disposeCleanly(tester);
   });
 
-  testWidgets('archiving navigates back and removes the habit from the list', (tester) async {
+  testWidgets('quantity dialog prefills total and rejects invalid amounts', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      final repo = HabitsRepository(db);
+      await repo.updateHabit(
+        id: habitId,
+        name: 'Morning workout',
+        targetAmount: 20,
+        targetUnit: 'minutes',
+      );
+      await repo.setCompletedForDate(
+        habitId,
+        DateTime.now(),
+        false,
+        amount: 12,
+      );
+    });
+    await openDetail(tester);
+    await tester.scrollUntilVisible(find.text("Log today's amount"), 200);
+    await tester.pumpAndSettle();
+    await Scrollable.ensureVisible(
+      tester.element(find.text("Log today's amount")),
+      alignment: 0.5,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text("Log today's amount"));
+    await tester.pumpAndSettle();
+    expect(find.text('12.0'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), '-1');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter zero or a positive number'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), '25');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async {
+      final log = (await HabitsRepository(
+        db,
+      ).watchLogsForHabit(habitId).first).single;
+      expect(log.amount, 25);
+      expect(log.completed, isTrue);
+    });
+    await _disposeCleanly(tester);
+  });
+
+  testWidgets('archiving navigates back and removes the habit from the list', (
+    tester,
+  ) async {
     await openDetail(tester);
 
     await tester.tap(find.text('Archive habit'));
@@ -137,14 +196,19 @@ void main() {
         icon: 'fitness_center',
         colorHex: '#2E9E63',
       );
-      final archivedId = await repo.createHabit('Old routine', categoryId: category.id);
+      final archivedId = await repo.createHabit(
+        'Old routine',
+        categoryId: category.id,
+      );
       await repo.archiveHabit(archivedId);
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             appDatabaseProvider.overrideWithValue(db),
-            notificationServiceProvider.overrideWithValue(_FakeNotificationService()),
+            notificationServiceProvider.overrideWithValue(
+              _FakeNotificationService(),
+            ),
           ],
           child: MaterialApp(
             theme: AppTheme.light(),
