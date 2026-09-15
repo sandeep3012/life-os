@@ -48,8 +48,9 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
   /// once in a session.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed)
+    if (state == AppLifecycleState.resumed) {
       ref.read(scheduleCoordinatorProvider).requestRefresh();
+    }
     if (!ref.read(settingsProvider).appLockEnabled) return;
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {

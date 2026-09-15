@@ -88,8 +88,9 @@ final habitConsistencyProvider = Provider<HabitConsistency>((ref) {
 
   for (final log in logs) {
     if (!log.completed ||
-        !(active[log.habitId]?.scheduledOn(log.date) ?? false))
+        !(active[log.habitId]?.scheduledOn(log.date) ?? false)) {
       continue;
+    }
     final day = dateOnly(log.date);
     if (!day.isBefore(thisWeekStart) && day.isBefore(nextWeekStart)) {
       thisWeek++;

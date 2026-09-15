@@ -48,8 +48,9 @@ List<Transaction> _filterTransactions(
   return source.where((t) {
     if (range != null &&
         (t.date.isBefore(dateOnly(range.start)) ||
-            !t.date.isBefore(endExclusive!)))
+            !t.date.isBefore(endExclusive!))) {
       return false;
+    }
     final category = t.paymentMode == 'transfer'
         ? '__transfer__'
         : t.categoryId ?? '__uncategorized__';
@@ -114,11 +115,12 @@ class _TransactionHistoryScreenState
         range = null;
         break;
     }
-    if (mounted)
+    if (mounted) {
       setState(() {
         _range = range;
         _preset = preset;
       });
+    }
   }
 
   Future<void> _selectCategories(List<Category> categories) async {
@@ -949,8 +951,9 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
   String _dateLabel(DateTime date) {
     final now = DateTime.now();
     if (isSameDay(date, now)) return 'Today';
-    if (isSameDay(date, now.subtract(const Duration(days: 1))))
+    if (isSameDay(date, now.subtract(const Duration(days: 1)))) {
       return 'Yesterday';
+    }
     return DateFormat('MMM d, yyyy').format(date);
   }
 

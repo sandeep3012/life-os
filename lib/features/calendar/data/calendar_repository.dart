@@ -86,8 +86,9 @@ class CalendarRepository {
       );
     }
     RepeatSchedule.decode(schedule.encode());
-    if (!schedule.hasOccurrence)
+    if (!schedule.hasOccurrence) {
       throw ArgumentError('No scheduled day in this range');
+    }
     final head = await getEvent(seriesId);
     final originalRule = await getSeriesSchedule(selected);
     final following = (await getEventsInSeries(

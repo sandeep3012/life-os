@@ -128,10 +128,11 @@ class ScheduleFields extends StatelessWidget {
                             : value.weekdays),
                       };
                       selected ? days.add(d) : days.remove(d);
-                      if (days.isNotEmpty)
+                      if (days.isNotEmpty) {
                         onChanged(
                           value.copyWith(weekdays: days.toList()..sort()),
                         );
+                      }
                     },
                   ),
               ],
@@ -154,8 +155,9 @@ class ScheduleFields extends StatelessWidget {
                         firstDate: RepeatSchedule.day(value.start),
                         lastDate: DateTime(2100),
                       );
-                      if (date != null && context.mounted)
+                      if (date != null && context.mounted) {
                         onChanged(value.copyWith(end: date));
+                      }
                     },
                   ),
                 ),

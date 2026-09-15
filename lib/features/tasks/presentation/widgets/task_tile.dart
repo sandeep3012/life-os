@@ -119,8 +119,9 @@ class TaskTile extends StatelessWidget {
     final now = DateTime.now();
     final timeLabel = DateFormat.jm().format(due);
     if (isSameDay(due, now)) return timeLabel;
-    if (isSameDay(due, now.add(const Duration(days: 1))))
+    if (isSameDay(due, now.add(const Duration(days: 1)))) {
       return 'Tomorrow · $timeLabel';
+    }
     return '${DateFormat.MMMd().format(due)} · $timeLabel';
   }
 }

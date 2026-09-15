@@ -30,10 +30,12 @@ class RepeatSchedule {
     final d = day(date);
     if (previous != null &&
         effectiveFrom != null &&
-        d.isBefore(day(effectiveFrom!)))
+        d.isBefore(day(effectiveFrom!))) {
       return previous!.includes(d);
-    if (d.isBefore(day(start)) || (end != null && d.isAfter(day(end!))))
+    }
+    if (d.isBefore(day(start)) || (end != null && d.isAfter(day(end!)))) {
       return false;
+    }
     switch (frequency) {
       case 'none':
         return d == day(start);
@@ -101,11 +103,13 @@ class RepeatSchedule {
     if (value == null) return null;
     final json = jsonDecode(value) as Map<String, dynamic>;
     final frequency = json['frequency'] as String;
-    if (!frequencies.contains(frequency))
+    if (!frequencies.contains(frequency)) {
       throw FormatException('Invalid repeat frequency');
+    }
     final weekdays = (json['weekdays'] as List).cast<int>();
-    if (weekdays.any((d) => d < 1 || d > 7))
+    if (weekdays.any((d) => d < 1 || d > 7)) {
       throw FormatException('Invalid weekdays');
+    }
     final result = RepeatSchedule(
       start: DateTime.parse(json['start'] as String),
       frequency: frequency,
