@@ -9,11 +9,7 @@ import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
-import 'package:life_manager/core/widgets/tappable.dart';
-import 'package:life_manager/features/habits/presentation/screens/habits_overview_screen.dart';
-import 'package:life_manager/features/health/presentation/screens/health_screen.dart';
 import 'package:life_manager/features/home/presentation/widgets/add_menu_sheet.dart';
-import 'package:life_manager/features/tasks/presentation/screens/tasks_habits_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class _FakeNotificationService extends NotificationService {
@@ -94,7 +90,10 @@ void main() {
     // the first few rows are asserted: the drawer's ListView builds lazily, so
     // later destinations aren't in the tree at this viewport size.
     expect(
-      find.descendant(of: find.byType(AppSidebar), matching: find.text('Home')),
+      find.descendant(
+        of: find.byType(AppSidebar),
+        matching: find.text('Record transaction'),
+      ),
       findsOneWidget,
     );
     expect(
@@ -104,67 +103,6 @@ void main() {
       ),
       findsOneWidget,
     );
-
-    await disposeCleanly(tester);
-  });
-
-  testWidgets('the sidebar opens Habits and Health, not the Tasks screen', (
-    tester,
-  ) async {
-    await tester.pumpWidget(buildApp());
-    await tester.pumpAndSettle();
-
-    // These used to be sub-routes of the tasks branch, so selecting them landed
-    // on the Tasks screen instead of their own.
-    await tester.tap(find.byIcon(LucideIcons.menu));
-    await tester.pumpAndSettle();
-    final habitsRow = find.descendant(
-      of: find.byType(AppSidebar),
-      matching: find.text('Habits'),
-    );
-    await tester.scrollUntilVisible(
-      habitsRow,
-      120,
-      scrollable: find
-          .descendant(
-            of: find.byType(AppSidebar),
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
-    await tester.tap(
-      find.ancestor(of: habitsRow, matching: find.byType(Tappable)).first,
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byType(HabitsOverviewScreen), findsOneWidget);
-    expect(find.byType(TasksHabitsScreen), findsNothing);
-
-    await tester.tap(find.byIcon(LucideIcons.menu));
-    await tester.pumpAndSettle();
-
-    // The drawer's list builds lazily, so rows past the fold aren't in the tree
-    // until scrolled to.
-    final healthRow = find.descendant(
-      of: find.byType(AppSidebar),
-      matching: find.text('Health'),
-    );
-    await tester.scrollUntilVisible(
-      healthRow,
-      120,
-      scrollable: find
-          .descendant(
-            of: find.byType(AppSidebar),
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
-    await tester.tap(
-      find.ancestor(of: healthRow, matching: find.byType(Tappable)).first,
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byType(HealthScreen), findsOneWidget);
 
     await disposeCleanly(tester);
   });

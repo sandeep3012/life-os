@@ -87,7 +87,9 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: RoutePaths.tasksHabits,
-              builder: (context, state) => const TasksHabitsScreen(),
+              builder: (context, state) => TasksHabitsScreen(
+                initialHabitsTab: state.uri.queryParameters['tab'] == 'habits',
+              ),
               routes: [
                 GoRoute(
                   path: 'archived-habits',

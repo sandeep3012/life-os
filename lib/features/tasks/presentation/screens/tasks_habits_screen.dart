@@ -24,15 +24,34 @@ enum _Section { tasks, habits }
 enum _TaskFilter { today, upcoming, all }
 
 class TasksHabitsScreen extends ConsumerStatefulWidget {
-  const TasksHabitsScreen({super.key});
+  const TasksHabitsScreen({super.key, this.initialHabitsTab = false});
+
+  /// Set by the Planner's `?tab=habits` route so menu navigation can arrive
+  /// directly on the Habits tab without creating a second habits screen.
+  final bool initialHabitsTab;
 
   @override
   ConsumerState<TasksHabitsScreen> createState() => _TasksHabitsScreenState();
 }
 
 class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
-  _Section _section = _Section.tasks;
+  late _Section _section;
   _TaskFilter _taskFilter = _TaskFilter.today;
+
+  @override
+  void initState() {
+    super.initState();
+    _section = widget.initialHabitsTab ? _Section.habits : _Section.tasks;
+  }
+
+  @override
+  void didUpdateWidget(covariant TasksHabitsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialHabitsTab != widget.initialHabitsTab) {
+      _section = widget.initialHabitsTab ? _Section.habits : _Section.tasks;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

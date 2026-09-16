@@ -43,7 +43,7 @@ class AppSidebar extends ConsumerWidget {
         (settings.themeMode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
 
-    final current = GoRouterState.of(context).uri.path;
+    final current = GoRouterState.of(context).uri.toString();
 
     return Drawer(
       width: 290,
@@ -154,7 +154,7 @@ class AppSidebar extends ConsumerWidget {
                     path: RoutePaths.reports,
                     current: current,
                   ),
-                  const _GroupLabel('Tasks'),
+                  const _GroupLabel('Planner'),
                   _Item(
                     icon: LucideIcons.listChecks,
                     label: 'Tasks',
@@ -165,9 +165,15 @@ class AppSidebar extends ConsumerWidget {
                   _Item(
                     icon: LucideIcons.repeat,
                     label: 'Habits',
-                    path: RoutePaths.habitsOverview,
+                    path: RoutePaths.plannerHabits,
                     current: current,
                     count: habitCount,
+                  ),
+                  _Item(
+                    icon: LucideIcons.flag,
+                    label: 'Goals',
+                    path: RoutePaths.goals,
+                    current: current,
                   ),
                   const _GroupLabel('Calendar'),
                   _Item(
@@ -193,12 +199,6 @@ class AppSidebar extends ConsumerWidget {
                     icon: LucideIcons.folder,
                     label: 'Documents',
                     path: RoutePaths.documents,
-                    current: current,
-                  ),
-                  _Item(
-                    icon: LucideIcons.flag,
-                    label: 'Goals',
-                    path: RoutePaths.goals,
                     current: current,
                   ),
                   _Item(

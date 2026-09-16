@@ -36,7 +36,7 @@ void main() {
 
   tearDown(() => db.close());
 
-  Widget buildApp() {
+  Widget buildApp({bool initialHabitsTab = false}) {
     return ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
@@ -46,7 +46,7 @@ void main() {
       ],
       child: MaterialApp(
         theme: AppTheme.light(),
-        home: const TasksHabitsScreen(),
+        home: TasksHabitsScreen(initialHabitsTab: initialHabitsTab),
       ),
     );
   }
@@ -118,6 +118,21 @@ void main() {
       await _disposeCleanly(tester);
     },
   );
+
+  testWidgets('the Planner can open directly on the Habits tab', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp(initialHabitsTab: true));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('New habit'), findsOneWidget);
+    expect(
+      find.text('No habits yet — add one to start a streak.'),
+      findsOneWidget,
+    );
+
+    await _disposeCleanly(tester);
+  });
 
   testWidgets('archived habits have a titled screen and a Back button', (
     tester,

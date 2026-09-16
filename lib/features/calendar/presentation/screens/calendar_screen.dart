@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/app_top_bar.dart';
+import '../../../../core/widgets/surface_card.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../application/calendar_providers.dart';
 import '../../domain/calendar_item.dart';
@@ -52,86 +53,89 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           Expanded(
             child: Column(
               children: [
-                TableCalendar<CalendarItemType>(
-                  focusedDay: _focusedMonth,
-                  firstDay: DateTime(2020),
-                  lastDay: DateTime(2035),
-                  currentDay: dateOnly(DateTime.now()),
-                  selectedDayPredicate: (day) => dateOnly(day) == selectedDay,
-                  eventLoader: (day) =>
-                      (markersByDay[dateOnly(day)] ?? const {}).toList(),
-                  onDaySelected: (selected, focused) {
-                    ref
-                        .read(selectedCalendarDayProvider.notifier)
-                        .select(selected);
-                    setState(() => _focusedMonth = focused);
-                  },
-                  onPageChanged: (focused) =>
-                      setState(() => _focusedMonth = focused),
-                  startingDayOfWeek: StartingDayOfWeek.monday,
-                  headerStyle: const HeaderStyle(
-                    formatButtonVisible: false,
-                    titleCentered: true,
-                  ),
-                  calendarStyle: CalendarStyle(
-                    outsideDaysVisible: true,
-                    todayDecoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      shape: BoxShape.circle,
-                    ),
-                    todayTextStyle: TextStyle(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                    selectedDecoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  calendarBuilders: CalendarBuilders(
-                    markerBuilder: (context, day, events) {
-                      if (events.isEmpty) return null;
-                      return Positioned(
-                        bottom: 4,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            for (final type in events.take(3))
-                              Container(
-                                width: 4,
-                                height: 4,
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 1,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: colorForCalendarItemType(
-                                    context,
-                                    type,
-                                  ),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                          ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                  child: SurfaceCard(
+                    padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+                    radius: 22,
+                    child: TableCalendar<CalendarItemType>(
+                      focusedDay: _focusedMonth,
+                      firstDay: DateTime(2020),
+                      lastDay: DateTime(2035),
+                      currentDay: dateOnly(DateTime.now()),
+                      selectedDayPredicate: (day) =>
+                          dateOnly(day) == selectedDay,
+                      eventLoader: (day) =>
+                          (markersByDay[dateOnly(day)] ?? const {}).toList(),
+                      onDaySelected: (selected, focused) {
+                        ref
+                            .read(selectedCalendarDayProvider.notifier)
+                            .select(selected);
+                        setState(() => _focusedMonth = focused);
+                      },
+                      onPageChanged: (focused) =>
+                          setState(() => _focusedMonth = focused),
+                      startingDayOfWeek: StartingDayOfWeek.monday,
+                      headerStyle: const HeaderStyle(
+                        formatButtonVisible: false,
+                        titleCentered: true,
+                      ),
+                      calendarStyle: CalendarStyle(
+                        outsideDaysVisible: true,
+                        todayDecoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer,
+                          shape: BoxShape.circle,
                         ),
-                      );
-                    },
+                        todayTextStyle: TextStyle(
+                          color: theme.colorScheme.onPrimaryContainer,
+                        ),
+                        selectedDecoration: BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      calendarBuilders: CalendarBuilders(
+                        markerBuilder: (context, day, events) {
+                          if (events.isEmpty) return null;
+                          return Positioned(
+                            bottom: 4,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                for (final type in events.take(3))
+                                  Container(
+                                    width: 4,
+                                    height: 4,
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colorForCalendarItemType(
+                                        context,
+                                        type,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
-                const Divider(height: 1),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                  // A Row can't shrink below its children's intrinsic width, and the
-                  // date plus three legend labels don't fit a phone — this overflowed
-                  // by ~98px at 392pt. Wrap spreads them when there's room and drops
-                  // the legend to a second line when there isn't.
-                  child: Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 12,
-                    runSpacing: 6,
+                  child: Row(
                     children: [
-                      Text(
-                        DateFormat.yMMMEd().format(selectedDay),
-                        style: theme.textTheme.titleSmall,
+                      Expanded(
+                        child: Text(
+                          DateFormat.yMMMEd().format(selectedDay),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall,
+                        ),
                       ),
                       Wrap(
                         spacing: 10,
