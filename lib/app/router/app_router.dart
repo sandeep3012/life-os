@@ -50,13 +50,11 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: RoutePaths.finance,
-              builder: (context, state) => const FinanceOverviewScreen(),
+              builder: (context, state) => const FinanceHomeScreen(),
               routes: [
-                // The pre-redesign finance screen, kept for the budget tools and
-                // filters the design comp has no slot for.
                 GoRoute(
-                  path: 'ledger',
-                  builder: (context, state) => const FinanceHomeScreen(),
+                  path: 'overview',
+                  builder: (context, state) => const FinanceOverviewScreen(),
                 ),
                 GoRoute(
                   path: 'analyzer',

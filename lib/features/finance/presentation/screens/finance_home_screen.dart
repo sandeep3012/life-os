@@ -20,6 +20,7 @@ import '../widgets/quick_add_account_sheet.dart';
 import '../widgets/quick_add_budget_sheet.dart';
 import '../widgets/quick_add_transaction_sheet.dart';
 import '../widgets/transaction_tile.dart';
+import '../widgets/transfer_money_dialog.dart';
 import 'account_detail_screen.dart';
 import 'archived_accounts_screen.dart';
 import '../../../../app/theme/app_fonts.dart';
@@ -399,6 +400,11 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
+                                'Finance home',
+                                style: theme.textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
                                 activeAccounts.isEmpty
                                     ? 'No accounts yet'
                                     : 'Across ${activeAccounts.length} account${activeAccounts.length == 1 ? '' : 's'}',
@@ -616,7 +622,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                 Navigator.of(context).pop();
                 Future.microtask(() {
                   if (!hostContext.mounted) return;
-                  _showTransferDialog(hostContext);
+                  showTransferMoneyDialog(hostContext, ref);
                 });
               },
             ),
@@ -632,97 +638,6 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _showTransferDialog(BuildContext context) async {
-    final accounts = ref.read(transactableAccountsProvider);
-    if (accounts.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Add at least two active accounts to transfer money.'),
-        ),
-      );
-      return;
-    }
-    final amountController = TextEditingController();
-    String fromId = accounts.first.id;
-    String toId = accounts[1].id;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setState) {
-          final valid =
-              fromId != toId &&
-              (double.tryParse(amountController.text.trim()) ?? 0) > 0;
-          return AlertDialog(
-            title: const Text('Transfer money'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: fromId,
-                  decoration: const InputDecoration(labelText: 'From account'),
-                  items: [
-                    for (final a in accounts)
-                      DropdownMenuItem(value: a.id, child: Text(a.name)),
-                  ],
-                  onChanged: (v) => setState(() => fromId = v!),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: toId,
-                  decoration: const InputDecoration(labelText: 'To account'),
-                  items: [
-                    for (final a in accounts)
-                      DropdownMenuItem(value: a.id, child: Text(a.name)),
-                  ],
-                  onChanged: (v) => setState(() => toId = v!),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: amountController,
-                  onChanged: (_) => setState(() {}),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(labelText: 'Amount'),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: valid
-                    ? () => Navigator.pop(dialogContext, true)
-                    : null,
-                child: const Text('Transfer'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-    final amount = ((double.tryParse(amountController.text.trim()) ?? 0) * 100)
-        .round();
-    // The dialog route is still animating out when showDialog completes. Keep
-    // the controller alive until that transition has finished; disposing it
-    // immediately causes TextField to rebuild against a dead controller.
-    Future<void>.delayed(
-      const Duration(milliseconds: 400),
-      amountController.dispose,
-    );
-    if (confirmed != true || amount <= 0) return;
-    await ref
-        .read(financeControllerProvider)
-        .transfer(
-          fromAccountId: fromId,
-          toAccountId: toId,
-          amountMinor: amount,
-          date: DateTime.now(),
-        );
   }
 
   Future<void> _addAccount(BuildContext context, WidgetRef ref) async {

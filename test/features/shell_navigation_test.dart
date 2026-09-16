@@ -92,7 +92,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(AppSidebar),
-        matching: find.text('Record transaction'),
+        matching: find.text('Finance home'),
       ),
       findsOneWidget,
     );

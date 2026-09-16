@@ -4,6 +4,7 @@ class RoutePaths {
 
   static const home = '/home';
   static const finance = '/finance';
+  static const financeOverview = '/finance/overview';
   static const financeLedger = '/finance/ledger';
   static const spendAnalyzer = '/finance/analyzer';
   static const recurringTransactions = '/finance/recurring';
