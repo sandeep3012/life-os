@@ -23,6 +23,7 @@ class HabitRingTile extends StatelessWidget {
     required this.progress,
     required this.onTap,
     this.complete = false,
+    this.color,
   });
 
   final String name;
@@ -35,6 +36,10 @@ class HabitRingTile extends StatelessWidget {
 
   /// Shows a tick instead of a percentage.
   final bool complete;
+
+  /// Optional state color for the ring. The dashboard uses the alert color
+  /// when the habit is not completed today.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +58,7 @@ class HabitRingTile extends StatelessWidget {
               progress: progress,
               size: 48,
               strokeWidth: 5,
-              color: scheme.secondary,
+              color: color ?? scheme.secondary,
               child: complete
                   ? Icon(LucideIcons.check, size: 18, color: scheme.onSurface)
                   : Text(

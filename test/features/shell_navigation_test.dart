@@ -9,6 +9,7 @@ import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
+import 'package:life_manager/core/widgets/tappable.dart';
 import 'package:life_manager/features/habits/presentation/screens/habits_overview_screen.dart';
 import 'package:life_manager/features/health/presentation/screens/health_screen.dart';
 import 'package:life_manager/features/home/presentation/widgets/add_menu_sheet.dart';
@@ -24,7 +25,10 @@ class _FakeNotificationService extends NotificationService {
   /// database has been initialised — so any test that pumps the whole app has to
   /// stub it out.
   @override
-  Future<void> scheduleDailyHabitReminder({int hour = 20, int minute = 0}) async {}
+  Future<void> scheduleDailyHabitReminder({
+    int hour = 20,
+    int minute = 0,
+  }) async {}
 
   @override
   Future<void> cancelDailyHabitReminder() async {}
@@ -63,7 +67,9 @@ void main() {
     return ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
-        notificationServiceProvider.overrideWithValue(_FakeNotificationService()),
+        notificationServiceProvider.overrideWithValue(
+          _FakeNotificationService(),
+        ),
       ],
       child: const LifeOSApp(),
     );
@@ -112,8 +118,22 @@ void main() {
     // on the Tasks screen instead of their own.
     await tester.tap(find.byIcon(LucideIcons.menu));
     await tester.pumpAndSettle();
+    final habitsRow = find.descendant(
+      of: find.byType(AppSidebar),
+      matching: find.text('Habits'),
+    );
+    await tester.scrollUntilVisible(
+      habitsRow,
+      120,
+      scrollable: find
+          .descendant(
+            of: find.byType(AppSidebar),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.tap(
-      find.descendant(of: find.byType(AppSidebar), matching: find.text('Habits')),
+      find.ancestor(of: habitsRow, matching: find.byType(Tappable)).first,
     );
     await tester.pumpAndSettle();
 
@@ -125,16 +145,23 @@ void main() {
 
     // The drawer's list builds lazily, so rows past the fold aren't in the tree
     // until scrolled to.
-    final healthRow =
-        find.descendant(of: find.byType(AppSidebar), matching: find.text('Health'));
+    final healthRow = find.descendant(
+      of: find.byType(AppSidebar),
+      matching: find.text('Health'),
+    );
     await tester.scrollUntilVisible(
       healthRow,
       120,
       scrollable: find
-          .descendant(of: find.byType(AppSidebar), matching: find.byType(Scrollable))
+          .descendant(
+            of: find.byType(AppSidebar),
+            matching: find.byType(Scrollable),
+          )
           .first,
     );
-    await tester.tap(healthRow);
+    await tester.tap(
+      find.ancestor(of: healthRow, matching: find.byType(Tappable)).first,
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(HealthScreen), findsOneWidget);

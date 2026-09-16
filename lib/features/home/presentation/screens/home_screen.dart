@@ -10,8 +10,12 @@ import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_fonts.dart';
+import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/section_header.dart';
+import '../../../../core/widgets/surface_card.dart';
+import '../../../../core/widgets/tappable.dart';
 import '../../../ai_analyser/application/ai_analyser_providers.dart';
 import '../../../ai_analyser/presentation/widgets/insight_card.dart';
 import '../../../calendar/application/calendar_providers.dart';
@@ -19,13 +23,12 @@ import '../../../calendar/domain/calendar_item.dart';
 import '../../../habits/application/habits_providers.dart';
 import '../../../habits/domain/habit_progress.dart';
 import '../../../health/application/health_providers.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../../tasks/application/tasks_providers.dart';
 import '../../application/home_providers.dart';
 import '../../../../core/widgets/app_top_bar.dart';
-import '../widgets/habit_ring_tile.dart';
 import '../widgets/now_hero_card.dart';
-import '../widgets/todo_row.dart';
-import '../widgets/upcoming_row.dart';
+import '../widgets/habit_ring_tile.dart';
 
 /// The dashboard, laid out as the design comp specifies: app bar, serif greeting,
 /// the "now" hero, today's to-dos, a two-column habit grid, then "Coming up".
@@ -46,6 +49,9 @@ class HomeScreen extends ConsumerWidget {
     final habits = ref.watch(habitCheckInProvider);
     final upcoming = ref.watch(upcomingItemsProvider);
     final insights = ref.watch(activeInsightsProvider);
+    final monthSpendMinor = ref.watch(monthSpendMinorProvider);
+    final activeGoals = ref.watch(activeGoalCountProvider);
+    final currencyCode = ref.watch(settingsProvider).currencyCode;
 
     final now = DateTime.now();
     // Habits have their own grid and tasks have their own list, so the hero
@@ -103,64 +109,78 @@ class HomeScreen extends ConsumerWidget {
                       now,
                     ),
 
+                    const SizedBox(height: 20),
+                    _DashboardStatRail(
+                      monthSpendMinor: monthSpendMinor,
+                      currencyCode: currencyCode,
+                      tasks: todayTasks,
+                      activeGoals: activeGoals,
+                    ),
+
                     if (todayTasks.tasks.isNotEmpty) ...[
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
                       SectionHeader(
                         title: "Today's to-dos",
-                        trailing: Text(
-                          '${todayTasks.doneCount} of ${todayTasks.total} done',
-                          style: TextStyle(
-                            fontFamily: AppFonts.sans,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurfaceVariant,
+                        trailing: Tappable(
+                          onTap: () => context.go(RoutePaths.tasksHabits),
+                          semanticLabel: 'See all tasks',
+                          child: Text(
+                            'See all',
+                            style: TextStyle(
+                              fontFamily: AppFonts.sans,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: colors.accentInk,
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 11),
-                      for (final task in todayTasks.tasks.take(4))
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 9),
-                          child: TodoRow(
-                            key: ValueKey(task.id),
-                            title: task.title,
-                            onOpen: () =>
-                                context.push(RoutePaths.taskDetail(task.id)),
-                            done: task.status == 'done',
-                            time: task.dueDate == null
-                                ? 'No date'
-                                : DateFormat('h:mm a').format(task.dueDate!),
-                            dotColor: colors.tasks,
-                            onToggle: () => ref
-                                .read(tasksControllerProvider)
-                                .toggleDone(task),
-                          ),
-                        ),
+                      _TodayTaskList(tasks: todayTasks.tasks.take(4).toList()),
                     ],
 
                     if (habits.isNotEmpty) ...[
                       const SizedBox(height: 22),
-                      const SectionHeader(title: 'Habits to keep'),
+                      SectionHeader(
+                        title: 'Habits to keep',
+                        trailing: Tappable(
+                          onTap: () => context.go(RoutePaths.habitsOverview),
+                          semanticLabel: 'See all habits',
+                          child: Text(
+                            'See all',
+                            style: TextStyle(
+                              fontFamily: AppFonts.sans,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: colors.accentInk,
+                            ),
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 11),
                       const _HabitGrid(),
                     ],
 
                     if (upcoming.isNotEmpty) ...[
                       const SizedBox(height: 22),
-                      const SectionHeader(title: 'Coming up'),
-                      const SizedBox(height: 11),
-                      for (final item in upcoming)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 9),
-                          child: UpcomingRow(
-                            icon: _iconFor(item.type),
-                            color: _colorFor(item.type, colors),
-                            title: item.title,
-                            subtitle: item.subtitle,
-                            trailing: _relative(item.time ?? item.date, now),
-                            onTap: () => context.go(RoutePaths.calendar),
+                      SectionHeader(
+                        title: 'Coming up',
+                        trailing: Tappable(
+                          onTap: () => context.go(RoutePaths.calendar),
+                          semanticLabel: 'Open calendar',
+                          child: Text(
+                            'Calendar',
+                            style: TextStyle(
+                              fontFamily: AppFonts.sans,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: colors.accentInk,
+                            ),
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 11),
+                      _UpcomingList(items: upcoming, now: now),
                     ],
 
                     if (insights.isNotEmpty) ...[
@@ -407,46 +427,352 @@ class _Greeting extends StatelessWidget {
   }
 }
 
-/// Comp: a 2-column grid at 11px gaps. Built as rows rather than a GridView so it
-/// sizes to content inside the parent [ListView].
+/// A short horizontal summary rail. Each card is deliberately a single focused
+/// number: it is quicker to scan than mixing finance, tasks and goals together.
+class _DashboardStatRail extends StatelessWidget {
+  const _DashboardStatRail({
+    required this.monthSpendMinor,
+    required this.currencyCode,
+    required this.tasks,
+    required this.activeGoals,
+  });
+
+  final int monthSpendMinor;
+  final String currencyCode;
+  final TodayTasks tasks;
+  final int activeGoals;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 138,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        children: [
+          _DashboardStatCard(
+            icon: LucideIcons.walletCards,
+            iconColor: context.appColors.warm,
+            label: 'This month spent',
+            value: formatMinor(
+              monthSpendMinor,
+              currencyCode: currencyCode,
+              showDecimals: false,
+            ),
+            footer: DateFormat.MMMM().format(DateTime.now()),
+            // A determinate bar keeps widget tests and reduced-motion devices
+            // free of the indeterminate progress animation.
+            progress: monthSpendMinor > 0 ? 1 : 0,
+            onTap: () => context.go(RoutePaths.finance),
+          ),
+          const SizedBox(width: 12),
+          _DashboardStatCard(
+            icon: LucideIcons.listChecks,
+            iconColor: context.appColors.tasks,
+            label: 'Tasks today',
+            value: '${tasks.doneCount} / ${tasks.total}',
+            footer: tasks.remaining == 0
+                ? 'All caught up'
+                : '${tasks.remaining} remaining',
+            progress: tasks.total == 0 ? 0 : tasks.doneCount / tasks.total,
+            onTap: () => context.go(RoutePaths.tasksHabits),
+          ),
+          const SizedBox(width: 12),
+          _DashboardStatCard(
+            icon: LucideIcons.target,
+            iconColor: context.appColors.goals,
+            label: activeGoals == 1 ? 'Active goal' : 'Active goals',
+            value: '$activeGoals',
+            footer: activeGoals == 0
+                ? 'Create your first goal'
+                : 'Keep moving forward',
+            progress: activeGoals == 0 ? 0 : 1,
+            onTap: () => context.go(RoutePaths.goals),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardStatCard extends StatelessWidget {
+  const _DashboardStatCard({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+    required this.footer,
+    required this.progress,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String value;
+  final String footer;
+  final double? progress;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 172,
+      child: Tappable(
+        onTap: onTap,
+        haptic: TapHaptic.selection,
+        semanticLabel: '$label: $value',
+        child: SurfaceCard(
+          padding: const EdgeInsets.all(15),
+          radius: 20,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: AppFonts.sans,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  Icon(icon, size: 18, color: iconColor),
+                ],
+              ),
+              const Spacer(),
+              Text(
+                value,
+                style: TextStyle(
+                  fontFamily: AppFonts.serif,
+                  fontSize: 27,
+                  height: 1,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.4,
+                  color: scheme.onSurface,
+                  fontFeatures: AppFonts.tabular,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                footer,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppFonts.sans,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(5),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 6,
+                  backgroundColor: scheme.surfaceContainer,
+                  color: iconColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TodayTaskList extends ConsumerWidget {
+  const _TodayTaskList({required this.tasks});
+
+  final List<Task> tasks;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    return SurfaceCard(
+      padding: EdgeInsets.zero,
+      radius: 22,
+      child: Column(
+        children: [
+          for (var index = 0; index < tasks.length; index++) ...[
+            _TodayTaskRow(task: tasks[index]),
+            if (index < tasks.length - 1)
+              Divider(height: 1, indent: 66, color: scheme.outline),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TodayTaskRow extends ConsumerWidget {
+  const _TodayTaskRow({required this.task});
+
+  final Task task;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final colors = context.appColors;
+    final done = task.status == 'done';
+    final priority =
+        task.priority[0].toUpperCase() + task.priority.substring(1);
+
+    return Tappable(
+      onTap: () => context.push(RoutePaths.taskDetail(task.id)),
+      semanticLabel: 'Open task $task.title',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: done ? 'Mark task open' : 'Complete task',
+              onPressed: () =>
+                  ref.read(tasksControllerProvider).toggleDone(task),
+              icon: Container(
+                width: 25,
+                height: 25,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: done ? colors.good : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: done ? colors.good : scheme.outline,
+                    width: 2,
+                  ),
+                ),
+                child: done
+                    ? Icon(LucideIcons.check, size: 15, color: scheme.onPrimary)
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: AppFonts.sans,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                      decoration: done ? TextDecoration.lineThrough : null,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.warning.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Text(
+                      priority.toUpperCase(),
+                      style: TextStyle(
+                        fontFamily: AppFonts.sans,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                        color: colors.warning,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              LucideIcons.chevronRight,
+              size: 20,
+              color: scheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Keeps the original compact two-column, two-row tile grid, with horizontal
+/// paging when more than four habits are due today.
 class _HabitGrid extends ConsumerWidget {
   const _HabitGrid();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shown = ref.watch(habitCheckInProvider).take(4).toList();
-    final rows = <Widget>[];
-
-    for (var i = 0; i < shown.length; i += 2) {
-      final left = shown[i];
-      final right = i + 1 < shown.length ? shown[i + 1] : null;
-      rows.add(
-        Padding(
-          padding: EdgeInsets.only(bottom: i + 2 < shown.length ? 11 : 0),
-          // IntrinsicHeight is what makes `stretch` legal here: inside a
-          // ListView the Row's height is unbounded, and stretching against an
-          // unbounded constraint asserts. It also gives the pair the equal
-          // heights the comp's grid shows when one label wraps and the other
-          // doesn't.
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: _tile(ref, left)),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: right == null ? const SizedBox() : _tile(ref, right),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+    final shown = ref.watch(habitCheckInProvider);
+    final pages = <List<HabitProgress>>[];
+    for (var index = 0; index < shown.length; index += 4) {
+      pages.add(shown.skip(index).take(4).toList());
     }
-    return Column(children: rows);
+
+    return SizedBox(
+      height: 166,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final cardWidth = (constraints.maxWidth - 11) / 2;
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            itemCount: pages.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 11),
+            itemBuilder: (context, pageIndex) {
+              final page = pages[pageIndex];
+              return SizedBox(
+                width: constraints.maxWidth,
+                child: Column(
+                  children: [
+                    for (
+                      var rowIndex = 0;
+                      rowIndex < page.length;
+                      rowIndex += 2
+                    )
+                      Padding(
+                        padding: EdgeInsets.only(
+                          bottom: rowIndex + 2 < page.length ? 10 : 0,
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: cardWidth,
+                              child: _tile(context, ref, page[rowIndex]),
+                            ),
+                            const SizedBox(width: 11),
+                            SizedBox(
+                              width: cardWidth,
+                              child: rowIndex + 1 < page.length
+                                  ? _tile(context, ref, page[rowIndex + 1])
+                                  : const SizedBox(),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
   }
 
-  Widget _tile(WidgetRef ref, HabitProgress progress) {
+  Widget _tile(BuildContext context, WidgetRef ref, HabitProgress progress) {
     final habit = progress.habit;
     final target = progress.weekCompletion.length;
     final doneThisWeek = progress.weekCompletion.values
@@ -454,14 +780,119 @@ class _HabitGrid extends ConsumerWidget {
         .length;
     final ratio = target <= 0 ? 0.0 : doneThisWeek / target;
     final doneToday = progress.weekCompletion[DateTime.now().weekday] ?? false;
+    final scheme = Theme.of(context).colorScheme;
+    final colors = context.appColors;
 
     return HabitRingTile(
       name: habit.name,
       subtitle: '$doneThisWeek / $target this week',
       progress: ratio,
       complete: ratio >= 1,
+      color: doneToday ? scheme.secondary : colors.critical,
       onTap: () =>
           ref.read(habitsControllerProvider).toggleToday(habit, !doneToday),
+    );
+  }
+}
+
+class _UpcomingList extends StatelessWidget {
+  const _UpcomingList({required this.items, required this.now});
+
+  final List<CalendarItem> items;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Tappable(
+      onTap: () => context.go(RoutePaths.calendar),
+      semanticLabel: 'Open calendar',
+      child: SurfaceCard(
+        padding: EdgeInsets.zero,
+        radius: 22,
+        child: Column(
+          children: [
+            for (var index = 0; index < items.length; index++) ...[
+              _UpcomingListRow(item: items[index], now: now),
+              if (index < items.length - 1)
+                Divider(height: 1, indent: 74, color: scheme.outline),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UpcomingListRow extends StatelessWidget {
+  const _UpcomingListRow({required this.item, required this.now});
+
+  final CalendarItem item;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = HomeScreen._colorFor(item.type, context.appColors);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 47,
+            child: Text(
+              HomeScreen._relative(item.time ?? item.date, now),
+              style: TextStyle(
+                fontFamily: AppFonts.sans,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Container(
+            width: 4,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppFonts.sans,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: AppFonts.sans,
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(HomeScreen._iconFor(item.type), size: 16, color: color),
+        ],
+      ),
     );
   }
 }

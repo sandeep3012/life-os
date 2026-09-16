@@ -18,6 +18,7 @@ import 'package:life_manager/features/finance/presentation/screens/finance_overv
 import 'package:life_manager/features/finance/presentation/screens/net_worth_screen.dart';
 import 'package:life_manager/features/health/presentation/screens/health_screen.dart';
 import 'package:life_manager/features/habits/presentation/screens/habits_overview_screen.dart';
+import 'package:life_manager/features/home/presentation/screens/home_screen.dart';
 import 'package:life_manager/features/tasks/presentation/screens/tasks_habits_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -26,7 +27,10 @@ class _FakeNotificationService extends NotificationService {
   Future<void> init() async {}
 
   @override
-  Future<void> scheduleDailyHabitReminder({int hour = 20, int minute = 0}) async {}
+  Future<void> scheduleDailyHabitReminder({
+    int hour = 20,
+    int minute = 0,
+  }) async {}
 
   @override
   Future<void> scheduleTaskReminder({
@@ -78,7 +82,9 @@ void main() {
     return ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
-        notificationServiceProvider.overrideWithValue(_FakeNotificationService()),
+        notificationServiceProvider.overrideWithValue(
+          _FakeNotificationService(),
+        ),
       ],
       child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
     );
@@ -94,7 +100,11 @@ void main() {
   Future<void> seedFinance() async {
     final finance = FinanceRepository(db, FileStorageService());
     await finance.ensureDefaultCategories();
-    await finance.createAccount(name: 'Checking', type: 'checking', balanceMinor: 500000);
+    await finance.createAccount(
+      name: 'Checking',
+      type: 'checking',
+      balanceMinor: 500000,
+    );
     final accountId = (await db.select(db.accounts).get()).first.id;
 
     final today = dateOnly(DateTime.now());
@@ -141,7 +151,9 @@ void main() {
     await disposeCleanly(tester);
   });
 
-  testWidgets('tasks screen renders its rails and opens the sidebar', (tester) async {
+  testWidgets('tasks screen renders its rails and opens the sidebar', (
+    tester,
+  ) async {
     usePhoneViewport(tester);
     await db.into(db.tasks).insert(TasksCompanion.insert(title: 'Write spec'));
     await tester.pumpWidget(host(const TasksHabitsScreen()));
@@ -179,9 +191,14 @@ void main() {
 
   testWidgets('habits screen renders without overflow', (tester) async {
     usePhoneViewport(tester);
-    await db.into(db.habits).insert(
-      HabitsCompanion.insert(name: 'Morning workout', targetPerWeek: const Value(5)),
-    );
+    await db
+        .into(db.habits)
+        .insert(
+          HabitsCompanion.insert(
+            name: 'Morning workout',
+            targetPerWeek: const Value(5),
+          ),
+        );
     await tester.pumpWidget(host(const HabitsOverviewScreen()));
     await tester.pumpAndSettle();
 
@@ -191,15 +208,43 @@ void main() {
     await disposeCleanly(tester);
   });
 
-  testWidgets('health screen renders both tabs without overflow', (tester) async {
+  testWidgets('home dashboard rails render without overflow', (tester) async {
     usePhoneViewport(tester);
-    await db.into(db.medications).insert(
-      MedicationsCompanion.insert(
-        name: 'Vitamin D3',
-        dosageNote: const Value('1 capsule · with breakfast'),
-        stockLeft: const Value(4),
-      ),
-    );
+    final today = dateOnly(DateTime.now());
+    await db
+        .into(db.tasks)
+        .insert(
+          TasksCompanion.insert(
+            title: 'Write the release notes',
+            dueDate: Value(today.add(const Duration(hours: 17))),
+          ),
+        );
+    await db
+        .into(db.habits)
+        .insert(HabitsCompanion.insert(name: 'Evening reading'));
+    await tester.pumpWidget(host(const HomeScreen()));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('This month spent'), findsOneWidget);
+    expect(find.text("Today's to-dos"), findsOneWidget);
+
+    await disposeCleanly(tester);
+  });
+
+  testWidgets('health screen renders both tabs without overflow', (
+    tester,
+  ) async {
+    usePhoneViewport(tester);
+    await db
+        .into(db.medications)
+        .insert(
+          MedicationsCompanion.insert(
+            name: 'Vitamin D3',
+            dosageNote: const Value('1 capsule · with breakfast'),
+            stockLeft: const Value(4),
+          ),
+        );
     await tester.pumpWidget(host(const HealthScreen()));
     await tester.pumpAndSettle();
 

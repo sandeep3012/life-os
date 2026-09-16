@@ -10,7 +10,24 @@ import '../../habits/application/habits_providers.dart';
 import '../../habits/domain/habit_progress.dart';
 import '../../tasks/application/tasks_providers.dart';
 
-/// Total expense (positive figure) logged since Monday this week.
+/// Total expense (positive figure) logged during the current calendar month.
+/// The dashboard labels this as "This month" so its amount always matches the
+/// period a person expects when opening the app mid-week.
+final monthSpendMinorProvider = Provider<int>((ref) {
+  final transactions = ref.watch(transactionsProvider).value ?? const [];
+  final now = DateTime.now();
+  final monthStart = DateTime(now.year, now.month);
+  return transactions
+      .where(
+        (t) =>
+            t.paymentMode != 'transfer' &&
+            t.amountMinor < 0 &&
+            !t.date.isBefore(monthStart),
+      )
+      .fold<int>(0, (sum, t) => sum + t.amountMinor.abs());
+});
+
+/// Backward-compatible name for callers that still show a weekly view.
 final weekSpendMinorProvider = Provider<int>((ref) {
   final transactions = ref.watch(transactionsProvider).value ?? const [];
   final weekStart = startOfWeek(DateTime.now());

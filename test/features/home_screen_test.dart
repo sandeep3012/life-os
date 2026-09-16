@@ -148,14 +148,17 @@ void main() {
 
     // Today's to-dos and the habit grid both surface, with a live done/total.
     expect(find.text('Finish Q3 budget review'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Morning workout'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Morning workout'), findsOneWidget);
-    expect(find.text('0 of 1 done'), findsOneWidget);
+    expect(find.text('0 / 1'), findsOneWidget);
 
-    // The redesign moves money figures and goal counts off the dashboard and
-    // onto Finance, per the design comp. Pinned as absent so they can't drift
-    // back in — the spend/goal aggregates are covered by the finance tests.
-    expect(find.textContaining('₹640'), findsNothing);
-    expect(find.text('Active goals'), findsNothing);
+    // The summary rail makes the requested current-month spend and active
+    // goal count visible without taking over the main dashboard column.
+    expect(find.textContaining('₹640'), findsOneWidget);
 
     await _disposeCleanly(tester);
   });
@@ -176,12 +179,17 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('0 of 1 done'), findsOneWidget);
+    expect(find.text('0 / 1'), findsOneWidget);
 
-    await tester.tap(find.bySemanticsLabel('Complete task'));
+    await tester.scrollUntilVisible(
+      find.byTooltip('Complete task'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byTooltip('Complete task'));
     await tester.pumpAndSettle();
 
-    expect(find.text('1 of 1 done'), findsOneWidget);
+    expect(find.text('1 / 1'), findsOneWidget);
 
     await _disposeCleanly(tester);
   });

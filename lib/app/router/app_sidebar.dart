@@ -16,10 +16,9 @@ import '../../core/widgets/tappable.dart';
 /// active one in `accentSoft`/`accentInk`, and a light/dark toggle pinned to the
 /// footer.
 ///
-/// This is where the comp retires the old "More" tab to — every destination that
-/// used to live behind it is a row here. Two rows carry live counts, as the comp
-/// specifies (`Habits (4)`, `To-dos & Reminders (2)`); those come from real
-/// providers, not fixed numbers.
+/// This is where the comp retires the old "More" tab to. Destinations are
+/// grouped by the top-level area they belong to, while live counts continue to
+/// come from real providers rather than fixed numbers.
 ///
 /// The comp's "Gym Planner" and "Investments" rows are deliberately absent: this
 /// build has no workout module, and adding a row that navigates nowhere is worse
@@ -39,7 +38,8 @@ class AppSidebar extends ConsumerWidget {
         .length;
 
     final settings = ref.watch(settingsProvider);
-    final isDark = settings.themeMode == ThemeMode.dark ||
+    final isDark =
+        settings.themeMode == ThemeMode.dark ||
         (settings.themeMode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
 
@@ -105,21 +105,16 @@ class AppSidebar extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
-                  _Item(
-                    icon: LucideIcons.layoutDashboard,
-                    label: 'Home',
-                    path: RoutePaths.home,
-                    current: current,
-                  ),
+                  const _GroupLabel('Finance'),
                   _Item(
                     icon: LucideIcons.wallet,
-                    label: 'Finance',
+                    label: 'Record transaction',
                     path: RoutePaths.finance,
                     current: current,
                   ),
                   _Item(
                     icon: LucideIcons.chartPie,
-                    label: 'Budgets & ledger',
+                    label: 'Create budget',
                     path: RoutePaths.financeLedger,
                     current: current,
                   ),
@@ -136,16 +131,36 @@ class AppSidebar extends ConsumerWidget {
                     current: current,
                   ),
                   _Item(
-                    icon: LucideIcons.refreshCw,
-                    label: 'Recurring',
-                    path: RoutePaths.recurringTransactions,
-                    current: current,
-                  ),
-                  _Item(
                     icon: LucideIcons.receipt,
                     label: 'Bills',
                     path: RoutePaths.bills,
                     current: current,
+                  ),
+                  _Item(
+                    icon: LucideIcons.refreshCw,
+                    label: 'Recurring transaction',
+                    path: RoutePaths.recurringTransactions,
+                    current: current,
+                  ),
+                  _Item(
+                    icon: LucideIcons.arrowLeftRight,
+                    label: 'Transfer between accounts',
+                    path: RoutePaths.finance,
+                    current: current,
+                  ),
+                  _Item(
+                    icon: LucideIcons.fileBarChart,
+                    label: 'Reports',
+                    path: RoutePaths.reports,
+                    current: current,
+                  ),
+                  const _GroupLabel('Tasks'),
+                  _Item(
+                    icon: LucideIcons.listChecks,
+                    label: 'Tasks',
+                    path: RoutePaths.tasksHabits,
+                    current: current,
+                    count: openTodoCount,
                   ),
                   _Item(
                     icon: LucideIcons.repeat,
@@ -154,29 +169,18 @@ class AppSidebar extends ConsumerWidget {
                     current: current,
                     count: habitCount,
                   ),
-                  _Item(
-                    icon: LucideIcons.listChecks,
-                    label: 'To-dos & reminders',
-                    path: RoutePaths.tasksHabits,
-                    current: current,
-                    count: openTodoCount,
-                  ),
-                  _Item(
-                    icon: LucideIcons.heart,
-                    label: 'Health',
-                    path: RoutePaths.health,
-                    current: current,
-                  ),
+                  const _GroupLabel('Calendar'),
                   _Item(
                     icon: LucideIcons.calendar,
                     label: 'Calendar',
                     path: RoutePaths.calendar,
                     current: current,
                   ),
+                  const _GroupLabel('More'),
                   _Item(
-                    icon: LucideIcons.bookOpen,
-                    label: 'Learn',
-                    path: RoutePaths.learn,
+                    icon: LucideIcons.search,
+                    label: 'Global search',
+                    path: RoutePaths.search,
                     current: current,
                   ),
                   _Item(
@@ -199,8 +203,20 @@ class AppSidebar extends ConsumerWidget {
                   ),
                   _Item(
                     icon: LucideIcons.sparkles,
-                    label: 'Insights',
+                    label: 'AI analyser',
                     path: RoutePaths.aiAnalyser,
+                    current: current,
+                  ),
+                  _Item(
+                    icon: LucideIcons.heart,
+                    label: 'Health',
+                    path: RoutePaths.health,
+                    current: current,
+                  ),
+                  _Item(
+                    icon: LucideIcons.bookOpen,
+                    label: 'Learn',
+                    path: RoutePaths.learn,
                     current: current,
                   ),
                   _Item(
@@ -244,13 +260,40 @@ class AppSidebar extends ConsumerWidget {
                     onChanged: (value) {
                       ref
                           .read(settingsControllerProvider)
-                          .setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
+                          .setThemeMode(
+                            value ? ThemeMode.dark : ThemeMode.light,
+                          );
                     },
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupLabel extends StatelessWidget {
+  const _GroupLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: AppFonts.sans,
+          fontSize: 15,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
+          color: colors.accentInk,
         ),
       ),
     );
@@ -290,7 +333,7 @@ class _Item extends StatelessWidget {
           if (!active) context.go(path);
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: active ? colors.accentSoft : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
@@ -314,7 +357,10 @@ class _Item extends StatelessWidget {
               ),
               if (count != null && count! > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.accentSoft,
                     borderRadius: BorderRadius.circular(999),
