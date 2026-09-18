@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/theme/app_color_theme.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/app_database_provider.dart';
 import '../data/settings_repository.dart';
@@ -18,6 +19,7 @@ final _settingsStreamProvider = StreamProvider<AppSetting?>((ref) {
 class ResolvedSettings {
   const ResolvedSettings({
     required this.themeMode,
+    required this.colorTheme,
     required this.taskReminders,
     required this.habitReminders,
     required this.aiInsightAlerts,
@@ -27,6 +29,7 @@ class ResolvedSettings {
   });
 
   final ThemeMode themeMode;
+  final AppColorTheme colorTheme;
   final bool taskReminders;
   final bool habitReminders;
   final bool aiInsightAlerts;
@@ -36,6 +39,7 @@ class ResolvedSettings {
 
   static const defaults = ResolvedSettings(
     themeMode: ThemeMode.system,
+    colorTheme: AppColorTheme.forest,
     taskReminders: true,
     habitReminders: true,
     aiInsightAlerts: false,
@@ -62,6 +66,7 @@ final settingsProvider = Provider<ResolvedSettings>((ref) {
   if (row == null) return ResolvedSettings.defaults;
   return ResolvedSettings(
     themeMode: _parseThemeMode(row.themeMode),
+    colorTheme: appColorThemeFromStorage(row.colorTheme),
     taskReminders: row.taskReminders,
     habitReminders: row.habitReminders,
     aiInsightAlerts: row.aiInsightAlerts,
@@ -79,17 +84,25 @@ class SettingsController {
   Future<void> setThemeMode(ThemeMode mode) =>
       _repo.setThemeMode(themeModeToValue(mode));
 
-  Future<void> setTaskReminders(bool enabled) => _repo.setTaskReminders(enabled);
+  Future<void> setColorTheme(AppColorTheme theme) =>
+      _repo.setColorTheme(theme.storageValue);
 
-  Future<void> setHabitReminders(bool enabled) => _repo.setHabitReminders(enabled);
+  Future<void> setTaskReminders(bool enabled) =>
+      _repo.setTaskReminders(enabled);
 
-  Future<void> setAiInsightAlerts(bool enabled) => _repo.setAiInsightAlerts(enabled);
+  Future<void> setHabitReminders(bool enabled) =>
+      _repo.setHabitReminders(enabled);
+
+  Future<void> setAiInsightAlerts(bool enabled) =>
+      _repo.setAiInsightAlerts(enabled);
 
   Future<void> setCurrencyCode(String code) => _repo.setCurrencyCode(code);
 
-  Future<void> setAppLockEnabled(bool enabled) => _repo.setAppLockEnabled(enabled);
+  Future<void> setAppLockEnabled(bool enabled) =>
+      _repo.setAppLockEnabled(enabled);
 
-  Future<void> setBiometricEnabled(bool enabled) => _repo.setBiometricEnabled(enabled);
+  Future<void> setBiometricEnabled(bool enabled) =>
+      _repo.setBiometricEnabled(enabled);
 }
 
 final settingsControllerProvider = Provider<SettingsController>((ref) {

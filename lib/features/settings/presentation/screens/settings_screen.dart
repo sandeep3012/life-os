@@ -7,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../../app/theme/app_color_theme.dart';
+import '../../../../app/app_restart.dart';
+import '../../../../app/theme/app_theme.dart';
 import '../../../../core/services/demo_data_service.dart';
 import '../../../../core/services/backup_service.dart';
 import '../../../../core/services/notification_service.dart';
@@ -83,6 +86,51 @@ class SettingsScreen extends ConsumerWidget {
                 selected: {settings.themeMode},
                 onSelectionChanged: (selection) =>
                     controller.setThemeMode(selection.first),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Color theme', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Changes the app accents and surfaces. Status colors stay consistent.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final colorTheme in AppColorTheme.values)
+                        ChoiceChip(
+                          avatar: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: colorTheme.previewColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          label: Text(colorTheme.label),
+                          selected: settings.colorTheme == colorTheme,
+                          onSelected: (_) => _previewAndApplyTheme(
+                            context,
+                            ref,
+                            colorTheme,
+                            settings.themeMode,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -211,6 +259,237 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+Future<void> _previewAndApplyTheme(
+  BuildContext context,
+  WidgetRef ref,
+  AppColorTheme colorTheme,
+  ThemeMode displayMode,
+) async {
+  final platformBrightness = MediaQuery.platformBrightnessOf(context);
+  final brightness = switch (displayMode) {
+    ThemeMode.light => Brightness.light,
+    ThemeMode.dark => Brightness.dark,
+    ThemeMode.system => platformBrightness,
+  };
+  final previewTheme = brightness == Brightness.dark
+      ? AppTheme.dark(colorTheme)
+      : AppTheme.light(colorTheme);
+  final approved = await showDialog<bool>(
+    context: context,
+    builder: (context) => Theme(
+      data: previewTheme,
+      child: _ThemePreviewDialog(theme: colorTheme),
+    ),
+  );
+  if (approved != true) return;
+
+  await ref.read(settingsControllerProvider).setColorTheme(colorTheme);
+  if (context.mounted) AppRestartBoundary.restart(context);
+}
+
+class _ThemePreviewDialog extends StatelessWidget {
+  const _ThemePreviewDialog({required this.theme});
+
+  final AppColorTheme theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Preview ${theme.label}', style: text.titleLarge),
+            const SizedBox(height: 4),
+            Text(
+              'This is how the app will look with this color theme.',
+              style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 18),
+            _ThemePreviewCanvas(theme: theme),
+            const SizedBox(height: 18),
+            Text('Apply this theme?', style: text.titleSmall),
+            const SizedBox(height: 4),
+            Text(
+              'The app will restart its interface so every screen uses the new colors.',
+              style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Apply & restart'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ThemePreviewCanvas extends StatelessWidget {
+  const _ThemePreviewCanvas({required this.theme});
+
+  final AppColorTheme theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Container(
+      height: 236,
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: colors.primary,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(
+                  LucideIcons.sparkles,
+                  size: 15,
+                  color: colors.onPrimary,
+                ),
+              ),
+              const SizedBox(width: 9),
+              Expanded(child: Text('Good morning', style: text.titleSmall)),
+              Icon(LucideIcons.bell, size: 17, color: colors.onSurfaceVariant),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: colors.primaryContainer,
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      child: Icon(
+                        LucideIcons.check,
+                        color: colors.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Today’s focus', style: text.titleSmall),
+                          const SizedBox(height: 2),
+                          Text(
+                            '2 tasks remaining',
+                            style: text.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: colors.primary,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text('60%', style: text.labelMedium),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _PreviewNavItem(
+                icon: LucideIcons.house,
+                label: 'Home',
+                active: true,
+              ),
+              _PreviewNavItem(icon: LucideIcons.listChecks, label: 'Plan'),
+              _PreviewNavItem(
+                icon: LucideIcons.calendarDays,
+                label: 'Calendar',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewNavItem extends StatelessWidget {
+  const _PreviewNavItem({
+    required this.icon,
+    required this.label,
+    this.active = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final color = active ? colors.primary : colors.onSurfaceVariant;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color),
+        ),
+      ],
     );
   }
 }

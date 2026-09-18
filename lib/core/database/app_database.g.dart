@@ -15342,6 +15342,18 @@ class $AppSettingsTable extends AppSettings
     requiredDuringInsert: false,
     defaultValue: const Constant('system'),
   );
+  static const VerificationMeta _colorThemeMeta = const VerificationMeta(
+    'colorTheme',
+  );
+  @override
+  late final GeneratedColumn<String> colorTheme = GeneratedColumn<String>(
+    'color_theme',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('forest'),
+  );
   static const VerificationMeta _taskRemindersMeta = const VerificationMeta(
     'taskReminders',
   );
@@ -15433,6 +15445,7 @@ class $AppSettingsTable extends AppSettings
   List<GeneratedColumn> get $columns => [
     id,
     themeMode,
+    colorTheme,
     taskReminders,
     habitReminders,
     aiInsightAlerts,
@@ -15459,6 +15472,12 @@ class $AppSettingsTable extends AppSettings
       context.handle(
         _themeModeMeta,
         themeMode.isAcceptableOrUnknown(data['theme_mode']!, _themeModeMeta),
+      );
+    }
+    if (data.containsKey('color_theme')) {
+      context.handle(
+        _colorThemeMeta,
+        colorTheme.isAcceptableOrUnknown(data['color_theme']!, _colorThemeMeta),
       );
     }
     if (data.containsKey('task_reminders')) {
@@ -15532,6 +15551,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.string,
         data['${effectivePrefix}theme_mode'],
       )!,
+      colorTheme: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color_theme'],
+      )!,
       taskReminders: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}task_reminders'],
@@ -15570,6 +15593,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
 
   /// light | dark | system
   final String themeMode;
+
+  /// Selected curated color palette, independent of [themeMode].
+  final String colorTheme;
   final bool taskReminders;
   final bool habitReminders;
   final bool aiInsightAlerts;
@@ -15584,6 +15610,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   const AppSetting({
     required this.id,
     required this.themeMode,
+    required this.colorTheme,
     required this.taskReminders,
     required this.habitReminders,
     required this.aiInsightAlerts,
@@ -15596,6 +15623,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['theme_mode'] = Variable<String>(themeMode);
+    map['color_theme'] = Variable<String>(colorTheme);
     map['task_reminders'] = Variable<bool>(taskReminders);
     map['habit_reminders'] = Variable<bool>(habitReminders);
     map['ai_insight_alerts'] = Variable<bool>(aiInsightAlerts);
@@ -15609,6 +15637,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     return AppSettingsCompanion(
       id: Value(id),
       themeMode: Value(themeMode),
+      colorTheme: Value(colorTheme),
       taskReminders: Value(taskReminders),
       habitReminders: Value(habitReminders),
       aiInsightAlerts: Value(aiInsightAlerts),
@@ -15626,6 +15655,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     return AppSetting(
       id: serializer.fromJson<int>(json['id']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
+      colorTheme: serializer.fromJson<String>(json['colorTheme']),
       taskReminders: serializer.fromJson<bool>(json['taskReminders']),
       habitReminders: serializer.fromJson<bool>(json['habitReminders']),
       aiInsightAlerts: serializer.fromJson<bool>(json['aiInsightAlerts']),
@@ -15640,6 +15670,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'themeMode': serializer.toJson<String>(themeMode),
+      'colorTheme': serializer.toJson<String>(colorTheme),
       'taskReminders': serializer.toJson<bool>(taskReminders),
       'habitReminders': serializer.toJson<bool>(habitReminders),
       'aiInsightAlerts': serializer.toJson<bool>(aiInsightAlerts),
@@ -15652,6 +15683,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   AppSetting copyWith({
     int? id,
     String? themeMode,
+    String? colorTheme,
     bool? taskReminders,
     bool? habitReminders,
     bool? aiInsightAlerts,
@@ -15661,6 +15693,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   }) => AppSetting(
     id: id ?? this.id,
     themeMode: themeMode ?? this.themeMode,
+    colorTheme: colorTheme ?? this.colorTheme,
     taskReminders: taskReminders ?? this.taskReminders,
     habitReminders: habitReminders ?? this.habitReminders,
     aiInsightAlerts: aiInsightAlerts ?? this.aiInsightAlerts,
@@ -15672,6 +15705,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     return AppSetting(
       id: data.id.present ? data.id.value : this.id,
       themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
+      colorTheme: data.colorTheme.present
+          ? data.colorTheme.value
+          : this.colorTheme,
       taskReminders: data.taskReminders.present
           ? data.taskReminders.value
           : this.taskReminders,
@@ -15698,6 +15734,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     return (StringBuffer('AppSetting(')
           ..write('id: $id, ')
           ..write('themeMode: $themeMode, ')
+          ..write('colorTheme: $colorTheme, ')
           ..write('taskReminders: $taskReminders, ')
           ..write('habitReminders: $habitReminders, ')
           ..write('aiInsightAlerts: $aiInsightAlerts, ')
@@ -15712,6 +15749,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   int get hashCode => Object.hash(
     id,
     themeMode,
+    colorTheme,
     taskReminders,
     habitReminders,
     aiInsightAlerts,
@@ -15725,6 +15763,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       (other is AppSetting &&
           other.id == this.id &&
           other.themeMode == this.themeMode &&
+          other.colorTheme == this.colorTheme &&
           other.taskReminders == this.taskReminders &&
           other.habitReminders == this.habitReminders &&
           other.aiInsightAlerts == this.aiInsightAlerts &&
@@ -15736,6 +15775,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<int> id;
   final Value<String> themeMode;
+  final Value<String> colorTheme;
   final Value<bool> taskReminders;
   final Value<bool> habitReminders;
   final Value<bool> aiInsightAlerts;
@@ -15745,6 +15785,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   const AppSettingsCompanion({
     this.id = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.colorTheme = const Value.absent(),
     this.taskReminders = const Value.absent(),
     this.habitReminders = const Value.absent(),
     this.aiInsightAlerts = const Value.absent(),
@@ -15755,6 +15796,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   AppSettingsCompanion.insert({
     this.id = const Value.absent(),
     this.themeMode = const Value.absent(),
+    this.colorTheme = const Value.absent(),
     this.taskReminders = const Value.absent(),
     this.habitReminders = const Value.absent(),
     this.aiInsightAlerts = const Value.absent(),
@@ -15765,6 +15807,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   static Insertable<AppSetting> custom({
     Expression<int>? id,
     Expression<String>? themeMode,
+    Expression<String>? colorTheme,
     Expression<bool>? taskReminders,
     Expression<bool>? habitReminders,
     Expression<bool>? aiInsightAlerts,
@@ -15775,6 +15818,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (themeMode != null) 'theme_mode': themeMode,
+      if (colorTheme != null) 'color_theme': colorTheme,
       if (taskReminders != null) 'task_reminders': taskReminders,
       if (habitReminders != null) 'habit_reminders': habitReminders,
       if (aiInsightAlerts != null) 'ai_insight_alerts': aiInsightAlerts,
@@ -15787,6 +15831,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   AppSettingsCompanion copyWith({
     Value<int>? id,
     Value<String>? themeMode,
+    Value<String>? colorTheme,
     Value<bool>? taskReminders,
     Value<bool>? habitReminders,
     Value<bool>? aiInsightAlerts,
@@ -15797,6 +15842,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     return AppSettingsCompanion(
       id: id ?? this.id,
       themeMode: themeMode ?? this.themeMode,
+      colorTheme: colorTheme ?? this.colorTheme,
       taskReminders: taskReminders ?? this.taskReminders,
       habitReminders: habitReminders ?? this.habitReminders,
       aiInsightAlerts: aiInsightAlerts ?? this.aiInsightAlerts,
@@ -15814,6 +15860,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     }
     if (themeMode.present) {
       map['theme_mode'] = Variable<String>(themeMode.value);
+    }
+    if (colorTheme.present) {
+      map['color_theme'] = Variable<String>(colorTheme.value);
     }
     if (taskReminders.present) {
       map['task_reminders'] = Variable<bool>(taskReminders.value);
@@ -15841,6 +15890,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     return (StringBuffer('AppSettingsCompanion(')
           ..write('id: $id, ')
           ..write('themeMode: $themeMode, ')
+          ..write('colorTheme: $colorTheme, ')
           ..write('taskReminders: $taskReminders, ')
           ..write('habitReminders: $habitReminders, ')
           ..write('aiInsightAlerts: $aiInsightAlerts, ')
@@ -28308,6 +28358,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
     AppSettingsCompanion Function({
       Value<int> id,
       Value<String> themeMode,
+      Value<String> colorTheme,
       Value<bool> taskReminders,
       Value<bool> habitReminders,
       Value<bool> aiInsightAlerts,
@@ -28319,6 +28370,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
       Value<int> id,
       Value<String> themeMode,
+      Value<String> colorTheme,
       Value<bool> taskReminders,
       Value<bool> habitReminders,
       Value<bool> aiInsightAlerts,
@@ -28343,6 +28395,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<String> get themeMode => $composableBuilder(
     column: $table.themeMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get colorTheme => $composableBuilder(
+    column: $table.colorTheme,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -28396,6 +28453,11 @@ class $$AppSettingsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get colorTheme => $composableBuilder(
+    column: $table.colorTheme,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get taskReminders => $composableBuilder(
     column: $table.taskReminders,
     builder: (column) => ColumnOrderings(column),
@@ -28441,6 +28503,11 @@ class $$AppSettingsTableAnnotationComposer
 
   GeneratedColumn<String> get themeMode =>
       $composableBuilder(column: $table.themeMode, builder: (column) => column);
+
+  GeneratedColumn<String> get colorTheme => $composableBuilder(
+    column: $table.colorTheme,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get taskReminders => $composableBuilder(
     column: $table.taskReminders,
@@ -28506,6 +28573,7 @@ class $$AppSettingsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
+                Value<String> colorTheme = const Value.absent(),
                 Value<bool> taskReminders = const Value.absent(),
                 Value<bool> habitReminders = const Value.absent(),
                 Value<bool> aiInsightAlerts = const Value.absent(),
@@ -28515,6 +28583,7 @@ class $$AppSettingsTableTableManager
               }) => AppSettingsCompanion(
                 id: id,
                 themeMode: themeMode,
+                colorTheme: colorTheme,
                 taskReminders: taskReminders,
                 habitReminders: habitReminders,
                 aiInsightAlerts: aiInsightAlerts,
@@ -28526,6 +28595,7 @@ class $$AppSettingsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
+                Value<String> colorTheme = const Value.absent(),
                 Value<bool> taskReminders = const Value.absent(),
                 Value<bool> habitReminders = const Value.absent(),
                 Value<bool> aiInsightAlerts = const Value.absent(),
@@ -28535,6 +28605,7 @@ class $$AppSettingsTableTableManager
               }) => AppSettingsCompanion.insert(
                 id: id,
                 themeMode: themeMode,
+                colorTheme: colorTheme,
                 taskReminders: taskReminders,
                 habitReminders: habitReminders,
                 aiInsightAlerts: aiInsightAlerts,

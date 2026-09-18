@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/services/notification_service.dart';
 import '../core/services/schedule_coordinator.dart';
@@ -21,10 +22,12 @@ class LifeOSApp extends ConsumerStatefulWidget {
 class _LifeOSAppState extends ConsumerState<LifeOSApp>
     with WidgetsBindingObserver {
   bool? _habitReminderScheduled;
+  late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
+    _router = createAppRouter();
     WidgetsBinding.instance.addObserver(this);
     // Fire-and-forget: none of these should block first frame, and none
     // should crash the app if the widget tree is torn down (e.g. hot
@@ -89,10 +92,10 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     return MaterialApp.router(
       title: 'LifeOS',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light(settings.colorTheme),
+      darkTheme: AppTheme.dark(settings.colorTheme),
       themeMode: themeMode,
-      routerConfig: appRouter,
+      routerConfig: _router,
       builder: (context, child) {
         if (showLockScreen) return const LockScreen();
         return child ?? const SizedBox.shrink();

@@ -31,7 +31,7 @@ import 'route_paths.dart';
 
 /// Root go_router config: a StatefulShellRoute with 5 bottom-nav branches,
 /// each branch preserving its own navigation stack.
-final appRouter = GoRouter(
+GoRouter createAppRouter() => GoRouter(
   initialLocation: RoutePaths.home,
   routes: [
     StatefulShellRoute.indexedStack(
@@ -185,3 +185,7 @@ final appRouter = GoRouter(
     ),
   ],
 );
+
+/// Shared router used by isolated widget tests. The live app creates a fresh
+/// router for each in-app restart.
+final appRouter = createAppRouter();

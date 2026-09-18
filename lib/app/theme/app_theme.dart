@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_color_theme.dart';
 import 'app_colors.dart';
 import 'app_fonts.dart';
 import 'app_spacing.dart';
@@ -19,63 +20,67 @@ import 'app_spacing.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData light() => _buildTheme(Brightness.light);
+  static ThemeData light([AppColorTheme colorTheme = AppColorTheme.forest]) =>
+      _buildTheme(Brightness.light, colorTheme);
 
-  static ThemeData dark() => _buildTheme(Brightness.dark);
+  static ThemeData dark([AppColorTheme colorTheme = AppColorTheme.forest]) =>
+      _buildTheme(Brightness.dark, colorTheme);
 
-  static ThemeData _buildTheme(Brightness brightness) {
+  static ThemeData _buildTheme(
+    Brightness brightness,
+    AppColorTheme colorTheme,
+  ) {
     final isLight = brightness == Brightness.light;
-    final appColors = isLight ? AppColors.light : AppColors.dark;
-
-    const lightNeutrals = _Neutrals(
-      bg: Color(0xFFF5F1E9), // --bg
-      surface: Color(0xFFFFFFFF), // --surface
-      surfaceDim: Color(0xFFFAF6EE), // --surface-2
-      raised: Color(0xFFFFFFFF), // --raised
-      ink: Color(0xFF1C1B18), // --text
-      ink2: Color(0xFF6E6A61), // --text-2
-      border: Color(0x171C1B18), // --border  rgba(28,27,24,.09)
-      border2: Color(0x0F1C1B18), // --border-2 rgba(28,27,24,.06)
-      btn: Color(0xFF0B7C56), // --btn
-      brandOn: Color(0xFFFFFFFF), // --on-accent
+    final palette = colorTheme.forBrightness(brightness);
+    final appColors = (isLight ? AppColors.light : AppColors.dark).copyWith(
+      surfaceAlt: palette.surfaceDim,
+      raised: palette.raised,
+      stage: palette.stage,
+      text3: palette.text3,
+      accentSoft: palette.accentSoft,
+      accentInk: palette.accentInk,
+      heroA: palette.heroA,
+      heroB: palette.heroB,
+      heroVeil: palette.heroVeil,
+      heroTrack: palette.heroTrack,
+      chrome: palette.ink,
+      codeBg: palette.codeBg,
     );
-    const darkNeutrals = _Neutrals(
-      bg: Color(0xFF161512),
-      surface: Color(0xFF201E1A),
-      surfaceDim: Color(0xFF2A2823),
-      raised: Color(0xFF26241F),
-      ink: Color(0xFFF4F0E7),
-      ink2: Color(0xFFA9A499),
-      border: Color(0x1AFFFFFF), // rgba(255,255,255,.10)
-      border2: Color(0x0DFFFFFF), // rgba(255,255,255,.05)
-      btn: Color(0xFF34D399),
-      brandOn: Color(0xFF0C0B09),
+    final neutrals = _Neutrals(
+      bg: palette.background,
+      surface: palette.surface,
+      surfaceDim: palette.surfaceDim,
+      raised: palette.raised,
+      ink: palette.ink,
+      ink2: palette.ink2,
+      border: isLight ? const Color(0x171C1B18) : const Color(0x1AFFFFFF),
+      border2: isLight ? const Color(0x0F1C1B18) : const Color(0x0DFFFFFF),
+      btn: palette.primary,
+      brandOn: palette.onPrimary,
     );
+    final brand = palette.primary;
 
-    final neutrals = isLight ? lightNeutrals : darkNeutrals;
-    final brand = neutrals.btn;
-
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.seed,
-      brightness: brightness,
-    ).copyWith(
-      primary: brand,
-      onPrimary: neutrals.brandOn,
-      primaryContainer: appColors.accentSoft,
-      onPrimaryContainer: appColors.accentInk,
-      secondary: appColors.good,
-      onSecondary: neutrals.brandOn,
-      surface: neutrals.surface,
-      onSurface: neutrals.ink,
-      onSurfaceVariant: neutrals.ink2,
-      surfaceContainer: neutrals.surfaceDim,
-      surfaceContainerHigh: neutrals.surface,
-      surfaceContainerHighest: neutrals.raised,
-      outline: neutrals.border,
-      outlineVariant: neutrals.border2,
-      error: appColors.critical,
-      onError: neutrals.brandOn,
-    );
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: palette.seed,
+          brightness: brightness,
+        ).copyWith(
+          primary: brand,
+          onPrimary: neutrals.brandOn,
+          primaryContainer: appColors.accentSoft,
+          onPrimaryContainer: appColors.accentInk,
+          secondary: palette.secondary ?? palette.primary,
+          surface: neutrals.surface,
+          onSurface: neutrals.ink,
+          onSurfaceVariant: neutrals.ink2,
+          surfaceContainer: neutrals.surfaceDim,
+          surfaceContainerHigh: neutrals.surface,
+          surfaceContainerHighest: neutrals.raised,
+          outline: neutrals.border,
+          outlineVariant: neutrals.border2,
+          error: appColors.critical,
+          onError: neutrals.brandOn,
+        );
 
     final textTheme = _buildTextTheme(neutrals.ink);
 
@@ -122,14 +127,14 @@ class AppTheme {
           return textTheme.labelSmall?.copyWith(
             fontSize: 10,
             fontWeight: FontWeight.w700,
-            color: selected ? appColors.good : appColors.text3,
+            color: selected ? brand : appColors.text3,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
             size: 23,
-            color: selected ? appColors.good : appColors.text3,
+            color: selected ? brand : appColors.text3,
           );
         }),
       ),
@@ -152,7 +157,10 @@ class AppTheme {
           }),
           side: WidgetStateProperty.all(BorderSide.none),
           textStyle: WidgetStateProperty.all(
-            textTheme.labelLarge?.copyWith(fontSize: 13, fontWeight: FontWeight.w700),
+            textTheme.labelLarge?.copyWith(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -182,7 +190,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.controlRadius),
-          borderSide: BorderSide(color: appColors.good, width: 1.6),
+          borderSide: BorderSide(color: brand, width: 1.6),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.controlRadius),
@@ -198,11 +206,13 @@ class AppTheme {
           vertical: 15,
         ),
       ),
-      filledButtonTheme: FilledButtonThemeData(style: _primaryButtonStyle(textTheme)),
+      filledButtonTheme: FilledButtonThemeData(
+        style: _primaryButtonStyle(textTheme),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: _primaryButtonStyle(textTheme).copyWith(
-          elevation: const WidgetStatePropertyAll<double>(0),
-        ),
+        style: _primaryButtonStyle(
+          textTheme,
+        ).copyWith(elevation: const WidgetStatePropertyAll<double>(0)),
       ),
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(
@@ -234,9 +244,7 @@ class AppTheme {
         backgroundColor: brand,
         foregroundColor: neutrals.brandOn,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(17),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: neutrals.surface,
@@ -280,7 +288,10 @@ class AppTheme {
         ),
       ),
       textStyle: WidgetStatePropertyAll(
-        textTheme.labelLarge?.copyWith(fontSize: 15.5, fontWeight: FontWeight.w700),
+        textTheme.labelLarge?.copyWith(
+          fontSize: 15.5,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -296,11 +307,12 @@ class AppTheme {
     ).black.apply(displayColor: ink, bodyColor: ink);
 
     // Comp hero headings: Newsreader 500 with `letter-spacing:-.5px`.
-    TextStyle? hero(TextStyle? s, {FontWeight w = FontWeight.w500}) => s?.copyWith(
-      fontFamily: AppFonts.serif,
-      fontWeight: w,
-      letterSpacing: -0.5,
-    );
+    TextStyle? hero(TextStyle? s, {FontWeight w = FontWeight.w500}) =>
+        s?.copyWith(
+          fontFamily: AppFonts.serif,
+          fontWeight: w,
+          letterSpacing: -0.5,
+        );
     // Comp card/section titles: Newsreader 600, near-neutral tracking.
     TextStyle? title(TextStyle? s) => s?.copyWith(
       fontFamily: AppFonts.serif,

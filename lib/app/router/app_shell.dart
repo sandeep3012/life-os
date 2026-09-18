@@ -41,7 +41,11 @@ class _AppShellState extends ConsumerState<AppShell> {
   bool _addMenuOpen = false;
 
   static const _destinations = [
-    AppNavDestination(LucideIcons.layoutDashboard, LucideIcons.layoutDashboard, 'Home'),
+    AppNavDestination(
+      LucideIcons.layoutDashboard,
+      LucideIcons.layoutDashboard,
+      'Home',
+    ),
     AppNavDestination(LucideIcons.wallet, LucideIcons.wallet, 'Finance'),
     AppNavDestination(LucideIcons.listChecks, LucideIcons.listChecks, 'Tasks'),
     AppNavDestination(LucideIcons.calendar, LucideIcons.calendar, 'Calendar'),
@@ -127,9 +131,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('Add an account first')),
-        );
+        ..showSnackBar(const SnackBar(content: Text('Add an account first')));
       return;
     }
 
@@ -138,16 +140,21 @@ class _AppShellState extends ConsumerState<AppShell> {
       kind: kind,
       accounts: accounts,
       categories: categories,
-      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+      currencySymbol: currencySymbolFor(
+        ref.read(settingsProvider).currencyCode,
+      ),
     );
     if (result == null) return;
-    await ref.read(financeControllerProvider).addTransaction(
-      accountId: result.accountId,
-      categoryId: result.categoryId,
-      merchant: result.note ?? (kind == EntryKind.expense ? 'Expense' : 'Income'),
-      amountMinor: result.amountMinor,
-      date: result.date,
-    );
+    await ref
+        .read(financeControllerProvider)
+        .addTransaction(
+          accountId: result.accountId,
+          categoryId: result.categoryId,
+          merchant:
+              result.note ?? (kind == EntryKind.expense ? 'Expense' : 'Income'),
+          amountMinor: result.amountMinor,
+          date: result.date,
+        );
 
     if (!mounted) return;
     // Comp copy: "Expense saved — ₹420 logged to HDFC Bank."
@@ -174,7 +181,8 @@ class _AppShellState extends ConsumerState<AppShell> {
     }
 
     final now = DateTime.now();
-    if (_lastExitAttempt != null && now.difference(_lastExitAttempt!) <= _exitConfirmationWindow) {
+    if (_lastExitAttempt != null &&
+        now.difference(_lastExitAttempt!) <= _exitConfirmationWindow) {
       SystemNavigator.pop();
       return;
     }
@@ -270,7 +278,7 @@ class AppFloatingNavBar extends StatelessWidget {
                   child: _NavButton(
                     destination: destinations[i],
                     selected: i == selectedIndex,
-                    activeColor: colors.good,
+                    activeColor: scheme.primary,
                     inactiveColor: colors.text3,
                     onTap: () => onSelected(i),
                   ),
