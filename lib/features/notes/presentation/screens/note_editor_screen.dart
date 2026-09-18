@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../tags/presentation/widgets/tag_chip_row.dart';
@@ -159,7 +160,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           actions: [
             if (_noteId != null)
               IconButton(
-                icon: const Icon(Icons.delete_outline_rounded),
+                icon: const Icon(LucideIcons.trash2),
                 onPressed: _delete,
               ),
             TextButton(onPressed: _saveAndClose, child: const Text('Save')),

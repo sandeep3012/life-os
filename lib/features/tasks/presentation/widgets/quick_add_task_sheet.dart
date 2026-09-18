@@ -1,4 +1,6 @@
+import '../../../../core/widgets/tab_rail.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/widgets/compact_editor_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/scheduling/repeat_schedule.dart';
@@ -171,7 +173,7 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
           ),
           TextButton.icon(
             onPressed: _addCategory,
-            icon: const Icon(Icons.add),
+            icon: const Icon(LucideIcons.plus),
             label: const Text('Add category'),
           ),
           const Text('Priority'),
@@ -233,22 +235,13 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
           if (_dueDate != null && _reminderEnabled)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: SegmentedButton<ReminderMode>(
-                segments: const [
-                  ButtonSegment(
-                    value: ReminderMode.notification,
-                    label: Text('Notification'),
-                    icon: Icon(Icons.notifications_rounded, size: 16),
-                  ),
-                  ButtonSegment(
-                    value: ReminderMode.alarm,
-                    label: Text('Alarm'),
-                    icon: Icon(Icons.alarm_rounded, size: 16),
-                  ),
-                ],
-                selected: {_reminderMode},
-                onSelectionChanged: (s) =>
-                    setState(() => _reminderMode = s.first),
+              child: AppTabRail<ReminderMode>(
+                value: _reminderMode,
+                labels: const {
+                  ReminderMode.notification: 'Notification',
+                  ReminderMode.alarm: 'Alarm',
+                },
+                onChanged: (value) => setState(() => _reminderMode = value),
               ),
             ),
           if (_dueDate != null && !_schedule.hasOccurrence)

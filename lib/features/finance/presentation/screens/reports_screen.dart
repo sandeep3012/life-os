@@ -1,3 +1,4 @@
+import '../../../../core/widgets/tab_rail.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -5,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
@@ -142,27 +144,18 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            SegmentedButton<ReportPeriodType>(
-              segments: const [
-                ButtonSegment(
-                  value: ReportPeriodType.month,
-                  label: Text('Monthly'),
-                ),
-                ButtonSegment(
-                  value: ReportPeriodType.year,
-                  label: Text('Yearly'),
-                ),
-                ButtonSegment(
-                  value: ReportPeriodType.custom,
-                  label: Text('Custom'),
-                ),
-              ],
-              selected: {_periodType},
-              onSelectionChanged: (s) {
-                if (s.first == ReportPeriodType.custom) {
+            AppTabRail<ReportPeriodType>(
+              value: _periodType,
+              labels: const {
+                ReportPeriodType.month: 'Monthly',
+                ReportPeriodType.year: 'Yearly',
+                ReportPeriodType.custom: 'Custom',
+              },
+              onChanged: (value) {
+                if (value == ReportPeriodType.custom) {
                   _pickRange();
                 } else {
-                  setState(() => _periodType = s.first);
+                  setState(() => _periodType = value);
                 }
               },
             ),
@@ -171,7 +164,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.chevron_left_rounded),
+                  icon: const Icon(LucideIcons.chevronLeft),
                   onPressed: _periodType == ReportPeriodType.custom
                       ? null
                       : () => _shiftPeriod(-1),
@@ -184,7 +177,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.chevron_right_rounded),
+                  icon: const Icon(LucideIcons.chevronRight),
                   onPressed: _periodType == ReportPeriodType.custom
                       ? null
                       : () => _shiftPeriod(1),
@@ -356,7 +349,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.picture_as_pdf_outlined),
+                    : const Icon(LucideIcons.fileText),
                 label: Text(
                   _exportingFormats.contains('pdf')
                       ? 'Exporting PDF…'
@@ -376,7 +369,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         dimension: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.download_rounded),
+                    : const Icon(LucideIcons.download),
                 label: Text(
                   _exportingFormats.contains('csv')
                       ? 'Exporting CSV…'

@@ -227,6 +227,54 @@ void main() {
             ),
           );
 
+      final medicine = await db
+          .into(db.medications)
+          .insertReturning(MedicationsCompanion.insert(name: 'Vitamin'));
+      await db
+          .into(db.medicationLogs)
+          .insert(
+            MedicationLogsCompanion.insert(
+              medicationId: medicine.id,
+              date: DateTime(2026, 9, 14),
+            ),
+          );
+      final workout = await db
+          .into(db.workoutDays)
+          .insertReturning(
+            WorkoutDaysCompanion.insert(weekday: 1, label: 'Push'),
+          );
+      final exercise = await db
+          .into(db.exercises)
+          .insertReturning(
+            ExercisesCompanion.insert(workoutDayId: workout.id, name: 'Press'),
+          );
+      await db
+          .into(db.workoutLogs)
+          .insert(
+            WorkoutLogsCompanion.insert(
+              exerciseId: exercise.id,
+              date: DateTime(2026, 9, 14),
+            ),
+          );
+      await db
+          .into(db.exerciseSetLogs)
+          .insert(
+            ExerciseSetLogsCompanion.insert(
+              exerciseId: exercise.id,
+              date: DateTime(2026, 9, 14),
+              setNumber: 1,
+              reps: const Value(10),
+              weightGrams: const Value(20000),
+            ),
+          );
+      final book = await db
+          .into(db.learnBooks)
+          .insertReturning(LearnBooksCompanion.insert(name: 'Flutter'));
+      await db
+          .into(db.learnNotes)
+          .insert(
+            LearnNotesCompanion.insert(bookId: book.id, title: 'Widgets'),
+          );
       final zipBytes = await backup.exportBackup();
       expect(zipBytes, isNotEmpty);
       final before = manifest(zipBytes)['tables'] as Map;
@@ -310,7 +358,7 @@ void main() {
     () async {
       await db.into(db.notes).insert(NotesCompanion.insert(title: 'Keep me'));
       final original = manifest(await backup.exportBackup());
-      for (final version in [null, 0, 3, '2']) {
+      for (final version in [null, 0, 4, '2']) {
         await expectLater(
           backup.importBackup(pack({...original, 'formatVersion': version})),
           throwsA(isA<InvalidBackupException>()),
@@ -346,6 +394,37 @@ void main() {
           );
       await backup.importBackup(pack(legacy));
       expect(await db.select(db.bills).get(), isEmpty);
+    },
+  );
+
+  test(
+    'version 2 backups remain importable without Health and Learn tables',
+    () async {
+      await db
+          .into(db.notes)
+          .insert(NotesCompanion.insert(title: 'Old backup'));
+      final legacy = manifest(await backup.exportBackup())
+        ..['formatVersion'] = 2;
+      final tables = legacy['tables'] as Map;
+      for (final name in [
+        'medications',
+        'medicationLogs',
+        'workoutDays',
+        'exercises',
+        'workoutLogs',
+        'exerciseSetLogs',
+        'learnBooks',
+        'learnNotes',
+      ]) {
+        tables.remove(name);
+      }
+      await db
+          .into(db.medications)
+          .insert(MedicationsCompanion.insert(name: 'Stale'));
+      await backup.importBackup(pack(legacy));
+      expect((await db.select(db.notes).getSingle()).title, 'Old backup');
+      expect(await db.select(db.medications).get(), isEmpty);
+      expect(await db.select(db.learnBooks).get(), isEmpty);
     },
   );
 

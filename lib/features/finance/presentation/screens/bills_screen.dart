@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -63,7 +64,7 @@ class BillsScreen extends ConsumerWidget {
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addBill(context, ref),
-        icon: const Icon(Icons.add_rounded),
+        icon: const Icon(LucideIcons.plus),
         label: const Text('New bill'),
       ),
     );
@@ -122,7 +123,7 @@ class _BillTile extends ConsumerWidget {
         height: 38,
         decoration: BoxDecoration(color: color.withValues(alpha: 0.16), shape: BoxShape.circle),
         child: Icon(
-          category != null ? resolveIcon(category!.icon) : Icons.receipt_long_rounded,
+          category != null ? resolveIcon(category!.icon) : LucideIcons.receipt,
           size: 18,
           color: color,
         ),
@@ -142,12 +143,12 @@ class _BillTile extends ConsumerWidget {
           ),
           IconButton(
             tooltip: 'Mark as paid',
-            icon: const Icon(Icons.check_circle_outline_rounded),
+            icon: const Icon(LucideIcons.circleCheck),
             onPressed: () => _markPaid(context, ref),
           ),
           IconButton(
             tooltip: 'Delete',
-            icon: const Icon(Icons.delete_outline_rounded),
+            icon: const Icon(LucideIcons.trash2),
             onPressed: () => _confirmDelete(context, ref),
           ),
         ],
@@ -200,7 +201,7 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.receipt_long_rounded, size: 40, color: theme.colorScheme.onSurfaceVariant),
+            Icon(LucideIcons.receipt, size: 40, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(height: 12),
             Text('No bills tracked yet', style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
             const SizedBox(height: 4),

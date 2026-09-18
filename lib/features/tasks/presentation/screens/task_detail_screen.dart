@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -84,7 +85,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
               ? colors.tasks
               : _categoryColor(category.colorHex, colors.tasks);
           final icon = category == null
-              ? Icons.checklist_rounded
+              ? LucideIcons.listChecks
               : resolveIcon(category.icon);
           final done = task.status == 'done';
 
@@ -133,9 +134,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
                       Row(
                         children: [
                           Icon(
-                            done
-                                ? Icons.check_circle_rounded
-                                : Icons.radio_button_unchecked_rounded,
+                            done ? LucideIcons.checkCircle : LucideIcons.circle,
                             size: 18,
                             color: done
                                 ? accent
@@ -158,7 +157,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
                           if (recurring) ...[
                             const SizedBox(width: 18),
                             Icon(
-                              Icons.repeat_rounded,
+                              LucideIcons.repeat,
                               size: 16,
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -177,12 +176,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
                                   const SizedBox(height: 8),
                                   if (task.description?.isNotEmpty ?? false)
                                     _DetailTile(
-                                      icon: Icons.notes_rounded,
+                                      icon: LucideIcons.notebookPen,
                                       title: 'Description',
                                       value: task.description!,
                                     ),
                                   _DetailTile(
-                                    icon: Icons.schedule_rounded,
+                                    icon: LucideIcons.clock,
                                     title: 'Date and time',
                                     value: task.dueDate == null
                                         ? 'Not set'
@@ -191,24 +190,24 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
                                           ),
                                   ),
                                   _DetailTile(
-                                    icon: Icons.repeat_rounded,
+                                    icon: LucideIcons.repeat,
                                     title: 'Repeat',
                                     value: _repeatLabel(schedule),
                                   ),
                                   _DetailTile(
-                                    icon: Icons.label_outline_rounded,
+                                    icon: LucideIcons.tag,
                                     title: 'Category',
                                     value: category?.name ?? 'Uncategorized',
                                   ),
                                   _DetailTile(
-                                    icon: Icons.flag_outlined,
+                                    icon: LucideIcons.flag,
                                     title: 'Priority',
                                     value: TaskPriorityX.fromValue(
                                       task.priority,
                                     ).label,
                                   ),
                                   _DetailTile(
-                                    icon: Icons.notifications_none_rounded,
+                                    icon: LucideIcons.bell,
                                     title: 'Reminder',
                                     value:
                                         task.reminderEnabled &&
@@ -247,9 +246,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
                             icon: AnimatedRotation(
                               turns: _detailsExpanded ? 0.5 : 0,
                               duration: const Duration(milliseconds: 220),
-                              child: const Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                              ),
+                              child: const Icon(LucideIcons.chevronDown),
                             ),
                           ),
                         ),
@@ -264,7 +261,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
                 child: FilledButton.icon(
                   onPressed: () =>
                       ref.read(tasksControllerProvider).toggleDone(task),
-                  icon: Icon(done ? Icons.undo_rounded : Icons.check_rounded),
+                  icon: Icon(done ? LucideIcons.undo : LucideIcons.check),
                   label: Text(done ? 'Mark as open' : 'Mark complete'),
                 ),
               ),
@@ -273,7 +270,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () => _editTask(context, ref, task),
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: const Icon(LucideIcons.pencil),
                   label: const Text('Edit task'),
                 ),
               ),
@@ -429,12 +426,12 @@ class _TaskHistoryTile extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       leading: Icon(
         done
-            ? Icons.check_circle_rounded
+            ? LucideIcons.checkCircle
             : missed
-            ? Icons.cancel_outlined
+            ? LucideIcons.circleX
             : pending
-            ? Icons.circle_outlined
-            : Icons.remove_circle_outline_rounded,
+            ? LucideIcons.circle
+            : LucideIcons.circleMinus,
         color: color,
       ),
       title: Text(DateFormat.yMMMEd().format(day)),
@@ -548,7 +545,7 @@ class _TaskCalendar extends StatelessWidget {
             Text('${day.day}', style: TextStyle(color: color)),
             if (done || missed)
               Icon(
-                done ? Icons.check_rounded : Icons.close_rounded,
+                done ? LucideIcons.check : LucideIcons.x,
                 size: 13,
                 color: color,
               ),

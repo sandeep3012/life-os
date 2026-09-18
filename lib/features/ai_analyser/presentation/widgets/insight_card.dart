@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -6,10 +7,10 @@ import '../../../../core/database/app_database.dart';
 (IconData, Color) _severityStyle(BuildContext context, String severity) {
   final colors = context.appColors;
   return switch (severity) {
-    'critical' => (Icons.local_fire_department_rounded, colors.critical),
-    'warning' => (Icons.account_balance_wallet_rounded, colors.warning),
-    'good' => (Icons.trending_up_rounded, colors.good),
-    _ => (Icons.insights_rounded, colors.info),
+    'critical' => (LucideIcons.flame, colors.critical),
+    'warning' => (LucideIcons.wallet, colors.warning),
+    'good' => (LucideIcons.trendingUp, colors.good),
+    _ => (LucideIcons.chartLine, colors.info),
   };
 }
 

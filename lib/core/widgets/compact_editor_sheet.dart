@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 
 Future<T?> showCompactEditorSheet<T>({
@@ -47,7 +48,7 @@ class CompactEditorSheet extends StatelessWidget {
                 IconButton(
                   tooltip: 'Cancel',
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(LucideIcons.x),
                 ),
               ],
             ),

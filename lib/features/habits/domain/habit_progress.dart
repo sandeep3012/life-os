@@ -27,5 +27,6 @@ class HabitProgress {
 
   bool get isAtRisk =>
       isScheduledToday &&
-      streakDays > 0 && !(weekCompletion[DateTime.now().weekday] ?? false);
+      streakDays > 0 &&
+      !(weekCompletion[DateTime.now().weekday] ?? false);
 }

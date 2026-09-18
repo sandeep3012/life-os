@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/category_spend.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class CategoryDonutChart extends StatelessWidget {
   const CategoryDonutChart({
@@ -51,7 +52,7 @@ class CategoryDonutChart extends StatelessWidget {
                 children: [
                   Text(
                     formatMinor(totalMinor, currencyCode: currencyCode, showDecimals: false),
-                    style: theme.textTheme.titleMedium?.copyWith(fontFamily: 'Fraunces'),
+                    style: theme.textTheme.titleMedium?.copyWith(fontFamily: AppFonts.serif),
                   ),
                   Text(
                     'this month',
@@ -97,7 +98,8 @@ class CategoryDonutChart extends StatelessWidget {
                       Text(
                         '${(entry.share * 100).round()}%',
                         style: const TextStyle(
-                          fontFamily: 'PlexMono',
+                          fontFamily: AppFonts.numeric,
+                          fontFeatures: AppFonts.tabular,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),

@@ -8,9 +8,20 @@ import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
 import 'file_storage_service.dart';
 
-const _backupFormatVersion = 2;
+const _backupFormatVersion = 3;
 const _legacyMissingTables = {'accountTypes', 'recurringTransactions', 'bills'};
+const _healthLearnTables = {
+  'medications',
+  'medicationLogs',
+  'workoutDays',
+  'exercises',
+  'workoutLogs',
+  'exerciseSetLogs',
+  'learnBooks',
+  'learnNotes',
+};
 const _tableNames = {
+  ..._healthLearnTables,
   'categories',
   'tags',
   'entityTags',
@@ -63,6 +74,30 @@ class BackupService {
 
   Future<Uint8List> _exportSnapshot() async {
     final tables = <String, List<Map<String, dynamic>>>{
+      'medications': (await _db.select(_db.medications).get())
+          .map((e) => e.toJson())
+          .toList(),
+      'medicationLogs': (await _db.select(_db.medicationLogs).get())
+          .map((e) => e.toJson())
+          .toList(),
+      'workoutDays': (await _db.select(_db.workoutDays).get())
+          .map((e) => e.toJson())
+          .toList(),
+      'exercises': (await _db.select(_db.exercises).get())
+          .map((e) => e.toJson())
+          .toList(),
+      'workoutLogs': (await _db.select(_db.workoutLogs).get())
+          .map((e) => e.toJson())
+          .toList(),
+      'exerciseSetLogs': (await _db.select(_db.exerciseSetLogs).get())
+          .map((e) => e.toJson())
+          .toList(),
+      'learnBooks': (await _db.select(_db.learnBooks).get())
+          .map((e) => e.toJson())
+          .toList(),
+      'learnNotes': (await _db.select(_db.learnNotes).get())
+          .map((e) => e.toJson())
+          .toList(),
       'categories': (await _db.select(_db.categories).get())
           .map((e) => e.toJson())
           .toList(),
@@ -210,6 +245,11 @@ class BackupService {
       );
     }
     for (final name in _tableNames) {
+      if (version < 3 &&
+          _healthLearnTables.contains(name) &&
+          !tables.containsKey(name)) {
+        tables[name] = <dynamic>[];
+      }
       if (version == 1 &&
           _legacyMissingTables.contains(name) &&
           !tables.containsKey(name)) {
@@ -236,6 +276,14 @@ class BackupService {
       // Children first, so nothing is ever left referencing a deleted parent
       // mid-wipe (this DB doesn't enforce FKs, but there's no reason to rely
       // on that).
+      await _db.delete(_db.medicationLogs).go();
+      await _db.delete(_db.exerciseSetLogs).go();
+      await _db.delete(_db.workoutLogs).go();
+      await _db.delete(_db.exercises).go();
+      await _db.delete(_db.workoutDays).go();
+      await _db.delete(_db.medications).go();
+      await _db.delete(_db.learnNotes).go();
+      await _db.delete(_db.learnBooks).go();
       await _db.delete(_db.entityTags).go();
       await _db.delete(_db.subtasks).go();
       await _db.delete(_db.goalLinks).go();
@@ -260,6 +308,42 @@ class BackupService {
       await _db.delete(_db.appSettings).go();
 
       // Parents first on the way back in.
+      await _insertAll(
+        _db.medications,
+        tables['medications'],
+        Medication.fromJson,
+      );
+      await _insertAll(
+        _db.medicationLogs,
+        tables['medicationLogs'],
+        MedicationLog.fromJson,
+      );
+      await _insertAll(
+        _db.workoutDays,
+        tables['workoutDays'],
+        WorkoutDay.fromJson,
+      );
+      await _insertAll(_db.exercises, tables['exercises'], Exercise.fromJson);
+      await _insertAll(
+        _db.workoutLogs,
+        tables['workoutLogs'],
+        WorkoutLog.fromJson,
+      );
+      await _insertAll(
+        _db.exerciseSetLogs,
+        tables['exerciseSetLogs'],
+        ExerciseSetLog.fromJson,
+      );
+      await _insertAll(
+        _db.learnBooks,
+        tables['learnBooks'],
+        LearnBook.fromJson,
+      );
+      await _insertAll(
+        _db.learnNotes,
+        tables['learnNotes'],
+        LearnNote.fromJson,
+      );
       await _insertAll(_db.categories, tables['categories'], Category.fromJson);
       await _insertAll(_db.tags, tables['tags'], Tag.fromJson);
       await _insertAll(

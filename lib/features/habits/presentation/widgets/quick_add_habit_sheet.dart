@@ -1,3 +1,5 @@
+import '../../../../core/widgets/tab_rail.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/widgets/compact_editor_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -242,7 +244,7 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.add_circle_outline_rounded, size: 16),
+                    Icon(LucideIcons.circlePlus, size: 16),
                     SizedBox(width: 8),
                     Text('Add new category'),
                   ],
@@ -267,28 +269,19 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
           if (_reminderEnabled)
             TextButton.icon(
               onPressed: _pickTime,
-              icon: const Icon(Icons.schedule_rounded, size: 16),
+              icon: const Icon(LucideIcons.clock, size: 16),
               label: Text(_reminderTime.format(context)),
             ),
           if (_reminderEnabled)
             Padding(
               padding: const EdgeInsets.only(top: 4, bottom: 4),
-              child: SegmentedButton<ReminderMode>(
-                segments: const [
-                  ButtonSegment(
-                    value: ReminderMode.notification,
-                    label: Text('Notification'),
-                    icon: Icon(Icons.notifications_rounded, size: 16),
-                  ),
-                  ButtonSegment(
-                    value: ReminderMode.alarm,
-                    label: Text('Alarm'),
-                    icon: Icon(Icons.alarm_rounded, size: 16),
-                  ),
-                ],
-                selected: {_reminderMode},
-                onSelectionChanged: (s) =>
-                    setState(() => _reminderMode = s.first),
+              child: AppTabRail<ReminderMode>(
+                value: _reminderMode,
+                labels: const {
+                  ReminderMode.notification: 'Notification',
+                  ReminderMode.alarm: 'Alarm',
+                },
+                onChanged: (value) => setState(() => _reminderMode = value),
               ),
             ),
           if (!_schedule.hasOccurrence)

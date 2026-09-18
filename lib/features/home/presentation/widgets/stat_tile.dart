@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class StatTile extends StatelessWidget {
   const StatTile({
@@ -63,7 +64,7 @@ class StatTile extends StatelessWidget {
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleLarge?.copyWith(fontFamily: 'Fraunces'),
+                  style: theme.textTheme.titleLarge?.copyWith(fontFamily: AppFonts.serif),
                 ),
                 if (delta != null) ...[
                   const SizedBox(height: 4),
@@ -79,7 +80,8 @@ class StatTile extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontFamily: 'PlexMono',
+                            fontFamily: AppFonts.numeric,
+                            fontFeatures: AppFonts.tabular,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
                             color: deltaColor ?? theme.colorScheme.onSurfaceVariant,

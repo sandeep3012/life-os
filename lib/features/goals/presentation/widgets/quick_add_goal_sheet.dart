@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/reminders/reminder_mode.dart';
@@ -50,7 +51,8 @@ Future<QuickAddGoalResult?> showQuickAddGoalSheet(
 }) {
   final linkOptions = [
     for (final h in habits) LinkOption(type: 'habit', id: h.id, label: h.name),
-    for (final a in accounts) LinkOption(type: 'account', id: a.id, label: a.name),
+    for (final a in accounts)
+      LinkOption(type: 'account', id: a.id, label: a.name),
   ];
   return showModalBottomSheet<QuickAddGoalResult>(
     context: context,
@@ -64,7 +66,11 @@ Future<QuickAddGoalResult?> showQuickAddGoalSheet(
 }
 
 class _QuickAddGoalSheet extends StatefulWidget {
-  const _QuickAddGoalSheet({required this.linkOptions, required this.currencySymbol, this.initial});
+  const _QuickAddGoalSheet({
+    required this.linkOptions,
+    required this.currencySymbol,
+    this.initial,
+  });
 
   final List<LinkOption> linkOptions;
   final String currencySymbol;
@@ -75,7 +81,9 @@ class _QuickAddGoalSheet extends StatefulWidget {
 }
 
 class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
-  late final _titleController = TextEditingController(text: widget.initial?.title);
+  late final _titleController = TextEditingController(
+    text: widget.initial?.title,
+  );
   late final _targetController = TextEditingController(
     text: widget.initial?.targetValue?.toString(),
   );
@@ -139,19 +147,35 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
               decoration: const InputDecoration(hintText: 'Goal title'),
             ),
             const SizedBox(height: 12),
-            SegmentedButton<String>(
-              segments: [
-                ButtonSegment(value: 'financial', label: Text(widget.currencySymbol)),
-                const ButtonSegment(value: 'habit', label: Text('Habit')),
-                const ButtonSegment(value: 'generic', label: Text('Generic')),
+            Text('Goal type', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Financial'),
+                  selected: _type == 'financial',
+                  onSelected: (_) => setState(() => _type = 'financial'),
+                ),
+                ChoiceChip(
+                  label: const Text('Habit'),
+                  selected: _type == 'habit',
+                  onSelected: (_) => setState(() => _type = 'habit'),
+                ),
+                ChoiceChip(
+                  label: const Text('Generic'),
+                  selected: _type == 'generic',
+                  onSelected: (_) => setState(() => _type = 'generic'),
+                ),
               ],
-              selected: {_type},
-              onSelectionChanged: (s) => setState(() => _type = s.first),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _targetController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: InputDecoration(
                 hintText: _type == 'financial'
                     ? 'Target amount (${widget.currencySymbol})'
@@ -163,24 +187,28 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
               onTap: _pickTargetDate,
               borderRadius: BorderRadius.circular(12),
               child: InputDecorator(
-                decoration: const InputDecoration(labelText: 'Deadline (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Deadline (optional)',
+                ),
                 child: Row(
                   children: [
                     Icon(
-                      Icons.calendar_today_rounded,
+                      LucideIcons.calendarDays,
                       size: 16,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      _targetDate == null ? 'No deadline' : DateFormat.yMMMd().format(_targetDate!),
+                      _targetDate == null
+                          ? 'No deadline'
+                          : DateFormat.yMMMd().format(_targetDate!),
                     ),
                     if (_targetDate != null) ...[
                       const Spacer(),
                       IconButton(
                         tooltip: 'Clear deadline',
                         onPressed: () => setState(() => _targetDate = null),
-                        icon: const Icon(Icons.close_rounded, size: 16),
+                        icon: const Icon(LucideIcons.x, size: 16),
                       ),
                     ],
                   ],
@@ -204,7 +232,8 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
                     for (final (value, label) in _reminderDaysOptions)
                       DropdownMenuItem(value: value, child: Text(label)),
                   ],
-                  onChanged: (v) => setState(() => _reminderDaysBefore = v ?? 0),
+                  onChanged: (v) =>
+                      setState(() => _reminderDaysBefore = v ?? 0),
                 ),
                 const SizedBox(height: 8),
                 SegmentedButton<ReminderMode>(
@@ -212,16 +241,17 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
                     ButtonSegment(
                       value: ReminderMode.notification,
                       label: Text('Notification'),
-                      icon: Icon(Icons.notifications_rounded, size: 16),
+                      icon: Icon(LucideIcons.bell, size: 16),
                     ),
                     ButtonSegment(
                       value: ReminderMode.alarm,
                       label: Text('Alarm'),
-                      icon: Icon(Icons.alarm_rounded, size: 16),
+                      icon: Icon(LucideIcons.alarmClock, size: 16),
                     ),
                   ],
                   selected: {_reminderMode},
-                  onSelectionChanged: (s) => setState(() => _reminderMode = s.first),
+                  onSelectionChanged: (s) =>
+                      setState(() => _reminderMode = s.first),
                 ),
               ],
             ],
@@ -255,7 +285,9 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
                         QuickAddGoalResult(
                           title: _titleController.text.trim(),
                           type: _type,
-                          targetValue: double.tryParse(_targetController.text.trim()),
+                          targetValue: double.tryParse(
+                            _targetController.text.trim(),
+                          ),
                           link: _link,
                           targetDate: _targetDate,
                           reminderEnabled: _reminderEnabled,

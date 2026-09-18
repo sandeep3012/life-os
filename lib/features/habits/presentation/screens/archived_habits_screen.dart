@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -73,7 +74,7 @@ class _ArchivedHabitTile extends StatelessWidget {
         ? colors.habits
         : Color(int.parse(category!.colorHex.replaceFirst('#', '0xFF')));
     final icon = category == null
-        ? Icons.local_fire_department_rounded
+        ? LucideIcons.flame
         : resolveIcon(category!.icon);
 
     return ListTile(

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../domain/task_priority.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class TaskTile extends StatelessWidget {
   const TaskTile({
@@ -36,7 +38,7 @@ class TaskTile extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         color: colors.critical.withValues(alpha: 0.15),
-        child: Icon(Icons.delete_outline_rounded, color: colors.critical),
+        child: Icon(LucideIcons.trash2, color: colors.critical),
       ),
       child: InkWell(
         onTap: onOpen,
@@ -45,8 +47,11 @@ class TaskTile extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(tooltip: done ? 'Mark incomplete' : 'Mark complete',
-                onPressed: onToggle, icon: _TaskCheckbox(done: done, color: colors.tasks)),
+              IconButton(
+                tooltip: done ? 'Mark incomplete' : 'Mark complete',
+                onPressed: onToggle,
+                icon: _TaskCheckbox(done: done, color: colors.tasks),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -63,15 +68,24 @@ class TaskTile extends StatelessWidget {
                       ),
                     ),
                     if (task.description?.isNotEmpty ?? false)
-                      Text(task.description!, maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall),
+                      Text(
+                        task.description!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
                     const SizedBox(height: 4),
                     Wrap(
                       spacing: 6,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        if (task.recurrenceId != null) const Icon(Icons.repeat_rounded, size: 16),
-                        if (categoryLabel != null) Text(categoryLabel!, style: theme.textTheme.labelSmall),
+                        if (task.recurrenceId != null)
+                          const Icon(LucideIcons.repeat, size: 16),
+                        if (categoryLabel != null)
+                          Text(
+                            categoryLabel!,
+                            style: theme.textTheme.labelSmall,
+                          ),
                         _PriorityChip(
                           priority: TaskPriorityX.fromValue(task.priority),
                         ),
@@ -80,7 +94,8 @@ class TaskTile extends StatelessWidget {
                             _formatDue(task.dueDate!),
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
-                              fontFamily: 'PlexMono',
+                              fontFamily: AppFonts.numeric,
+                              fontFeatures: AppFonts.tabular,
                             ),
                           ),
                       ],
@@ -88,7 +103,11 @@ class TaskTile extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(tooltip: 'Task details', onPressed: onOpen, icon: const Icon(Icons.chevron_right_rounded)),
+              IconButton(
+                tooltip: 'Task details',
+                onPressed: onOpen,
+                icon: const Icon(LucideIcons.chevronRight),
+              ),
             ],
           ),
         ),
@@ -100,7 +119,9 @@ class TaskTile extends StatelessWidget {
     final now = DateTime.now();
     final timeLabel = DateFormat.jm().format(due);
     if (isSameDay(due, now)) return timeLabel;
-    if (isSameDay(due, now.add(const Duration(days: 1)))) return 'Tomorrow · $timeLabel';
+    if (isSameDay(due, now.add(const Duration(days: 1)))) {
+      return 'Tomorrow · $timeLabel';
+    }
     return '${DateFormat.MMMd().format(due)} · $timeLabel';
   }
 }
@@ -127,7 +148,7 @@ class _TaskCheckbox extends StatelessWidget {
         ),
       ),
       child: done
-          ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+          ? const Icon(LucideIcons.check, size: 14, color: Colors.white)
           : null,
     );
   }

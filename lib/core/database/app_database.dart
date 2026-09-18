@@ -8,8 +8,10 @@ import 'tables/documents_tables.dart';
 import 'tables/finance_tables.dart';
 import 'tables/folders_table.dart';
 import 'tables/goals_tables.dart';
+import 'tables/health_tables.dart';
 import 'tables/habits_tables.dart';
 import 'tables/insights_table.dart';
+import 'tables/learn_tables.dart';
 import 'tables/notes_tables.dart';
 import 'tables/settings_table.dart';
 import 'tables/tasks_tables.dart';
@@ -43,6 +45,14 @@ part 'app_database.g.dart';
     Notes,
     Documents,
     Insights,
+    Medications,
+    MedicationLogs,
+    WorkoutDays,
+    Exercises,
+    WorkoutLogs,
+    ExerciseSetLogs,
+    LearnBooks,
+    LearnNotes,
     AppSettings,
   ],
 )
@@ -52,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -171,36 +181,78 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(appSettings, appSettings.appLockEnabled);
         await m.addColumn(appSettings, appSettings.biometricEnabled);
       }
-      if (from < 15) {
-        // Nullable additions preserve old rows and JSON backups unchanged.
-        await m.addColumn(tasks, tasks.schedule);
-        await m.addColumn(tasks, tasks.recurrenceId);
-        await m.addColumn(tasks, tasks.recurrenceNextGenerationDate);
-        await m.addColumn(habits, habits.schedule);
-        await m.addColumn(habits, habits.description);
-        await m.addColumn(events, events.schedule);
-        await m.addColumn(events, events.description);
+      if (from < 19) {
+        // Versions 15/16 existed on two independent branches: Health/Learn
+        // tables on one, schedules/goal progress on the other. Inspect the
+        // actual schema so either lineage upgrades without losing its data.
+        final existingTables = (await customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'table'",
+        ).get()).map((row) => row.read<String>('name')).toSet();
+        for (final table in <TableInfo>[
+          medications,
+          medicationLogs,
+          workoutDays,
+          exercises,
+          workoutLogs,
+          exerciseSetLogs,
+          learnBooks,
+          learnNotes,
+        ]) {
+          if (!existingTables.contains(table.actualTableName)) {
+            await m.createTable(table);
+          }
+        }
+        final additions = <TableInfo, List<GeneratedColumn>>{
+          tasks: [
+            tasks.schedule,
+            tasks.recurrenceId,
+            tasks.recurrenceNextGenerationDate,
+          ],
+          habits: [
+            habits.schedule,
+            habits.description,
+            habits.targetAmount,
+            habits.targetUnit,
+            habits.pauseStartedAt,
+            habits.pausedUntil,
+            habits.pauseHistory,
+          ],
+          events: [events.schedule, events.description],
+          goals: [goals.progressMode],
+          habitLogs: [
+            habitLogs.amount,
+            habitLogs.targetAmountSnapshot,
+            habitLogs.targetUnitSnapshot,
+          ],
+        };
+        var needsSnapshots = false;
+        for (final entry in additions.entries) {
+          final columns = (await customSelect(
+            'PRAGMA table_info("${entry.key.actualTableName}")',
+          ).get()).map((row) => row.read<String>('name')).toSet();
+          for (final column in entry.value) {
+            if (!columns.contains(column.$name)) {
+              await m.addColumn(entry.key, column);
+              if (entry.key == habitLogs &&
+                  column == habitLogs.targetAmountSnapshot) {
+                needsSnapshots = true;
+              }
+            }
+          }
+        }
+        if (needsSnapshots) {
+          await customStatement('''
+            UPDATE habit_logs SET
+              target_amount_snapshot = (SELECT target_amount FROM habits WHERE habits.id = habit_logs.habit_id),
+              target_unit_snapshot = (SELECT target_unit FROM habits WHERE habits.id = habit_logs.habit_id)
+            WHERE amount IS NOT NULL
+          ''');
+        }
       }
-      if (from < 16) {
-        await m.addColumn(goals, goals.progressMode);
-      }
-      if (from < 17) {
-        await m.addColumn(habits, habits.targetAmount);
-        await m.addColumn(habits, habits.targetUnit);
-        await m.addColumn(habits, habits.pauseStartedAt);
-        await m.addColumn(habits, habits.pausedUntil);
-        await m.addColumn(habitLogs, habitLogs.amount);
-      }
-      if (from < 18) {
-        await m.addColumn(habits, habits.pauseHistory);
-        await m.addColumn(habitLogs, habitLogs.targetAmountSnapshot);
-        await m.addColumn(habitLogs, habitLogs.targetUnitSnapshot);
-        await customStatement('''
-          UPDATE habit_logs SET
-            target_amount_snapshot = (SELECT target_amount FROM habits WHERE habits.id = habit_logs.habit_id),
-            target_unit_snapshot = (SELECT target_unit FROM habits WHERE habits.id = habit_logs.habit_id)
-          WHERE amount IS NOT NULL
-        ''');
+      if (from < 20) {
+        // v19 -> v20: selected curated brand palette. Existing installs keep
+        // the original Forest appearance through the column default.
+        await m.addColumn(appSettings, appSettings.colorTheme);
       }
     },
   );

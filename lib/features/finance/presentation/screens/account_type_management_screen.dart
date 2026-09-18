@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
@@ -28,7 +29,7 @@ class AccountTypeManagementScreen extends ConsumerWidget {
                   title: Text(t.name),
                   onTap: () => _openEditor(context, ref, existing: t),
                   trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline_rounded),
+                    icon: const Icon(LucideIcons.trash2),
                     onPressed: () => _delete(context, ref, t),
                   ),
                 );
@@ -36,7 +37,7 @@ class AccountTypeManagementScreen extends ConsumerWidget {
             ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openEditor(context, ref),
-        icon: const Icon(Icons.add_rounded),
+        icon: const Icon(LucideIcons.plus),
         label: const Text('Add type'),
       ),
     );

@@ -12,10 +12,10 @@ Future<Uint8List> reportToPdf(
   required String currencyCode,
 }) async {
   final font = pw.Font.ttf(
-    await rootBundle.load('assets/fonts/Figtree-Regular.ttf'),
+    await rootBundle.load('assets/fonts/Manrope-Variable.ttf'),
   );
   final bold = pw.Font.ttf(
-    await rootBundle.load('assets/fonts/Figtree-Bold.ttf'),
+    await rootBundle.load('assets/fonts/Manrope-Variable.ttf'),
   );
   final document = pw.Document(
     theme: pw.ThemeData.withFont(base: font, bold: bold),
@@ -23,12 +23,12 @@ Future<Uint8List> reportToPdf(
   String amount(int minor) =>
       '$currencyCode ${(minor / 100).toStringAsFixed(2)}';
   const palette = [
-    '#6750E7',
-    '#E87956',
-    '#38A478',
-    '#E8B14A',
-    '#5096D0',
-    '#B56AC6',
+    '#0E9F6E',
+    '#C2703D',
+    '#3FA6A0',
+    '#D9A441',
+    '#4B7BA6',
+    '#B0558E',
   ];
   // Keep small categories legible by grouping the tail in the chart only.
   final slices = report.categoryLines.take(5).toList();

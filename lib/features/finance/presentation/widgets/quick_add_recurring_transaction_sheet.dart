@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
@@ -228,7 +229,7 @@ class _QuickAddRecurringTransactionSheetState
                 child: Row(
                   children: [
                     Icon(
-                      Icons.calendar_today_rounded,
+                      LucideIcons.calendarDays,
                       size: 16,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -248,14 +249,14 @@ class _QuickAddRecurringTransactionSheetState
                   suffixIcon: _endDate == null
                       ? null
                       : IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 18),
+                          icon: const Icon(LucideIcons.x, size: 18),
                           onPressed: () => setState(() => _endDate = null),
                         ),
                 ),
                 child: Row(
                   children: [
                     Icon(
-                      Icons.event_busy_rounded,
+                      LucideIcons.calendarX,
                       size: 16,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),

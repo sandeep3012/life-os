@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -22,12 +23,12 @@ class MoreScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appColors = context.appColors;
     final entries = [
-      _MoreEntry('Search', Icons.search_rounded, appColors.info, RoutePaths.search),
-      _MoreEntry('Notes', Icons.note_alt_rounded, appColors.notes, RoutePaths.notes),
-      _MoreEntry('Documents', Icons.folder_copy_rounded, appColors.documents, RoutePaths.documents),
-      _MoreEntry('Goals', Icons.flag_rounded, appColors.goals, RoutePaths.goals),
-      _MoreEntry('AI Analyser', Icons.insights_rounded, appColors.aiAnalyser, RoutePaths.aiAnalyser),
-      _MoreEntry('Settings', Icons.settings_rounded, Colors.grey, RoutePaths.settings),
+      _MoreEntry('Search', LucideIcons.search, appColors.info, RoutePaths.search),
+      _MoreEntry('Notes', LucideIcons.notebookPen, appColors.notes, RoutePaths.notes),
+      _MoreEntry('Documents', LucideIcons.folders, appColors.documents, RoutePaths.documents),
+      _MoreEntry('Goals', LucideIcons.flag, appColors.goals, RoutePaths.goals),
+      _MoreEntry('AI Analyser', LucideIcons.chartLine, appColors.aiAnalyser, RoutePaths.aiAnalyser),
+      _MoreEntry('Settings', LucideIcons.settings, Colors.grey, RoutePaths.settings),
     ];
     return Scaffold(
       appBar: AppBar(title: const Text('More')),

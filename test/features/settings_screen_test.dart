@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:life_manager/app/theme/app_color_theme.dart';
 import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
@@ -89,6 +90,8 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
+    expect(container.read(settingsProvider).colorTheme, AppColorTheme.forest);
+
     final settings = container.read(settingsProvider);
     expect(settings.themeMode, ThemeMode.system);
     expect(settings.taskReminders, isTrue);
@@ -116,12 +119,34 @@ void main() {
     },
   );
 
+  testWidgets('changing color theme persists and updates resolved settings', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ocean'));
+    await tester.pumpAndSettle();
+    expect(find.text('Preview Ocean'), findsOneWidget);
+    await tester.tap(find.text('Apply & restart'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(settingsProvider).colorTheme, AppColorTheme.ocean);
+    final row = await db.select(db.appSettings).getSingle();
+    expect(row.colorTheme, 'ocean');
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
   testWidgets(
     'turning off habit reminders cancels the scheduled notification',
     (tester) async {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
+      await tester.drag(find.byType(ListView).first, const Offset(0, -420));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Habit reminders'));
       await tester.pumpAndSettle();
 

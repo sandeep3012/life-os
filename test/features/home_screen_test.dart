@@ -54,22 +54,38 @@ void main() {
       initialLocation: '/home',
       routes: [
         GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
-        GoRoute(path: '/finance', builder: (context, state) => const SizedBox()),
-        GoRoute(path: '/tasks-habits', builder: (context, state) => const SizedBox()),
-        GoRoute(path: '/calendar', builder: (context, state) => const SizedBox()),
-        GoRoute(path: '/more/goals', builder: (context, state) => const SizedBox()),
+        GoRoute(
+          path: '/finance',
+          builder: (context, state) => const SizedBox(),
+        ),
+        GoRoute(
+          path: '/tasks-habits',
+          builder: (context, state) => const SizedBox(),
+        ),
+        GoRoute(
+          path: '/calendar',
+          builder: (context, state) => const SizedBox(),
+        ),
+        GoRoute(
+          path: '/more/goals',
+          builder: (context, state) => const SizedBox(),
+        ),
       ],
     );
     return ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
-        notificationServiceProvider.overrideWithValue(_FakeNotificationService()),
+        notificationServiceProvider.overrideWithValue(
+          _FakeNotificationService(),
+        ),
       ],
       child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
     );
   }
 
-  testWidgets('empty install shows the onboarding dashboard state', (tester) async {
+  testWidgets('empty install shows the onboarding dashboard state', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
@@ -78,7 +94,7 @@ void main() {
     await _disposeCleanly(tester);
   });
 
-  testWidgets('dashboard aggregates spend, tasks, habits and goals across modules', (
+  testWidgets('dashboard surfaces today\'s to-dos, habits and schedule', (
     tester,
   ) async {
     final today = dateOnly(DateTime.now());
@@ -86,7 +102,11 @@ void main() {
     // Finance: one expense logged this week.
     final finance = FinanceRepository(db, FileStorageService());
     await finance.ensureDefaultCategories();
-    await finance.createAccount(name: 'Checking', type: 'checking', balanceMinor: 500000);
+    await finance.createAccount(
+      name: 'Checking',
+      type: 'checking',
+      balanceMinor: 500000,
+    );
     final accountId = (await db.select(db.accounts).get()).first.id;
     await finance.createTransaction(
       accountId: accountId,
@@ -96,14 +116,17 @@ void main() {
     );
 
     // Tasks: one due today, still open.
-    await db.into(db.tasks).insert(
-      TasksCompanion.insert(
-        title: 'Finish Q3 budget review',
-        dueDate: Value(today.add(const Duration(hours: 17))),
-      ),
-    );
+    await db
+        .into(db.tasks)
+        .insert(
+          TasksCompanion.insert(
+            title: 'Finish Q3 budget review',
+            dueDate: Value(today.add(const Duration(hours: 17))),
+          ),
+        );
 
-    // Habits: logged yesterday but not today, so it reads as at risk.
+    // Habits: logged yesterday but not today, so the ring shows partial
+    // week completion rather than a tick.
     final habits = HabitsRepository(db);
     await habits.createHabit('Morning workout');
     final habit = (await db.select(db.habits).get()).first;
@@ -114,22 +137,28 @@ void main() {
     );
 
     // Goals: one active.
-    await db.into(db.goals).insert(GoalsCompanion.insert(title: 'Emergency Fund'));
+    await db
+        .into(db.goals)
+        .insert(GoalsCompanion.insert(title: 'Emergency Fund'));
 
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
     expect(find.text('Your dashboard fills in as you go'), findsNothing);
 
-    // Stat tiles pull from four different modules.
-    expect(find.textContaining('₹640'), findsWidgets);
-    expect(find.text('0 / 1'), findsOneWidget);
-    expect(find.text('Active goals'), findsOneWidget);
-
-    // Today's task and the at-risk habit both surface.
+    // Today's to-dos and the habit grid both surface, with a live done/total.
     expect(find.text('Finish Q3 budget review'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Morning workout'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Morning workout'), findsOneWidget);
-    expect(find.textContaining('at risk'), findsOneWidget);
+    expect(find.text('0 / 1'), findsOneWidget);
+
+    // The summary rail makes the requested current-month spend and active
+    // goal count visible without taking over the main dashboard column.
+    expect(find.textContaining('₹640'), findsOneWidget);
 
     await _disposeCleanly(tester);
   });
@@ -138,23 +167,29 @@ void main() {
     tester,
   ) async {
     final today = dateOnly(DateTime.now());
-    await db.into(db.tasks).insert(
-      TasksCompanion.insert(
-        title: 'Call plumber',
-        dueDate: Value(today.add(const Duration(hours: 11))),
-      ),
-    );
+    await db
+        .into(db.tasks)
+        .insert(
+          TasksCompanion.insert(
+            title: 'Call plumber',
+            dueDate: Value(today.add(const Duration(hours: 11))),
+          ),
+        );
 
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
     expect(find.text('0 / 1'), findsOneWidget);
 
-    await tester.tap(find.text('Call plumber'));
+    await tester.scrollUntilVisible(
+      find.byTooltip('Complete task'),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byTooltip('Complete task'));
     await tester.pumpAndSettle();
 
     expect(find.text('1 / 1'), findsOneWidget);
-    expect(find.text('all done'), findsOneWidget);
 
     await _disposeCleanly(tester);
   });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -8,6 +9,7 @@ import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../domain/payment_mode.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class TransactionTile extends StatelessWidget {
   const TransactionTile({
@@ -30,7 +32,7 @@ class TransactionTile extends StatelessWidget {
     final isIncome = transaction.amountMinor >= 0;
     final color = category != null
         ? Color(int.parse(category!.colorHex.replaceFirst('#', '0xFF')))
-        : (isIncome ? colors.good : colors.spend);
+        : (isIncome ? colors.good : colors.warm);
     final mode = paymentModeById(transaction.paymentMode);
 
     return InkWell(
@@ -44,7 +46,7 @@ class TransactionTile extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(color: color.withValues(alpha: 0.16), shape: BoxShape.circle),
               child: Icon(
-                category != null ? resolveIcon(category!.icon) : Icons.swap_horiz_rounded,
+                category != null ? resolveIcon(category!.icon) : LucideIcons.arrowLeftRight,
                 size: 18,
                 color: color,
               ),
@@ -76,7 +78,7 @@ class TransactionTile extends StatelessWidget {
                       if (transaction.receiptDocumentId != null) ...[
                         const SizedBox(width: 6),
                         Icon(
-                          Icons.attach_file_rounded,
+                          LucideIcons.paperclip,
                           size: 12,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -89,7 +91,8 @@ class TransactionTile extends StatelessWidget {
             Text(
               formatMinor(transaction.amountMinor, currencyCode: currencyCode, showSign: isIncome),
               style: TextStyle(
-                fontFamily: 'PlexMono',
+                fontFamily: AppFonts.numeric,
+                fontFeatures: AppFonts.tabular,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: isIncome ? colors.good : theme.colorScheme.onSurface,

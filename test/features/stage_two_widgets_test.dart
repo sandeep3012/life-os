@@ -1,3 +1,4 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -120,7 +121,7 @@ void main() {
       await tester.tap(find.byType(SwitchListTile));
       await tester.pumpAndSettle();
       expect(find.text('1 / 10'), findsOneWidget);
-      expect(find.byIcon(Icons.remove_rounded), findsNothing);
+      expect(find.byIcon(LucideIcons.minus), findsNothing);
       await tester.tap(find.byType(SwitchListTile));
       await tester.pumpAndSettle();
       expect(find.text('4 / 10'), findsOneWidget);

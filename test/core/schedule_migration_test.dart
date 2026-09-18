@@ -7,6 +7,9 @@ void main() {
     final db = AppDatabase.forTesting(
       NativeDatabase.memory(
         setup: (sqlite) {
+          sqlite.execute('CREATE TABLE tasks (id TEXT PRIMARY KEY)');
+          sqlite.execute('CREATE TABLE events (id TEXT PRIMARY KEY)');
+          sqlite.execute('CREATE TABLE goals (id TEXT PRIMARY KEY)');
           sqlite.execute(
             'CREATE TABLE habits (id TEXT PRIMARY KEY, target_amount REAL, target_unit TEXT, pause_started_at INTEGER, paused_until INTEGER)',
           );

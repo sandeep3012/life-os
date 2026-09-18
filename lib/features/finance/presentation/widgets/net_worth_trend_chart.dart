@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../domain/net_worth_point.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class NetWorthTrendChart extends StatelessWidget {
   const NetWorthTrendChart({
@@ -35,10 +36,17 @@ class NetWorthTrendChart extends StatelessWidget {
     ].reduce((a, b) => a > b ? a : b) / 100;
     final ceiling = maxY <= 0 ? 100.0 : maxY * 1.2;
 
-    return SizedBox(
-      height: 160,
-      child: LineChart(
+    // The first and last bottom labels are centred on edge data points, so they
+    // extend past the plot area and spill out of the enclosing card. The
+    // horizontal inset gives them somewhere to go, and `clipData` stops the line
+    // and its dots painting outside the plot on the way.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: SizedBox(
+        height: 160,
+        child: LineChart(
         LineChartData(
+          clipData: const FlClipData.all(),
           minY: 0,
           maxY: ceiling,
           gridData: FlGridData(
@@ -64,12 +72,18 @@ class NetWorthTrendChart extends StatelessWidget {
                   final isLast = index == points.length - 1;
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text(
+                    child: SizedBox(
+                      width: 38,
+                      child: Center(
+                        child: Text(
                       isLast ? 'Now' : DateFormat.MMM().format(points[index].date),
                       style: TextStyle(
-                        fontFamily: 'PlexMono',
+                        fontFamily: AppFonts.numeric,
+                        fontFeatures: AppFonts.tabular,
                         fontSize: 9,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -83,6 +97,7 @@ class NetWorthTrendChart extends StatelessWidget {
             _line(assetSpots, assetColor),
             _line(liabilitySpots, liabilityColor),
           ],
+        ),
         ),
       ),
     );

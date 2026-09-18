@@ -62,7 +62,8 @@ final allCalendarItemsProvider = Provider<List<CalendarItem>>((ref) {
         title: t.title,
         date: dateOnly(t.dueDate!),
         time: t.dueDate,
-        subtitle: 'Task · ${t.priority[0].toUpperCase()}${t.priority.substring(1)} priority',
+        subtitle:
+            'Task · ${t.priority[0].toUpperCase()}${t.priority.substring(1)} priority',
         sourceId: t.id,
       ),
     for (final log in habitLogs)
@@ -98,29 +99,38 @@ final allCalendarItemsProvider = Provider<List<CalendarItem>>((ref) {
 });
 
 /// Date -> distinct item types that day, for the month grid's dot markers.
-final calendarMarkersByDayProvider = Provider<Map<DateTime, Set<CalendarItemType>>>((ref) {
-  final items = ref.watch(allCalendarItemsProvider);
-  final map = <DateTime, Set<CalendarItemType>>{};
-  for (final item in items) {
-    map.putIfAbsent(item.date, () => {}).add(item.type);
-  }
-  return map;
-});
+final calendarMarkersByDayProvider =
+    Provider<Map<DateTime, Set<CalendarItemType>>>((ref) {
+      final items = ref.watch(allCalendarItemsProvider);
+      final map = <DateTime, Set<CalendarItemType>>{};
+      for (final item in items) {
+        map.putIfAbsent(item.date, () => {}).add(item.type);
+      }
+      return map;
+    });
 
 final selectedDayItemsProvider = Provider<List<CalendarItem>>((ref) {
   final selected = ref.watch(selectedCalendarDayProvider);
-  final items = ref.watch(allCalendarItemsProvider).where((i) => i.date == selected).toList()
-    ..sort((a, b) {
-      if (a.time == null && b.time == null) return 0;
-      if (a.time == null) return 1;
-      if (b.time == null) return -1;
-      return a.time!.compareTo(b.time!);
-    });
+  final items =
+      ref
+          .watch(allCalendarItemsProvider)
+          .where((i) => i.date == selected)
+          .toList()
+        ..sort((a, b) {
+          if (a.time == null && b.time == null) return 0;
+          if (a.time == null) return 1;
+          if (b.time == null) return -1;
+          return a.time!.compareTo(b.time!);
+        });
   return items;
 });
 
 class CalendarController {
-  CalendarController(this._repo, this._notifications, bool Function() remindersEnabled);
+  CalendarController(
+    this._repo,
+    this._notifications,
+    bool Function() remindersEnabled,
+  );
 
   final CalendarRepository _repo;
   final NotificationService _notifications;
@@ -181,14 +191,27 @@ class CalendarController {
     await _repo.deleteEvent(id);
   }
 
-  Future<void> updateFollowingEvents({required String id, required String title,
-    String? description, required RepeatSchedule schedule, required DateTime startTime,
-    DateTime? endTime, bool reminderEnabled = false,
-    ReminderMode reminderMode = ReminderMode.notification, int reminderMinutesBefore = 0,
-  }) => _repo.updateFollowingEvents(id: id, title: title, description: description,
-    schedule: schedule, startTime: startTime, endTime: endTime,
-    reminderEnabled: reminderEnabled, reminderMode: reminderMode,
-    reminderMinutesBefore: reminderMinutesBefore);
+  Future<void> updateFollowingEvents({
+    required String id,
+    required String title,
+    String? description,
+    required RepeatSchedule schedule,
+    required DateTime startTime,
+    DateTime? endTime,
+    bool reminderEnabled = false,
+    ReminderMode reminderMode = ReminderMode.notification,
+    int reminderMinutesBefore = 0,
+  }) => _repo.updateFollowingEvents(
+    id: id,
+    title: title,
+    description: description,
+    schedule: schedule,
+    startTime: startTime,
+    endTime: endTime,
+    reminderEnabled: reminderEnabled,
+    reminderMode: reminderMode,
+    reminderMinutesBefore: reminderMinutesBefore,
+  );
 
   /// Cancels every event's reminder in the series before the bulk delete —
   /// a SQL delete doesn't touch the OS notification queue, so each id needs
@@ -202,7 +225,6 @@ class CalendarController {
   }
 
   Future<void> extendRecurringEvents() => _repo.extendRecurringEvents();
-
 }
 
 final calendarControllerProvider = Provider<CalendarController>((ref) {

@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../../finance/domain/budget_progress.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class BudgetBar extends StatelessWidget {
   const BudgetBar({super.key, required this.progress, required this.currencyCode, this.onEdit});
@@ -45,7 +46,8 @@ class BudgetBar extends StatelessWidget {
                 Text(
                   '${formatMinor(progress.spentMinor, currencyCode: currencyCode, showDecimals: false)} / ${formatMinor(progress.limitMinor, currencyCode: currencyCode, showDecimals: false)}',
                   style: TextStyle(
-                    fontFamily: 'PlexMono',
+                    fontFamily: AppFonts.numeric,
+                    fontFeatures: AppFonts.tabular,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                     color: color,

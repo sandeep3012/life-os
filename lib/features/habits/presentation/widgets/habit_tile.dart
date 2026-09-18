@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/icon_lookup.dart';
@@ -36,87 +37,115 @@ class HabitTile extends StatelessWidget {
     final iconValue = category?.icon;
 
     return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.16),
-                shape: BoxShape.circle,
-              ),
-              child: iconValue == null
-                  ? Icon(Icons.local_fire_department_rounded, color: iconColor, size: 20)
-                  : IconOrEmoji(value: iconValue, color: iconColor, size: 20),
+      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.16),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    progress.habit.name,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            child: iconValue == null
+                ? Icon(LucideIcons.flame, color: iconColor, size: 20)
+                : IconOrEmoji(value: iconValue, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  progress.habit.name,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 5,
-                    runSpacing: 5,
-                    children: [
-                      for (var i = 1; i <= 7; i++) ...[
-                        _WeekDot(
-                          label: progress.weekCompletion.containsKey(i) ? _weekdayLabels[i - 1] : '–',
-                          on: progress.weekCompletion[i] ?? false,
-                          color: colors.habits,
-                        ),
-                      ],
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 5,
+                  runSpacing: 5,
+                  children: [
+                    for (var i = 1; i <= 7; i++) ...[
+                      _WeekDot(
+                        label: progress.weekCompletion.containsKey(i)
+                            ? _weekdayLabels[i - 1]
+                            : '–',
+                        on: progress.weekCompletion[i] ?? false,
+                        color: colors.habits,
+                      ),
                     ],
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Semantics(
-              button: true,
-              toggled: completedToday,
-              label: '${progress.habit.name}: ${completedToday ? 'mark incomplete today' : 'mark done today'}, ${progress.streakDays} day streak${atRisk ? ', at risk' : ''}',
-              child: Tooltip(
-                message: !progress.isScheduledToday ? 'Not scheduled today' : completedToday ? 'Mark incomplete today' : 'Mark done today',
-                child: Material(
-                  color: Colors.transparent,
+          ),
+          const SizedBox(width: 8),
+          Semantics(
+            button: true,
+            toggled: completedToday,
+            label:
+                '${progress.habit.name}: ${completedToday ? 'mark incomplete today' : 'mark done today'}, ${progress.streakDays} day streak${atRisk ? ', at risk' : ''}',
+            child: Tooltip(
+              message: !progress.isScheduledToday
+                  ? 'Not scheduled today'
+                  : completedToday
+                  ? 'Mark incomplete today'
+                  : 'Mark done today',
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
                   borderRadius: BorderRadius.circular(14),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: progress.isScheduledToday ? () => onToggleToday(!completedToday) : null,
-                    child: SizedBox(
-                      width: 52,
-                      height: 56,
-                      child: ExcludeSemantics(child: Column(
+                  onTap: progress.isScheduledToday
+                      ? () => onToggleToday(!completedToday)
+                      : null,
+                  child: SizedBox(
+                    width: 52,
+                    height: 56,
+                    child: ExcludeSemantics(
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(completedToday ? Icons.check_circle_rounded : Icons.local_fire_department_rounded,
-                            size: 24, color: !progress.isScheduledToday ? theme.disabledColor : completedToday ? colors.habits : accent),
-                          Text(atRisk ? 'at risk' : '${progress.streakDays}d',
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: accent)),
+                          Icon(
+                            completedToday
+                                ? LucideIcons.checkCircle
+                                : LucideIcons.flame,
+                            size: 24,
+                            color: !progress.isScheduledToday
+                                ? theme.disabledColor
+                                : completedToday
+                                ? colors.habits
+                                : accent,
+                          ),
+                          Text(
+                            atRisk ? 'at risk' : '${progress.streakDays}d',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 11,
+                              color: accent,
+                            ),
+                          ),
                         ],
-                      )),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 4),
-            IconButton(
-              tooltip: 'Open ${progress.habit.name}',
-              onPressed: onTap,
-              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-              icon: const Icon(Icons.chevron_right_rounded),
-              iconSize: 28,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: 'Open ${progress.habit.name}',
+            onPressed: onTap,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            icon: const Icon(LucideIcons.chevronRight),
+            iconSize: 28,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -135,7 +164,9 @@ class _WeekDot extends StatelessWidget {
       height: 16,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: on ? color : Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: on
+            ? color
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
@@ -143,7 +174,9 @@ class _WeekDot extends StatelessWidget {
         style: TextStyle(
           fontSize: 8,
           fontWeight: FontWeight.w700,
-          color: on ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
+          color: on
+              ? Colors.white
+              : Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
     );

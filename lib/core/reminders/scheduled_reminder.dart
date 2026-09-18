@@ -1,8 +1,13 @@
 import 'reminder_mode.dart';
 
 class ScheduledReminder {
-  const ScheduledReminder({required this.key, required this.title,
-    required this.time, required this.kind, required this.mode});
+  const ScheduledReminder({
+    required this.key,
+    required this.title,
+    required this.time,
+    required this.kind,
+    required this.mode,
+  });
   final String key;
   final String title;
   final DateTime time;

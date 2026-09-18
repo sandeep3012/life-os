@@ -59,13 +59,24 @@ class NetWorthScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    // Title plus both legend labels exceed a phone's width — this
+                    // overflowed by ~95px at 392pt. Wrap keeps them on one line
+                    // when they fit and stacks them when they don't.
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      runSpacing: 6,
                       children: [
                         Text('Last 6 months', style: theme.textTheme.titleSmall),
-                        const Spacer(),
-                        _LegendDot(color: colors.good, label: 'Assets'),
-                        const SizedBox(width: 12),
-                        _LegendDot(color: colors.critical, label: 'Liabilities'),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 4,
+                          children: [
+                            _LegendDot(color: colors.good, label: 'Assets'),
+                            _LegendDot(color: colors.critical, label: 'Liabilities'),
+                          ],
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),

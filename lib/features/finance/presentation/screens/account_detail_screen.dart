@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -9,6 +10,7 @@ import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../widgets/account_card.dart';
 import '../widgets/quick_add_account_sheet.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 class AccountDetailScreen extends ConsumerStatefulWidget {
   const AccountDetailScreen({super.key, required this.accountId});
@@ -80,7 +82,7 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
                       ),
                       IconButton(
                         tooltip: 'Edit account',
-                        icon: const Icon(Icons.edit_outlined),
+                        icon: const Icon(LucideIcons.pencil),
                         onPressed: _busy ? null : () => _editAccount(account),
                       ),
                     ],
@@ -89,7 +91,8 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
                   Text(
                     formatMinor(account.balanceMinor, currencyCode: currencyCode),
                     style: TextStyle(
-                      fontFamily: 'PlexMono',
+                      fontFamily: AppFonts.numeric,
+                      fontFeatures: AppFonts.tabular,
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       color: negative ? colors.critical : theme.colorScheme.onSurface,
@@ -110,7 +113,7 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.archive_outlined, color: theme.colorScheme.onSurfaceVariant),
+                  Icon(LucideIcons.archive, color: theme.colorScheme.onSurfaceVariant),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -131,12 +134,12 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
             child: account.isActive
                 ? OutlinedButton.icon(
                     onPressed: _busy ? null : () => _deactivate(account.id),
-                    icon: const Icon(Icons.archive_outlined),
+                    icon: const Icon(LucideIcons.archive),
                     label: const Text('Deactivate account'),
                   )
                 : FilledButton.icon(
                     onPressed: _busy ? null : () => _reactivate(account.id),
-                    icon: const Icon(Icons.unarchive_outlined),
+                    icon: const Icon(LucideIcons.archiveRestore),
                     label: const Text('Reactivate account'),
                   ),
           ),
@@ -146,7 +149,7 @@ class _AccountDetailScreenState extends ConsumerState<AccountDetailScreen> {
             child: TextButton.icon(
               onPressed: _busy ? null : () => _attemptDelete(account.id),
               style: TextButton.styleFrom(foregroundColor: colors.critical),
-              icon: const Icon(Icons.delete_outline_rounded),
+              icon: const Icon(LucideIcons.trash2),
               label: const Text('Delete account'),
             ),
           ),

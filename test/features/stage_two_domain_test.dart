@@ -205,6 +205,8 @@ void main() {
     db = AppDatabase.forTesting(
       NativeDatabase.memory(
         setup: (sqlite) {
+          sqlite.execute('CREATE TABLE tasks (id TEXT PRIMARY KEY)');
+          sqlite.execute('CREATE TABLE events (id TEXT PRIMARY KEY)');
           sqlite.execute(
             'CREATE TABLE goals (id TEXT PRIMARY KEY, title TEXT NOT NULL, current_value REAL NOT NULL)',
           );

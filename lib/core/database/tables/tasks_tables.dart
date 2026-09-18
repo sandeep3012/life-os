@@ -23,7 +23,8 @@ class Tasks extends Table {
   /// scheduled for that moment. Defaults true so existing behavior (any task
   /// with a due date got a reminder) is unchanged for tasks created before
   /// this toggle existed.
-  BoolColumn get reminderEnabled => boolean().withDefault(const Constant(true))();
+  BoolColumn get reminderEnabled =>
+      boolean().withDefault(const Constant(true))();
 
   /// notification | alarm — see `ReminderMode`.
   TextColumn get reminderMode =>

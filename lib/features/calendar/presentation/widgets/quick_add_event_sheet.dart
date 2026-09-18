@@ -1,3 +1,5 @@
+import '../../../../core/widgets/tab_rail.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -328,7 +330,7 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
               Expanded(
                 child: TextButton.icon(
                   onPressed: _pickEndTime,
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                  icon: const Icon(LucideIcons.arrowRight, size: 16),
                   label: Text(_endTime?.format(context) ?? 'Add end time'),
                 ),
               ),
@@ -336,7 +338,7 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
                 IconButton(
                   tooltip: 'Clear end time',
                   onPressed: () => setState(() => _endTime = null),
-                  icon: const Icon(Icons.close_rounded, size: 16),
+                  icon: const Icon(LucideIcons.x, size: 16),
                 ),
             ],
           ),
@@ -369,22 +371,13 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
               onChanged: (v) => setState(() => _reminderMinutesBefore = v ?? 0),
             ),
             const SizedBox(height: 8),
-            SegmentedButton<ReminderMode>(
-              segments: const [
-                ButtonSegment(
-                  value: ReminderMode.notification,
-                  label: Text('Notification'),
-                  icon: Icon(Icons.notifications_rounded, size: 16),
-                ),
-                ButtonSegment(
-                  value: ReminderMode.alarm,
-                  label: Text('Alarm'),
-                  icon: Icon(Icons.alarm_rounded, size: 16),
-                ),
-              ],
-              selected: {_reminderMode},
-              onSelectionChanged: (s) =>
-                  setState(() => _reminderMode = s.first),
+            AppTabRail<ReminderMode>(
+              value: _reminderMode,
+              labels: const {
+                ReminderMode.notification: 'Notification',
+                ReminderMode.alarm: 'Alarm',
+              },
+              onChanged: (value) => setState(() => _reminderMode = value),
             ),
           ],
           if (!validSchedule)
@@ -407,7 +400,7 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
                   widget.onDelete!();
                 },
                 icon: Icon(
-                  Icons.delete_outline_rounded,
+                  LucideIcons.trash2,
                   color: Theme.of(context).colorScheme.error,
                 ),
                 label: Text(

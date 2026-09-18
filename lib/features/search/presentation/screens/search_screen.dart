@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -44,7 +45,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               onChanged: (value) => ref.read(searchQueryProvider.notifier).set(value),
               decoration: const InputDecoration(
                 hintText: 'Search everything',
-                prefixIcon: Icon(Icons.search_rounded),
+                prefixIcon: Icon(LucideIcons.search),
               ),
             ),
           ),
@@ -115,15 +116,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 (IconData, Color) _iconAndColor(BuildContext context, SearchResultType type) {
   final colors = context.appColors;
   return switch (type) {
-    SearchResultType.transaction => (Icons.swap_horiz_rounded, colors.finance),
-    SearchResultType.bill => (Icons.receipt_long_rounded, colors.finance),
-    SearchResultType.recurringTransaction => (Icons.autorenew_rounded, colors.finance),
-    SearchResultType.task => (Icons.check_circle_outline_rounded, colors.tasks),
-    SearchResultType.note => (Icons.note_alt_rounded, colors.notes),
-    SearchResultType.document => (Icons.folder_copy_rounded, colors.documents),
-    SearchResultType.goal => (Icons.flag_rounded, colors.goals),
-    SearchResultType.habit => (Icons.repeat_rounded, colors.habits),
-    SearchResultType.event => (Icons.event_rounded, colors.calendar),
+    SearchResultType.transaction => (LucideIcons.arrowLeftRight, colors.finance),
+    SearchResultType.bill => (LucideIcons.receipt, colors.finance),
+    SearchResultType.recurringTransaction => (LucideIcons.refreshCw, colors.finance),
+    SearchResultType.task => (LucideIcons.circleCheck, colors.tasks),
+    SearchResultType.note => (LucideIcons.notebookPen, colors.notes),
+    SearchResultType.document => (LucideIcons.folders, colors.documents),
+    SearchResultType.goal => (LucideIcons.flag, colors.goals),
+    SearchResultType.habit => (LucideIcons.repeat, colors.habits),
+    SearchResultType.event => (LucideIcons.calendar, colors.calendar),
   };
 }
 

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../domain/calendar_item.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 Color colorForCalendarItemType(BuildContext context, CalendarItemType type) {
   final colors = context.appColors;
@@ -42,7 +44,8 @@ class CalendarItemTile extends StatelessWidget {
               child: Text(
                 timeLabel,
                 style: TextStyle(
-                  fontFamily: 'PlexMono',
+                  fontFamily: AppFonts.numeric,
+                  fontFeatures: AppFonts.tabular,
                   fontSize: 11.5,
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -70,7 +73,7 @@ class CalendarItemTile extends StatelessWidget {
                       if (item.reminderEnabled) ...[
                         const SizedBox(width: 4),
                         Icon(
-                          Icons.notifications_active_rounded,
+                          LucideIcons.bellRing,
                           size: 12,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

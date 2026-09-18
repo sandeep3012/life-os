@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -9,6 +10,7 @@ import '../../../../core/utils/icon_lookup.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../../data/finance_repository.dart';
+import '../../../../app/theme/app_fonts.dart';
 
 /// Resolves an account's icon from the user-manageable `AccountTypes` list
 /// (matched case/underscore-insensitively via [normalizeAccountTypeKey], so
@@ -19,7 +21,7 @@ IconData accountIconFor(String type, List<AccountType> types) {
   for (final t in types) {
     if (normalizeAccountTypeKey(t.name) == key) return resolveIcon(t.icon);
   }
-  return Icons.account_balance_wallet_rounded;
+  return LucideIcons.wallet;
 }
 
 String accountIconValueFor(String type, List<AccountType> types) {
@@ -92,7 +94,8 @@ class AccountCard extends ConsumerWidget {
                 Text(
                   formatMinor(account.balanceMinor, currencyCode: currencyCode, showDecimals: false),
                   style: TextStyle(
-                    fontFamily: 'PlexMono',
+                    fontFamily: AppFonts.numeric,
+                    fontFeatures: AppFonts.tabular,
                     fontSize: 19,
                     fontWeight: FontWeight.w700,
                     color: negative ? colors.critical : theme.colorScheme.onSurface,
@@ -136,7 +139,7 @@ class AddAccountCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.add_circle_outline_rounded, color: theme.colorScheme.primary, size: 20),
+              Icon(LucideIcons.circlePlus, color: theme.colorScheme.primary, size: 20),
               const SizedBox(height: 4),
               Text(
                 'Add account',

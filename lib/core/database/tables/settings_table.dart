@@ -8,6 +8,9 @@ class AppSettings extends Table {
 
   /// light | dark | system
   TextColumn get themeMode => text().withDefault(const Constant('system'))();
+
+  /// Selected curated color palette, independent of [themeMode].
+  TextColumn get colorTheme => text().withDefault(const Constant('forest'))();
   BoolColumn get taskReminders => boolean().withDefault(const Constant(true))();
   BoolColumn get habitReminders =>
       boolean().withDefault(const Constant(true))();
