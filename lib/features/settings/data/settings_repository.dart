@@ -15,10 +15,22 @@ class SettingsRepository {
   Future<void> setSaveAnimationsEnabled(bool enabled) =>
       _upsert(AppSettingsCompanion(saveAnimationsEnabled: Value(enabled)));
 
-  Future<void> setSaveFeedbackMode({required bool animation}) => _upsert(
+  Future<void> setSaveFeedbackMode({
+    required bool animation,
+    required bool confirmation,
+  }) => _upsert(
     AppSettingsCompanion(
       saveAnimationsEnabled: Value(animation),
-      saveConfirmationsEnabled: Value(!animation),
+      saveConfirmationsEnabled: Value(confirmation),
+    ),
+  );
+
+  Future<void> setSaveFeedbackEnabled(bool enabled) => _upsert(
+    AppSettingsCompanion(
+      // Enabling starts with the animation. The user can immediately switch
+      // to Confirmation below the toggle.
+      saveAnimationsEnabled: Value(enabled),
+      saveConfirmationsEnabled: const Value(false),
     ),
   );
 

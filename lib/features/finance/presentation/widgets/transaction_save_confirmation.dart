@@ -13,6 +13,7 @@ Future<void> showTransactionSaveConfirmation(
   required QuickAddTransactionResult result,
   required List<Account> accounts,
   required String currencyCode,
+  bool updated = false,
 }) {
   final account = accounts.where((item) => item.id == result.accountId);
   final destination = account.isEmpty ? 'your ledger' : account.first.name;
@@ -24,7 +25,15 @@ Future<void> showTransactionSaveConfirmation(
   return showSaveFeedback(
     context,
     ref,
-    title: result.amountMinor > 0 ? 'Income saved' : 'Expense saved',
-    message: '$amount logged to $destination.',
+    title: result.amountMinor > 0
+        ? updated
+            ? 'Income updated'
+            : 'Income saved'
+        : updated
+        ? 'Expense updated'
+        : 'Expense saved',
+    message: updated
+        ? '$amount updated in $destination.'
+        : '$amount logged to $destination.',
   );
 }

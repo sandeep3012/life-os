@@ -25,12 +25,14 @@ class CalendarScreen extends ConsumerStatefulWidget {
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   DateTime _focusedMonth = DateTime.now();
 
-  void _acknowledgeEventSave() {
+  void _acknowledgeEventSave({required bool updated}) {
     showSaveFeedback(
       context,
       ref,
-      title: 'Event saved',
-      message: 'Your calendar has been updated.',
+      title: updated ? 'Event updated' : 'Event saved',
+      message: updated
+          ? 'Your changes are on the calendar.'
+          : 'Your event is on the calendar.',
     );
   }
 
@@ -204,7 +206,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 reminderMinutesBefore: result.reminderMinutesBefore,
               );
           if (!context.mounted) return;
-          _acknowledgeEventSave();
+          _acknowledgeEventSave(updated: false);
         },
         icon: const Icon(LucideIcons.plus),
         label: const Text('New event'),
@@ -346,7 +348,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             reminderMinutesBefore: result.reminderMinutesBefore,
           );
       if (!context.mounted) return;
-      _acknowledgeEventSave();
+      _acknowledgeEventSave(updated: true);
       return;
     }
     await ref
@@ -363,7 +365,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           reminderMinutesBefore: result.reminderMinutesBefore,
         );
     if (!context.mounted) return;
-    _acknowledgeEventSave();
+    _acknowledgeEventSave(updated: true);
   }
 }
 

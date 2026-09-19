@@ -37,7 +37,10 @@ void main() {
         row = await db.select(db.appSettings).getSingle();
         expect(row.hapticsEnabled, isFalse);
         expect(row.saveAnimationsEnabled, isTrue);
-        await repository.setSaveFeedbackMode(animation: false);
+        await repository.setSaveFeedbackMode(
+          animation: false,
+          confirmation: true,
+        );
         await repository.setHapticsEnabled(true);
         await db.close();
         db = AppDatabase.forTesting(NativeDatabase(file));
@@ -45,6 +48,10 @@ void main() {
         expect(row.hapticsEnabled, isTrue);
         expect(row.saveAnimationsEnabled, isFalse);
         expect(row.saveConfirmationsEnabled, isTrue);
+        await repository.setSaveFeedbackEnabled(false);
+        row = await db.select(db.appSettings).getSingle();
+        expect(row.saveAnimationsEnabled, isFalse);
+        expect(row.saveConfirmationsEnabled, isFalse);
         expect(row.currencyCode, 'USD');
       } finally {
         await db.close();

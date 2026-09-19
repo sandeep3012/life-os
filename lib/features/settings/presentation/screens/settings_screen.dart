@@ -146,42 +146,52 @@ class SettingsScreen extends ConsumerWidget {
                   onChanged: controller.setHapticsEnabled,
                 ),
                 const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Save feedback', style: theme.textTheme.bodyMedium),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Choose the visual response after a successful save.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SegmentedButton<SaveFeedbackMode>(
-                        segments: const [
-                          ButtonSegment(
-                            value: SaveFeedbackMode.animation,
-                            label: Text('Animation'),
-                          ),
-                          ButtonSegment(
-                            value: SaveFeedbackMode.confirmation,
-                            label: Text('Confirmation'),
-                          ),
-                        ],
-                        selected: {
-                          settings.saveConfirmationsEnabled
-                              ? SaveFeedbackMode.confirmation
-                              : SaveFeedbackMode.animation,
-                        },
-                        onSelectionChanged: (selection) =>
-                            controller.setSaveFeedbackMode(selection.first),
-                      ),
-                    ],
-                  ),
+                _SettingSwitch(
+                  title: 'Save feedback',
+                  subtitle: 'Show a visual response after a successful save',
+                  value:
+                      settings.saveAnimationsEnabled ||
+                      settings.saveConfirmationsEnabled,
+                  onChanged: controller.setSaveFeedbackEnabled,
                 ),
+                if (settings.saveAnimationsEnabled ||
+                    settings.saveConfirmationsEnabled) ...[
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Choose how successful saves are acknowledged.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SegmentedButton<SaveFeedbackMode>(
+                          segments: const [
+                            ButtonSegment(
+                              value: SaveFeedbackMode.animation,
+                              label: Text('Animation'),
+                            ),
+                            ButtonSegment(
+                              value: SaveFeedbackMode.confirmation,
+                              label: Text('Confirmation'),
+                            ),
+                          ],
+                          selected: {
+                            settings.saveConfirmationsEnabled
+                                ? SaveFeedbackMode.confirmation
+                                : SaveFeedbackMode.animation,
+                          },
+                          onSelectionChanged: (selection) => controller
+                              .setSaveFeedbackMode(selection.first),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

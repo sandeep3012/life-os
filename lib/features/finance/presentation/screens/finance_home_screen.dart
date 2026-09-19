@@ -981,6 +981,7 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
       result: result,
       accounts: accounts,
       currencyCode: ref.read(settingsProvider).currencyCode,
+      updated: true,
     );
   }
 

@@ -101,7 +101,12 @@ class SettingsController {
   Future<void> setSaveAnimationsEnabled(bool enabled) =>
       _repo.setSaveAnimationsEnabled(enabled);
   Future<void> setSaveFeedbackMode(SaveFeedbackMode mode) =>
-      _repo.setSaveFeedbackMode(animation: mode == SaveFeedbackMode.animation);
+      _repo.setSaveFeedbackMode(
+        animation: mode == SaveFeedbackMode.animation,
+        confirmation: mode == SaveFeedbackMode.confirmation,
+      );
+  Future<void> setSaveFeedbackEnabled(bool enabled) =>
+      _repo.setSaveFeedbackEnabled(enabled);
 
   Future<void> setThemeMode(ThemeMode mode) =>
       _repo.setThemeMode(themeModeToValue(mode));
