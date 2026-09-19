@@ -5,11 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/utils/currency_utils.dart';
-import '../../core/widgets/success_overlay.dart';
 import '../../core/widgets/tappable.dart';
 import '../../features/finance/application/finance_providers.dart';
 import '../../features/finance/presentation/widgets/entry_form_sheet.dart';
 import '../../features/finance/presentation/widgets/transaction_recorder_sheet.dart';
+import '../../features/finance/presentation/widgets/transaction_save_confirmation.dart';
 import '../../features/home/presentation/widgets/add_menu_sheet.dart';
 import '../../features/settings/application/settings_providers.dart';
 import '../motion.dart';
@@ -160,18 +160,11 @@ class _AppShellState extends ConsumerState<AppShell> {
         );
 
     if (!mounted) return;
-    // Comp copy: "Expense saved — ₹420 logged to HDFC Bank."
-    final account = accounts.where((a) => a.id == result.accountId);
-    final where = account.isEmpty ? 'your ledger' : account.first.name;
-    final amount = formatMinor(
-      result.amountMinor.abs(),
-      currencyCode: ref.read(settingsProvider).currencyCode,
-      showDecimals: false,
-    );
-    await showSuccessOverlay(
+    await showTransactionSaveConfirmation(
       context,
-      title: result.amountMinor > 0 ? 'Income saved' : 'Expense saved',
-      message: '$amount logged to $where.',
+      result: result,
+      accounts: accounts,
+      currencyCode: ref.read(settingsProvider).currencyCode,
     );
   }
 

@@ -11,6 +11,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/scheduling/repeat_schedule.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/widgets/success_overlay.dart';
 import '../../application/tasks_providers.dart';
 import '../../domain/task_priority.dart';
 import '../widgets/quick_add_task_sheet.dart';
@@ -313,6 +314,12 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
           reminderEnabled: result.reminderEnabled,
           reminderMode: result.reminderMode,
         );
+    if (!context.mounted) return;
+    await showSuccessOverlay(
+      context,
+      title: 'Task updated',
+      message: 'Changes to “${result.title}” were saved.',
+    );
   }
 
   static Color _categoryColor(String value, Color fallback) {

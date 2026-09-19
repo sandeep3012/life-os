@@ -21,6 +21,7 @@ import '../widgets/quick_add_account_sheet.dart';
 import '../widgets/quick_add_budget_sheet.dart';
 import '../widgets/quick_add_transaction_sheet.dart';
 import '../widgets/transaction_recorder_sheet.dart';
+import '../widgets/transaction_save_confirmation.dart';
 import '../widgets/transaction_tile.dart';
 import '../widgets/transfer_money_dialog.dart';
 import 'account_detail_screen.dart';
@@ -771,6 +772,13 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
           date: result.date,
           paymentMode: result.paymentMode,
         );
+    if (!context.mounted) return;
+    await showTransactionSaveConfirmation(
+      context,
+      result: result,
+      accounts: transactableAccounts,
+      currencyCode: ref.read(settingsProvider).currencyCode,
+    );
   }
 }
 
