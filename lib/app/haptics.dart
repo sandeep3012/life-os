@@ -1,21 +1,12 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../features/settings/application/settings_providers.dart';
 
-/// Whether haptics fire at all.
-///
-/// The design handoff requires every haptic to be gated on a user setting
-/// (`settings.haptics_enabled`). That column doesn't exist on `AppSettings` yet —
-/// adding it means a Drift schema migration plus a `build_runner` regeneration —
-/// so this is the single seam to repoint once it does:
-///
-/// ```dart
-/// final hapticsEnabledProvider = Provider<bool>((ref) {
-///   return ref.watch(settingsProvider).hapticsEnabled;
-/// });
-/// ```
-///
-/// Until then it reports enabled, matching the handoff's default.
-final hapticsEnabledProvider = Provider<bool>((ref) => true);
+/// App-wide haptics preference, persisted in Settings.
+final hapticsEnabledProvider = Provider<bool>(
+  (ref) => ref.watch(settingsProvider).hapticsEnabled,
+);
 
 /// Resolved haptics, with the user's setting already applied.
 ///
@@ -53,6 +44,24 @@ class LifeHaptics {
 
   /// Successful save.
   Future<void> success() => _fire(HapticFeedback.vibrate);
+
+  /// A short two-beat acknowledgement for a saved calendar event.
+  Future<void> calendarSave() async {
+    if (!enabled) return;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        await const MethodChannel(
+          'com.sandeep.lifeos/haptics',
+        ).invokeMethod<void>('calendarSave');
+        return;
+      } catch (_) {
+        // Older builds and unsupported platforms retain the Flutter fallback.
+      }
+    }
+    await light();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await medium();
+  }
 
   /// Never rethrows. A haptic is cosmetic: a device without a vibrator, a
   /// platform that doesn't implement the channel, or a test with no handler must

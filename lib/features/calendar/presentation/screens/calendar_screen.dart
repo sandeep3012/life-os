@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../../app/haptics.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/app_top_bar.dart';
@@ -13,6 +15,7 @@ import '../../application/calendar_providers.dart';
 import '../../domain/calendar_item.dart';
 import '../widgets/calendar_item_tile.dart';
 import '../widgets/quick_add_event_sheet.dart';
+import '../widgets/calendar_save_wave.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -23,6 +26,14 @@ class CalendarScreen extends ConsumerStatefulWidget {
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   DateTime _focusedMonth = DateTime.now();
+
+  void _acknowledgeEventSave() {
+    // Cosmetic feedback must never hold up the freshly saved event appearing.
+    ref.read(hapticsProvider).calendarSave();
+    if (ref.read(settingsProvider).saveAnimationsEnabled) {
+      showCalendarSaveWave(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -193,6 +204,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 reminderMode: result.reminderMode,
                 reminderMinutesBefore: result.reminderMinutesBefore,
               );
+          if (!context.mounted) return;
+          _acknowledgeEventSave();
         },
         icon: const Icon(LucideIcons.plus),
         label: const Text('New event'),
@@ -333,6 +346,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             reminderMode: result.reminderMode,
             reminderMinutesBefore: result.reminderMinutesBefore,
           );
+      if (!context.mounted) return;
+      _acknowledgeEventSave();
       return;
     }
     await ref
@@ -348,6 +363,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           reminderMode: result.reminderMode,
           reminderMinutesBefore: result.reminderMinutesBefore,
         );
+    if (!context.mounted) return;
+    _acknowledgeEventSave();
   }
 }
 

@@ -9,6 +9,12 @@ class SettingsRepository {
 
   final AppDatabase _db;
 
+  Future<void> setHapticsEnabled(bool enabled) =>
+      _upsert(AppSettingsCompanion(hapticsEnabled: Value(enabled)));
+
+  Future<void> setSaveAnimationsEnabled(bool enabled) =>
+      _upsert(AppSettingsCompanion(saveAnimationsEnabled: Value(enabled)));
+
   Stream<AppSetting?> watchSettings() {
     return (_db.select(
       _db.appSettings,

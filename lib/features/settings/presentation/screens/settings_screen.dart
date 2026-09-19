@@ -135,6 +135,26 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
+          const _SectionTitle('Touch & feedback'),
+          Card(
+            child: Column(
+              children: [
+                _SettingSwitch(
+                  title: 'Haptic feedback',
+                  subtitle: 'Vibration for interactions and calendar saves',
+                  value: settings.hapticsEnabled,
+                  onChanged: controller.setHapticsEnabled,
+                ),
+                const Divider(height: 1),
+                _SettingSwitch(
+                  title: 'Save animation',
+                  subtitle: 'Show a ripple after saving a calendar event',
+                  value: settings.saveAnimationsEnabled,
+                  onChanged: controller.setSaveAnimationsEnabled,
+                ),
+              ],
+            ),
+          ),
           const _SectionTitle('Notifications'),
           Card(
             child: Column(

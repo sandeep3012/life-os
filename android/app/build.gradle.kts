@@ -22,6 +22,9 @@ android {
 
     defaultConfig {
         applicationId = "com.sandeep.lifeos"
+        // Release builds keep this identity. Debug builds override both the
+        // application id and label below so they can live beside production.
+        manifestPlaceholders["appLabel"] = "LifeOS"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -31,6 +34,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            manifestPlaceholders["appLabel"] = "LifeOS Dev"
+        }
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.

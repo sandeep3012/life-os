@@ -4,6 +4,11 @@ import 'package:drift/drift.dart';
 /// this app has no accounts, so app-wide preferences live in one row rather
 /// than per-user.
 class AppSettings extends Table {
+  BoolColumn get hapticsEnabled =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get saveAnimationsEnabled =>
+      boolean().withDefault(const Constant(true))();
+
   IntColumn get id => integer().withDefault(const Constant(0))();
 
   /// light | dark | system
