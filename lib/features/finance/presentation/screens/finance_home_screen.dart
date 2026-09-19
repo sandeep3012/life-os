@@ -16,9 +16,11 @@ import '../../../spend_analyzer/presentation/widgets/budget_bar.dart';
 import '../../application/finance_providers.dart';
 import '../../domain/budget_progress.dart';
 import '../widgets/account_card.dart';
+import '../widgets/entry_form_sheet.dart';
 import '../widgets/quick_add_account_sheet.dart';
 import '../widgets/quick_add_budget_sheet.dart';
 import '../widgets/quick_add_transaction_sheet.dart';
+import '../widgets/transaction_recorder_sheet.dart';
 import '../widgets/transaction_tile.dart';
 import '../widgets/transfer_money_dialog.dart';
 import 'account_detail_screen.dart';
@@ -561,7 +563,9 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         // with no accounts yet the button opens the *account* sheet, so an
         // inlined "New transaction" tooltip described the wrong action.
         tooltip: _fabLabel(ref),
-        onPressed: () => _handleFab(context, ref),
+        onPressed: () => _section == _FinanceSection.transactions
+            ? _showTransactionActions(context, ref)
+            : _handleFab(context, ref),
         child: const Icon(LucideIcons.plus),
       ),
     );
@@ -667,37 +671,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     }
 
     if (_section == _FinanceSection.transactions) {
-      final transactableAccounts = ref.read(transactableAccountsProvider);
-      if (transactableAccounts.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Add a non-investment account first to record transactions.',
-            ),
-          ),
-        );
-        return;
-      }
-      final categories = ref.read(categoriesProvider).value ?? const [];
-      final result = await showQuickAddTransactionSheet(
-        context,
-        accounts: transactableAccounts,
-        categories: categories,
-        currencySymbol: currencySymbolFor(
-          ref.read(settingsProvider).currencyCode,
-        ),
-      );
-      if (result == null) return;
-      await ref
-          .read(financeControllerProvider)
-          .addTransaction(
-            accountId: result.accountId,
-            categoryId: result.categoryId,
-            merchant: result.merchant,
-            amountMinor: result.amountMinor,
-            date: result.date,
-            paymentMode: result.paymentMode,
-          );
+      await _openTransactionRecorder(context, ref, EntryKind.expense);
     } else {
       final categories = ref.read(categoriesProvider).value ?? const [];
       final result = await showQuickAddBudgetSheet(
@@ -717,6 +691,86 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
             effectiveMonth: result.effectiveMonth,
           );
     }
+  }
+
+  Future<void> _showTransactionActions(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(LucideIcons.arrowDownLeft),
+              title: const Text('Expense'),
+              subtitle: const Text('Record a one-off spend'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                Future.microtask(() {
+                  if (!context.mounted) return;
+                  _openTransactionRecorder(context, ref, EntryKind.expense);
+                });
+              },
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.arrowUpRight),
+              title: const Text('Income'),
+              subtitle: const Text('Record salary, refunds, or other income'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                Future.microtask(() {
+                  if (!context.mounted) return;
+                  _openTransactionRecorder(context, ref, EntryKind.income);
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openTransactionRecorder(
+    BuildContext context,
+    WidgetRef ref,
+    EntryKind kind,
+  ) async {
+    final transactableAccounts = ref.read(transactableAccountsProvider);
+    if (transactableAccounts.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Add a non-investment account first to record transactions.',
+          ),
+        ),
+      );
+      return;
+    }
+    final categories = ref.read(categoriesProvider).value ?? const [];
+    final result = await showTransactionRecorder(
+      context,
+      ref,
+      accounts: transactableAccounts,
+      categories: categories,
+      initialKind: kind,
+      currencySymbol: currencySymbolFor(
+        ref.read(settingsProvider).currencyCode,
+      ),
+    );
+    if (result == null) return;
+    await ref
+        .read(financeControllerProvider)
+        .addTransaction(
+          accountId: result.accountId,
+          categoryId: result.categoryId,
+          merchant: result.merchant,
+          amountMinor: result.amountMinor,
+          date: result.date,
+          paymentMode: result.paymentMode,
+        );
   }
 }
 

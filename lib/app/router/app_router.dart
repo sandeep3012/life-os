@@ -28,6 +28,7 @@ import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import 'app_shell.dart';
 import 'route_paths.dart';
+import 'navigator_keys.dart';
 
 /// Root go_router config: a StatefulShellRoute with 5 bottom-nav branches,
 /// each branch preserving its own navigation stack.
@@ -39,6 +40,7 @@ GoRouter createAppRouter() => GoRouter(
           AppShell(navigationShell: navigationShell),
       branches: [
         StatefulShellBranch(
+          navigatorKey: branchNavigatorKeys[0],
           routes: [
             GoRoute(
               path: RoutePaths.home,
@@ -47,6 +49,7 @@ GoRouter createAppRouter() => GoRouter(
           ],
         ),
         StatefulShellBranch(
+          navigatorKey: branchNavigatorKeys[1],
           routes: [
             GoRoute(
               path: RoutePaths.finance,
@@ -82,6 +85,7 @@ GoRouter createAppRouter() => GoRouter(
           ],
         ),
         StatefulShellBranch(
+          navigatorKey: branchNavigatorKeys[2],
           routes: [
             GoRoute(
               path: RoutePaths.tasksHabits,
@@ -109,6 +113,7 @@ GoRouter createAppRouter() => GoRouter(
           ],
         ),
         StatefulShellBranch(
+          navigatorKey: branchNavigatorKeys[3],
           routes: [
             GoRoute(
               path: RoutePaths.calendar,
@@ -117,6 +122,7 @@ GoRouter createAppRouter() => GoRouter(
           ],
         ),
         StatefulShellBranch(
+          navigatorKey: branchNavigatorKeys[4],
           routes: [
             GoRoute(
               path: RoutePaths.more,

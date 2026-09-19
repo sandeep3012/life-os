@@ -15354,6 +15354,18 @@ class $AppSettingsTable extends AppSettings
     requiredDuringInsert: false,
     defaultValue: const Constant('forest'),
   );
+  static const VerificationMeta _transactionEntryLayoutMeta =
+      const VerificationMeta('transactionEntryLayout');
+  @override
+  late final GeneratedColumn<String> transactionEntryLayout =
+      GeneratedColumn<String>(
+        'transaction_entry_layout',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('keypad'),
+      );
   static const VerificationMeta _taskRemindersMeta = const VerificationMeta(
     'taskReminders',
   );
@@ -15446,6 +15458,7 @@ class $AppSettingsTable extends AppSettings
     id,
     themeMode,
     colorTheme,
+    transactionEntryLayout,
     taskReminders,
     habitReminders,
     aiInsightAlerts,
@@ -15478,6 +15491,15 @@ class $AppSettingsTable extends AppSettings
       context.handle(
         _colorThemeMeta,
         colorTheme.isAcceptableOrUnknown(data['color_theme']!, _colorThemeMeta),
+      );
+    }
+    if (data.containsKey('transaction_entry_layout')) {
+      context.handle(
+        _transactionEntryLayoutMeta,
+        transactionEntryLayout.isAcceptableOrUnknown(
+          data['transaction_entry_layout']!,
+          _transactionEntryLayoutMeta,
+        ),
       );
     }
     if (data.containsKey('task_reminders')) {
@@ -15555,6 +15577,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.string,
         data['${effectivePrefix}color_theme'],
       )!,
+      transactionEntryLayout: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}transaction_entry_layout'],
+      )!,
       taskReminders: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}task_reminders'],
@@ -15596,6 +15622,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
 
   /// Selected curated color palette, independent of [themeMode].
   final String colorTheme;
+
+  /// keypad | form — the transaction recorder layout last selected by the user.
+  final String transactionEntryLayout;
   final bool taskReminders;
   final bool habitReminders;
   final bool aiInsightAlerts;
@@ -15611,6 +15640,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.id,
     required this.themeMode,
     required this.colorTheme,
+    required this.transactionEntryLayout,
     required this.taskReminders,
     required this.habitReminders,
     required this.aiInsightAlerts,
@@ -15624,6 +15654,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['id'] = Variable<int>(id);
     map['theme_mode'] = Variable<String>(themeMode);
     map['color_theme'] = Variable<String>(colorTheme);
+    map['transaction_entry_layout'] = Variable<String>(transactionEntryLayout);
     map['task_reminders'] = Variable<bool>(taskReminders);
     map['habit_reminders'] = Variable<bool>(habitReminders);
     map['ai_insight_alerts'] = Variable<bool>(aiInsightAlerts);
@@ -15638,6 +15669,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       id: Value(id),
       themeMode: Value(themeMode),
       colorTheme: Value(colorTheme),
+      transactionEntryLayout: Value(transactionEntryLayout),
       taskReminders: Value(taskReminders),
       habitReminders: Value(habitReminders),
       aiInsightAlerts: Value(aiInsightAlerts),
@@ -15656,6 +15688,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       id: serializer.fromJson<int>(json['id']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
       colorTheme: serializer.fromJson<String>(json['colorTheme']),
+      transactionEntryLayout: serializer.fromJson<String>(
+        json['transactionEntryLayout'],
+      ),
       taskReminders: serializer.fromJson<bool>(json['taskReminders']),
       habitReminders: serializer.fromJson<bool>(json['habitReminders']),
       aiInsightAlerts: serializer.fromJson<bool>(json['aiInsightAlerts']),
@@ -15671,6 +15706,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'id': serializer.toJson<int>(id),
       'themeMode': serializer.toJson<String>(themeMode),
       'colorTheme': serializer.toJson<String>(colorTheme),
+      'transactionEntryLayout': serializer.toJson<String>(
+        transactionEntryLayout,
+      ),
       'taskReminders': serializer.toJson<bool>(taskReminders),
       'habitReminders': serializer.toJson<bool>(habitReminders),
       'aiInsightAlerts': serializer.toJson<bool>(aiInsightAlerts),
@@ -15684,6 +15722,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     int? id,
     String? themeMode,
     String? colorTheme,
+    String? transactionEntryLayout,
     bool? taskReminders,
     bool? habitReminders,
     bool? aiInsightAlerts,
@@ -15694,6 +15733,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     id: id ?? this.id,
     themeMode: themeMode ?? this.themeMode,
     colorTheme: colorTheme ?? this.colorTheme,
+    transactionEntryLayout:
+        transactionEntryLayout ?? this.transactionEntryLayout,
     taskReminders: taskReminders ?? this.taskReminders,
     habitReminders: habitReminders ?? this.habitReminders,
     aiInsightAlerts: aiInsightAlerts ?? this.aiInsightAlerts,
@@ -15708,6 +15749,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       colorTheme: data.colorTheme.present
           ? data.colorTheme.value
           : this.colorTheme,
+      transactionEntryLayout: data.transactionEntryLayout.present
+          ? data.transactionEntryLayout.value
+          : this.transactionEntryLayout,
       taskReminders: data.taskReminders.present
           ? data.taskReminders.value
           : this.taskReminders,
@@ -15735,6 +15779,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('id: $id, ')
           ..write('themeMode: $themeMode, ')
           ..write('colorTheme: $colorTheme, ')
+          ..write('transactionEntryLayout: $transactionEntryLayout, ')
           ..write('taskReminders: $taskReminders, ')
           ..write('habitReminders: $habitReminders, ')
           ..write('aiInsightAlerts: $aiInsightAlerts, ')
@@ -15750,6 +15795,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     id,
     themeMode,
     colorTheme,
+    transactionEntryLayout,
     taskReminders,
     habitReminders,
     aiInsightAlerts,
@@ -15764,6 +15810,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.id == this.id &&
           other.themeMode == this.themeMode &&
           other.colorTheme == this.colorTheme &&
+          other.transactionEntryLayout == this.transactionEntryLayout &&
           other.taskReminders == this.taskReminders &&
           other.habitReminders == this.habitReminders &&
           other.aiInsightAlerts == this.aiInsightAlerts &&
@@ -15776,6 +15823,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<int> id;
   final Value<String> themeMode;
   final Value<String> colorTheme;
+  final Value<String> transactionEntryLayout;
   final Value<bool> taskReminders;
   final Value<bool> habitReminders;
   final Value<bool> aiInsightAlerts;
@@ -15786,6 +15834,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.id = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.colorTheme = const Value.absent(),
+    this.transactionEntryLayout = const Value.absent(),
     this.taskReminders = const Value.absent(),
     this.habitReminders = const Value.absent(),
     this.aiInsightAlerts = const Value.absent(),
@@ -15797,6 +15846,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.id = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.colorTheme = const Value.absent(),
+    this.transactionEntryLayout = const Value.absent(),
     this.taskReminders = const Value.absent(),
     this.habitReminders = const Value.absent(),
     this.aiInsightAlerts = const Value.absent(),
@@ -15808,6 +15858,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<int>? id,
     Expression<String>? themeMode,
     Expression<String>? colorTheme,
+    Expression<String>? transactionEntryLayout,
     Expression<bool>? taskReminders,
     Expression<bool>? habitReminders,
     Expression<bool>? aiInsightAlerts,
@@ -15819,6 +15870,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (id != null) 'id': id,
       if (themeMode != null) 'theme_mode': themeMode,
       if (colorTheme != null) 'color_theme': colorTheme,
+      if (transactionEntryLayout != null)
+        'transaction_entry_layout': transactionEntryLayout,
       if (taskReminders != null) 'task_reminders': taskReminders,
       if (habitReminders != null) 'habit_reminders': habitReminders,
       if (aiInsightAlerts != null) 'ai_insight_alerts': aiInsightAlerts,
@@ -15832,6 +15885,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<int>? id,
     Value<String>? themeMode,
     Value<String>? colorTheme,
+    Value<String>? transactionEntryLayout,
     Value<bool>? taskReminders,
     Value<bool>? habitReminders,
     Value<bool>? aiInsightAlerts,
@@ -15843,6 +15897,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       id: id ?? this.id,
       themeMode: themeMode ?? this.themeMode,
       colorTheme: colorTheme ?? this.colorTheme,
+      transactionEntryLayout:
+          transactionEntryLayout ?? this.transactionEntryLayout,
       taskReminders: taskReminders ?? this.taskReminders,
       habitReminders: habitReminders ?? this.habitReminders,
       aiInsightAlerts: aiInsightAlerts ?? this.aiInsightAlerts,
@@ -15863,6 +15919,11 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     }
     if (colorTheme.present) {
       map['color_theme'] = Variable<String>(colorTheme.value);
+    }
+    if (transactionEntryLayout.present) {
+      map['transaction_entry_layout'] = Variable<String>(
+        transactionEntryLayout.value,
+      );
     }
     if (taskReminders.present) {
       map['task_reminders'] = Variable<bool>(taskReminders.value);
@@ -15891,6 +15952,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('id: $id, ')
           ..write('themeMode: $themeMode, ')
           ..write('colorTheme: $colorTheme, ')
+          ..write('transactionEntryLayout: $transactionEntryLayout, ')
           ..write('taskReminders: $taskReminders, ')
           ..write('habitReminders: $habitReminders, ')
           ..write('aiInsightAlerts: $aiInsightAlerts, ')
@@ -28359,6 +28421,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<int> id,
       Value<String> themeMode,
       Value<String> colorTheme,
+      Value<String> transactionEntryLayout,
       Value<bool> taskReminders,
       Value<bool> habitReminders,
       Value<bool> aiInsightAlerts,
@@ -28371,6 +28434,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> themeMode,
       Value<String> colorTheme,
+      Value<String> transactionEntryLayout,
       Value<bool> taskReminders,
       Value<bool> habitReminders,
       Value<bool> aiInsightAlerts,
@@ -28400,6 +28464,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<String> get colorTheme => $composableBuilder(
     column: $table.colorTheme,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get transactionEntryLayout => $composableBuilder(
+    column: $table.transactionEntryLayout,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -28458,6 +28527,11 @@ class $$AppSettingsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get transactionEntryLayout => $composableBuilder(
+    column: $table.transactionEntryLayout,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get taskReminders => $composableBuilder(
     column: $table.taskReminders,
     builder: (column) => ColumnOrderings(column),
@@ -28506,6 +28580,11 @@ class $$AppSettingsTableAnnotationComposer
 
   GeneratedColumn<String> get colorTheme => $composableBuilder(
     column: $table.colorTheme,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get transactionEntryLayout => $composableBuilder(
+    column: $table.transactionEntryLayout,
     builder: (column) => column,
   );
 
@@ -28574,6 +28653,7 @@ class $$AppSettingsTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
                 Value<String> colorTheme = const Value.absent(),
+                Value<String> transactionEntryLayout = const Value.absent(),
                 Value<bool> taskReminders = const Value.absent(),
                 Value<bool> habitReminders = const Value.absent(),
                 Value<bool> aiInsightAlerts = const Value.absent(),
@@ -28584,6 +28664,7 @@ class $$AppSettingsTableTableManager
                 id: id,
                 themeMode: themeMode,
                 colorTheme: colorTheme,
+                transactionEntryLayout: transactionEntryLayout,
                 taskReminders: taskReminders,
                 habitReminders: habitReminders,
                 aiInsightAlerts: aiInsightAlerts,
@@ -28596,6 +28677,7 @@ class $$AppSettingsTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
                 Value<String> colorTheme = const Value.absent(),
+                Value<String> transactionEntryLayout = const Value.absent(),
                 Value<bool> taskReminders = const Value.absent(),
                 Value<bool> habitReminders = const Value.absent(),
                 Value<bool> aiInsightAlerts = const Value.absent(),
@@ -28606,6 +28688,7 @@ class $$AppSettingsTableTableManager
                 id: id,
                 themeMode: themeMode,
                 colorTheme: colorTheme,
+                transactionEntryLayout: transactionEntryLayout,
                 taskReminders: taskReminders,
                 habitReminders: habitReminders,
                 aiInsightAlerts: aiInsightAlerts,

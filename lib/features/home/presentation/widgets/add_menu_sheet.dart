@@ -53,7 +53,9 @@ class AddMenuSheet extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: _Tile(item: items[i], index: i)),
+                Expanded(
+                  child: _Tile(item: items[i], index: i),
+                ),
                 const SizedBox(width: 11),
                 Expanded(
                   child: right == null
@@ -133,7 +135,10 @@ class _Tile extends StatelessWidget {
       semanticLabel: '${item.label}, ${item.subtitle}',
       onTap: () {
         Navigator.of(context).pop();
-        item.onTap();
+        // Wait until this sheet has fully dismissed before opening another
+        // modal. Otherwise a nested sheet can inherit the add menu's route
+        // geometry and cover the floating bottom navigation.
+        Future<void>.delayed(AppMotion.sheetClose, item.onTap);
       },
       child: Container(
         padding: const EdgeInsets.all(15),

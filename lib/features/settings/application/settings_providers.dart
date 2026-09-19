@@ -20,6 +20,7 @@ class ResolvedSettings {
   const ResolvedSettings({
     required this.themeMode,
     required this.colorTheme,
+    required this.transactionEntryLayout,
     required this.taskReminders,
     required this.habitReminders,
     required this.aiInsightAlerts,
@@ -30,6 +31,7 @@ class ResolvedSettings {
 
   final ThemeMode themeMode;
   final AppColorTheme colorTheme;
+  final String transactionEntryLayout;
   final bool taskReminders;
   final bool habitReminders;
   final bool aiInsightAlerts;
@@ -40,6 +42,7 @@ class ResolvedSettings {
   static const defaults = ResolvedSettings(
     themeMode: ThemeMode.system,
     colorTheme: AppColorTheme.forest,
+    transactionEntryLayout: 'keypad',
     taskReminders: true,
     habitReminders: true,
     aiInsightAlerts: false,
@@ -67,6 +70,7 @@ final settingsProvider = Provider<ResolvedSettings>((ref) {
   return ResolvedSettings(
     themeMode: _parseThemeMode(row.themeMode),
     colorTheme: appColorThemeFromStorage(row.colorTheme),
+    transactionEntryLayout: row.transactionEntryLayout,
     taskReminders: row.taskReminders,
     habitReminders: row.habitReminders,
     aiInsightAlerts: row.aiInsightAlerts,
@@ -86,6 +90,9 @@ class SettingsController {
 
   Future<void> setColorTheme(AppColorTheme theme) =>
       _repo.setColorTheme(theme.storageValue);
+
+  Future<void> setTransactionEntryLayout(String layout) =>
+      _repo.setTransactionEntryLayout(layout);
 
   Future<void> setTaskReminders(bool enabled) =>
       _repo.setTaskReminders(enabled);
