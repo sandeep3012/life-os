@@ -4,18 +4,16 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../app/haptics.dart';
-import '../../../settings/application/settings_providers.dart';
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/app_top_bar.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/surface_card.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../application/calendar_providers.dart';
 import '../../domain/calendar_item.dart';
 import '../widgets/calendar_item_tile.dart';
 import '../widgets/quick_add_event_sheet.dart';
-import '../widgets/calendar_save_wave.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -28,11 +26,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   DateTime _focusedMonth = DateTime.now();
 
   void _acknowledgeEventSave() {
-    // Cosmetic feedback must never hold up the freshly saved event appearing.
-    ref.read(hapticsProvider).calendarSave();
-    if (ref.read(settingsProvider).saveAnimationsEnabled) {
-      showCalendarSaveWave(context);
-    }
+    showSaveFeedback(
+      context,
+      ref,
+      title: 'Event saved',
+      message: 'Your calendar has been updated.',
+    );
   }
 
   @override

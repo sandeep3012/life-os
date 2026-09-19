@@ -162,6 +162,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (!mounted) return;
     await showTransactionSaveConfirmation(
       context,
+      ref: ref,
       result: result,
       accounts: accounts,
       currencyCode: ref.read(settingsProvider).currencyCode,

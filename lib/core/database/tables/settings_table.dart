@@ -8,6 +8,8 @@ class AppSettings extends Table {
       boolean().withDefault(const Constant(true))();
   BoolColumn get saveAnimationsEnabled =>
       boolean().withDefault(const Constant(true))();
+  BoolColumn get saveConfirmationsEnabled =>
+      boolean().withDefault(const Constant(false))();
 
   IntColumn get id => integer().withDefault(const Constant(0))();
 

@@ -7,7 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../../core/widgets/app_top_bar.dart';
-import '../../../../core/widgets/success_overlay.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/tab_rail.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -123,8 +123,9 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
           reminderMode: result.reminderMode,
         );
     if (!mounted) return;
-    await showSuccessOverlay(
+    await showSaveFeedback(
       context,
+      ref,
       title: 'Task saved',
       message: '“${result.title}” is ready to do.',
     );
@@ -152,8 +153,9 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
           reminderMode: result.reminderMode,
         );
     if (!mounted) return;
-    await showSuccessOverlay(
+    await showSaveFeedback(
       context,
+      ref,
       title: 'Habit saved',
       message: '“${result.name}” is ready to track.',
     );

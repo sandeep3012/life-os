@@ -45,14 +45,14 @@ class LifeHaptics {
   /// Successful save.
   Future<void> success() => _fire(HapticFeedback.vibrate);
 
-  /// A short two-beat acknowledgement for a saved calendar event.
-  Future<void> calendarSave() async {
+  /// A short two-beat acknowledgement for a successful save or update.
+  Future<void> save() async {
     if (!enabled) return;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       try {
         await const MethodChannel(
           'com.sandeep.lifeos/haptics',
-        ).invokeMethod<void>('calendarSave');
+        ).invokeMethod<void>('save');
         return;
       } catch (_) {
         // Older builds and unsupported platforms retain the Flutter fallback.

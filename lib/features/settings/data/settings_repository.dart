@@ -15,6 +15,13 @@ class SettingsRepository {
   Future<void> setSaveAnimationsEnabled(bool enabled) =>
       _upsert(AppSettingsCompanion(saveAnimationsEnabled: Value(enabled)));
 
+  Future<void> setSaveFeedbackMode({required bool animation}) => _upsert(
+    AppSettingsCompanion(
+      saveAnimationsEnabled: Value(animation),
+      saveConfirmationsEnabled: Value(!animation),
+    ),
+  );
+
   Stream<AppSetting?> watchSettings() {
     return (_db.select(
       _db.appSettings,

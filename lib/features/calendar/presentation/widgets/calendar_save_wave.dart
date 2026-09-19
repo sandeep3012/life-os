@@ -9,7 +9,7 @@ import '../../../../app/motion.dart';
 /// This is intentionally an [OverlayEntry] rather than a dialog: saving an
 /// event has already completed, so the acknowledgement must not delay or
 /// intercept the user's next action.
-void showCalendarSaveWave(BuildContext context) {
+void showSaveWave(BuildContext context) {
   final overlay = Navigator.of(context, rootNavigator: true).overlay;
   if (overlay == null) return;
 

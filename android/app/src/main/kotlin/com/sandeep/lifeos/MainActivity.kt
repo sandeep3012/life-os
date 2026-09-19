@@ -15,7 +15,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/haptics")
             .setMethodCallHandler { call, result ->
-                if (call.method != "calendarSave") {
+                if (call.method != "save") {
                     result.notImplemented()
                     return@setMethodCallHandler
                 }

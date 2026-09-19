@@ -775,6 +775,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     if (!context.mounted) return;
     await showTransactionSaveConfirmation(
       context,
+      ref: ref,
       result: result,
       accounts: transactableAccounts,
       currencyCode: ref.read(settingsProvider).currencyCode,
@@ -973,6 +974,14 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
           date: result.date,
           paymentMode: result.paymentMode,
         );
+    if (!mounted) return;
+    await showTransactionSaveConfirmation(
+      context,
+      ref: ref,
+      result: result,
+      accounts: accounts,
+      currencyCode: ref.read(settingsProvider).currencyCode,
+    );
   }
 
   void _scheduleDelete(Transaction t) {

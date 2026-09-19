@@ -146,11 +146,41 @@ class SettingsScreen extends ConsumerWidget {
                   onChanged: controller.setHapticsEnabled,
                 ),
                 const Divider(height: 1),
-                _SettingSwitch(
-                  title: 'Save animation',
-                  subtitle: 'Show a ripple after saving a calendar event',
-                  value: settings.saveAnimationsEnabled,
-                  onChanged: controller.setSaveAnimationsEnabled,
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Save feedback', style: theme.textTheme.bodyMedium),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Choose the visual response after a successful save.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<SaveFeedbackMode>(
+                        segments: const [
+                          ButtonSegment(
+                            value: SaveFeedbackMode.animation,
+                            label: Text('Animation'),
+                          ),
+                          ButtonSegment(
+                            value: SaveFeedbackMode.confirmation,
+                            label: Text('Confirmation'),
+                          ),
+                        ],
+                        selected: {
+                          settings.saveConfirmationsEnabled
+                              ? SaveFeedbackMode.confirmation
+                              : SaveFeedbackMode.animation,
+                        },
+                        onSelectionChanged: (selection) =>
+                            controller.setSaveFeedbackMode(selection.first),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

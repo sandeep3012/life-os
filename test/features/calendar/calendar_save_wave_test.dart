@@ -23,9 +23,9 @@ void main() {
         null,
       ),
     );
-    await const LifeHaptics(enabled: true).calendarSave();
-    await const LifeHaptics(enabled: false).calendarSave();
-    expect(calls, ['calendarSave']);
+    await const LifeHaptics(enabled: true).save();
+    await const LifeHaptics(enabled: false).save();
+    expect(calls, ['save']);
   });
   for (final reduceMotion in [false, true]) {
     testWidgets(
@@ -51,7 +51,7 @@ void main() {
                   ),
                 ),
                 floatingActionButton: FloatingActionButton(
-                  onPressed: () => showCalendarSaveWave(context),
+                  onPressed: () => showSaveWave(context),
                   child: const Icon(Icons.check),
                 ),
               ),
@@ -99,7 +99,7 @@ void main() {
         null,
       ),
     );
-    final feedback = const LifeHaptics(enabled: true).calendarSave();
+    final feedback = const LifeHaptics(enabled: true).save();
     await tester.pump();
     expect(calls, ['HapticFeedbackType.lightImpact']);
     await tester.pump(const Duration(milliseconds: 100));
@@ -109,7 +109,7 @@ void main() {
       'HapticFeedbackType.mediumImpact',
     ]);
     calls.clear();
-    await const LifeHaptics(enabled: false).calendarSave();
+    await const LifeHaptics(enabled: false).save();
     expect(calls, isEmpty);
     debugDefaultTargetPlatformOverride = null;
   });

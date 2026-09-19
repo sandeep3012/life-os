@@ -6,6 +6,8 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/app_database_provider.dart';
 import '../data/settings_repository.dart';
 
+enum SaveFeedbackMode { animation, confirmation }
+
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepository(ref.watch(appDatabaseProvider));
 });
@@ -20,6 +22,7 @@ class ResolvedSettings {
   const ResolvedSettings({
     this.hapticsEnabled = true,
     this.saveAnimationsEnabled = true,
+    this.saveConfirmationsEnabled = false,
     required this.themeMode,
     required this.colorTheme,
     required this.transactionEntryLayout,
@@ -34,6 +37,7 @@ class ResolvedSettings {
   final ThemeMode themeMode;
   final bool hapticsEnabled;
   final bool saveAnimationsEnabled;
+  final bool saveConfirmationsEnabled;
   final AppColorTheme colorTheme;
   final String transactionEntryLayout;
   final bool taskReminders;
@@ -74,6 +78,7 @@ final settingsProvider = Provider<ResolvedSettings>((ref) {
   return ResolvedSettings(
     hapticsEnabled: row.hapticsEnabled,
     saveAnimationsEnabled: row.saveAnimationsEnabled,
+    saveConfirmationsEnabled: row.saveConfirmationsEnabled,
     themeMode: _parseThemeMode(row.themeMode),
     colorTheme: appColorThemeFromStorage(row.colorTheme),
     transactionEntryLayout: row.transactionEntryLayout,
@@ -95,6 +100,8 @@ class SettingsController {
       _repo.setHapticsEnabled(enabled);
   Future<void> setSaveAnimationsEnabled(bool enabled) =>
       _repo.setSaveAnimationsEnabled(enabled);
+  Future<void> setSaveFeedbackMode(SaveFeedbackMode mode) =>
+      _repo.setSaveFeedbackMode(animation: mode == SaveFeedbackMode.animation);
 
   Future<void> setThemeMode(ThemeMode mode) =>
       _repo.setThemeMode(themeModeToValue(mode));

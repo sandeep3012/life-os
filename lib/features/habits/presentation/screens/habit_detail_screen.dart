@@ -8,7 +8,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
-import '../../../../core/widgets/success_overlay.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../application/habits_providers.dart';
 import '../../domain/habit_schedule.dart';
 import '../../domain/habit_statistics.dart';
@@ -538,8 +538,9 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
           targetUnit: result.targetUnit,
         );
     if (!mounted) return;
-    await showSuccessOverlay(
+    await showSaveFeedback(
       context,
+      ref,
       title: 'Habit updated',
       message: 'Changes to “${result.name}” were saved.',
     );
