@@ -11,6 +11,10 @@ class AppSettings extends Table {
 
   /// Selected curated color palette, independent of [themeMode].
   TextColumn get colorTheme => text().withDefault(const Constant('forest'))();
+
+  /// keypad | form — the transaction recorder layout last selected by the user.
+  TextColumn get transactionEntryLayout =>
+      text().withDefault(const Constant('keypad'))();
   BoolColumn get taskReminders => boolean().withDefault(const Constant(true))();
   BoolColumn get habitReminders =>
       boolean().withDefault(const Constant(true))();

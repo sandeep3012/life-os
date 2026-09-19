@@ -27,6 +27,9 @@ class SettingsRepository {
   Future<void> setColorTheme(String theme) =>
       _upsert(AppSettingsCompanion(colorTheme: Value(theme)));
 
+  Future<void> setTransactionEntryLayout(String layout) =>
+      _upsert(AppSettingsCompanion(transactionEntryLayout: Value(layout)));
+
   Future<void> setTaskReminders(bool enabled) =>
       _upsert(AppSettingsCompanion(taskReminders: Value(enabled)));
 

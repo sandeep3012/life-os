@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 21;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -253,6 +253,9 @@ class AppDatabase extends _$AppDatabase {
         // v19 -> v20: selected curated brand palette. Existing installs keep
         // the original Forest appearance through the column default.
         await m.addColumn(appSettings, appSettings.colorTheme);
+      }
+      if (from < 21) {
+        await m.addColumn(appSettings, appSettings.transactionEntryLayout);
       }
     },
   );

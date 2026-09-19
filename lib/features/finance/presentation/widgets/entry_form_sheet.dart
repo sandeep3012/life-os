@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -10,8 +9,12 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_fonts.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/icon_lookup.dart';
 import '../../../../core/widgets/initial_well.dart';
 import '../../../../core/widgets/tappable.dart';
+import '../../application/finance_providers.dart';
+import '../../domain/payment_mode.dart';
+import '../screens/category_management_screen.dart';
 
 /// Which direction the entry moves money.
 enum EntryKind { expense, income }
@@ -26,6 +29,7 @@ class EntryFormResult {
     required this.date,
     this.categoryId,
     this.note,
+    this.paymentMode,
   });
 
   final int amountMinor;
@@ -33,6 +37,7 @@ class EntryFormResult {
   final DateTime date;
   final String? categoryId;
   final String? note;
+  final String? paymentMode;
 }
 
 /// The design's entry form: a near-full-height sheet with a fixed header, a
@@ -54,12 +59,14 @@ class EntryFormSheet extends ConsumerStatefulWidget {
     required this.accounts,
     required this.categories,
     required this.currencySymbol,
+    this.onSwitchLayout,
   });
 
   final EntryKind kind;
   final List<Account> accounts;
   final List<Category> categories;
   final String currencySymbol;
+  final Future<void> Function()? onSwitchLayout;
 
   @override
   ConsumerState<EntryFormSheet> createState() => _EntryFormSheetState();
@@ -67,73 +74,55 @@ class EntryFormSheet extends ConsumerStatefulWidget {
 
 class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
   /// The raw digit buffer, e.g. `"1234"` or `"1234.5"`. Formatting happens on read.
-  String _buffer = '';
+  final _amountController = TextEditingController();
   String? _categoryId;
+  late List<Category> _categories;
   late String _accountId;
+  late bool _isExpense;
+  String? _paymentMode;
   DateTime _date = DateTime.now();
   final _noteController = TextEditingController();
-
-  static const _maxIntegerDigits = 8;
 
   @override
   void initState() {
     super.initState();
     _accountId = widget.accounts.first.id;
+    _categories = List.of(widget.categories);
+    _isExpense = widget.kind == EntryKind.expense;
+    final initialCategory = _categories.where(
+      (category) => category.kind == (_isExpense ? 'expense' : 'income'),
+    );
+    _categoryId = initialCategory.isEmpty ? null : initialCategory.first.id;
+    _paymentMode = paymentModes.first.id;
+    _amountController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _noteController.dispose();
+    _amountController.dispose();
     super.dispose();
   }
 
-  bool get _isExpense => widget.kind == EntryKind.expense;
-  bool get _valid => _amountMinor > 0;
+  bool get _validAmount {
+    final value = double.tryParse(_amountController.text.trim());
+    return value != null && value.isFinite && value > 0;
+  }
+
+  bool get _valid =>
+      _validAmount &&
+      _accountId.isNotEmpty &&
+      _categoryId != null &&
+      _paymentMode != null;
 
   int get _amountMinor {
-    if (_buffer.isEmpty) return 0;
-    final parsed = double.tryParse(_buffer) ?? 0;
+    final parsed = double.tryParse(_amountController.text) ?? 0;
     return (parsed * 100).round();
   }
 
-  /// Comp: grouped Indian-style live as digits are entered — `₹1,85,000`, never
-  /// `₹185,000`. The integer part is grouped; any decimals are shown verbatim so
-  /// a half-typed `12.` doesn't jump around.
-  String get _display {
-    if (_buffer.isEmpty) return '0';
-    final dot = _buffer.indexOf('.');
-    final intPart = dot < 0 ? _buffer : _buffer.substring(0, dot);
-    final grouped = NumberFormat.decimalPattern(
-      'en_IN',
-    ).format(int.tryParse(intPart) ?? 0);
-    if (dot < 0) return grouped;
-    return '$grouped${_buffer.substring(dot)}';
-  }
-
-  void _press(String key) {
-    ref.read(hapticsProvider).selection();
-    setState(() {
-      final dot = _buffer.indexOf('.');
-      if (key == '.') {
-        if (dot >= 0) return;
-        _buffer = _buffer.isEmpty ? '0.' : '$_buffer.';
-        return;
-      }
-      if (dot >= 0) {
-        // Max two decimal places.
-        if (_buffer.length - dot - 1 >= 2) return;
-      } else {
-        if (_buffer.length >= _maxIntegerDigits) return;
-        if (_buffer == '0') _buffer = '';
-      }
-      _buffer = '$_buffer$key';
-    });
-  }
-
-  void _backspace() {
-    ref.read(hapticsProvider).selection();
-    if (_buffer.isEmpty) return;
-    setState(() => _buffer = _buffer.substring(0, _buffer.length - 1));
+  Future<void> _switchLayout() async {
+    await widget.onSwitchLayout?.call();
+    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _submit() async {
@@ -150,6 +139,7 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
         date: _date,
         categoryId: _categoryId,
         note: note.isEmpty ? null : note,
+        paymentMode: _paymentMode,
       ),
     );
   }
@@ -164,6 +154,28 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
     if (picked != null) setState(() => _date = picked);
   }
 
+  Future<void> _addCategory() async {
+    final result = await showCategoryEditorSheet(
+      context,
+      fixedKind: _isExpense ? 'expense' : 'income',
+    );
+    if (result == null) return;
+
+    final category = await ref
+        .read(financeControllerProvider)
+        .addCategory(
+          name: result.name,
+          icon: result.icon,
+          colorHex: result.colorHex,
+          kind: result.kind,
+        );
+    if (!mounted) return;
+    setState(() {
+      _categories = [..._categories, category];
+      _categoryId = category.id;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -171,14 +183,18 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
     final colors = context.appColors;
 
     final accent = _isExpense ? colors.spend : colors.finance;
-    final relevant = widget.categories;
+    final relevant = _categories
+        .where(
+          (category) => category.kind == (_isExpense ? 'expense' : 'income'),
+        )
+        .toList();
 
     return Padding(
       // Comp: the sheet stops 52px below the top of the screen.
       padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top + 52),
       child: Container(
         decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
+          color: scheme.surface,
           border: Border(top: BorderSide(color: scheme.outline)),
           borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppSpacing.sheetRadius),
@@ -236,6 +252,29 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
                           ],
                         ),
                       ),
+                      if (widget.onSwitchLayout != null) ...[
+                        Tappable(
+                          onTap: _switchLayout,
+                          haptic: TapHaptic.light,
+                          semanticLabel: 'Full details',
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: scheme.surface,
+                              border: Border.all(color: scheme.outline),
+                              borderRadius: BorderRadius.circular(11),
+                            ),
+                            child: Icon(
+                              LucideIcons.list,
+                              size: 16,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
                       Tappable(
                         onTap: () => Navigator.of(context).pop(),
                         haptic: TapHaptic.light,
@@ -268,38 +307,58 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 children: [
                   _AmountDisplay(
-                    label: _isExpense ? 'Amount spent' : 'Amount received',
+                    label: _isExpense
+                        ? 'Amount spent *'
+                        : 'Amount received *',
                     symbol: widget.currencySymbol,
-                    value: _display,
-                    empty: _buffer.isEmpty,
+                    controller: _amountController,
+                    errorText: _amountController.text.isNotEmpty && !_validAmount
+                        ? 'Enter a positive amount'
+                        : null,
                   ),
 
-                  if (relevant.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    _FieldLabel(_isExpense ? 'Category' : 'Source'),
-                    const SizedBox(height: 9),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (var i = 0; i < relevant.length; i++)
-                          _Chip(
-                            label: relevant[i].name,
-                            dotColor: colors.spendCategoryPalette[
-                                i % colors.spendCategoryPalette.length],
-                            selected: relevant[i].id == _categoryId,
-                            onTap: () =>
-                                setState(() => _categoryId = relevant[i].id),
-                          ),
-                      ],
-                    ),
-                  ],
+                  const SizedBox(height: 16),
+                  _FieldLabel(_isExpense ? 'Category' : 'Source'),
+                  const SizedBox(height: 9),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (var i = 0; i < relevant.length; i++)
+                        _Chip(
+                          label: relevant[i].name,
+                          iconValue: relevant[i].icon,
+                          dotColor: colors.spendCategoryPalette[
+                              i % colors.spendCategoryPalette.length],
+                          selected: relevant[i].id == _categoryId,
+                          onTap: () =>
+                              setState(() => _categoryId = relevant[i].id),
+                        ),
+                      _AddCategoryChip(onTap: _addCategory),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+                  _FieldLabel('Payment mode'),
+                  const SizedBox(height: 9),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final mode in paymentModes)
+                        _PaymentChip(
+                          mode: mode,
+                          selected: _paymentMode == mode.id,
+                          onTap: () => setState(() => _paymentMode = mode.id),
+                        ),
+                    ],
+                  ),
 
                   const SizedBox(height: 16),
                   _FieldLabel(_isExpense ? 'Paid from' : 'Credited to'),
                   const SizedBox(height: 9),
                   SizedBox(
-                    height: 58,
+                    height: 64,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: widget.accounts.length,
@@ -317,13 +376,11 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
                   ),
 
                   const SizedBox(height: 16),
-                  _FieldLabel('Note'),
-                  const SizedBox(height: 9),
                   TextField(
                     controller: _noteController,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: const InputDecoration(
-                      hintText: 'What was it for?',
+                      labelText: 'What was it for?',
                     ),
                   ),
 
@@ -376,13 +433,24 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
               ),
             ),
 
-            // ---- pinned keypad tray ----
-            _Keypad(
-              onKey: _press,
-              onBackspace: _backspace,
-              onSubmit: _submit,
-              enabled: _valid,
-              saveLabel: _isExpense ? 'Save expense' : 'Save income',
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  8,
+                  20,
+                  MediaQuery.viewInsetsOf(context).bottom + 12,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: AppSpacing.primaryButtonHeight,
+                  child: FilledButton(
+                    onPressed: _valid ? _submit : null,
+                    child: Text(_isExpense ? 'Save expense' : 'Save income'),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -405,14 +473,14 @@ class _AmountDisplay extends StatelessWidget {
   const _AmountDisplay({
     required this.label,
     required this.symbol,
-    required this.value,
-    required this.empty,
+    required this.controller,
+    this.errorText,
   });
 
   final String label;
   final String symbol;
-  final String value;
-  final bool empty;
+  final TextEditingController controller;
+  final String? errorText;
 
   @override
   Widget build(BuildContext context) {
@@ -432,42 +500,90 @@ class _AmountDisplay extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              symbol,
-              style: TextStyle(
-                fontFamily: AppFonts.serif,
-                fontSize: 30,
-                fontWeight: FontWeight.w400,
-                color: colors.text3,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Flexible(
-              child: Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: AppFonts.serif,
-                  fontSize: 46,
-                  height: 1,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: -1,
-                  color: empty ? colors.text3 : scheme.onSurface,
-                  fontFeatures: AppFonts.tabular,
+        SizedBox(
+          width: 300,
+          height: 52,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              IgnorePointer(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        symbol,
+                        style: TextStyle(
+                          fontFamily: AppFonts.serif,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w400,
+                          color: colors.text3,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        controller.text.isEmpty ? '0' : controller.text,
+                        style: TextStyle(
+                          fontFamily: AppFonts.serif,
+                          fontSize: 46,
+                          height: 1,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: -1,
+                          color: controller.text.isEmpty
+                              ? colors.text3
+                              : scheme.onSurface,
+                          fontFeatures: AppFonts.tabular,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        width: 2,
+                        height: 38,
+                        color: scheme.secondary,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 4),
-            Container(width: 2, height: 38, color: scheme.secondary)
-                .animate(onPlay: (c) => c.repeat(reverse: true))
-                .fadeIn(duration: 900.ms),
-          ],
+              Positioned.fill(
+                child: TextField(
+                  controller: controller,
+                  autofocus: true,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textAlign: TextAlign.center,
+                  cursorColor: Colors.transparent,
+                  style: const TextStyle(color: Colors.transparent),
+                  decoration: const InputDecoration(
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
+        if (errorText != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            errorText!,
+            style: TextStyle(
+              fontFamily: AppFonts.sans,
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.error,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -497,12 +613,14 @@ class _FieldLabel extends StatelessWidget {
 class _Chip extends StatelessWidget {
   const _Chip({
     required this.label,
+    required this.iconValue,
     required this.dotColor,
     required this.selected,
     required this.onTap,
   });
 
   final String label;
+  final String? iconValue;
   final Color dotColor;
   final bool selected;
   final VoidCallback onTap;
@@ -530,14 +648,7 @@ class _Chip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: dotColor,
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
+            IconOrEmoji(value: iconValue, size: 16, color: dotColor),
             const SizedBox(width: 7),
             Text(
               label,
@@ -551,6 +662,71 @@ class _Chip extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AddCategoryChip extends StatelessWidget {
+  const _AddCategoryChip({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Tappable(
+      onTap: onTap,
+      haptic: TapHaptic.light,
+      semanticLabel: 'Add category',
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          border: Border.all(color: scheme.outline),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(LucideIcons.plus, size: 15, color: scheme.primary),
+            const SizedBox(width: 6),
+            Text(
+              'Add category',
+              style: TextStyle(
+                fontFamily: AppFonts.sans,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: scheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentChip extends StatelessWidget {
+  const _PaymentChip({
+    required this.mode,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final PaymentMode mode;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ChoiceChip(
+      avatar: Icon(mode.icon, size: 16),
+      label: Text(mode.label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      selectedColor: scheme.primary.withValues(alpha: 0.14),
     );
   }
 }
@@ -616,136 +792,6 @@ class _AccountChip extends StatelessWidget {
   }
 }
 
-/// Comp: a `surface-2` tray with a `border-2` top edge, a 3×4 grid of 46px
-/// radius-13 keys set in Newsreader 21px, and the CTA below at 54px/r16. The CTA
-/// drops to 60% opacity on a `text3` fill until an amount exists.
-class _Keypad extends StatelessWidget {
-  const _Keypad({
-    required this.onKey,
-    required this.onBackspace,
-    required this.onSubmit,
-    required this.enabled,
-    required this.saveLabel,
-  });
-
-  final ValueChanged<String> onKey;
-  final VoidCallback onBackspace;
-  final VoidCallback onSubmit;
-  final bool enabled;
-  final String saveLabel;
-
-  static const _rows = [
-    ['1', '2', '3'],
-    ['4', '5', '6'],
-    ['7', '8', '9'],
-    ['.', '0', '<'],
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final colors = context.appColors;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            for (final row in _rows)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    for (var i = 0; i < row.length; i++) ...[
-                      if (i > 0) const SizedBox(width: 8),
-                      Expanded(
-                        child: Tappable(
-                          onTap: row[i] == '<'
-                              ? onBackspace
-                              : () => onKey(row[i]),
-                          semanticLabel: row[i] == '<' ? 'Delete' : row[i],
-                          child: Container(
-                            height: 46,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: scheme.surface,
-                              border: Border.all(color: scheme.outlineVariant),
-                              borderRadius: BorderRadius.circular(
-                                AppSpacing.iconButtonRadius,
-                              ),
-                            ),
-                            child: row[i] == '<'
-                                ? Icon(
-                                    LucideIcons.delete,
-                                    size: 19,
-                                    color: scheme.onSurface,
-                                  )
-                                : Text(
-                                    row[i],
-                                    style: TextStyle(
-                                      fontFamily: AppFonts.serif,
-                                      fontSize: 21,
-                                      fontWeight: FontWeight.w500,
-                                      color: scheme.onSurface,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            const SizedBox(height: 2),
-            Tappable(
-              onTap: onSubmit,
-              semanticLabel: saveLabel,
-              child: Opacity(
-                opacity: enabled ? 1 : 0.6,
-                child: Container(
-                  height: AppSpacing.primaryButtonHeight,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: enabled ? scheme.primary : colors.text3,
-                    borderRadius: BorderRadius.circular(
-                      AppSpacing.primaryButtonRadius,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        saveLabel,
-                        style: TextStyle(
-                          fontFamily: AppFonts.sans,
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        LucideIcons.check,
-                        size: 18,
-                        color: scheme.onPrimary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Presents [EntryFormSheet] with the comp's sheet chrome.
 Future<EntryFormResult?> showEntryFormSheet(
   BuildContext context, {
@@ -753,11 +799,13 @@ Future<EntryFormResult?> showEntryFormSheet(
   required List<Account> accounts,
   required List<Category> categories,
   required String currencySymbol,
+  Future<void> Function()? onSwitchLayout,
 }) {
   return showModalBottomSheet<EntryFormResult>(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
+    useRootNavigator: false,
     useSafeArea: true,
     // Comp: 420ms in on a curve that overshoots slightly, 190ms out.
     sheetAnimationStyle: AnimationStyle(
@@ -771,6 +819,7 @@ Future<EntryFormResult?> showEntryFormSheet(
       accounts: accounts,
       categories: categories,
       currencySymbol: currencySymbol,
+      onSwitchLayout: onSwitchLayout,
     ),
   );
 }

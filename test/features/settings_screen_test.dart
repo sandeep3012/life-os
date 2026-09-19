@@ -139,6 +139,20 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1));
   });
 
+  testWidgets('transaction recorder layout persists', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await container
+        .read(settingsControllerProvider)
+        .setTransactionEntryLayout('form');
+    await tester.pumpAndSettle();
+
+    expect(container.read(settingsProvider).transactionEntryLayout, 'form');
+    final row = await db.select(db.appSettings).getSingle();
+    expect(row.transactionEntryLayout, 'form');
+  });
+
   testWidgets(
     'turning off habit reminders cancels the scheduled notification',
     (tester) async {

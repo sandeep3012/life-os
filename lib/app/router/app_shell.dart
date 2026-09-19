@@ -9,12 +9,14 @@ import '../../core/widgets/success_overlay.dart';
 import '../../core/widgets/tappable.dart';
 import '../../features/finance/application/finance_providers.dart';
 import '../../features/finance/presentation/widgets/entry_form_sheet.dart';
+import '../../features/finance/presentation/widgets/transaction_recorder_sheet.dart';
 import '../../features/home/presentation/widgets/add_menu_sheet.dart';
 import '../../features/settings/application/settings_providers.dart';
 import '../motion.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import 'route_paths.dart';
+import 'navigator_keys.dart';
 
 /// Bottom-nav shell. Four destinations either side of a centre add button, which
 /// is the layout the design handoff specifies — the comp's old "More" tab is
@@ -93,14 +95,14 @@ class _AppShellState extends ConsumerState<AppShell> {
           subtitle: 'One-off spend',
           icon: LucideIcons.arrowDownLeft,
           color: colors.spend,
-          onTap: () => _addEntry(EntryKind.expense),
+          onTap: () => _addTransaction(EntryKind.expense),
         ),
         AddMenuItem(
           label: 'Income',
           subtitle: 'Salary, refunds',
           icon: LucideIcons.arrowUpRight,
           color: colors.finance,
-          onTap: () => _addEntry(EntryKind.income),
+          onTap: () => _addTransaction(EntryKind.income),
         ),
         AddMenuItem(
           label: 'Recurring',
@@ -124,7 +126,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   /// Opens the design's keypad entry sheet, then persists through the finance
   /// module's existing controller rather than duplicating the save path here.
-  Future<void> _addEntry(EntryKind kind) async {
+  Future<void> _addTransaction(EntryKind kind) async {
     final accounts = ref.read(transactableAccountsProvider);
     final categories = ref.read(categoriesProvider).value ?? const [];
     if (accounts.isEmpty) {
@@ -135,11 +137,13 @@ class _AppShellState extends ConsumerState<AppShell> {
       return;
     }
 
-    final result = await showEntryFormSheet(
-      context,
-      kind: kind,
+    final result = await showTransactionRecorder(
+      branchNavigatorKeys[widget.navigationShell.currentIndex].currentContext ??
+          context,
+      ref,
       accounts: accounts,
       categories: categories,
+      initialKind: kind,
       currencySymbol: currencySymbolFor(
         ref.read(settingsProvider).currencyCode,
       ),
@@ -150,8 +154,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         .addTransaction(
           accountId: result.accountId,
           categoryId: result.categoryId,
-          merchant:
-              result.note ?? (kind == EntryKind.expense ? 'Expense' : 'Income'),
+          merchant: result.merchant,
           amountMinor: result.amountMinor,
           date: result.date,
         );
