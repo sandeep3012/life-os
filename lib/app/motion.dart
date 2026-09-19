@@ -65,6 +65,9 @@ class AppMotion {
   static const successCheckDraw = Duration(milliseconds: 400);
   static const successCheckDrawDelay = Duration(milliseconds: 120);
 
+  /// A brief, full-screen ripple used to acknowledge a completed calendar save.
+  static const calendarSaveWave = Duration(milliseconds: 1000);
+
   /// How long the success overlay stays before dismissing itself.
   static const successDwell = Duration(milliseconds: 1900);
 

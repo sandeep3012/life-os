@@ -15320,6 +15320,51 @@ class $AppSettingsTable extends AppSettings
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $AppSettingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _hapticsEnabledMeta = const VerificationMeta(
+    'hapticsEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> hapticsEnabled = GeneratedColumn<bool>(
+    'haptics_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("haptics_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _saveAnimationsEnabledMeta =
+      const VerificationMeta('saveAnimationsEnabled');
+  @override
+  late final GeneratedColumn<bool> saveAnimationsEnabled =
+      GeneratedColumn<bool>(
+        'save_animations_enabled',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("save_animations_enabled" IN (0, 1))',
+        ),
+        defaultValue: const Constant(true),
+      );
+  static const VerificationMeta _saveConfirmationsEnabledMeta =
+      const VerificationMeta('saveConfirmationsEnabled');
+  @override
+  late final GeneratedColumn<bool> saveConfirmationsEnabled =
+      GeneratedColumn<bool>(
+        'save_confirmations_enabled',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("save_confirmations_enabled" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
@@ -15455,6 +15500,9 @@ class $AppSettingsTable extends AppSettings
   );
   @override
   List<GeneratedColumn> get $columns => [
+    hapticsEnabled,
+    saveAnimationsEnabled,
+    saveConfirmationsEnabled,
     id,
     themeMode,
     colorTheme,
@@ -15478,6 +15526,33 @@ class $AppSettingsTable extends AppSettings
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('haptics_enabled')) {
+      context.handle(
+        _hapticsEnabledMeta,
+        hapticsEnabled.isAcceptableOrUnknown(
+          data['haptics_enabled']!,
+          _hapticsEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('save_animations_enabled')) {
+      context.handle(
+        _saveAnimationsEnabledMeta,
+        saveAnimationsEnabled.isAcceptableOrUnknown(
+          data['save_animations_enabled']!,
+          _saveAnimationsEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('save_confirmations_enabled')) {
+      context.handle(
+        _saveConfirmationsEnabledMeta,
+        saveConfirmationsEnabled.isAcceptableOrUnknown(
+          data['save_confirmations_enabled']!,
+          _saveConfirmationsEnabledMeta,
+        ),
+      );
+    }
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     }
@@ -15565,6 +15640,18 @@ class $AppSettingsTable extends AppSettings
   AppSetting map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return AppSetting(
+      hapticsEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}haptics_enabled'],
+      )!,
+      saveAnimationsEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}save_animations_enabled'],
+      )!,
+      saveConfirmationsEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}save_confirmations_enabled'],
+      )!,
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
@@ -15615,6 +15702,9 @@ class $AppSettingsTable extends AppSettings
 }
 
 class AppSetting extends DataClass implements Insertable<AppSetting> {
+  final bool hapticsEnabled;
+  final bool saveAnimationsEnabled;
+  final bool saveConfirmationsEnabled;
   final int id;
 
   /// light | dark | system
@@ -15637,6 +15727,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   final bool appLockEnabled;
   final bool biometricEnabled;
   const AppSetting({
+    required this.hapticsEnabled,
+    required this.saveAnimationsEnabled,
+    required this.saveConfirmationsEnabled,
     required this.id,
     required this.themeMode,
     required this.colorTheme,
@@ -15651,6 +15744,11 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['haptics_enabled'] = Variable<bool>(hapticsEnabled);
+    map['save_animations_enabled'] = Variable<bool>(saveAnimationsEnabled);
+    map['save_confirmations_enabled'] = Variable<bool>(
+      saveConfirmationsEnabled,
+    );
     map['id'] = Variable<int>(id);
     map['theme_mode'] = Variable<String>(themeMode);
     map['color_theme'] = Variable<String>(colorTheme);
@@ -15666,6 +15764,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
 
   AppSettingsCompanion toCompanion(bool nullToAbsent) {
     return AppSettingsCompanion(
+      hapticsEnabled: Value(hapticsEnabled),
+      saveAnimationsEnabled: Value(saveAnimationsEnabled),
+      saveConfirmationsEnabled: Value(saveConfirmationsEnabled),
       id: Value(id),
       themeMode: Value(themeMode),
       colorTheme: Value(colorTheme),
@@ -15685,6 +15786,13 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return AppSetting(
+      hapticsEnabled: serializer.fromJson<bool>(json['hapticsEnabled']),
+      saveAnimationsEnabled: serializer.fromJson<bool>(
+        json['saveAnimationsEnabled'],
+      ),
+      saveConfirmationsEnabled: serializer.fromJson<bool>(
+        json['saveConfirmationsEnabled'],
+      ),
       id: serializer.fromJson<int>(json['id']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
       colorTheme: serializer.fromJson<String>(json['colorTheme']),
@@ -15703,6 +15811,11 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'hapticsEnabled': serializer.toJson<bool>(hapticsEnabled),
+      'saveAnimationsEnabled': serializer.toJson<bool>(saveAnimationsEnabled),
+      'saveConfirmationsEnabled': serializer.toJson<bool>(
+        saveConfirmationsEnabled,
+      ),
       'id': serializer.toJson<int>(id),
       'themeMode': serializer.toJson<String>(themeMode),
       'colorTheme': serializer.toJson<String>(colorTheme),
@@ -15719,6 +15832,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   }
 
   AppSetting copyWith({
+    bool? hapticsEnabled,
+    bool? saveAnimationsEnabled,
+    bool? saveConfirmationsEnabled,
     int? id,
     String? themeMode,
     String? colorTheme,
@@ -15730,6 +15846,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     bool? appLockEnabled,
     bool? biometricEnabled,
   }) => AppSetting(
+    hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
+    saveAnimationsEnabled: saveAnimationsEnabled ?? this.saveAnimationsEnabled,
+    saveConfirmationsEnabled:
+        saveConfirmationsEnabled ?? this.saveConfirmationsEnabled,
     id: id ?? this.id,
     themeMode: themeMode ?? this.themeMode,
     colorTheme: colorTheme ?? this.colorTheme,
@@ -15744,6 +15864,15 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
+      hapticsEnabled: data.hapticsEnabled.present
+          ? data.hapticsEnabled.value
+          : this.hapticsEnabled,
+      saveAnimationsEnabled: data.saveAnimationsEnabled.present
+          ? data.saveAnimationsEnabled.value
+          : this.saveAnimationsEnabled,
+      saveConfirmationsEnabled: data.saveConfirmationsEnabled.present
+          ? data.saveConfirmationsEnabled.value
+          : this.saveConfirmationsEnabled,
       id: data.id.present ? data.id.value : this.id,
       themeMode: data.themeMode.present ? data.themeMode.value : this.themeMode,
       colorTheme: data.colorTheme.present
@@ -15776,6 +15905,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   @override
   String toString() {
     return (StringBuffer('AppSetting(')
+          ..write('hapticsEnabled: $hapticsEnabled, ')
+          ..write('saveAnimationsEnabled: $saveAnimationsEnabled, ')
+          ..write('saveConfirmationsEnabled: $saveConfirmationsEnabled, ')
           ..write('id: $id, ')
           ..write('themeMode: $themeMode, ')
           ..write('colorTheme: $colorTheme, ')
@@ -15792,6 +15924,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
 
   @override
   int get hashCode => Object.hash(
+    hapticsEnabled,
+    saveAnimationsEnabled,
+    saveConfirmationsEnabled,
     id,
     themeMode,
     colorTheme,
@@ -15807,6 +15942,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is AppSetting &&
+          other.hapticsEnabled == this.hapticsEnabled &&
+          other.saveAnimationsEnabled == this.saveAnimationsEnabled &&
+          other.saveConfirmationsEnabled == this.saveConfirmationsEnabled &&
           other.id == this.id &&
           other.themeMode == this.themeMode &&
           other.colorTheme == this.colorTheme &&
@@ -15820,6 +15958,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
+  final Value<bool> hapticsEnabled;
+  final Value<bool> saveAnimationsEnabled;
+  final Value<bool> saveConfirmationsEnabled;
   final Value<int> id;
   final Value<String> themeMode;
   final Value<String> colorTheme;
@@ -15831,6 +15972,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<bool> appLockEnabled;
   final Value<bool> biometricEnabled;
   const AppSettingsCompanion({
+    this.hapticsEnabled = const Value.absent(),
+    this.saveAnimationsEnabled = const Value.absent(),
+    this.saveConfirmationsEnabled = const Value.absent(),
     this.id = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.colorTheme = const Value.absent(),
@@ -15843,6 +15987,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.biometricEnabled = const Value.absent(),
   });
   AppSettingsCompanion.insert({
+    this.hapticsEnabled = const Value.absent(),
+    this.saveAnimationsEnabled = const Value.absent(),
+    this.saveConfirmationsEnabled = const Value.absent(),
     this.id = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.colorTheme = const Value.absent(),
@@ -15855,6 +16002,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.biometricEnabled = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
+    Expression<bool>? hapticsEnabled,
+    Expression<bool>? saveAnimationsEnabled,
+    Expression<bool>? saveConfirmationsEnabled,
     Expression<int>? id,
     Expression<String>? themeMode,
     Expression<String>? colorTheme,
@@ -15867,6 +16017,11 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<bool>? biometricEnabled,
   }) {
     return RawValuesInsertable({
+      if (hapticsEnabled != null) 'haptics_enabled': hapticsEnabled,
+      if (saveAnimationsEnabled != null)
+        'save_animations_enabled': saveAnimationsEnabled,
+      if (saveConfirmationsEnabled != null)
+        'save_confirmations_enabled': saveConfirmationsEnabled,
       if (id != null) 'id': id,
       if (themeMode != null) 'theme_mode': themeMode,
       if (colorTheme != null) 'color_theme': colorTheme,
@@ -15882,6 +16037,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   }
 
   AppSettingsCompanion copyWith({
+    Value<bool>? hapticsEnabled,
+    Value<bool>? saveAnimationsEnabled,
+    Value<bool>? saveConfirmationsEnabled,
     Value<int>? id,
     Value<String>? themeMode,
     Value<String>? colorTheme,
@@ -15894,6 +16052,11 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<bool>? biometricEnabled,
   }) {
     return AppSettingsCompanion(
+      hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
+      saveAnimationsEnabled:
+          saveAnimationsEnabled ?? this.saveAnimationsEnabled,
+      saveConfirmationsEnabled:
+          saveConfirmationsEnabled ?? this.saveConfirmationsEnabled,
       id: id ?? this.id,
       themeMode: themeMode ?? this.themeMode,
       colorTheme: colorTheme ?? this.colorTheme,
@@ -15911,6 +16074,19 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (hapticsEnabled.present) {
+      map['haptics_enabled'] = Variable<bool>(hapticsEnabled.value);
+    }
+    if (saveAnimationsEnabled.present) {
+      map['save_animations_enabled'] = Variable<bool>(
+        saveAnimationsEnabled.value,
+      );
+    }
+    if (saveConfirmationsEnabled.present) {
+      map['save_confirmations_enabled'] = Variable<bool>(
+        saveConfirmationsEnabled.value,
+      );
+    }
     if (id.present) {
       map['id'] = Variable<int>(id.value);
     }
@@ -15949,6 +16125,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   @override
   String toString() {
     return (StringBuffer('AppSettingsCompanion(')
+          ..write('hapticsEnabled: $hapticsEnabled, ')
+          ..write('saveAnimationsEnabled: $saveAnimationsEnabled, ')
+          ..write('saveConfirmationsEnabled: $saveConfirmationsEnabled, ')
           ..write('id: $id, ')
           ..write('themeMode: $themeMode, ')
           ..write('colorTheme: $colorTheme, ')
@@ -28418,6 +28597,9 @@ typedef $$LearnNotesTableProcessedTableManager =
     >;
 typedef $$AppSettingsTableCreateCompanionBuilder =
     AppSettingsCompanion Function({
+      Value<bool> hapticsEnabled,
+      Value<bool> saveAnimationsEnabled,
+      Value<bool> saveConfirmationsEnabled,
       Value<int> id,
       Value<String> themeMode,
       Value<String> colorTheme,
@@ -28431,6 +28613,9 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
+      Value<bool> hapticsEnabled,
+      Value<bool> saveAnimationsEnabled,
+      Value<bool> saveConfirmationsEnabled,
       Value<int> id,
       Value<String> themeMode,
       Value<String> colorTheme,
@@ -28452,6 +28637,21 @@ class $$AppSettingsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<bool> get hapticsEnabled => $composableBuilder(
+    column: $table.hapticsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get saveAnimationsEnabled => $composableBuilder(
+    column: $table.saveAnimationsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get saveConfirmationsEnabled => $composableBuilder(
+    column: $table.saveConfirmationsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
@@ -28512,6 +28712,21 @@ class $$AppSettingsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<bool> get hapticsEnabled => $composableBuilder(
+    column: $table.hapticsEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get saveAnimationsEnabled => $composableBuilder(
+    column: $table.saveAnimationsEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get saveConfirmationsEnabled => $composableBuilder(
+    column: $table.saveConfirmationsEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
@@ -28572,6 +28787,21 @@ class $$AppSettingsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<bool> get hapticsEnabled => $composableBuilder(
+    column: $table.hapticsEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get saveAnimationsEnabled => $composableBuilder(
+    column: $table.saveAnimationsEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get saveConfirmationsEnabled => $composableBuilder(
+    column: $table.saveConfirmationsEnabled,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
@@ -28650,6 +28880,9 @@ class $$AppSettingsTableTableManager
               $$AppSettingsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
+                Value<bool> hapticsEnabled = const Value.absent(),
+                Value<bool> saveAnimationsEnabled = const Value.absent(),
+                Value<bool> saveConfirmationsEnabled = const Value.absent(),
                 Value<int> id = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
                 Value<String> colorTheme = const Value.absent(),
@@ -28661,6 +28894,9 @@ class $$AppSettingsTableTableManager
                 Value<bool> appLockEnabled = const Value.absent(),
                 Value<bool> biometricEnabled = const Value.absent(),
               }) => AppSettingsCompanion(
+                hapticsEnabled: hapticsEnabled,
+                saveAnimationsEnabled: saveAnimationsEnabled,
+                saveConfirmationsEnabled: saveConfirmationsEnabled,
                 id: id,
                 themeMode: themeMode,
                 colorTheme: colorTheme,
@@ -28674,6 +28910,9 @@ class $$AppSettingsTableTableManager
               ),
           createCompanionCallback:
               ({
+                Value<bool> hapticsEnabled = const Value.absent(),
+                Value<bool> saveAnimationsEnabled = const Value.absent(),
+                Value<bool> saveConfirmationsEnabled = const Value.absent(),
                 Value<int> id = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
                 Value<String> colorTheme = const Value.absent(),
@@ -28685,6 +28924,9 @@ class $$AppSettingsTableTableManager
                 Value<bool> appLockEnabled = const Value.absent(),
                 Value<bool> biometricEnabled = const Value.absent(),
               }) => AppSettingsCompanion.insert(
+                hapticsEnabled: hapticsEnabled,
+                saveAnimationsEnabled: saveAnimationsEnabled,
+                saveConfirmationsEnabled: saveConfirmationsEnabled,
                 id: id,
                 themeMode: themeMode,
                 colorTheme: colorTheme,

@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/widgets/app_top_bar.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/surface_card.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../application/calendar_providers.dart';
@@ -23,6 +24,17 @@ class CalendarScreen extends ConsumerStatefulWidget {
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   DateTime _focusedMonth = DateTime.now();
+
+  void _acknowledgeEventSave({required bool updated}) {
+    showSaveFeedback(
+      context,
+      ref,
+      title: updated ? 'Event updated' : 'Event saved',
+      message: updated
+          ? 'Your changes are on the calendar.'
+          : 'Your event is on the calendar.',
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -193,6 +205,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 reminderMode: result.reminderMode,
                 reminderMinutesBefore: result.reminderMinutesBefore,
               );
+          if (!context.mounted) return;
+          _acknowledgeEventSave(updated: false);
         },
         icon: const Icon(LucideIcons.plus),
         label: const Text('New event'),
@@ -333,6 +347,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             reminderMode: result.reminderMode,
             reminderMinutesBefore: result.reminderMinutesBefore,
           );
+      if (!context.mounted) return;
+      _acknowledgeEventSave(updated: true);
       return;
     }
     await ref
@@ -348,6 +364,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           reminderMode: result.reminderMode,
           reminderMinutesBefore: result.reminderMinutesBefore,
         );
+    if (!context.mounted) return;
+    _acknowledgeEventSave(updated: true);
   }
 }
 

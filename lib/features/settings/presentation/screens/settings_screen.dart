@@ -135,6 +135,66 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
+          const _SectionTitle('Touch & feedback'),
+          Card(
+            child: Column(
+              children: [
+                _SettingSwitch(
+                  title: 'Haptic feedback',
+                  subtitle: 'Vibration for interactions and calendar saves',
+                  value: settings.hapticsEnabled,
+                  onChanged: controller.setHapticsEnabled,
+                ),
+                const Divider(height: 1),
+                _SettingSwitch(
+                  title: 'Save feedback',
+                  subtitle: 'Show a visual response after a successful save',
+                  value:
+                      settings.saveAnimationsEnabled ||
+                      settings.saveConfirmationsEnabled,
+                  onChanged: controller.setSaveFeedbackEnabled,
+                ),
+                if (settings.saveAnimationsEnabled ||
+                    settings.saveConfirmationsEnabled) ...[
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Choose how successful saves are acknowledged.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SegmentedButton<SaveFeedbackMode>(
+                          segments: const [
+                            ButtonSegment(
+                              value: SaveFeedbackMode.animation,
+                              label: Text('Animation'),
+                            ),
+                            ButtonSegment(
+                              value: SaveFeedbackMode.confirmation,
+                              label: Text('Confirmation'),
+                            ),
+                          ],
+                          selected: {
+                            settings.saveConfirmationsEnabled
+                                ? SaveFeedbackMode.confirmation
+                                : SaveFeedbackMode.animation,
+                          },
+                          onSelectionChanged: (selection) => controller
+                              .setSaveFeedbackMode(selection.first),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
           const _SectionTitle('Notifications'),
           Card(
             child: Column(

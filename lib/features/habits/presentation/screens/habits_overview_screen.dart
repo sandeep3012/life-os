@@ -14,6 +14,7 @@ import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/dashed_action_button.dart';
 import '../../../../core/widgets/progress_ring.dart';
 import '../../../../core/widgets/section_header.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/surface_card.dart';
 import '../../../../core/widgets/tappable.dart';
 import '../../application/habit_consistency_providers.dart';
@@ -186,6 +187,13 @@ class HabitsOverviewScreen extends ConsumerWidget {
                               reminderMinute: result.reminderMinute,
                               reminderMode: result.reminderMode,
                             );
+                        if (!context.mounted) return;
+                        await showSaveFeedback(
+                          context,
+                          ref,
+                          title: 'Habit saved',
+                          message: '“${result.name}” is ready to track.',
+                        );
                       },
                     ),
                   ],

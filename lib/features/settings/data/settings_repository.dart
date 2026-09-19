@@ -9,6 +9,31 @@ class SettingsRepository {
 
   final AppDatabase _db;
 
+  Future<void> setHapticsEnabled(bool enabled) =>
+      _upsert(AppSettingsCompanion(hapticsEnabled: Value(enabled)));
+
+  Future<void> setSaveAnimationsEnabled(bool enabled) =>
+      _upsert(AppSettingsCompanion(saveAnimationsEnabled: Value(enabled)));
+
+  Future<void> setSaveFeedbackMode({
+    required bool animation,
+    required bool confirmation,
+  }) => _upsert(
+    AppSettingsCompanion(
+      saveAnimationsEnabled: Value(animation),
+      saveConfirmationsEnabled: Value(confirmation),
+    ),
+  );
+
+  Future<void> setSaveFeedbackEnabled(bool enabled) => _upsert(
+    AppSettingsCompanion(
+      // Enabling starts with the animation. The user can immediately switch
+      // to Confirmation below the toggle.
+      saveAnimationsEnabled: Value(enabled),
+      saveConfirmationsEnabled: const Value(false),
+    ),
+  );
+
   Stream<AppSetting?> watchSettings() {
     return (_db.select(
       _db.appSettings,
