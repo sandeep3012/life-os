@@ -52,15 +52,12 @@ void main() {
   }
 
   testWidgets(
-    'adding a task shows it in the Today list and can be checked off',
+    'adding a task shows it in the sectioned list and can be checked off',
     (tester) async {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('Nothing here — add a task to get started.'),
-        findsOneWidget,
-      );
+      expect(find.text('No tasks here.'), findsOneWidget);
 
       // The screen's add affordance is an icon-only FloatingActionButton whose
       // label lives in its tooltip, so there is no Text to match.

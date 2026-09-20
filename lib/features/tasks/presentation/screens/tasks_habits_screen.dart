@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -10,19 +9,17 @@ import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/tab_rail.dart';
 import '../../../../app/theme/app_colors.dart';
-import '../../../../core/database/app_database.dart';
-import '../../../../core/utils/date_utils.dart';
 import '../../../habits/application/habits_providers.dart';
 import '../../../habits/domain/habit_progress.dart';
 import '../../../habits/presentation/widgets/habit_tile.dart';
 import '../../../habits/presentation/widgets/quick_add_habit_sheet.dart';
 import '../../application/tasks_providers.dart';
 import '../widgets/quick_add_task_sheet.dart';
-import '../widgets/task_tile.dart';
+import '../widgets/planner_tasks_pane.dart';
+import '../../application/planner_view_providers.dart';
+import 'planner_categories_screen.dart';
 
 enum _Section { tasks, habits }
-
-enum _TaskFilter { today, upcoming, all }
 
 class TasksHabitsScreen extends ConsumerStatefulWidget {
   const TasksHabitsScreen({super.key, this.initialHabitsTab = false});
@@ -37,7 +34,6 @@ class TasksHabitsScreen extends ConsumerStatefulWidget {
 
 class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
   late _Section _section;
-  _TaskFilter _taskFilter = _TaskFilter.today;
 
   @override
   void initState() {
@@ -68,11 +64,9 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
                   centerText: 'Planner',
                   centerIsTitle: true,
                   onMenu: () => Scaffold.of(context).openDrawer(),
-                  trailingIcon: _section == _Section.habits
-                      ? LucideIcons.package
-                      : null,
-                  showTrailing: _section == _Section.habits,
-                  onTrailing: () => context.push(RoutePaths.archivedHabits),
+                  trailingIcon: LucideIcons.slidersVertical,
+                  trailingLabel: 'Layout and categories',
+                  onTrailing: _showViewOptions,
                 ),
               ),
             ),
@@ -90,10 +84,7 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
             const SizedBox(height: 8),
             Expanded(
               child: _section == _Section.tasks
-                  ? _TasksPane(
-                      filter: _taskFilter,
-                      onFilterChanged: (f) => setState(() => _taskFilter = f),
-                    )
+                  ? const PlannerTasksPane()
                   : const _HabitsPane(),
             ),
           ],
@@ -131,6 +122,104 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
     );
   }
 
+  Future<void> _showViewOptions() async {
+    final habits = _section == _Section.habits;
+    final manage = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => Consumer(
+        builder: (context, ref, _) {
+          final taskLayout = ref.watch(taskLayoutProvider);
+          final habitLayout = ref.watch(habitLayoutProvider);
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      habits ? 'Habit view' : 'Task view',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  if (habits)
+                    for (final layout in HabitLayout.values)
+                      ListTile(
+                        title: Text(
+                          layout == HabitLayout.categories
+                              ? 'By category'
+                              : 'Pending and completed',
+                        ),
+                        subtitle: Text(
+                          layout == HabitLayout.categories
+                              ? 'Group habits by category'
+                              : 'Today’s pending, completed, and not scheduled',
+                        ),
+                        trailing: habitLayout == layout
+                            ? const Icon(LucideIcons.check)
+                            : null,
+                        onTap: () {
+                          ref.read(habitLayoutProvider.notifier).select(layout);
+                          Navigator.pop(sheetContext);
+                        },
+                      )
+                  else
+                    for (final layout in TaskLayout.values)
+                      ListTile(
+                        title: Text(
+                          layout == TaskLayout.list
+                              ? 'Date sections'
+                              : 'Priority board',
+                        ),
+                        subtitle: Text(
+                          layout == TaskLayout.list
+                              ? 'Overdue, Today, Upcoming, No date, Completed'
+                              : 'High, Medium, and Low priority cards',
+                        ),
+                        trailing: taskLayout == layout
+                            ? const Icon(LucideIcons.check)
+                            : null,
+                        onTap: () {
+                          ref.read(taskLayoutProvider.notifier).select(layout);
+                          Navigator.pop(sheetContext);
+                        },
+                      ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(LucideIcons.tags),
+                    title: Text(
+                      habits
+                          ? 'Manage habit categories'
+                          : 'Manage task categories',
+                    ),
+                    onTap: () => Navigator.pop(sheetContext, true),
+                  ),
+                  if (habits)
+                    ListTile(
+                      leading: const Icon(LucideIcons.package),
+                      title: const Text('Archived habits'),
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        this.context.push(RoutePaths.archivedHabits);
+                      },
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    if (manage != true || !mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            PlannerCategoriesScreen(kind: habits ? 'habit' : 'task'),
+      ),
+    );
+  }
+
   Future<void> _addHabit() async {
     final categories = ref.read(habitCategoriesProvider).value ?? const [];
     final result = await showQuickAddHabitSheet(
@@ -162,104 +251,6 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
   }
 }
 
-class _TasksPane extends ConsumerWidget {
-  const _TasksPane({required this.filter, required this.onFilterChanged});
-
-  final _TaskFilter filter;
-  final ValueChanged<_TaskFilter> onFilterChanged;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tasksAsync = ref.watch(allTasksProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: AppTabRail<_TaskFilter>(
-            value: filter,
-            labels: const {
-              _TaskFilter.today: 'Today',
-              _TaskFilter.upcoming: 'Upcoming',
-              _TaskFilter.all: 'All',
-            },
-            height: 36,
-            fontSize: 12.5,
-            onChanged: onFilterChanged,
-          ),
-        ),
-        Expanded(
-          child: tasksAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Could not load tasks: $e')),
-            data: (tasks) {
-              final filtered = _applyFilter(tasks, filter);
-              if (filtered.isEmpty) {
-                return const _EmptyState(
-                  icon: LucideIcons.listChecks,
-                  message: 'Nothing here — add a task to get started.',
-                );
-              }
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
-                ),
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final task = filtered[index];
-                  return TaskTile(
-                    key: ValueKey(task.id),
-                    task: task,
-                    onOpen: () => context.push(RoutePaths.taskDetail(task.id)),
-                    categoryLabel: ref
-                        .watch(taskCategoriesProvider)
-                        .value
-                        ?.where((c) => c.id == task.categoryId)
-                        .firstOrNull
-                        ?.name,
-                    onToggle: () =>
-                        ref.read(tasksControllerProvider).toggleDone(task),
-                    onDelete: () =>
-                        ref.read(tasksControllerProvider).deleteTask(task),
-                  ).animate().fadeIn(duration: 200.ms);
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  List<Task> _applyFilter(List<Task> tasks, _TaskFilter filter) {
-    final now = DateTime.now();
-    switch (filter) {
-      case _TaskFilter.today:
-        // Status is deliberately ignored here: a task due today (or with no
-        // due date at all) stays visible with a strikethrough once checked
-        // off, matching the prototype's Home "Today" section — only tasks
-        // due on a *different* day leave this view.
-        return tasks
-            .where((t) => t.dueDate == null || isSameDay(t.dueDate!, now))
-            .toList();
-      case _TaskFilter.upcoming:
-        return tasks
-            .where((t) => t.status == 'open')
-            .where(
-              (t) =>
-                  t.dueDate != null &&
-                  t.dueDate!.isAfter(now) &&
-                  !isSameDay(t.dueDate!, now),
-            )
-            .toList();
-      case _TaskFilter.all:
-        return tasks;
-    }
-  }
-}
-
 class _HabitsPane extends ConsumerStatefulWidget {
   const _HabitsPane();
 
@@ -269,100 +260,138 @@ class _HabitsPane extends ConsumerStatefulWidget {
 
 class _HabitsPaneState extends ConsumerState<_HabitsPane> {
   String? _selectedCategory;
+  static const _uncategorized = '__uncategorized__';
 
   @override
   Widget build(BuildContext context) {
+    final habits = ref.watch(habitsListProvider);
+    if (habits.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (habits.hasError) {
+      return const Center(child: Text('Could not load habits.'));
+    }
     final progress = ref.watch(habitsWithProgressProvider);
-
+    final categories = ref.watch(habitCategoriesProvider).value ?? const [];
+    final layout = ref.watch(habitLayoutProvider);
     if (progress.isEmpty) {
       return const _EmptyState(
         icon: LucideIcons.flame,
         message: 'No habits yet — add one to start a streak.',
       );
     }
-
-    final completedThisWeek = progress.fold<int>(
+    final selected =
+        _selectedCategory == _uncategorized ||
+            categories.any((c) => c.id == _selectedCategory)
+        ? _selectedCategory
+        : null;
+    final visible = progress
+        .where(
+          (item) =>
+              selected == null ||
+              (selected == _uncategorized
+                  ? item.category == null
+                  : item.category?.id == selected),
+        )
+        .toList();
+    final groups = <String, List<HabitProgress>>{};
+    if (layout == HabitLayout.categories) {
+      for (final category in categories) {
+        final items = visible
+            .where((item) => item.category?.id == category.id)
+            .toList();
+        if (items.isNotEmpty) groups[category.id] = items;
+      }
+      final uncategorized = visible
+          .where((item) => item.category == null)
+          .toList();
+      if (uncategorized.isNotEmpty) groups[_uncategorized] = uncategorized;
+    } else {
+      bool done(HabitProgress item) =>
+          item.weekCompletion[DateTime.now().weekday] ?? false;
+      groups['Today’s pending'] = visible
+          .where((item) => item.isScheduledToday && !done(item))
+          .toList();
+      groups['Completed today'] = visible.where(done).toList();
+      groups['Not scheduled today'] = visible
+          .where((item) => !item.isScheduledToday && !done(item))
+          .toList();
+    }
+    final completed = progress.fold<int>(
       0,
       (sum, item) =>
           sum + item.weekCompletion.values.where((done) => done).length,
     );
-    final totalThisWeek = progress.fold<int>(
+    final total = progress.fold<int>(
       0,
       (sum, item) => sum + item.weekCompletion.length,
     );
-    final groups = <String, List<HabitProgress>>{};
-    for (final item in progress) {
-      final name = item.category?.name ?? _fallbackGroup(item.habit.name);
-      groups.putIfAbsent(name, () => []).add(item);
-    }
-    // A removed/archived category must not leave an invisible active filter.
-    final selectedCategory = groups.containsKey(_selectedCategory)
-        ? _selectedCategory
-        : null;
-    final visible = selectedCategory == null
-        ? progress
-        : groups[selectedCategory]!;
-
     return ListView(
+      key: PageStorageKey('habits-${layout.name}'),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
       children: [
-        _WeekSummary(
-          completed: completedThisWeek,
-          total: totalThisWeek,
-          progress: progress,
-        ),
-        Padding(
+        _WeekSummary(completed: completed, total: total, progress: progress),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(vertical: 12),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                ChoiceChip(
-                  label: const Text('All'),
-                  selected: selectedCategory == null,
-                  onSelected: (_) => setState(() => _selectedCategory = null),
-                ),
-                for (final category in groups.keys) ...[
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: Text(category),
-                    selected: selectedCategory == category,
+          child: Row(
+            children: [
+              for (final entry in <String?, String>{
+                null: 'All',
+                for (final c in categories) c.id: c.name,
+                _uncategorized: 'Uncategorized',
+              }.entries)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(entry.value),
+                    selected: selected == entry.key,
                     onSelected: (_) =>
-                        setState(() => _selectedCategory = category),
+                        setState(() => _selectedCategory = entry.key),
                   ),
-                ],
-              ],
+                ),
+            ],
+          ),
+        ),
+        if (visible.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text('No habits in this category.'),
+          ),
+        for (final group in groups.entries) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              '${layout == HabitLayout.completion
+                  ? group.key
+                  : group.key == _uncategorized
+                  ? 'Uncategorized'
+                  : categories.firstWhere((c) => c.id == group.key).name} (${group.value.length})',
+              style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
-        ),
-        for (var index = 0; index < visible.length; index++) ...[
-          HabitTile(
-            key: ValueKey(visible[index].habit.id),
-            progress: visible[index],
-            onToggleToday: (completed) => ref
-                .read(habitsControllerProvider)
-                .toggleToday(visible[index].habit, completed),
-            onTap: () =>
-                context.push(RoutePaths.habitDetail(visible[index].habit.id)),
-          ),
-          if (index != visible.length - 1) const Divider(height: 1, indent: 56),
+          if (group.value.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'No habits here.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          for (final item in group.value) ...[
+            HabitTile(
+              key: ValueKey(item.habit.id),
+              progress: item,
+              onToggleToday: (completed) => ref
+                  .read(habitsControllerProvider)
+                  .toggleToday(item.habit, completed),
+              onTap: () => context.push(RoutePaths.habitDetail(item.habit.id)),
+            ),
+            const Divider(height: 1, indent: 56),
+          ],
         ],
       ],
     );
-  }
-
-  String _fallbackGroup(String name) {
-    final normalized = name.toLowerCase();
-    if (normalized.contains('read') ||
-        normalized.contains('meditat') ||
-        normalized.contains('learn') ||
-        normalized.contains('journal')) {
-      return 'Personal growth';
-    }
-    if (normalized.contains('expense') || normalized.contains('finance')) {
-      return 'Other habits';
-    }
-    return 'Daily habits';
   }
 }
 
@@ -429,7 +458,9 @@ class _WeekSummary extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Row(
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
                     children: [
                       for (var day = 1; day <= 7; day++) ...[
                         _WeekdayDot(
@@ -446,7 +477,6 @@ class _WeekSummary extends StatelessWidget {
                             (item) => item.weekCompletion[day] ?? false,
                           ),
                         ),
-                        if (day != 7) const SizedBox(width: 4),
                       ],
                     ],
                   ),

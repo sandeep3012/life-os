@@ -24,6 +24,7 @@ class AppTopBar extends StatelessWidget {
     this.onTrailing,
     this.centerIsTitle = false,
     this.showTrailing = true,
+    this.trailingLabel = 'Filter',
   });
 
   final String centerText;
@@ -34,6 +35,7 @@ class AppTopBar extends StatelessWidget {
   /// When set, replaces the avatar with a bordered icon button — the comp's
   /// finance screen uses a filter button in that slot.
   final IconData? trailingIcon;
+  final String trailingLabel;
   final VoidCallback? onTrailing;
 
   /// Finance renders its centre slot as a 19px serif title instead of an overline.
@@ -47,13 +49,19 @@ class AppTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _IconButton(icon: LucideIcons.menu, onTap: onMenu, semanticLabel: 'Menu'),
+        _IconButton(
+          icon: LucideIcons.menu,
+          onTap: onMenu,
+          semanticLabel: 'Menu',
+        ),
         Expanded(
           child: Center(
             child: centerIsTitle
                 ? Text(
                     centerText,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 19),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(fontSize: 19),
                   )
                 : Overline(centerText, letterSpacing: 0.4),
           ),
@@ -64,7 +72,7 @@ class AppTopBar extends StatelessWidget {
           _IconButton(
             icon: trailingIcon!,
             onTap: onTrailing,
-            semanticLabel: 'Filter',
+            semanticLabel: trailingLabel,
           )
         else
           _Avatar(initials: initials, onTap: onAvatar),
