@@ -11,7 +11,9 @@ import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/surface_card.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../application/calendar_providers.dart';
+import '../../application/calendar_view_providers.dart';
 import '../../domain/calendar_item.dart';
+import '../widgets/calendar_agenda_view.dart';
 import '../widgets/calendar_item_tile.dart';
 import '../widgets/quick_add_event_sheet.dart';
 
@@ -24,6 +26,44 @@ class CalendarScreen extends ConsumerStatefulWidget {
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   DateTime _focusedMonth = DateTime.now();
+
+  Future<void> _showViewOptions() => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (context) => SafeArea(
+      child: Consumer(
+        builder: (context, ref, _) {
+          final layout = ref.watch(calendarLayoutProvider);
+          return SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Calendar layout',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                for (final option in CalendarLayout.values)
+                  ListTile(
+                    title: Text(
+                      option == CalendarLayout.month ? 'Month' : 'Agenda',
+                    ),
+                    trailing: layout == option
+                        ? const Icon(LucideIcons.check)
+                        : null,
+                    onTap: () {
+                      _focusedMonth = ref.read(selectedCalendarDayProvider);
+                      ref.read(calendarLayoutProvider.notifier).select(option);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          );
+        },
+      ),
+    ),
+  );
 
   void _acknowledgeEventSave({required bool updated}) {
     showSaveFeedback(
@@ -43,6 +83,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final selectedDay = ref.watch(selectedCalendarDayProvider);
     final markersByDay = ref.watch(calendarMarkersByDayProvider);
     final dayItems = ref.watch(selectedDayItemsProvider);
+    final layout = ref.watch(calendarLayoutProvider);
 
     return Scaffold(
       drawer: const AppSidebar(),
@@ -56,131 +97,160 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 builder: (context) => AppTopBar(
                   centerText: 'Calendar',
                   centerIsTitle: true,
-                  showTrailing: false,
+                  trailingIcon: LucideIcons.slidersVertical,
+                  trailingLabel: 'Calendar layout',
+                  onTrailing: _showViewOptions,
                   onMenu: () => Scaffold.of(context).openDrawer(),
                 ),
               ),
             ),
           ),
           Expanded(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                  child: SurfaceCard(
-                    padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
-                    radius: 22,
-                    child: TableCalendar<CalendarItemType>(
-                      focusedDay: _focusedMonth,
-                      firstDay: DateTime(2020),
-                      lastDay: DateTime(2035),
-                      currentDay: dateOnly(DateTime.now()),
-                      selectedDayPredicate: (day) =>
-                          dateOnly(day) == selectedDay,
-                      eventLoader: (day) =>
-                          (markersByDay[dateOnly(day)] ?? const {}).toList(),
-                      onDaySelected: (selected, focused) {
-                        ref
-                            .read(selectedCalendarDayProvider.notifier)
-                            .select(selected);
-                        setState(() => _focusedMonth = focused);
-                      },
-                      onPageChanged: (focused) =>
-                          setState(() => _focusedMonth = focused),
-                      startingDayOfWeek: StartingDayOfWeek.monday,
-                      headerStyle: const HeaderStyle(
-                        formatButtonVisible: false,
-                        titleCentered: true,
-                      ),
-                      calendarStyle: CalendarStyle(
-                        outsideDaysVisible: true,
-                        todayDecoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer,
-                          shape: BoxShape.circle,
-                        ),
-                        todayTextStyle: TextStyle(
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
-                        selectedDecoration: BoxDecoration(
-                          color: theme.colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      calendarBuilders: CalendarBuilders(
-                        markerBuilder: (context, day, events) {
-                          if (events.isEmpty) return null;
-                          return Positioned(
-                            bottom: 4,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                for (final type in events.take(3))
-                                  Container(
-                                    width: 4,
-                                    height: 4,
-                                    margin: const EdgeInsets.symmetric(
-                                      horizontal: 1,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: colorForCalendarItemType(
-                                        context,
-                                        type,
-                                      ),
-                                      shape: BoxShape.circle,
-                                    ),
+            child: layout == CalendarLayout.agenda
+                ? CalendarAgendaView(
+                    items: ref.watch(allCalendarItemsProvider),
+                    selectedDay: selectedDay,
+                    onDayChanged: (day) => ref
+                        .read(selectedCalendarDayProvider.notifier)
+                        .select(day),
+                    itemBuilder: (context, item) =>
+                        _buildItemTile(context, item, agenda: true),
+                  )
+                : Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                        child: SurfaceCard(
+                          padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+                          radius: 22,
+                          child: TableCalendar<CalendarItemType>(
+                            focusedDay: _focusedMonth,
+                            firstDay: _focusedMonth.isBefore(DateTime(2020))
+                                ? dateOnly(_focusedMonth)
+                                : DateTime(2020),
+                            lastDay: _focusedMonth.isAfter(DateTime(2035))
+                                ? dateOnly(_focusedMonth)
+                                : DateTime(2035),
+                            currentDay: dateOnly(DateTime.now()),
+                            selectedDayPredicate: (day) =>
+                                dateOnly(day) == selectedDay,
+                            eventLoader: (day) =>
+                                (markersByDay[dateOnly(day)] ?? const {})
+                                    .toList(),
+                            onDaySelected: (selected, focused) {
+                              ref
+                                  .read(selectedCalendarDayProvider.notifier)
+                                  .select(selected);
+                              setState(() => _focusedMonth = focused);
+                            },
+                            onPageChanged: (focused) =>
+                                setState(() => _focusedMonth = focused),
+                            startingDayOfWeek: StartingDayOfWeek.monday,
+                            headerStyle: const HeaderStyle(
+                              formatButtonVisible: false,
+                              titleCentered: true,
+                            ),
+                            calendarStyle: CalendarStyle(
+                              outsideDaysVisible: true,
+                              todayDecoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer,
+                                shape: BoxShape.circle,
+                              ),
+                              todayTextStyle: TextStyle(
+                                color: theme.colorScheme.onPrimaryContainer,
+                              ),
+                              selectedDecoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            calendarBuilders: CalendarBuilders(
+                              markerBuilder: (context, day, events) {
+                                if (events.isEmpty) return null;
+                                return Positioned(
+                                  bottom: 4,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      for (final type in events.take(3))
+                                        Container(
+                                          width: 4,
+                                          height: 4,
+                                          margin: const EdgeInsets.symmetric(
+                                            horizontal: 1,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: colorForCalendarItemType(
+                                              context,
+                                              type,
+                                            ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                    ],
                                   ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                DateFormat.yMMMEd().format(selectedDay),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleSmall,
+                              ),
+                            ),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 4,
+                              children: [
+                                _LegendDot(label: 'Task', color: colors.tasks),
+                                _LegendDot(
+                                  label: 'Habit',
+                                  color: colors.habits,
+                                ),
+                                _LegendDot(
+                                  label: 'Event',
+                                  color: colors.calendar,
+                                ),
                               ],
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          DateFormat.yMMMEd().format(selectedDay),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall,
+                          ],
                         ),
                       ),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 4,
-                        children: [
-                          _LegendDot(label: 'Task', color: colors.tasks),
-                          _LegendDot(label: 'Habit', color: colors.habits),
-                          _LegendDot(label: 'Event', color: colors.calendar),
-                        ],
+                      Expanded(
+                        child: dayItems.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'Nothing scheduled for this day.',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                padding: const EdgeInsets.fromLTRB(
+                                  20,
+                                  4,
+                                  20,
+                                  100,
+                                ),
+                                itemCount: dayItems.length,
+                                separatorBuilder: (_, _) =>
+                                    const Divider(height: 1),
+                                itemBuilder: (context, index) =>
+                                    _buildItemTile(context, dayItems[index]),
+                              ),
                       ),
                     ],
                   ),
-                ),
-                Expanded(
-                  child: dayItems.isEmpty
-                      ? Center(
-                          child: Text(
-                            'Nothing scheduled for this day.',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
-                          itemCount: dayItems.length,
-                          separatorBuilder: (_, _) => const Divider(height: 1),
-                          itemBuilder: (context, index) =>
-                              _buildItemTile(context, dayItems[index]),
-                        ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -216,9 +286,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   /// Manual events (not tasks/habits/bills, which keep navigating to their
   /// own modules elsewhere) get tap-to-edit and swipe-to-delete.
-  Widget _buildItemTile(BuildContext context, CalendarItem item) {
+  Widget _buildItemTile(
+    BuildContext context,
+    CalendarItem item, {
+    bool agenda = false,
+  }) {
     if (item.type != CalendarItemType.event || item.sourceId == null) {
-      return CalendarItemTile(item: item);
+      return CalendarItemTile(item: item, agenda: agenda);
     }
     final eventId = item.sourceId!;
     final recurrenceId = item.recurrenceId;
@@ -254,6 +328,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       },
       child: CalendarItemTile(
         item: item,
+        agenda: agenda,
         onTap: () => _editEvent(context, eventId),
       ),
     );

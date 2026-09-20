@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../tags/application/tags_providers.dart';
+import '../../../../core/widgets/collection_layout.dart';
 import '../../application/notes_providers.dart';
 import '../widgets/note_card.dart';
 import 'note_editor_screen.dart';
@@ -34,6 +35,9 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   @override
   Widget build(BuildContext context) {
     final notesAsync = ref.watch(notesListProvider);
+    final layout = ref.watch(
+      collectionLayoutsProvider,
+    )[CollectionScreen.notes]!;
     final folders = ref.watch(noteFoldersProvider).value ?? const [];
     final folderById = {for (final f in folders) f.id: f};
     final query = _searchController.text.trim().toLowerCase();
@@ -43,11 +47,15 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         ? null
         : {
             for (final e in entityTags)
-              if (e.entityType == 'note' && e.tagId == _selectedTagId) e.entityId,
+              if (e.entityType == 'note' && e.tagId == _selectedTagId)
+                e.entityId,
           };
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notes')),
+      appBar: AppBar(
+        title: const Text('Notes'),
+        actions: const [CollectionLayoutButton(screen: CollectionScreen.notes)],
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -81,7 +89,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                     child: ChoiceChip(
                       label: Text(f.name),
                       selected: _selectedFolderId == f.id,
-                      onSelected: (_) => setState(() => _selectedFolderId = f.id),
+                      onSelected: (_) =>
+                          setState(() => _selectedFolderId = f.id),
                     ),
                   ),
               ],
@@ -102,7 +111,9 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                         label: Text(t.name),
                         selected: _selectedTagId == t.id,
                         onSelected: (_) => setState(
-                          () => _selectedTagId = _selectedTagId == t.id ? null : t.id,
+                          () => _selectedTagId = _selectedTagId == t.id
+                              ? null
+                              : t.id,
                         ),
                       ),
                     ),
@@ -118,12 +129,14 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               data: (notes) {
                 final filtered = notes.where((n) {
                   final matchesFolder =
-                      _selectedFolderId == null || n.folderId == _selectedFolderId;
+                      _selectedFolderId == null ||
+                      n.folderId == _selectedFolderId;
                   final matchesQuery =
                       query.isEmpty ||
                       n.title.toLowerCase().contains(query) ||
                       n.body.toLowerCase().contains(query);
-                  final matchesTag = taggedNoteIds == null || taggedNoteIds.contains(n.id);
+                  final matchesTag =
+                      taggedNoteIds == null || taggedNoteIds.contains(n.id);
                   return matchesFolder && matchesQuery && matchesTag;
                 }).toList();
 
@@ -144,22 +157,20 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   );
                 }
 
-                return GridView.builder(
+                return CollectionView(
+                  layout: layout,
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.95,
-                  ),
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final note = filtered[index];
                     return NoteCard(
+                      grid: layout == CollectionLayout.grid,
                       note: note,
                       folder: folderById[note.folderId],
                       onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => NoteEditorScreen(note: note)),
+                        MaterialPageRoute(
+                          builder: (_) => NoteEditorScreen(note: note),
+                        ),
                       ),
                     );
                   },
@@ -172,7 +183,8 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => NoteEditorScreen(initialFolderId: _selectedFolderId),
+            builder: (_) =>
+                NoteEditorScreen(initialFolderId: _selectedFolderId),
           ),
         ),
         icon: const Icon(LucideIcons.plus),

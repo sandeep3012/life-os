@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/widgets/collection_layout.dart';
 import '../../../tags/application/tags_providers.dart';
 import '../../application/documents_providers.dart';
 import '../widgets/document_tile.dart';
@@ -41,6 +42,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
   @override
   Widget build(BuildContext context) {
     final documentsAsync = ref.watch(documentsListProvider);
+    final layout = ref.watch(
+      collectionLayoutsProvider,
+    )[CollectionScreen.documents]!;
     final folders = ref.watch(documentFoldersProvider).value ?? const [];
     final counts = ref.watch(documentCountByFolderProvider);
     final query = _searchController.text.trim().toLowerCase();
@@ -50,11 +54,17 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
         ? null
         : {
             for (final e in entityTags)
-              if (e.entityType == 'document' && e.tagId == _selectedTagId) e.entityId,
+              if (e.entityType == 'document' && e.tagId == _selectedTagId)
+                e.entityId,
           };
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Documents')),
+      appBar: AppBar(
+        title: const Text('Documents'),
+        actions: const [
+          CollectionLayoutButton(screen: CollectionScreen.documents),
+        ],
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -71,7 +81,10 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
           if (folders.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text('Folders', style: Theme.of(context).textTheme.titleSmall),
+              child: Text(
+                'Folders',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -90,7 +103,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                       count: counts[f.id] ?? 0,
                       selected: _selectedFolderId == f.id,
                       onTap: () => setState(
-                        () => _selectedFolderId = _selectedFolderId == f.id ? null : f.id,
+                        () => _selectedFolderId = _selectedFolderId == f.id
+                            ? null
+                            : f.id,
                       ),
                     ),
                   );
@@ -113,7 +128,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                         label: Text(t.name),
                         selected: _selectedTagId == t.id,
                         onSelected: (_) => setState(
-                          () => _selectedTagId = _selectedTagId == t.id ? null : t.id,
+                          () => _selectedTagId = _selectedTagId == t.id
+                              ? null
+                              : t.id,
                         ),
                       ),
                     ),
@@ -124,19 +141,26 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
           ],
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-            child: Text('Recent', style: Theme.of(context).textTheme.titleSmall),
+            child: Text(
+              'Recent',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
           ),
           Expanded(
             child: documentsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Could not load documents: $e')),
+              error: (e, _) =>
+                  Center(child: Text('Could not load documents: $e')),
               data: (documents) {
                 final filtered = documents.where((d) {
                   final matchesFolder =
-                      _selectedFolderId == null || d.folderId == _selectedFolderId;
-                  final matchesQuery = query.isEmpty || d.title.toLowerCase().contains(query);
+                      _selectedFolderId == null ||
+                      d.folderId == _selectedFolderId;
+                  final matchesQuery =
+                      query.isEmpty || d.title.toLowerCase().contains(query);
                   final matchesTag =
-                      taggedDocumentIds == null || taggedDocumentIds.contains(d.id);
+                      taggedDocumentIds == null ||
+                      taggedDocumentIds.contains(d.id);
                   return matchesFolder && matchesQuery && matchesTag;
                 }).toList();
 
@@ -157,15 +181,19 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                   );
                 }
 
-                return ListView.separated(
+                return CollectionView(
+                  layout: layout,
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
                   itemCount: filtered.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final d = filtered[index];
                     return DocumentTile(
+                      key: ValueKey(d.id),
+                      grid: layout == CollectionLayout.grid,
                       document: d,
-                      onDelete: () => ref.read(documentsControllerProvider).deleteDocument(d),
+                      onDelete: () => ref
+                          .read(documentsControllerProvider)
+                          .deleteDocument(d),
                       onTap: () => _editDocument(d),
                     );
                   },
@@ -194,7 +222,11 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     if (details == null) return;
     await ref
         .read(documentsControllerProvider)
-        .updateDocument(id: document.id, title: details.title, folderId: details.folderId);
+        .updateDocument(
+          id: document.id,
+          title: details.title,
+          folderId: details.folderId,
+        );
   }
 
   Future<void> _pickImportSource() async {
@@ -231,7 +263,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
           name = picked.name;
         }
       case _ImportSource.camera:
-        final picked = await ImagePicker().pickImage(source: ImageSource.camera);
+        final picked = await ImagePicker().pickImage(
+          source: ImageSource.camera,
+        );
         if (picked != null) {
           file = File(picked.path);
           name = p.basename(picked.path);
@@ -247,12 +281,14 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     );
     if (details == null) return;
 
-    await ref.read(documentsControllerProvider).importDocument(
-      source: file,
-      originalName: name,
-      title: details.title,
-      folderId: details.folderId,
-    );
+    await ref
+        .read(documentsControllerProvider)
+        .importDocument(
+          source: file,
+          originalName: name,
+          title: details.title,
+          folderId: details.folderId,
+        );
   }
 }
 

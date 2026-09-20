@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/widgets/collection_layout.dart';
 import '../../../finance/application/finance_providers.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../settings/application/settings_providers.dart';
@@ -19,9 +20,15 @@ class GoalsScreen extends ConsumerWidget {
     final goals = ref.watch(goalsWithLinksProvider);
     final currencyCode = ref.watch(settingsProvider).currencyCode;
     final theme = Theme.of(context);
+    final layout = ref.watch(
+      collectionLayoutsProvider,
+    )[CollectionScreen.goals]!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Goals')),
+      appBar: AppBar(
+        title: const Text('Goals'),
+        actions: const [CollectionLayoutButton(screen: CollectionScreen.goals)],
+      ),
       body: goals.isEmpty
           ? Center(
               child: Padding(
@@ -35,13 +42,14 @@ class GoalsScreen extends ConsumerWidget {
                 ),
               ),
             )
-          : ListView.separated(
+          : CollectionView(
+              layout: layout,
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
               itemCount: goals.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final data = goals[index];
                 return GoalCard(
+                  grid: layout == CollectionLayout.grid,
                   data: data,
                   currencyCode: currencyCode,
                   onTap: () => Navigator.of(context).push(
