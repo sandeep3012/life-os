@@ -16,9 +16,11 @@ class TaskTile extends StatelessWidget {
     required this.onDelete,
     required this.onOpen,
     this.categoryLabel,
+    this.compact = false,
   });
 
   final Task task;
+  final bool compact;
   final String? categoryLabel;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
@@ -52,7 +54,7 @@ class TaskTile extends StatelessWidget {
                 onPressed: onToggle,
                 icon: _TaskCheckbox(done: done, color: colors.tasks),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: compact ? 2 : 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +69,7 @@ class TaskTile extends StatelessWidget {
                             : theme.colorScheme.onSurface,
                       ),
                     ),
-                    if (task.description?.isNotEmpty ?? false)
+                    if (!compact && (task.description?.isNotEmpty ?? false))
                       Text(
                         task.description!,
                         maxLines: 2,
@@ -103,11 +105,12 @@ class TaskTile extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                tooltip: 'Task details',
-                onPressed: onOpen,
-                icon: const Icon(LucideIcons.chevronRight),
-              ),
+              if (!compact)
+                IconButton(
+                  tooltip: 'Task details',
+                  onPressed: onOpen,
+                  icon: const Icon(LucideIcons.chevronRight),
+                ),
             ],
           ),
         ),
