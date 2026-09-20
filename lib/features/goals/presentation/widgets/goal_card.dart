@@ -38,11 +38,13 @@ class GoalCard extends StatelessWidget {
     required this.data,
     required this.currencyCode,
     required this.onTap,
+    this.grid = false,
   });
 
   final GoalWithLinks data;
   final String currencyCode;
   final VoidCallback onTap;
+  final bool grid;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +68,46 @@ class GoalCard extends StatelessWidget {
           )
         : '${formatGoalValue(goal.type, goal.currentValue, currencyCode: currencyCode)} / ${formatGoalValue(goal.type, target, currencyCode: currencyCode)}';
 
+    if (grid) {
+      return Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GoalRing(ratio: data.ratio, color: color),
+                const SizedBox(height: 14),
+                Text(
+                  goal.title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  progressLabel,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (data.links.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    data.links.map((link) => link.label).join(' · '),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(

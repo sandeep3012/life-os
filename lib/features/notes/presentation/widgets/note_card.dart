@@ -6,11 +6,18 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
 
 class NoteCard extends StatelessWidget {
-  const NoteCard({super.key, required this.note, this.folder, required this.onTap});
+  const NoteCard({
+    super.key,
+    required this.note,
+    this.folder,
+    required this.onTap,
+    this.grid = true,
+  });
 
   final Note note;
   final Folder? folder;
   final VoidCallback onTap;
+  final bool grid;
 
   @override
   Widget build(BuildContext context) {
@@ -28,14 +35,14 @@ class NoteCard extends StatelessWidget {
             children: [
               Text(
                 note.title,
-                maxLines: 1,
+                maxLines: grid ? 2 : 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.titleSmall,
               ),
               const SizedBox(height: 4),
               Text(
                 note.body,
-                maxLines: 2,
+                maxLines: grid ? 4 : 2,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
@@ -43,18 +50,24 @@ class NoteCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
                 children: [
                   if (folder != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(7),
                       ),
                       child: Text(
                         folder!.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
@@ -84,7 +97,9 @@ class NoteCard extends StatelessWidget {
       if (hours < 1) return '${now.difference(dt).inMinutes}m ago';
       return '${hours}h ago';
     }
-    if (isSameDay(dt, now.subtract(const Duration(days: 1)))) return 'Yesterday';
+    if (isSameDay(dt, now.subtract(const Duration(days: 1)))) {
+      return 'Yesterday';
+    }
     final days = now.difference(dt).inDays;
     if (days < 7) return '${days}d ago';
     return DateFormat.MMMd().format(dt);
