@@ -377,6 +377,10 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
                 ReminderMode.notification: 'Notification',
                 ReminderMode.alarm: 'Alarm',
               },
+              icons: const {
+                ReminderMode.notification: LucideIcons.bell,
+                ReminderMode.alarm: LucideIcons.alarmClock,
+              },
               onChanged: (value) => setState(() => _reminderMode = value),
             ),
           ],

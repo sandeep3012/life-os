@@ -3,7 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/features/tasks/data/planner_categories_repository.dart';
-import 'package:life_manager/features/tasks/presentation/widgets/planner_tasks_pane.dart';
+import 'package:life_manager/features/tasks/domain/task_date_window.dart';
 
 void main() {
   test('category deletion keeps tasks and active/archived habits', () async {
@@ -54,7 +54,7 @@ void main() {
   });
 
   test(
-    'task sections include overdue, undated and completed without duplicates',
+    'task sections use due dates and keep completed tasks in their date group',
     () async {
       final db = AppDatabase.forTesting(NativeDatabase.memory());
       addTearDown(db.close);
@@ -76,10 +76,22 @@ void main() {
               ),
             );
       }
-      final groups = groupPlannerTasks(await db.select(db.tasks).get(), today);
-      for (final entry in groups.entries) {
-        expect(entry.value.single.title, entry.key);
-      }
+      final groups = groupTasksByDueDate(await db.select(db.tasks).get());
+      expect(groups.keys, [
+        DateTime(2026, 9, 18),
+        today,
+        DateTime(2026, 9, 20),
+      ]);
+      expect(groups[today]!.map((task) => task.title), ['Completed', 'Today']);
+      expect(groups.values.expand((tasks) => tasks).length, 4);
+      expect(
+        groups.values
+            .expand((tasks) => tasks)
+            .map((task) => task.id)
+            .toSet()
+            .length,
+        4,
+      );
     },
   );
 }

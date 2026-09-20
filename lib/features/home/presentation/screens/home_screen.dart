@@ -643,10 +643,10 @@ class _TodayTaskRow extends ConsumerWidget {
                 height: 25,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: done ? colors.good : Colors.transparent,
+                  color: done ? scheme.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: done ? colors.good : scheme.outline,
+                    color: done ? scheme.primary : scheme.outline,
                     width: 2,
                   ),
                 ),

@@ -7,6 +7,39 @@ class TasksRepository {
   TasksRepository(this._db);
   final AppDatabase _db;
 
+  /// Filter in SQLite so the Planner does not load the entire task history.
+  /// Null selects undated tasks; the upper bound is exclusive and DST-safe.
+  Stream<List<Task>> watchTasksForDay(DateTime? day) {
+    if (day != null) {
+      return watchTasksInRange(
+        DateTime(day.year, day.month, day.day),
+        DateTime(day.year, day.month, day.day + 1),
+      );
+    }
+    final query = _db.select(_db.tasks);
+    query.where((t) => t.dueDate.isNull());
+    query.orderBy([
+      (t) => OrderingTerm.asc(t.dueDate),
+      (t) => OrderingTerm.asc(t.title),
+      (t) => OrderingTerm.asc(t.id),
+    ]);
+    return query.watch();
+  }
+
+  Stream<List<Task>> watchTasksInRange(DateTime start, DateTime end) =>
+      (_db.select(_db.tasks)
+            ..where(
+              (t) =>
+                  t.dueDate.isBiggerOrEqualValue(start) &
+                  t.dueDate.isSmallerThanValue(end),
+            )
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.dueDate),
+              (t) => OrderingTerm.asc(t.title),
+              (t) => OrderingTerm.asc(t.id),
+            ]))
+          .watch();
+
   Stream<List<Task>> watchAllTasks() => (_db.select(
     _db.tasks,
   )..orderBy([(t) => OrderingTerm.asc(t.dueDate)])).watch();

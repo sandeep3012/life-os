@@ -44,17 +44,20 @@ class QuickAddTaskResult {
 Future<QuickAddTaskResult?> showQuickAddTaskSheet(
   BuildContext context, {
   Task? initial,
+  DateTime? initialDueDate,
 }) {
   return showCompactEditorSheet<QuickAddTaskResult>(
     context: context,
-    builder: (context) => _QuickAddTaskSheet(initial: initial),
+    builder: (context) =>
+        _QuickAddTaskSheet(initial: initial, initialDueDate: initialDueDate),
   );
 }
 
 class _QuickAddTaskSheet extends ConsumerStatefulWidget {
-  const _QuickAddTaskSheet({this.initial});
+  const _QuickAddTaskSheet({this.initial, this.initialDueDate});
 
   final Task? initial;
+  final DateTime? initialDueDate;
 
   @override
   ConsumerState<_QuickAddTaskSheet> createState() => _QuickAddTaskSheetState();
@@ -69,13 +72,18 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
   );
   late RepeatSchedule _schedule =
       RepeatSchedule.decode(widget.initial?.schedule) ??
-      RepeatSchedule(start: widget.initial?.dueDate ?? DateTime.now());
+      RepeatSchedule(
+        start:
+            widget.initial?.dueDate ?? widget.initialDueDate ?? DateTime.now(),
+      );
   late String? _categoryId = widget.initial?.categoryId;
   Category? _newCategory;
   late TaskPriority _priority = TaskPriorityX.fromValue(
     widget.initial?.priority ?? 'medium',
   );
-  late DateTime? _dueDate = widget.initial?.dueDate;
+  late DateTime? _dueDate = widget.initial != null
+      ? widget.initial!.dueDate
+      : widget.initialDueDate;
   late bool _reminderEnabled = widget.initial?.reminderEnabled ?? false;
   late ReminderMode _reminderMode = ReminderMode.fromStorage(
     widget.initial?.reminderMode ?? 'notification',
@@ -240,6 +248,10 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
                 labels: const {
                   ReminderMode.notification: 'Notification',
                   ReminderMode.alarm: 'Alarm',
+                },
+                icons: const {
+                  ReminderMode.notification: LucideIcons.bell,
+                  ReminderMode.alarm: LucideIcons.alarmClock,
                 },
                 onChanged: (value) => setState(() => _reminderMode = value),
               ),

@@ -78,6 +78,10 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
                   _Section.tasks: 'Tasks',
                   _Section.habits: 'Habits',
                 },
+                icons: const {
+                  _Section.tasks: LucideIcons.circleCheckBig,
+                  _Section.habits: LucideIcons.sprout,
+                },
                 onChanged: (value) => setState(() => _section = value),
               ),
             ),
@@ -99,7 +103,10 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
   }
 
   Future<void> _addTask() async {
-    final result = await showQuickAddTaskSheet(context);
+    final result = await showQuickAddTaskSheet(
+      context,
+      initialDueDate: ref.read(selectedTaskDayProvider),
+    );
     if (result == null) return;
     await ref
         .read(tasksControllerProvider)
@@ -424,7 +431,7 @@ class _WeekSummary extends StatelessWidget {
                   CircularProgressIndicator(
                     value: ratio,
                     strokeWidth: 7,
-                    color: context.appColors.habits,
+                    color: theme.colorScheme.primary,
                     backgroundColor: theme.colorScheme.surfaceContainerHighest,
                   ),
                   Text(
@@ -499,15 +506,15 @@ class _WeekdayDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final theme = Theme.of(context);
     return Container(
       width: 18,
       height: 18,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: active
-            ? colors.habits
-            : Theme.of(context).colorScheme.surfaceContainerHighest,
+            ? theme.colorScheme.primary
+            : theme.colorScheme.surfaceContainerHighest,
         shape: BoxShape.circle,
       ),
       child: Text(
@@ -516,8 +523,8 @@ class _WeekdayDot extends StatelessWidget {
           fontSize: 9,
           fontWeight: FontWeight.w700,
           color: active
-              ? Colors.white
-              : Theme.of(context).colorScheme.onSurfaceVariant,
+              ? theme.colorScheme.onPrimary
+              : theme.colorScheme.onSurfaceVariant,
         ),
       ),
     );

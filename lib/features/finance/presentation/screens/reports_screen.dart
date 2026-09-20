@@ -151,6 +151,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 ReportPeriodType.year: 'Yearly',
                 ReportPeriodType.custom: 'Custom',
               },
+              icons: const {
+                ReportPeriodType.month: LucideIcons.calendarDays,
+                ReportPeriodType.year: LucideIcons.calendarRange,
+                ReportPeriodType.custom: LucideIcons.calendarSearch,
+              },
               onChanged: (value) {
                 if (value == ReportPeriodType.custom) {
                   _pickRange();
