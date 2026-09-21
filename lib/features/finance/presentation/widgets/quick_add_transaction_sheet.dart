@@ -324,7 +324,10 @@ class _QuickAddTransactionSheetState
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _accountId,
-              decoration: const InputDecoration(labelText: 'Account'),
+              decoration: const InputDecoration(
+                labelText: 'Account',
+                prefixIcon: Icon(LucideIcons.landmark, size: 18),
+              ),
               items: [
                 for (final a in widget.accounts)
                   DropdownMenuItem(value: a.id, child: Text(a.name)),

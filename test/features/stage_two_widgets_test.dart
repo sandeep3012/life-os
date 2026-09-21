@@ -78,7 +78,10 @@ void main() {
     await tester.tap(find.text('Wallet').last);
     await tester.pumpAndSettle();
     expect(find.text('Wallet'), findsOneWidget);
+    // The comparison now closes the report, below the fold at this viewport.
+    await tester.scrollUntilVisible(find.textContaining('Compared with'), 300);
     expect(find.textContaining('Compared with'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Custom'), -300);
     await tester.tap(find.text('Custom'));
     await tester.pumpAndSettle();
     expect(find.byType(DateRangePickerDialog), findsOneWidget);

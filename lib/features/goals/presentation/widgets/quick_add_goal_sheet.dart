@@ -238,7 +238,10 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
               if (_reminderEnabled) ...[
                 DropdownButtonFormField<int>(
                   initialValue: _reminderDaysBefore,
-                  decoration: const InputDecoration(labelText: 'Remind'),
+                  decoration: const InputDecoration(
+                    labelText: 'Remind',
+                    prefixIcon: Icon(LucideIcons.bellRing, size: 18),
+                  ),
                   items: [
                     for (final (value, label) in _reminderDaysOptions)
                       DropdownMenuItem(value: value, child: Text(label)),

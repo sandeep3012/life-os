@@ -176,6 +176,9 @@ class _PayFromDialogState extends State<_PayFromDialog> {
       title: const Text('Pay from'),
       content: DropdownButtonFormField<String>(
         initialValue: _accountId,
+        decoration: const InputDecoration(
+          prefixIcon: Icon(LucideIcons.landmark, size: 18),
+        ),
         items: [
           for (final a in widget.accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
         ],

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_fonts.dart';
 import '../../../../core/widgets/progress_ring.dart';
 
-/// A goal's completion ring with the percentage centred inside.
+/// A goal's completion ring with the percentage centred inside, drawn in the
+/// theme accent like the dashboard's habit rings.
 ///
 /// Draws with the kit's [ProgressRing] rather than stacking two
 /// [CircularProgressIndicator]s: Material centres its stroke on the box edge,
@@ -13,13 +14,15 @@ class GoalRing extends StatelessWidget {
   const GoalRing({
     super.key,
     required this.ratio,
-    required this.color,
+    this.color,
     this.size = 64,
     this.strokeWidth = 7,
   });
 
   final double ratio;
-  final Color color;
+
+  /// Defaults to the theme accent (`colorScheme.primary`).
+  final Color? color;
   final double size;
   final double strokeWidth;
 
@@ -30,7 +33,7 @@ class GoalRing extends StatelessWidget {
       progress: ratio,
       size: size,
       strokeWidth: strokeWidth,
-      color: color,
+      color: color ?? scheme.primary,
       trackColor: scheme.onSurface.withValues(alpha: 0.18),
       child: Text(
         '${(ratio * 100).round()}%',

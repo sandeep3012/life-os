@@ -138,7 +138,10 @@ class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _accountId,
-              decoration: const InputDecoration(labelText: 'Usually paid from (optional)'),
+              decoration: const InputDecoration(
+                labelText: 'Usually paid from (optional)',
+                prefixIcon: Icon(LucideIcons.landmark, size: 18),
+              ),
               items: [
                 for (final a in widget.accounts)
                   DropdownMenuItem(value: a.id, child: Text(a.name)),
@@ -208,7 +211,10 @@ class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
             if (_reminderEnabled) ...[
               DropdownButtonFormField<int>(
                 initialValue: _reminderDaysBefore,
-                decoration: const InputDecoration(labelText: 'Remind'),
+                decoration: const InputDecoration(
+                  labelText: 'Remind',
+                  prefixIcon: Icon(LucideIcons.bellRing, size: 18),
+                ),
                 items: const [
                   DropdownMenuItem(value: 0, child: Text('On the due date')),
                   DropdownMenuItem(value: 1, child: Text('1 day before')),
