@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../tags/application/tags_providers.dart';
 import '../../../../core/widgets/collection_layout.dart';
+import '../../../../app/router/app_sidebar.dart';
 import '../../application/notes_providers.dart';
 import '../widgets/note_card.dart';
 import 'note_editor_screen.dart';
@@ -52,6 +53,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           };
 
     return Scaffold(
+      drawer: const AppSidebar(),
       appBar: AppBar(
         title: const Text('Notes'),
         actions: const [CollectionLayoutButton(screen: CollectionScreen.notes)],

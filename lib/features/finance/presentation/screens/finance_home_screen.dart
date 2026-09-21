@@ -11,6 +11,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/widgets/tab_rail.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../../spend_analyzer/presentation/widgets/budget_bar.dart';
 import '../../application/finance_providers.dart';
@@ -516,20 +517,19 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: SegmentedButton<_FinanceSection>(
-                            segments: const [
-                              ButtonSegment(
-                                value: _FinanceSection.transactions,
-                                label: Text('Transactions'),
-                              ),
-                              ButtonSegment(
-                                value: _FinanceSection.budgets,
-                                label: Text('Budgets'),
-                              ),
-                            ],
-                            selected: {_section},
-                            onSelectionChanged: (s) =>
-                                setState(() => _section = s.first),
+                          child: AppTabRail<_FinanceSection>(
+                            value: _section,
+                            labels: const {
+                              _FinanceSection.transactions: 'Transactions',
+                              _FinanceSection.budgets: 'Budgets',
+                            },
+                            icons: const {
+                              _FinanceSection.transactions:
+                                  LucideIcons.arrowLeftRight,
+                              _FinanceSection.budgets: LucideIcons.walletCards,
+                            },
+                            onChanged: (section) =>
+                                setState(() => _section = section),
                           ),
                         ),
                         const SizedBox(width: 8),

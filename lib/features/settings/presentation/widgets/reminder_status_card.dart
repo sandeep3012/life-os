@@ -5,7 +5,11 @@ import '../../../../core/reminders/reminder_status.dart';
 import '../../../../core/services/notification_service.dart';
 
 class ReminderStatusCard extends ConsumerStatefulWidget {
-  const ReminderStatusCard({super.key});
+  const ReminderStatusCard({super.key, this.embedded = false});
+
+  /// True when a parent (the Settings "Reminder status" disclosure) already
+  /// supplies the card surface and title, so only the body is drawn.
+  final bool embedded;
   @override
   ConsumerState<ReminderStatusCard> createState() => _ReminderStatusCardState();
 }
@@ -61,9 +65,11 @@ class _ReminderStatusCardState extends ConsumerState<ReminderStatusCard>
   }
 
   @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
+  Widget build(BuildContext context) {
+    final body = Padding(
+      padding: widget.embedded
+          ? const EdgeInsets.fromLTRB(16, 0, 16, 12)
+          : const EdgeInsets.all(16),
       child: FutureBuilder<ReminderStatus>(
         future: _status,
         builder: (context, snapshot) {
@@ -71,11 +77,13 @@ class _ReminderStatusCardState extends ConsumerState<ReminderStatusCard>
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Reminder status',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
+              if (!widget.embedded) ...[
+                Text(
+                  'Reminder status',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+              ],
               if (snapshot.connectionState == ConnectionState.waiting)
                 const LinearProgressIndicator()
               else if (snapshot.hasError)
@@ -129,6 +137,7 @@ class _ReminderStatusCardState extends ConsumerState<ReminderStatusCard>
           );
         },
       ),
-    ),
-  );
+    );
+    return widget.embedded ? body : Card(child: body);
+  }
 }

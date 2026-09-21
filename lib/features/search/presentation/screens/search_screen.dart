@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/router/app_sidebar.dart';
 import '../../../goals/presentation/screens/goal_detail_screen.dart';
 import '../../../notes/application/notes_providers.dart';
 import '../../../notes/presentation/screens/note_editor_screen.dart';
@@ -34,6 +35,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final results = ref.watch(searchResultsProvider);
 
     return Scaffold(
+      drawer: const AppSidebar(),
       appBar: AppBar(title: const Text('Search')),
       body: Column(
         children: [
@@ -42,7 +44,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: TextField(
               controller: _controller,
               autofocus: true,
-              onChanged: (value) => ref.read(searchQueryProvider.notifier).set(value),
+              onChanged: (value) =>
+                  ref.read(searchQueryProvider.notifier).set(value),
               decoration: const InputDecoration(
                 hintText: 'Search everything',
                 prefixIcon: Icon(LucideIcons.search),
@@ -70,7 +73,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
                     itemCount: results.length,
                     itemBuilder: (context, index) {
                       final result = results[index];
@@ -86,7 +92,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Future<void> _openResult(BuildContext context, WidgetRef ref, SearchResult result) async {
+  Future<void> _openResult(
+    BuildContext context,
+    WidgetRef ref,
+    SearchResult result,
+  ) async {
     switch (result.type) {
       case SearchResultType.habit:
         context.push(RoutePaths.habitDetail(result.sourceId));
@@ -94,11 +104,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         final notes = ref.read(notesListProvider).value ?? const [];
         final note = notes.where((n) => n.id == result.sourceId).firstOrNull;
         if (note == null) return;
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => NoteEditorScreen(note: note)));
-      case SearchResultType.goal:
         await Navigator.of(
           context,
-        ).push(MaterialPageRoute(builder: (_) => GoalDetailScreen(goalId: result.sourceId)));
+        ).push(MaterialPageRoute(builder: (_) => NoteEditorScreen(note: note)));
+      case SearchResultType.goal:
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => GoalDetailScreen(goalId: result.sourceId),
+          ),
+        );
       case SearchResultType.transaction:
       case SearchResultType.bill:
       case SearchResultType.recurringTransaction:
@@ -116,9 +130,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 (IconData, Color) _iconAndColor(BuildContext context, SearchResultType type) {
   final colors = context.appColors;
   return switch (type) {
-    SearchResultType.transaction => (LucideIcons.arrowLeftRight, colors.finance),
+    SearchResultType.transaction => (
+      LucideIcons.arrowLeftRight,
+      colors.finance,
+    ),
     SearchResultType.bill => (LucideIcons.receipt, colors.finance),
-    SearchResultType.recurringTransaction => (LucideIcons.refreshCw, colors.finance),
+    SearchResultType.recurringTransaction => (
+      LucideIcons.refreshCw,
+      colors.finance,
+    ),
     SearchResultType.task => (LucideIcons.circleCheck, colors.tasks),
     SearchResultType.note => (LucideIcons.notebookPen, colors.notes),
     SearchResultType.document => (LucideIcons.folders, colors.documents),
@@ -146,10 +166,17 @@ class _SearchResultTile extends StatelessWidget {
         foregroundColor: color,
         child: Icon(icon, size: 20),
       ),
-      title: Text(result.title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+      title: Text(
+        result.title,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       subtitle: Text(
         result.subtitle,
-        style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }

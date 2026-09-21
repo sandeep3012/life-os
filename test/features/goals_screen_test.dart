@@ -55,7 +55,7 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.tap(find.text('New goal'));
+      await tester.tap(find.text('Build a new goal'));
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).first, 'Run a 10K');
@@ -92,7 +92,7 @@ void main() {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('New goal'));
+      await tester.tap(find.text('Build a new goal'));
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).first, 'Finish course');

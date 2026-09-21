@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,9 +60,11 @@ void main() {
 
       expect(find.text('No tasks here.'), findsOneWidget);
 
-      // The screen's add affordance is an icon-only FloatingActionButton whose
-      // label lives in its tooltip, so there is no Text to match.
-      await tester.tap(find.byTooltip('New task'));
+      // With the list this short the dashed "Build a new task" row is on
+      // screen, so it stands in for the FAB — only one add affordance shows.
+      expect(find.text('Build a new task'), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsNothing);
+      await tester.tap(find.text('Build a new task'));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -100,7 +103,8 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.tap(find.byTooltip('New habit'));
+      expect(find.byType(FloatingActionButton), findsNothing);
+      await tester.tap(find.text('Build a new habit'));
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).first, 'Morning workout');
@@ -122,7 +126,7 @@ void main() {
     await tester.pumpWidget(buildApp(initialHabitsTab: true));
     await tester.pumpAndSettle();
 
-    expect(find.byTooltip('New habit'), findsOneWidget);
+    expect(find.text('Build a new habit'), findsOneWidget);
     expect(
       find.text('No habits yet — add one to start a streak.'),
       findsOneWidget,
@@ -130,6 +134,47 @@ void main() {
 
     await _disposeCleanly(tester);
   });
+
+  testWidgets(
+    'a long task list shows the FAB until the inline add row scrolls into view',
+    (tester) async {
+      // Pin a phone-sized surface so 30 rows genuinely overflow the viewport.
+      tester.view.physicalSize = const Size(392, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final today = DateTime.now();
+      for (var i = 0; i < 30; i++) {
+        await db
+            .into(db.tasks)
+            .insert(
+              TasksCompanion.insert(
+                title: 'Task $i',
+                dueDate: Value(DateTime(today.year, today.month, today.day)),
+              ),
+            );
+      }
+
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      // The dashed row exists at the end of the list but is off screen, so the
+      // FAB is the visible affordance.
+      expect(find.byType(FloatingActionButton), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Build a new task'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
+      // Once the row is on screen the FAB steps aside.
+      expect(find.byType(FloatingActionButton), findsNothing);
+
+      await _disposeCleanly(tester);
+    },
+  );
 
   testWidgets('archived habits have a titled screen and a Back button', (
     tester,

@@ -58,7 +58,8 @@ class HabitRingTile extends StatelessWidget {
               progress: progress,
               size: 48,
               strokeWidth: 5,
-              color: color ?? scheme.secondary,
+              color: color ?? scheme.primary,
+              trackColor: scheme.onSurface.withValues(alpha: 0.18),
               child: complete
                   ? Icon(LucideIcons.check, size: 18, color: scheme.onSurface)
                   : Text(

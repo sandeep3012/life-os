@@ -8,6 +8,7 @@ import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/widgets/inline_add_button.dart';
 import '../../../../core/widgets/tab_rail.dart';
 import '../../application/tasks_providers.dart';
 import '../../application/planner_view_providers.dart';
@@ -16,7 +17,17 @@ import '../../domain/task_date_window.dart';
 import 'task_tile.dart';
 
 class PlannerTasksPane extends ConsumerStatefulWidget {
-  const PlannerTasksPane({super.key});
+  const PlannerTasksPane({
+    super.key,
+    required this.onAdd,
+    required this.onAddVisibilityChanged,
+  });
+
+  /// Opens the same quick-add sheet as the screen's FAB.
+  final VoidCallback onAdd;
+
+  /// Reports whether the inline add row is on screen (see [InlineAddButton]).
+  final ValueChanged<bool> onAddVisibilityChanged;
   @override
   ConsumerState<PlannerTasksPane> createState() => _PlannerTasksPaneState();
 }
@@ -125,7 +136,7 @@ class _PlannerTasksPaneState extends ConsumerState<PlannerTasksPane> {
                         return GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 100),
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: columns,
@@ -186,6 +197,13 @@ class _PlannerTasksPaneState extends ConsumerState<PlannerTasksPane> {
                   )
                 else
                   _taskSliver(visible, categories, sectionScope: 'list'),
+                SliverToBoxAdapter(
+                  child: InlineAddButton(
+                    label: 'Build a new task',
+                    onTap: widget.onAdd,
+                    onVisibilityChanged: widget.onAddVisibilityChanged,
+                  ),
+                ),
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             );

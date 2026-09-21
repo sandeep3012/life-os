@@ -87,11 +87,15 @@ class CollectionView extends StatelessWidget {
     required this.itemCount,
     required this.itemBuilder,
     this.padding = const EdgeInsets.fromLTRB(20, 12, 20, 100),
+    this.footer,
   });
   final CollectionLayout layout;
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
   final EdgeInsets padding;
+
+  /// Full-width row appended after the last item in either layout.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -103,12 +107,15 @@ class CollectionView extends StatelessWidget {
                     (160 * scale + 12))
                 .floor()
                 .clamp(1, 4);
+      final rows = (itemCount / columns).ceil();
       return ListView.separated(
         key: ValueKey(layout),
         padding: padding,
-        itemCount: (itemCount / columns).ceil(),
+        itemCount: rows + (footer == null ? 0 : 1),
         separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, row) => columns == 1
+        itemBuilder: (context, row) => row == rows
+            ? footer!
+            : columns == 1
             ? itemBuilder(context, row)
             : IntrinsicHeight(
                 child: Row(

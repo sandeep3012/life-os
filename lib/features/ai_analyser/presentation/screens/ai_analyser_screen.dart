@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../../app/router/app_sidebar.dart';
 import '../../application/ai_analyser_providers.dart';
 import '../widgets/insight_card.dart';
 
@@ -32,6 +33,7 @@ class _AiAnalyserScreenState extends ConsumerState<AiAnalyserScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      drawer: const AppSidebar(),
       appBar: AppBar(
         title: const Text('Insights'),
         actions: [
@@ -70,7 +72,9 @@ class _AiAnalyserScreenState extends ConsumerState<AiAnalyserScreen> {
                 final insight = insights[index];
                 return InsightCard(
                   insight: insight,
-                  onDismiss: () => ref.read(aiAnalyserControllerProvider).dismiss(insight.id),
+                  onDismiss: () => ref
+                      .read(aiAnalyserControllerProvider)
+                      .dismiss(insight.id),
                 );
               },
             ),

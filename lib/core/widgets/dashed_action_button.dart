@@ -17,6 +17,7 @@ class DashedActionButton extends StatelessWidget {
     this.icon = LucideIcons.plus,
     this.height = 52,
     this.radius = 18,
+    this.color,
   });
 
   final String label;
@@ -25,22 +26,29 @@ class DashedActionButton extends StatelessWidget {
   final double height;
   final double radius;
 
+  /// Tints the outline, glyph and label. Null keeps the comp's neutral
+  /// invitation; the Planner passes the theme accent so the affordance reads
+  /// as the FAB's inline stand-in rather than a secondary row.
+  final Color? color;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final outline = color ?? scheme.outline;
+    final ink = color ?? scheme.onSurfaceVariant;
 
     return Tappable(
       onTap: onTap,
       haptic: TapHaptic.light,
       semanticLabel: label,
       child: CustomPaint(
-        painter: _DashedBorderPainter(color: scheme.outline, radius: radius),
+        painter: _DashedBorderPainter(color: outline, radius: radius),
         child: SizedBox(
           height: height,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 17, color: scheme.onSurfaceVariant),
+              Icon(icon, size: 17, color: ink),
               const SizedBox(width: 8),
               Text(
                 label,
@@ -48,7 +56,7 @@ class DashedActionButton extends StatelessWidget {
                   fontFamily: AppFonts.sans,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
+                  color: ink,
                 ),
               ),
             ],
