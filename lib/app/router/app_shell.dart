@@ -5,17 +5,24 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/utils/currency_utils.dart';
+import '../../core/widgets/save_feedback.dart';
 import '../../core/widgets/tappable.dart';
 import '../../features/finance/application/finance_providers.dart';
 import '../../features/finance/presentation/widgets/entry_form_sheet.dart';
+import '../../features/finance/presentation/widgets/quick_add_account_sheet.dart';
 import '../../features/finance/presentation/widgets/transaction_recorder_sheet.dart';
 import '../../features/finance/presentation/widgets/transaction_save_confirmation.dart';
+import '../../features/goals/application/goals_providers.dart';
+import '../../features/goals/presentation/widgets/quick_add_goal_sheet.dart';
+import '../../features/habits/application/habits_providers.dart';
+import '../../features/habits/presentation/widgets/quick_add_habit_sheet.dart';
 import '../../features/home/presentation/widgets/add_menu_sheet.dart';
 import '../../features/settings/application/settings_providers.dart';
+import '../../features/tasks/application/tasks_providers.dart';
+import '../../features/tasks/presentation/widgets/quick_add_task_sheet.dart';
 import '../motion.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import 'route_paths.dart';
 import 'navigator_keys.dart';
 
 /// Bottom-nav shell. Four destinations either side of a centre add button, which
@@ -80,9 +87,14 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
   }
 
-  /// The comp offers six tiles, four of which map onto flows this build actually
-  /// has. Investment and Recurring SIP are omitted: there is no investments
-  /// module, and a tile that opens nothing is worse than no tile.
+  /// The comp's six tiles, mapped onto the six things this build can create.
+  /// Investment and Recurring SIP are gone — there is no investments module,
+  /// and recurring entries have their own sheet reached from Finance — so the
+  /// slots go to the planner and goals flows instead.
+  ///
+  /// Every tile opens the module's own quick-add sheet and saves through that
+  /// module's controller; none of them navigate away, so the menu can be used
+  /// from any tab without losing your place.
   Future<void> _openAddMenu() async {
     final colors = context.appColors;
     setState(() => _addMenuOpen = true);
@@ -105,23 +117,183 @@ class _AppShellState extends ConsumerState<AppShell> {
           onTap: () => _addTransaction(EntryKind.income),
         ),
         AddMenuItem(
-          label: 'Recurring',
-          subtitle: 'Auto-adds on schedule',
-          icon: LucideIcons.refreshCw,
-          color: colors.aiAnalyser,
-          onTap: () => context.go(RoutePaths.recurringTransactions),
+          label: 'Habit',
+          subtitle: 'Build a routine',
+          icon: LucideIcons.sprout,
+          color: colors.habits,
+          onTap: _addHabit,
+        ),
+        AddMenuItem(
+          label: 'Task',
+          subtitle: 'Something to do',
+          icon: LucideIcons.circleCheckBig,
+          color: colors.tasks,
+          onTap: _addTask,
+        ),
+        AddMenuItem(
+          label: 'Goal',
+          subtitle: 'Track progress',
+          icon: LucideIcons.target,
+          color: colors.goals,
+          onTap: _addGoal,
         ),
         AddMenuItem(
           label: 'Account',
           subtitle: 'Bank, card, cash',
           icon: LucideIcons.landmark,
-          color: colors.tasks,
-          onTap: () => context.go(RoutePaths.finance),
+          color: colors.finance,
+          onTap: _addAccount,
         ),
       ],
     );
 
     if (mounted) setState(() => _addMenuOpen = false);
+  }
+
+  /// The shell watches none of these streams, and Riverpod tears an unlistened
+  /// [StreamProvider] down before its first emission ever arrives — so hold a
+  /// subscription for the duration of the await.
+  Future<List<T>> _readList<T>(StreamProvider<List<T>> provider) async {
+    final cached = ref.read(provider).value;
+    if (cached != null) return cached;
+    final subscription = ref.listenManual(provider, (_, _) {});
+    try {
+      return await ref.read(provider.future);
+    } finally {
+      subscription.close();
+    }
+  }
+
+  /// The menu's sheets open on the active branch's navigator, like the
+  /// transaction recorder does, so they sit above the floating nav bar.
+  BuildContext get _sheetContext =>
+      branchNavigatorKeys[widget.navigationShell.currentIndex].currentContext ??
+      context;
+
+  Future<void> _addHabit() async {
+    final categories = await _readList(habitCategoriesProvider);
+    if (!mounted) return;
+    final result = await showQuickAddHabitSheet(
+      _sheetContext,
+      categories: categories,
+    );
+    if (result == null) return;
+    await ref
+        .read(habitsControllerProvider)
+        .addHabit(
+          result.name,
+          targetAmount: result.targetAmount,
+          targetUnit: result.targetUnit,
+          description: result.description,
+          schedule: result.schedule,
+          categoryId: result.categoryId,
+          reminderEnabled: result.reminderEnabled,
+          reminderHour: result.reminderHour,
+          reminderMinute: result.reminderMinute,
+          reminderMode: result.reminderMode,
+        );
+    if (!mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Habit saved',
+      message: '“${result.name}” is ready to track.',
+    );
+  }
+
+  Future<void> _addTask() async {
+    final result = await showQuickAddTaskSheet(_sheetContext);
+    if (result == null) return;
+    await ref
+        .read(tasksControllerProvider)
+        .addTask(
+          title: result.title,
+          description: result.description,
+          categoryId: result.categoryId,
+          schedule: result.schedule,
+          priority: result.priority,
+          dueDate: result.dueDate,
+          reminderEnabled: result.reminderEnabled,
+          reminderMode: result.reminderMode,
+        );
+    if (!mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Task saved',
+      message: '“${result.title}” is ready to do.',
+    );
+  }
+
+  Future<void> _addGoal() async {
+    final habits = (await _readList(
+      goalHabitsProvider,
+    )).where((habit) => !habit.archived).toList();
+    if (!mounted) return;
+    final accounts = ref.read(activeAccountsProvider);
+    final result = await showQuickAddGoalSheet(
+      _sheetContext,
+      habits: habits,
+      accounts: accounts,
+      currencySymbol: currencySymbolFor(
+        ref.read(settingsProvider).currencyCode,
+      ),
+    );
+    if (result == null) return;
+    final goalId = await ref
+        .read(goalsControllerProvider)
+        .createGoal(
+          title: result.title,
+          type: result.type,
+          targetValue: result.targetValue,
+          targetDate: result.targetDate,
+          reminderEnabled: result.reminderEnabled,
+          reminderMode: result.reminderMode,
+          reminderDaysBefore: result.reminderDaysBefore,
+        );
+    if (result.link != null) {
+      await ref
+          .read(goalsControllerProvider)
+          .addLink(
+            goalId: goalId,
+            linkedType: result.link!.type,
+            linkedId: result.link!.id,
+          );
+    }
+    if (!mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Goal saved',
+      message: '“${result.title}” is being tracked.',
+    );
+  }
+
+  Future<void> _addAccount() async {
+    final accountTypes = await _readList(accountTypesProvider);
+    if (!mounted) return;
+    final result = await showQuickAddAccountSheet(
+      _sheetContext,
+      accountTypes: accountTypes,
+      currencySymbol: currencySymbolFor(
+        ref.read(settingsProvider).currencyCode,
+      ),
+    );
+    if (result == null) return;
+    await ref
+        .read(financeControllerProvider)
+        .addAccount(
+          name: result.name,
+          type: result.type,
+          balanceMinor: result.startingBalanceMinor,
+        );
+    if (!mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Account saved',
+      message: '“${result.name}” is ready to use.',
+    );
   }
 
   /// Opens the design's keypad entry sheet, then persists through the finance

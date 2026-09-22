@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -263,6 +263,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 23) {
         await m.addColumn(appSettings, appSettings.saveConfirmationsEnabled);
+      }
+      if (from < 24) {
+        await m.addColumn(appSettings, appSettings.balancesVisible);
       }
     },
   );

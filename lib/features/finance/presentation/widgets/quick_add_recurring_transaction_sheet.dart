@@ -4,6 +4,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
+import '../../../../core/widgets/tab_rail.dart';
+import 'account_option_row.dart';
 import '../../domain/payment_mode.dart';
 
 class QuickAddRecurringTransactionResult {
@@ -42,14 +45,15 @@ const _frequencies = [
 Future<QuickAddRecurringTransactionResult?> showQuickAddRecurringTransactionSheet(
   BuildContext context, {
   required List<Account> accounts,
+  required List<AccountType> accountTypes,
   required List<Category> categories,
   required String currencySymbol,
 }) {
-  return showModalBottomSheet<QuickAddRecurringTransactionResult>(
+  return showCompactEditorSheet<QuickAddRecurringTransactionResult>(
     context: context,
-    isScrollControlled: true,
     builder: (context) => _QuickAddRecurringTransactionSheet(
       accounts: accounts,
+      accountTypes: accountTypes,
       categories: categories,
       currencySymbol: currencySymbol,
     ),
@@ -59,11 +63,15 @@ Future<QuickAddRecurringTransactionResult?> showQuickAddRecurringTransactionShee
 class _QuickAddRecurringTransactionSheet extends StatefulWidget {
   const _QuickAddRecurringTransactionSheet({
     required this.accounts,
+    required this.accountTypes,
     required this.categories,
     required this.currencySymbol,
   });
 
   final List<Account> accounts;
+
+  /// Supplies each account's glyph; see [OptionRow.account].
+  final List<AccountType> accountTypes;
   final List<Category> categories;
   final String currencySymbol;
 
@@ -124,27 +132,24 @@ class _QuickAddRecurringTransactionSheetState
         _merchantController.text.trim().isNotEmpty &&
         (double.tryParse(_amountController.text.trim()) ?? 0) > 0;
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return CompactEditorSheet(
+      title: 'New recurring transaction',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('New recurring transaction', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: true, label: Text('Expense')),
-                ButtonSegment(value: false, label: Text('Income')),
-              ],
-              selected: {_isExpense},
-              onSelectionChanged: (s) => setState(() => _isExpense = s.first),
+            const SizedBox(height: 8),
+            // The kit's rail, not Material's SegmentedButton: this design's
+            // segments are borderless and transparent, so SegmentedButton
+            // renders no track and the choice reads as plain text.
+            AppTabRail<bool>(
+              value: _isExpense,
+              labels: const {true: 'Expense', false: 'Income'},
+              icons: const {
+                true: LucideIcons.arrowDownLeft,
+                false: LucideIcons.arrowUpRight,
+              },
+              onChanged: (value) => setState(() => _isExpense = value),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -162,13 +167,13 @@ class _QuickAddRecurringTransactionSheetState
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _accountId,
-              decoration: const InputDecoration(
-                labelText: 'Account',
-                prefixIcon: Icon(LucideIcons.landmark, size: 18),
-              ),
+              decoration: const InputDecoration(labelText: 'Account'),
               items: [
                 for (final a in widget.accounts)
-                  DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  DropdownMenuItem(
+                    value: a.id,
+                    child: OptionRow.account(a, widget.accountTypes),
+                  ),
               ],
               onChanged: (value) => setState(() => _accountId = value!),
             ),
@@ -184,7 +189,7 @@ class _QuickAddRecurringTransactionSheetState
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconOrEmoji(value: c.icon, size: 16),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: dropdownIconGap),
                         Text(c.name),
                       ],
                     ),
@@ -296,7 +301,6 @@ class _QuickAddRecurringTransactionSheetState
             ),
           ],
         ),
-      ),
     );
   }
 }

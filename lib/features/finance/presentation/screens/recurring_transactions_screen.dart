@@ -25,9 +25,11 @@ class RecurringTransactionsScreen extends ConsumerWidget {
     final accounts = ref.read(transactableAccountsProvider);
     if (accounts.isEmpty) return;
     final categories = ref.read(categoriesProvider).value ?? const [];
+    final accountTypes = ref.read(accountTypesProvider).value ?? const [];
     final result = await showQuickAddRecurringTransactionSheet(
       context,
       accounts: accounts,
+      accountTypes: accountTypes,
       categories: categories,
       currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
     );

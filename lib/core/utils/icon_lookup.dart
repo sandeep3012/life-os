@@ -69,9 +69,16 @@ const pickableIcons = [
 /// icon names. Unicode strings are rendered as text by [IconOrEmoji].
 const pickableEmojis = ['🍽️', '🛒', '🚗', '🏠', '🎬', '💳', '🏥', '🎓', '✈️', '🏋️', '🐾', '👕', '🎮', '🎁', '🔧', '📶', '👛', '💰', '🏦', '☕', '🎵', '📚', '❤️', '⭐'];
 
-IconData resolveIcon(String? name) => _iconsByName[name] ?? LucideIcons.tag;
+/// The icon a category carries when none was chosen — matches the `icon`
+/// column's own default, and what [resolveIcon] falls back to.
+const defaultCategoryIcon = 'label';
 
-bool isEmojiIcon(String? value) => value != null && !_iconsByName.containsKey(value);
+IconData resolveIcon(String? name) => _iconsByName[name] ?? _iconsByName[defaultCategoryIcon]!;
+
+/// Blank counts as "no icon", not as an emoji — a row imported from an older
+/// backup can carry an empty string, which would otherwise render as nothing.
+bool isEmojiIcon(String? value) =>
+    value != null && value.isNotEmpty && !_iconsByName.containsKey(value);
 
 class IconOrEmoji extends StatelessWidget {
   const IconOrEmoji({super.key, required this.value, this.size = 20, this.color});

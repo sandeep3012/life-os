@@ -38,6 +38,23 @@ String currencySymbolFor(String code) => _optionFor(code).symbol;
 /// Formats an amount stored in minor units (e.g. paise, cents) as a
 /// currency-grouped string for [currencyCode] (e.g. 14238050 with 'INR' ->
 /// "₹1,42,380.50").
+/// Stand-in for a hidden amount: the currency symbol, then six dots.
+///
+/// The symbol stays so a masked balance still reads as money, and the fixed
+/// width means toggling visibility doesn't reflow the row around it.
+String maskedAmount(String currencyCode) => '${currencySymbolFor(currencyCode)} ••••••';
+
+/// [formatMinor], or [maskedAmount] when the user has hidden balances.
+String formatMinorMasked(
+  int minor, {
+  required String currencyCode,
+  required bool visible,
+  bool showDecimals = true,
+  bool showSign = false,
+}) => visible
+    ? formatMinor(minor, currencyCode: currencyCode, showDecimals: showDecimals, showSign: showSign)
+    : maskedAmount(currencyCode);
+
 String formatMinor(
   int minor, {
   required String currencyCode,

@@ -55,6 +55,9 @@ class SettingsRepository {
   Future<void> setTransactionEntryLayout(String layout) =>
       _upsert(AppSettingsCompanion(transactionEntryLayout: Value(layout)));
 
+  Future<void> setBalancesVisible(bool visible) =>
+      _upsert(AppSettingsCompanion(balancesVisible: Value(visible)));
+
   Future<void> setTaskReminders(bool enabled) =>
       _upsert(AppSettingsCompanion(taskReminders: Value(enabled)));
 

@@ -5,6 +5,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/reminders/reminder_mode.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
+import 'account_option_row.dart';
 
 class QuickAddBillResult {
   const QuickAddBillResult({
@@ -39,14 +41,15 @@ const _frequencies = [('once', 'One-time'), ('monthly', 'Monthly'), ('yearly', '
 Future<QuickAddBillResult?> showQuickAddBillSheet(
   BuildContext context, {
   required List<Account> accounts,
+  required List<AccountType> accountTypes,
   required List<Category> categories,
   required String currencySymbol,
 }) {
-  return showModalBottomSheet<QuickAddBillResult>(
+  return showCompactEditorSheet<QuickAddBillResult>(
     context: context,
-    isScrollControlled: true,
     builder: (context) => _QuickAddBillSheet(
       accounts: accounts,
+      accountTypes: accountTypes,
       categories: categories,
       currencySymbol: currencySymbol,
     ),
@@ -56,11 +59,15 @@ Future<QuickAddBillResult?> showQuickAddBillSheet(
 class _QuickAddBillSheet extends StatefulWidget {
   const _QuickAddBillSheet({
     required this.accounts,
+    required this.accountTypes,
     required this.categories,
     required this.currencySymbol,
   });
 
   final List<Account> accounts;
+
+  /// Supplies each account's glyph; see [OptionRow.account].
+  final List<AccountType> accountTypes;
   final List<Category> categories;
   final String currencySymbol;
 
@@ -109,20 +116,13 @@ class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
         _nameController.text.trim().isNotEmpty &&
         (double.tryParse(_amountController.text.trim()) ?? 0) > 0;
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return CompactEditorSheet(
+      title: 'New bill',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('New bill', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             TextField(
               controller: _nameController,
               autofocus: true,
@@ -140,11 +140,13 @@ class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
               initialValue: _accountId,
               decoration: const InputDecoration(
                 labelText: 'Usually paid from (optional)',
-                prefixIcon: Icon(LucideIcons.landmark, size: 18),
               ),
               items: [
                 for (final a in widget.accounts)
-                  DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  DropdownMenuItem(
+                    value: a.id,
+                    child: OptionRow.account(a, widget.accountTypes),
+                  ),
               ],
               onChanged: (value) => setState(() => _accountId = value),
             ),
@@ -160,7 +162,7 @@ class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconOrEmoji(value: c.icon, size: 16),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: dropdownIconGap),
                         Text(c.name),
                       ],
                     ),
@@ -269,7 +271,6 @@ class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
             ),
           ],
         ),
-      ),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
 
 class QuickAddAccountResult {
   const QuickAddAccountResult({
@@ -21,9 +22,8 @@ Future<QuickAddAccountResult?> showQuickAddAccountSheet(
   required String currencySymbol,
   Account? initial,
 }) {
-  return showModalBottomSheet<QuickAddAccountResult>(
+  return showCompactEditorSheet<QuickAddAccountResult>(
     context: context,
-    isScrollControlled: true,
     builder: (context) =>
         _QuickAddAccountSheet(accountTypes: accountTypes, currencySymbol: currencySymbol, initial: initial),
   );
@@ -62,19 +62,13 @@ class _QuickAddAccountSheetState extends State<_QuickAddAccountSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
+    return CompactEditorSheet(
+      title: widget.initial == null ? 'New account' : 'Edit account',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.initial == null ? 'New account' : 'Edit account', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           TextField(
             controller: _nameController,
             autofocus: true,

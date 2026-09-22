@@ -38,6 +38,11 @@ class AppSettings extends Table {
   BoolColumn get biometricEnabled =>
       boolean().withDefault(const Constant(false))();
 
+  /// Whether Finance home shows its balances. Off masks the running total and
+  /// every account card, for reading the app in public.
+  BoolColumn get balancesVisible =>
+      boolean().withDefault(const Constant(true))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

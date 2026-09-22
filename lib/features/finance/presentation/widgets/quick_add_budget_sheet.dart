@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import 'account_option_row.dart' show dropdownIconGap;
 import '../../application/finance_providers.dart';
 import '../screens/category_management_screen.dart';
 
@@ -163,7 +164,7 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconOrEmoji(value: c.icon, size: 16),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: dropdownIconGap),
                       Text(c.name),
                     ],
                   ),

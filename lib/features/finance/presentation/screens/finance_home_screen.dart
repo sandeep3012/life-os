@@ -360,6 +360,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     // for AiAnalyserController.refresh() in CLAUDE.md.
     ref.watch(accountTypesProvider);
     final totalBalance = ref.watch(totalBalanceMinorProvider);
+    final balancesVisible = ref.watch(settingsProvider).balancesVisible;
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final categoryById = {for (final c in categories) c.id: c};
     final currencyCode = ref.watch(settingsProvider).currencyCode;
@@ -418,9 +419,10 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                                 ),
                               ),
                               Text(
-                                formatMinor(
+                                formatMinorMasked(
                                   totalBalance,
                                   currencyCode: currencyCode,
+                                  visible: balancesVisible,
                                 ),
                                 style: theme.textTheme.headlineMedium?.copyWith(
                                   fontFamily: AppFonts.serif,
@@ -439,6 +441,23 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                             icon: const Icon(LucideIcons.archive, size: 18),
                             label: Text('Archived ($archivedCount)'),
                           ),
+                        // Masks the running total and every account card, for
+                        // reading the app somewhere public.
+                        IconButton(
+                          tooltip: balancesVisible
+                              ? 'Hide balances'
+                              : 'Show balances',
+                          isSelected: !balancesVisible,
+                          icon: Icon(
+                            balancesVisible
+                                ? LucideIcons.eye
+                                : LucideIcons.eyeOff,
+                            size: 20,
+                          ),
+                          onPressed: () => ref
+                              .read(settingsControllerProvider)
+                              .setBalancesVisible(!balancesVisible),
+                        ),
                       ],
                     ),
                   ),

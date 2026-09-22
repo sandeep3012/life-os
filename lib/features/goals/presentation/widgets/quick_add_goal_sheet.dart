@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/reminders/reminder_mode.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
 
 class LinkOption {
   const LinkOption({required this.type, required this.id, required this.label});
@@ -54,9 +55,8 @@ Future<QuickAddGoalResult?> showQuickAddGoalSheet(
     for (final a in accounts)
       LinkOption(type: 'account', id: a.id, label: a.name),
   ];
-  return showModalBottomSheet<QuickAddGoalResult>(
+  return showCompactEditorSheet<QuickAddGoalResult>(
     context: context,
-    isScrollControlled: true,
     builder: (context) => _QuickAddGoalSheet(
       linkOptions: linkOptions,
       currencySymbol: currencySymbol,
@@ -123,33 +123,12 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return CompactEditorSheet(
+      title: _isEditMode ? 'Edit goal' : 'New goal',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _isEditMode ? 'Edit goal' : 'New goal',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Cancel',
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(LucideIcons.x),
-                ),
-              ],
-            ),
             const SizedBox(height: 8),
             TextField(
               controller: _titleController,
@@ -314,7 +293,6 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
             ),
           ],
         ),
-      ),
     );
   }
 }

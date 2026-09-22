@@ -6,6 +6,8 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../application/finance_providers.dart';
 
+/// The swatch row, in display order. A new category starts on
+/// [_defaultColorHex] rather than whichever colour happens to lead the row.
 const _paletteHex = [
   '#E0475A',
   '#2E9E63',
@@ -16,6 +18,8 @@ const _paletteHex = [
   '#0E9488',
   '#8B84A3',
 ];
+
+const _defaultColorHex = '#2E9E63';
 
 class CategoryEditorResult {
   const CategoryEditorResult({
@@ -179,8 +183,8 @@ class _CategoryEditorSheet extends StatefulWidget {
 
 class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
   late final _nameController = TextEditingController(text: widget.existing?.name);
-  late String _icon = widget.existing?.icon ?? pickableIcons.first;
-  late String _colorHex = widget.existing?.colorHex ?? _paletteHex.first;
+  late String _icon = widget.existing?.icon ?? defaultCategoryIcon;
+  late String _colorHex = widget.existing?.colorHex ?? _defaultColorHex;
   late String _kind = widget.existing?.kind ?? widget.fixedKind ?? 'expense';
 
   bool get _isEditing => widget.existing != null;
