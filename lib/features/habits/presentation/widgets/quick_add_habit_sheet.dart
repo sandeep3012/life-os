@@ -10,6 +10,8 @@ import '../../../../core/scheduling/repeat_schedule.dart';
 import '../../../../core/scheduling/schedule_fields.dart';
 import '../../domain/habit_schedule.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../finance/presentation/widgets/account_option_row.dart'
+    show dropdownIconGap;
 import '../../../finance/presentation/screens/category_management_screen.dart';
 import '../../application/habits_providers.dart';
 
@@ -234,7 +236,7 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconOrEmoji(value: c.icon, size: 16),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: dropdownIconGap),
                       Text(c.name),
                     ],
                   ),

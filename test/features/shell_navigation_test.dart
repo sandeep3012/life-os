@@ -123,9 +123,97 @@ void main() {
 
     expect(find.byType(AddMenuSheet), findsOneWidget);
     expect(find.text('What are we adding?'), findsOneWidget);
-    expect(find.text('Expense'), findsOneWidget);
-    expect(find.text('Account'), findsOneWidget);
+    // All six creation flows the build actually has.
+    for (final label in [
+      'Expense',
+      'Income',
+      'Habit',
+      'Task',
+      'Goal',
+      'Account',
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: '$label tile missing');
+    }
+    expect(find.text('Recurring'), findsNothing);
 
     await disposeCleanly(tester);
   });
+
+  // Each tile has to reach its module's own sheet and save through that
+  // module's controller — a tile that opens nothing is the failure mode this
+  // guards against.
+  for (final flow
+      in <
+        ({
+          String tile,
+          String submit,
+          String name,
+          Future<int> Function(AppDatabase) count,
+        })
+      >[
+        (
+          tile: 'Habit',
+          submit: 'Add habit',
+          name: 'Morning walk',
+          count: (db) async => (await db.select(db.habits).get()).length,
+        ),
+        (
+          tile: 'Task',
+          submit: 'Add task',
+          name: 'File taxes',
+          count: (db) async => (await db.select(db.tasks).get()).length,
+        ),
+        (
+          tile: 'Goal',
+          submit: 'Add goal',
+          name: 'Run a 10k',
+          count: (db) async => (await db.select(db.goals).get()).length,
+        ),
+        (
+          tile: 'Account',
+          submit: 'Add account',
+          name: 'Everyday card',
+          count: (db) async => (await db.select(db.accounts).get()).length,
+        ),
+      ]) {
+    testWidgets('the add menu creates a ${flow.tile.toLowerCase()}', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AppFloatingNavBar),
+          matching: find.byIcon(LucideIcons.plus),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(flow.tile));
+      // The menu waits for its own dismissal before opening the next sheet.
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(flow.submit),
+        findsOneWidget,
+        reason: '${flow.tile} tile did not open its sheet',
+      );
+      await tester.enterText(find.byType(TextField).first, flow.name);
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.text(flow.submit));
+      await tester.tap(find.text(flow.submit));
+      await tester.pumpAndSettle();
+
+      expect(find.text(flow.submit), findsNothing);
+      expect(
+        await flow.count(db),
+        1,
+        reason: '${flow.tile} sheet did not persist through its controller',
+      );
+
+      await disposeCleanly(tester);
+    });
+  }
 }

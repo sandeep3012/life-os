@@ -7,6 +7,8 @@ import '../../../../core/scheduling/repeat_schedule.dart';
 import '../../../../core/scheduling/schedule_fields.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../finance/presentation/widgets/account_option_row.dart'
+    show dropdownIconGap;
 import '../../../finance/presentation/screens/category_management_screen.dart';
 import '../../../../core/database/app_database_provider.dart';
 import 'package:drift/drift.dart' show Value;
@@ -170,7 +172,7 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
                   child: Row(
                     children: [
                       IconOrEmoji(value: c.icon, size: 18),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: dropdownIconGap),
                       Text(c.name),
                     ],
                   ),

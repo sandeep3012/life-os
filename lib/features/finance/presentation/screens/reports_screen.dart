@@ -10,8 +10,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/utils/icon_lookup.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
+import '../widgets/account_option_row.dart';
 import '../../domain/finance_report.dart';
 import '../../domain/finance_report_pdf.dart';
 
@@ -122,6 +124,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final categoryNameById = {for (final c in categories) c.id: c.name};
     final currencyCode = ref.watch(settingsProvider).currencyCode;
     final accounts = ref.watch(accountsProvider).value ?? const [];
+    final accountTypes = ref.watch(accountTypesProvider).value ?? const [];
     final scope =
         '${_accountId == null ? 'All accounts' : accounts.where((a) => a.id == _accountId).firstOrNull?.name ?? 'Selected account'} · ${_categoryId == null
             ? 'All categories'
@@ -197,24 +200,30 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _accountId ?? 'all',
-              decoration: const InputDecoration(
-                labelText: 'Account',
-                prefixIcon: Icon(LucideIcons.landmark, size: 18),
-              ),
+              decoration: const InputDecoration(labelText: 'Account'),
               isExpanded: true,
               items: [
                 const DropdownMenuItem(
                   value: 'all',
-                  child: Text('All accounts'),
+                  child: _CategoryOption(
+                    icon: Icon(LucideIcons.layers, size: 16),
+                    label: 'All accounts',
+                  ),
                 ),
                 if (_accountId != null &&
                     !accounts.any((a) => a.id == _accountId))
-                  DropdownMenuItem(
-                    value: _accountId,
-                    child: const Text('Unavailable account'),
+                  const DropdownMenuItem(
+                    value: null,
+                    child: _CategoryOption(
+                      icon: Icon(LucideIcons.landmark, size: 16),
+                      label: 'Unavailable account',
+                    ),
                   ),
                 for (final a in accounts)
-                  DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  DropdownMenuItem(
+                    value: a.id,
+                    child: OptionRow.account(a, accountTypes),
+                  ),
               ],
               onChanged: (value) =>
                   setState(() => _accountId = value == 'all' ? null : value),
@@ -227,18 +236,36 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               items: [
                 const DropdownMenuItem(
                   value: 'all',
-                  child: Text('All categories'),
+                  child: _CategoryOption(
+                    icon: Icon(LucideIcons.layers, size: 16),
+                    label: 'All categories',
+                  ),
                 ),
-                const DropdownMenuItem(value: '', child: Text('Uncategorized')),
+                const DropdownMenuItem(
+                  value: '',
+                  child: _CategoryOption(
+                    icon: IconOrEmoji(value: null, size: 16),
+                    label: 'Uncategorized',
+                  ),
+                ),
                 if (_categoryId != null &&
                     _categoryId != '' &&
                     !categories.any((c) => c.id == _categoryId))
                   DropdownMenuItem(
                     value: _categoryId,
-                    child: const Text('Unavailable category'),
+                    child: const _CategoryOption(
+                      icon: IconOrEmoji(value: null, size: 16),
+                      label: 'Unavailable category',
+                    ),
                   ),
                 for (final c in categories)
-                  DropdownMenuItem(value: c.id, child: Text(c.name)),
+                  DropdownMenuItem(
+                    value: c.id,
+                    child: _CategoryOption(
+                      icon: IconOrEmoji(value: c.icon, size: 16),
+                      label: c.name,
+                    ),
+                  ),
               ],
               onChanged: (value) =>
                   setState(() => _categoryId = value == 'all' ? null : value),
@@ -390,6 +417,27 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// One row of the category filter: glyph, then name. Kept in one place so the
+/// real categories and the "all"/"uncategorized" rows align identically.
+class _CategoryOption extends StatelessWidget {
+  const _CategoryOption({required this.icon, required this.label});
+
+  final Widget icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        icon,
+        const SizedBox(width: dropdownIconGap),
+        Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+      ],
     );
   }
 }

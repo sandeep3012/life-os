@@ -13,6 +13,7 @@ import '../../../../core/utils/icon_lookup.dart';
 import '../../../../core/widgets/initial_well.dart';
 import '../../../../core/widgets/tappable.dart';
 import '../../application/finance_providers.dart';
+import 'account_card.dart' show accountIconValueFor;
 import '../../domain/payment_mode.dart';
 import '../screens/category_management_screen.dart';
 
@@ -181,6 +182,8 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final colors = context.appColors;
+    // An account's glyph comes from its type, the same lookup AccountCard uses.
+    final accountTypes = ref.watch(accountTypesProvider).value ?? const [];
 
     final accent = _isExpense ? colors.spend : colors.finance;
     final relevant = _categories
@@ -368,6 +371,7 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
                         return _AccountChip(
                           name: account.name,
                           subtitle: account.type,
+                          icon: accountIconValueFor(account.type, accountTypes),
                           selected: account.id == _accountId,
                           onTap: () => setState(() => _accountId = account.id),
                         );
@@ -735,12 +739,16 @@ class _AccountChip extends StatelessWidget {
   const _AccountChip({
     required this.name,
     required this.subtitle,
+    required this.icon,
     required this.selected,
     required this.onTap,
   });
 
   final String name;
   final String subtitle;
+
+  /// Icon-name string from the account's type, resolved by [IconOrEmoji].
+  final String icon;
   final bool selected;
   final VoidCallback onTap;
 
@@ -763,27 +771,38 @@ class _AccountChip extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              name,
-              style: TextStyle(
-                fontFamily: AppFonts.sans,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: selected ? colors.accentInk : scheme.onSurface,
-              ),
+            IconOrEmoji(
+              value: icon,
+              size: 18,
+              color: selected ? colors.accentInk : colors.finance,
             ),
-            const SizedBox(height: 1),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontFamily: AppFonts.sans,
-                fontSize: 11,
-                color: colors.text3,
-              ),
+            const SizedBox(width: 10),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: TextStyle(
+                    fontFamily: AppFonts.sans,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: selected ? colors.accentInk : scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontFamily: AppFonts.sans,
+                    fontSize: 11,
+                    color: colors.text3,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

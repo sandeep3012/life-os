@@ -16,6 +16,7 @@ import '../../../../core/widgets/initial_well.dart';
 import '../../../../core/widgets/tappable.dart';
 import '../../../documents/application/documents_providers.dart';
 import '../../application/finance_providers.dart';
+import 'account_option_row.dart';
 import '../../domain/payment_mode.dart';
 import '../screens/category_management_screen.dart';
 
@@ -191,6 +192,8 @@ class _QuickAddTransactionSheetState
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final colors = context.appColors;
+    // An account's glyph comes from its type, the same lookup AccountCard uses.
+    final accountTypes = ref.watch(accountTypesProvider).value ?? const [];
     final accent = _isExpense ? colors.spend : colors.finance;
     final canSubmit =
         _validAmount &&
@@ -324,13 +327,13 @@ class _QuickAddTransactionSheetState
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _accountId,
-              decoration: const InputDecoration(
-                labelText: 'Account',
-                prefixIcon: Icon(LucideIcons.landmark, size: 18),
-              ),
+              decoration: const InputDecoration(labelText: 'Account'),
               items: [
                 for (final a in widget.accounts)
-                  DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  DropdownMenuItem(
+                    value: a.id,
+                    child: OptionRow.account(a, accountTypes),
+                  ),
               ],
               onChanged: (value) => setState(() => _accountId = value!),
             ),
@@ -347,7 +350,7 @@ class _QuickAddTransactionSheetState
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconOrEmoji(value: c.icon, size: 16),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: dropdownIconGap),
                         Text(c.name),
                       ],
                     ),

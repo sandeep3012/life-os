@@ -15498,6 +15498,21 @@ class $AppSettingsTable extends AppSettings
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _balancesVisibleMeta = const VerificationMeta(
+    'balancesVisible',
+  );
+  @override
+  late final GeneratedColumn<bool> balancesVisible = GeneratedColumn<bool>(
+    'balances_visible',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("balances_visible" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     hapticsEnabled,
@@ -15513,6 +15528,7 @@ class $AppSettingsTable extends AppSettings
     currencyCode,
     appLockEnabled,
     biometricEnabled,
+    balancesVisible,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -15631,6 +15647,15 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('balances_visible')) {
+      context.handle(
+        _balancesVisibleMeta,
+        balancesVisible.isAcceptableOrUnknown(
+          data['balances_visible']!,
+          _balancesVisibleMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -15692,6 +15717,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.bool,
         data['${effectivePrefix}biometric_enabled'],
       )!,
+      balancesVisible: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}balances_visible'],
+      )!,
     );
   }
 
@@ -15726,6 +15755,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   /// in `flutter_secure_storage`, already OS-encrypted at rest.
   final bool appLockEnabled;
   final bool biometricEnabled;
+
+  /// Whether Finance home shows its balances. Off masks the running total and
+  /// every account card, for reading the app in public.
+  final bool balancesVisible;
   const AppSetting({
     required this.hapticsEnabled,
     required this.saveAnimationsEnabled,
@@ -15740,6 +15773,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.currencyCode,
     required this.appLockEnabled,
     required this.biometricEnabled,
+    required this.balancesVisible,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -15759,6 +15793,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['currency_code'] = Variable<String>(currencyCode);
     map['app_lock_enabled'] = Variable<bool>(appLockEnabled);
     map['biometric_enabled'] = Variable<bool>(biometricEnabled);
+    map['balances_visible'] = Variable<bool>(balancesVisible);
     return map;
   }
 
@@ -15777,6 +15812,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       currencyCode: Value(currencyCode),
       appLockEnabled: Value(appLockEnabled),
       biometricEnabled: Value(biometricEnabled),
+      balancesVisible: Value(balancesVisible),
     );
   }
 
@@ -15805,6 +15841,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       currencyCode: serializer.fromJson<String>(json['currencyCode']),
       appLockEnabled: serializer.fromJson<bool>(json['appLockEnabled']),
       biometricEnabled: serializer.fromJson<bool>(json['biometricEnabled']),
+      balancesVisible: serializer.fromJson<bool>(json['balancesVisible']),
     );
   }
   @override
@@ -15828,6 +15865,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'currencyCode': serializer.toJson<String>(currencyCode),
       'appLockEnabled': serializer.toJson<bool>(appLockEnabled),
       'biometricEnabled': serializer.toJson<bool>(biometricEnabled),
+      'balancesVisible': serializer.toJson<bool>(balancesVisible),
     };
   }
 
@@ -15845,6 +15883,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     String? currencyCode,
     bool? appLockEnabled,
     bool? biometricEnabled,
+    bool? balancesVisible,
   }) => AppSetting(
     hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
     saveAnimationsEnabled: saveAnimationsEnabled ?? this.saveAnimationsEnabled,
@@ -15861,6 +15900,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     currencyCode: currencyCode ?? this.currencyCode,
     appLockEnabled: appLockEnabled ?? this.appLockEnabled,
     biometricEnabled: biometricEnabled ?? this.biometricEnabled,
+    balancesVisible: balancesVisible ?? this.balancesVisible,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -15899,6 +15939,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       biometricEnabled: data.biometricEnabled.present
           ? data.biometricEnabled.value
           : this.biometricEnabled,
+      balancesVisible: data.balancesVisible.present
+          ? data.balancesVisible.value
+          : this.balancesVisible,
     );
   }
 
@@ -15917,7 +15960,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('aiInsightAlerts: $aiInsightAlerts, ')
           ..write('currencyCode: $currencyCode, ')
           ..write('appLockEnabled: $appLockEnabled, ')
-          ..write('biometricEnabled: $biometricEnabled')
+          ..write('biometricEnabled: $biometricEnabled, ')
+          ..write('balancesVisible: $balancesVisible')
           ..write(')'))
         .toString();
   }
@@ -15937,6 +15981,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     currencyCode,
     appLockEnabled,
     biometricEnabled,
+    balancesVisible,
   );
   @override
   bool operator ==(Object other) =>
@@ -15954,7 +15999,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.aiInsightAlerts == this.aiInsightAlerts &&
           other.currencyCode == this.currencyCode &&
           other.appLockEnabled == this.appLockEnabled &&
-          other.biometricEnabled == this.biometricEnabled);
+          other.biometricEnabled == this.biometricEnabled &&
+          other.balancesVisible == this.balancesVisible);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -15971,6 +16017,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<String> currencyCode;
   final Value<bool> appLockEnabled;
   final Value<bool> biometricEnabled;
+  final Value<bool> balancesVisible;
   const AppSettingsCompanion({
     this.hapticsEnabled = const Value.absent(),
     this.saveAnimationsEnabled = const Value.absent(),
@@ -15985,6 +16032,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.currencyCode = const Value.absent(),
     this.appLockEnabled = const Value.absent(),
     this.biometricEnabled = const Value.absent(),
+    this.balancesVisible = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.hapticsEnabled = const Value.absent(),
@@ -16000,6 +16048,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.currencyCode = const Value.absent(),
     this.appLockEnabled = const Value.absent(),
     this.biometricEnabled = const Value.absent(),
+    this.balancesVisible = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<bool>? hapticsEnabled,
@@ -16015,6 +16064,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<String>? currencyCode,
     Expression<bool>? appLockEnabled,
     Expression<bool>? biometricEnabled,
+    Expression<bool>? balancesVisible,
   }) {
     return RawValuesInsertable({
       if (hapticsEnabled != null) 'haptics_enabled': hapticsEnabled,
@@ -16033,6 +16083,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (currencyCode != null) 'currency_code': currencyCode,
       if (appLockEnabled != null) 'app_lock_enabled': appLockEnabled,
       if (biometricEnabled != null) 'biometric_enabled': biometricEnabled,
+      if (balancesVisible != null) 'balances_visible': balancesVisible,
     });
   }
 
@@ -16050,6 +16101,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<String>? currencyCode,
     Value<bool>? appLockEnabled,
     Value<bool>? biometricEnabled,
+    Value<bool>? balancesVisible,
   }) {
     return AppSettingsCompanion(
       hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
@@ -16068,6 +16120,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       currencyCode: currencyCode ?? this.currencyCode,
       appLockEnabled: appLockEnabled ?? this.appLockEnabled,
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
+      balancesVisible: balancesVisible ?? this.balancesVisible,
     );
   }
 
@@ -16119,6 +16172,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (biometricEnabled.present) {
       map['biometric_enabled'] = Variable<bool>(biometricEnabled.value);
     }
+    if (balancesVisible.present) {
+      map['balances_visible'] = Variable<bool>(balancesVisible.value);
+    }
     return map;
   }
 
@@ -16137,7 +16193,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('aiInsightAlerts: $aiInsightAlerts, ')
           ..write('currencyCode: $currencyCode, ')
           ..write('appLockEnabled: $appLockEnabled, ')
-          ..write('biometricEnabled: $biometricEnabled')
+          ..write('biometricEnabled: $biometricEnabled, ')
+          ..write('balancesVisible: $balancesVisible')
           ..write(')'))
         .toString();
   }
@@ -28610,6 +28667,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<String> currencyCode,
       Value<bool> appLockEnabled,
       Value<bool> biometricEnabled,
+      Value<bool> balancesVisible,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -28626,6 +28684,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<String> currencyCode,
       Value<bool> appLockEnabled,
       Value<bool> biometricEnabled,
+      Value<bool> balancesVisible,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -28699,6 +28758,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<bool> get biometricEnabled => $composableBuilder(
     column: $table.biometricEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get balancesVisible => $composableBuilder(
+    column: $table.balancesVisible,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -28776,6 +28840,11 @@ class $$AppSettingsTableOrderingComposer
     column: $table.biometricEnabled,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get balancesVisible => $composableBuilder(
+    column: $table.balancesVisible,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -28847,6 +28916,11 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.biometricEnabled,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get balancesVisible => $composableBuilder(
+    column: $table.balancesVisible,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -28893,6 +28967,7 @@ class $$AppSettingsTableTableManager
                 Value<String> currencyCode = const Value.absent(),
                 Value<bool> appLockEnabled = const Value.absent(),
                 Value<bool> biometricEnabled = const Value.absent(),
+                Value<bool> balancesVisible = const Value.absent(),
               }) => AppSettingsCompanion(
                 hapticsEnabled: hapticsEnabled,
                 saveAnimationsEnabled: saveAnimationsEnabled,
@@ -28907,6 +28982,7 @@ class $$AppSettingsTableTableManager
                 currencyCode: currencyCode,
                 appLockEnabled: appLockEnabled,
                 biometricEnabled: biometricEnabled,
+                balancesVisible: balancesVisible,
               ),
           createCompanionCallback:
               ({
@@ -28923,6 +28999,7 @@ class $$AppSettingsTableTableManager
                 Value<String> currencyCode = const Value.absent(),
                 Value<bool> appLockEnabled = const Value.absent(),
                 Value<bool> biometricEnabled = const Value.absent(),
+                Value<bool> balancesVisible = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 hapticsEnabled: hapticsEnabled,
                 saveAnimationsEnabled: saveAnimationsEnabled,
@@ -28937,6 +29014,7 @@ class $$AppSettingsTableTableManager
                 currencyCode: currencyCode,
                 appLockEnabled: appLockEnabled,
                 biometricEnabled: biometricEnabled,
+                balancesVisible: balancesVisible,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

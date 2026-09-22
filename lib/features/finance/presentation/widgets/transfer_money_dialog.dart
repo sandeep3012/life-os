@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/finance_providers.dart';
+import 'account_option_row.dart';
 
 /// Opens the one transfer flow used by both Finance home and the sidebar.
 Future<void> showTransferMoneyDialog(
@@ -10,6 +10,7 @@ Future<void> showTransferMoneyDialog(
   WidgetRef ref,
 ) async {
   final accounts = ref.read(transactableAccountsProvider);
+  final accountTypes = ref.read(accountTypesProvider).value ?? const [];
   if (accounts.length < 2) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -36,15 +37,12 @@ Future<void> showTransferMoneyDialog(
             children: [
               DropdownButtonFormField<String>(
                 initialValue: fromId,
-                decoration: const InputDecoration(
-                  labelText: 'From account',
-                  prefixIcon: Icon(LucideIcons.landmark, size: 18),
-                ),
+                decoration: const InputDecoration(labelText: 'From account'),
                 items: [
                   for (final account in accounts)
                     DropdownMenuItem(
                       value: account.id,
-                      child: Text(account.name),
+                      child: OptionRow.account(account, accountTypes),
                     ),
                 ],
                 onChanged: (value) => setState(() => fromId = value!),
@@ -52,15 +50,12 @@ Future<void> showTransferMoneyDialog(
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: toId,
-                decoration: const InputDecoration(
-                  labelText: 'To account',
-                  prefixIcon: Icon(LucideIcons.landmark, size: 18),
-                ),
+                decoration: const InputDecoration(labelText: 'To account'),
                 items: [
                   for (final account in accounts)
                     DropdownMenuItem(
                       value: account.id,
-                      child: Text(account.name),
+                      child: OptionRow.account(account, accountTypes),
                     ),
                 ],
                 onChanged: (value) => setState(() => toId = value!),

@@ -29,7 +29,10 @@ String accountIconValueFor(String type, List<AccountType> types) {
   for (final t in types) {
     if (normalizeAccountTypeKey(t.name) == key) return t.icon;
   }
-  return 'account_balance_wallet';
+  // Falls back to the bank glyph: a type with no icon of its own still has to
+  // read as an account, and this is the one the pickers used to show for all
+  // of them.
+  return 'account_balance';
 }
 
 class AccountCard extends ConsumerWidget {
@@ -46,7 +49,8 @@ class AccountCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final types = ref.watch(accountTypesProvider).value ?? const [];
     final iconValue = accountIconValueFor(account.type, types);
-    final currencyCode = ref.watch(settingsProvider).currencyCode;
+    final settings = ref.watch(settingsProvider);
+    final currencyCode = settings.currencyCode;
 
     return Material(
       color: theme.colorScheme.surface,
@@ -92,7 +96,12 @@ class AccountCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  formatMinor(account.balanceMinor, currencyCode: currencyCode, showDecimals: false),
+                  formatMinorMasked(
+                    account.balanceMinor,
+                    currencyCode: currencyCode,
+                    visible: settings.balancesVisible,
+                    showDecimals: false,
+                  ),
                   style: TextStyle(
                     fontFamily: AppFonts.numeric,
                     fontFeatures: AppFonts.tabular,

@@ -32,6 +32,7 @@ class ResolvedSettings {
     required this.currencyCode,
     required this.appLockEnabled,
     required this.biometricEnabled,
+    this.balancesVisible = true,
   });
 
   final ThemeMode themeMode;
@@ -46,6 +47,7 @@ class ResolvedSettings {
   final String currencyCode;
   final bool appLockEnabled;
   final bool biometricEnabled;
+  final bool balancesVisible;
 
   static const defaults = ResolvedSettings(
     themeMode: ThemeMode.system,
@@ -88,6 +90,7 @@ final settingsProvider = Provider<ResolvedSettings>((ref) {
     currencyCode: row.currencyCode,
     appLockEnabled: row.appLockEnabled,
     biometricEnabled: row.biometricEnabled,
+    balancesVisible: row.balancesVisible,
   );
 });
 
@@ -116,6 +119,9 @@ class SettingsController {
 
   Future<void> setTransactionEntryLayout(String layout) =>
       _repo.setTransactionEntryLayout(layout);
+
+  Future<void> setBalancesVisible(bool visible) =>
+      _repo.setBalancesVisible(visible);
 
   Future<void> setTaskReminders(bool enabled) =>
       _repo.setTaskReminders(enabled);

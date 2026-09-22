@@ -10,6 +10,7 @@ import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
+import '../widgets/account_option_row.dart';
 import '../widgets/quick_add_bill_sheet.dart';
 
 const _frequencyLabels = {'once': 'One-time', 'monthly': 'Monthly', 'yearly': 'Yearly'};
@@ -21,9 +22,11 @@ class BillsScreen extends ConsumerWidget {
     final accounts = ref.read(transactableAccountsProvider);
     if (accounts.isEmpty) return;
     final categories = ref.read(categoriesProvider).value ?? const [];
+    final accountTypes = ref.read(accountTypesProvider).value ?? const [];
     final result = await showQuickAddBillSheet(
       context,
       accounts: accounts,
+      accountTypes: accountTypes,
       categories: categories,
       currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
     );
@@ -80,12 +83,17 @@ class _BillTile extends ConsumerWidget {
   Future<void> _markPaid(BuildContext context, WidgetRef ref) async {
     final accounts = ref.read(transactableAccountsProvider);
     if (accounts.isEmpty) return;
+    final accountTypes = ref.read(accountTypesProvider).value ?? const [];
     var accountId = bill.accountId ?? accounts.first.id;
     if (!accounts.any((a) => a.id == accountId)) accountId = accounts.first.id;
 
     final chosen = await showDialog<String>(
       context: context,
-      builder: (context) => _PayFromDialog(accounts: accounts, initialAccountId: accountId),
+      builder: (context) => _PayFromDialog(
+        accounts: accounts,
+        accountTypes: accountTypes,
+        initialAccountId: accountId,
+      ),
     );
     if (chosen == null) return;
     await ref.read(financeControllerProvider).markBillPaid(bill, accountId: chosen);
@@ -158,9 +166,16 @@ class _BillTile extends ConsumerWidget {
 }
 
 class _PayFromDialog extends StatefulWidget {
-  const _PayFromDialog({required this.accounts, required this.initialAccountId});
+  const _PayFromDialog({
+    required this.accounts,
+    required this.accountTypes,
+    required this.initialAccountId,
+  });
 
   final List<Account> accounts;
+
+  /// Supplies each account's glyph; see [OptionRow.account].
+  final List<AccountType> accountTypes;
   final String initialAccountId;
 
   @override
@@ -176,11 +191,12 @@ class _PayFromDialogState extends State<_PayFromDialog> {
       title: const Text('Pay from'),
       content: DropdownButtonFormField<String>(
         initialValue: _accountId,
-        decoration: const InputDecoration(
-          prefixIcon: Icon(LucideIcons.landmark, size: 18),
-        ),
         items: [
-          for (final a in widget.accounts) DropdownMenuItem(value: a.id, child: Text(a.name)),
+          for (final a in widget.accounts)
+            DropdownMenuItem(
+              value: a.id,
+              child: OptionRow.account(a, widget.accountTypes),
+            ),
         ],
         onChanged: (v) => setState(() => _accountId = v ?? _accountId),
       ),
