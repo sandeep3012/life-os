@@ -26,7 +26,7 @@ class HabitTile extends StatelessWidget {
     final colors = context.appColors;
     final theme = Theme.of(context);
     final atRisk = progress.isAtRisk;
-    final accent = atRisk ? colors.critical : colors.habits;
+    final accent = atRisk ? colors.critical : theme.colorScheme.primary;
     final today = DateTime.now().weekday;
     final completedToday = progress.weekCompletion[today] ?? false;
     final category = progress.category;
@@ -73,7 +73,7 @@ class HabitTile extends StatelessWidget {
                             ? _weekdayLabels[i - 1]
                             : '–',
                         on: progress.weekCompletion[i] ?? false,
-                        color: colors.habits,
+                        color: theme.colorScheme.primary,
                       ),
                     ],
                   ],
@@ -116,7 +116,7 @@ class HabitTile extends StatelessWidget {
                             color: !progress.isScheduledToday
                                 ? theme.disabledColor
                                 : completedToday
-                                ? colors.habits
+                                ? theme.colorScheme.primary
                                 : accent,
                           ),
                           Text(
@@ -175,7 +175,7 @@ class _WeekDot extends StatelessWidget {
           fontSize: 8,
           fontWeight: FontWeight.w700,
           color: on
-              ? Colors.white
+              ? Theme.of(context).colorScheme.onPrimary
               : Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),

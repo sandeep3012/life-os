@@ -112,7 +112,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
     final categoryColor = category == null
         ? null
         : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
-    final accent = categoryColor ?? colors.habits;
+    final accent = categoryColor ?? theme.colorScheme.primary;
     final icon = category == null
         ? LucideIcons.flame
         : resolveIcon(category.icon);
@@ -390,7 +390,10 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
               spacing: 16,
               runSpacing: 8,
               children: [
-                Text('✓ Done', style: TextStyle(color: colors.habits)),
+                Text(
+                  '✓ Done',
+                  style: TextStyle(color: theme.colorScheme.primary),
+                ),
                 Text('× Absent', style: TextStyle(color: colors.critical)),
                 const Text('○ Today: pending'),
               ],
@@ -474,7 +477,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
     final absent = eligible && date.isBefore(today) && !done;
     final colors = context.appColors;
     final color = done
-        ? colors.habits
+        ? Theme.of(context).colorScheme.primary
         : absent
         ? colors.critical
         : Theme.of(context).colorScheme.onSurfaceVariant;
@@ -606,7 +609,7 @@ class _HistoryTile extends ConsumerWidget {
             ? LucideIcons.circle
             : LucideIcons.circleX,
         color: log.completed
-            ? colors.habits
+            ? theme.colorScheme.primary
             : pending
             ? theme.colorScheme.onSurfaceVariant
             : colors.critical,

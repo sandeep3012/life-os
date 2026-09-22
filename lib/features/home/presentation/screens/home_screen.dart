@@ -144,7 +144,7 @@ class HomeScreen extends ConsumerWidget {
                       SectionHeader(
                         title: 'Habits to keep',
                         trailing: Tappable(
-                          onTap: () => context.go(RoutePaths.habitsOverview),
+                          onTap: () => context.go(RoutePaths.plannerHabits),
                           semanticLabel: 'See all habits',
                           child: Text(
                             'See all',
@@ -643,10 +643,10 @@ class _TodayTaskRow extends ConsumerWidget {
                 height: 25,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: done ? colors.good : Colors.transparent,
+                  color: done ? scheme.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: done ? colors.good : scheme.outline,
+                    color: done ? scheme.primary : scheme.outline,
                     width: 2,
                   ),
                 ),
@@ -788,7 +788,7 @@ class _HabitGrid extends ConsumerWidget {
       subtitle: '$doneThisWeek / $target this week',
       progress: ratio,
       complete: ratio >= 1,
-      color: doneToday ? scheme.secondary : colors.critical,
+      color: doneToday ? scheme.primary : colors.critical,
       onTap: () =>
           ref.read(habitsControllerProvider).toggleToday(habit, !doneToday),
     );

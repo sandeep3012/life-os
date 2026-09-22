@@ -151,6 +151,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 ReportPeriodType.year: 'Yearly',
                 ReportPeriodType.custom: 'Custom',
               },
+              icons: const {
+                ReportPeriodType.month: LucideIcons.calendarDays,
+                ReportPeriodType.year: LucideIcons.calendarRange,
+                ReportPeriodType.custom: LucideIcons.calendarSearch,
+              },
               onChanged: (value) {
                 if (value == ReportPeriodType.custom) {
                   _pickRange();
@@ -189,9 +194,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 onPressed: _pickRange,
                 child: const Text('Change dates'),
               ),
+            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _accountId ?? 'all',
-              decoration: const InputDecoration(labelText: 'Account'),
+              decoration: const InputDecoration(
+                labelText: 'Account',
+                prefixIcon: Icon(LucideIcons.landmark, size: 18),
+              ),
               isExpanded: true,
               items: [
                 const DropdownMenuItem(
@@ -235,38 +244,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   setState(() => _categoryId = value == 'all' ? null : value),
             ),
             const SizedBox(height: 16),
-            if (report.previous case final previous?)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Compared with ${previous.period.label}',
-                        style: theme.textTheme.titleSmall,
-                      ),
-                      const Text(
-                        'Full selected periods; the current period may be incomplete.',
-                      ),
-                      for (final row in [
-                        (
-                          'Income',
-                          report.totalIncomeMinor - previous.totalIncomeMinor,
-                        ),
-                        (
-                          'Expense',
-                          report.totalExpenseMinor - previous.totalExpenseMinor,
-                        ),
-                        ('Net', report.netMinor - previous.netMinor),
-                      ])
-                        Text(
-                          '${row.$1} change: ${formatMinor(row.$2, currencyCode: currencyCode, showSign: true)}',
-                        ),
-                    ],
-                  ),
-                ),
-              ),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -377,6 +354,39 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            if (report.previous case final previous?)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Compared with ${previous.period.label}',
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      const Text(
+                        'Full selected periods; the current period may be incomplete.',
+                      ),
+                      for (final row in [
+                        (
+                          'Income',
+                          report.totalIncomeMinor - previous.totalIncomeMinor,
+                        ),
+                        (
+                          'Expense',
+                          report.totalExpenseMinor - previous.totalExpenseMinor,
+                        ),
+                        ('Net', report.netMinor - previous.netMinor),
+                      ])
+                        Text(
+                          '${row.$1} change: ${formatMinor(row.$2, currencyCode: currencyCode, showSign: true)}',
+                        ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),

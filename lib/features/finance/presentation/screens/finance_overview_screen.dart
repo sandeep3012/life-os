@@ -206,6 +206,11 @@ class _FinanceOverviewScreenState extends ConsumerState<FinanceOverviewScreen> {
                         _FinanceTab.income: 'Income',
                         _FinanceTab.spending: 'Spending',
                       },
+                      icons: const {
+                        _FinanceTab.overview: LucideIcons.chartNoAxesCombined,
+                        _FinanceTab.income: LucideIcons.arrowDownLeft,
+                        _FinanceTab.spending: LucideIcons.arrowUpRight,
+                      },
                       onChanged: (tab) => setState(() => _tab = tab),
                     ),
 

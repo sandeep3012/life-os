@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../finance/application/finance_providers.dart';
@@ -28,7 +27,6 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = context.appColors;
     final all = ref.watch(goalsWithLinksProvider);
     final data = all.where((g) => g.goal.id == widget.goalId).firstOrNull;
 
@@ -38,11 +36,6 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
 
     final goal = data.goal;
     final currencyCode = ref.watch(settingsProvider).currencyCode;
-    final color = switch (goal.type) {
-      'financial' => colors.finance,
-      'habit' => colors.habits,
-      _ => colors.goals,
-    };
     final step = goal.type == 'financial' ? 1000.0 : 1.0;
 
     return Scaffold(
@@ -66,12 +59,7 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           Center(
-            child: GoalRing(
-              ratio: data.ratio,
-              color: color,
-              size: 120,
-              strokeWidth: 12,
-            ),
+            child: GoalRing(ratio: data.ratio, size: 120, strokeWidth: 12),
           ),
           const SizedBox(height: 20),
           Center(

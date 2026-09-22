@@ -53,115 +53,127 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
       drawer: const AppSidebar(),
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 14),
-              child: Builder(
-                builder: (context) => AppTopBar(
-                  centerText: 'Learn',
-                  centerIsTitle: true,
-                  trailingIcon: LucideIcons.plus,
-                  onTrailing: () => showNoteEditorSheet(context),
-                  onMenu: () => Scaffold.of(context).openDrawer(),
-                ),
-              ),
-            ),
-
-            _ReviewQueueHero(
-              dueCount: due.length,
-              totalCount: notes.length,
-              onStart: due.isEmpty
-                  ? null
-                  : () => context.go(RoutePaths.learnNote(due.first.id)),
-            ),
-
-            const SizedBox(height: 20),
-            SectionHeader(
-              title: 'Notebooks',
-              trailing: Text(
-                '${notes.length} ${notes.length == 1 ? 'note' : 'notes'}',
-                style: TextStyle(
-                  fontFamily: AppFonts.sans,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const SizedBox(height: 11),
-            if (books.isEmpty)
-              Text(
-                'No notebooks yet — your first note creates one.',
-                style: TextStyle(
-                  fontFamily: AppFonts.sans,
-                  fontSize: 13.5,
-                  color: colors.text3,
-                ),
-              )
-            else
-              SizedBox(
-                height: 132,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: books.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 9),
-                  itemBuilder: (context, i) => _NotebookCard(progress: books[i]),
-                ),
-              ),
-
-            const SizedBox(height: 20),
-            AppTabRail<_LearnTab>(
-              value: _tab,
-              labels: const {
-                _LearnTab.recent: 'Recent',
-                _LearnTab.starred: 'Starred',
-                _LearnTab.due: 'Due',
-              },
-              height: 36,
-              fontSize: 12.5,
-              onChanged: (t) => setState(() => _tab = t),
-            ),
-
-            const SizedBox(height: 12),
-            if (visible.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: Text(
-                    switch (_tab) {
-                      _LearnTab.recent => 'Nothing written yet.',
-                      _LearnTab.starred => 'No starred notes.',
-                      _LearnTab.due => 'Nothing due — you are all caught up.',
-                    },
-                    style: TextStyle(
-                      fontFamily: AppFonts.sans,
-                      fontSize: 14,
-                      color: colors.text3,
+        child:
+            ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 14),
+                      child: Builder(
+                        builder: (context) => AppTopBar(
+                          centerText: 'Learn',
+                          centerIsTitle: true,
+                          trailingIcon: LucideIcons.plus,
+                          onTrailing: () => showNoteEditorSheet(context),
+                          onMenu: () => Scaffold.of(context).openDrawer(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              )
-            else
-              for (final note in visible)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _NoteCard(note: note),
-                ),
 
-            const SizedBox(height: 2),
-            DashedActionButton(
-              label: 'Write a new note',
-              onTap: () => showNoteEditorSheet(context),
-            ),
-          ],
-        ).animate().fadeIn(duration: AppMotion.screenEnter).slideY(
-              begin: 0.02,
-              end: 0.0,
-              duration: AppMotion.screenEnter,
-              curve: AppMotion.standard,
-            ),
+                    _ReviewQueueHero(
+                      dueCount: due.length,
+                      totalCount: notes.length,
+                      onStart: due.isEmpty
+                          ? null
+                          : () =>
+                                context.go(RoutePaths.learnNote(due.first.id)),
+                    ),
+
+                    const SizedBox(height: 20),
+                    SectionHeader(
+                      title: 'Notebooks',
+                      trailing: Text(
+                        '${notes.length} ${notes.length == 1 ? 'note' : 'notes'}',
+                        style: TextStyle(
+                          fontFamily: AppFonts.sans,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 11),
+                    if (books.isEmpty)
+                      Text(
+                        'No notebooks yet — your first note creates one.',
+                        style: TextStyle(
+                          fontFamily: AppFonts.sans,
+                          fontSize: 13.5,
+                          color: colors.text3,
+                        ),
+                      )
+                    else
+                      SizedBox(
+                        height: 132,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: books.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 9),
+                          itemBuilder: (context, i) =>
+                              _NotebookCard(progress: books[i]),
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
+                    AppTabRail<_LearnTab>(
+                      value: _tab,
+                      labels: const {
+                        _LearnTab.recent: 'Recent',
+                        _LearnTab.starred: 'Starred',
+                        _LearnTab.due: 'Due',
+                      },
+                      icons: const {
+                        _LearnTab.recent: LucideIcons.clock3,
+                        _LearnTab.starred: LucideIcons.star,
+                        _LearnTab.due: LucideIcons.calendarClock,
+                      },
+                      height: 36,
+                      fontSize: 12.5,
+                      onChanged: (t) => setState(() => _tab = t),
+                    ),
+
+                    const SizedBox(height: 12),
+                    if (visible.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(
+                            switch (_tab) {
+                              _LearnTab.recent => 'Nothing written yet.',
+                              _LearnTab.starred => 'No starred notes.',
+                              _LearnTab.due =>
+                                'Nothing due — you are all caught up.',
+                            },
+                            style: TextStyle(
+                              fontFamily: AppFonts.sans,
+                              fontSize: 14,
+                              color: colors.text3,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      for (final note in visible)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _NoteCard(note: note),
+                        ),
+
+                    const SizedBox(height: 2),
+                    DashedActionButton(
+                      label: 'Write a new note',
+                      onTap: () => showNoteEditorSheet(context),
+                    ),
+                  ],
+                )
+                .animate()
+                .fadeIn(duration: AppMotion.screenEnter)
+                .slideY(
+                  begin: 0.02,
+                  end: 0.0,
+                  duration: AppMotion.screenEnter,
+                  curve: AppMotion.standard,
+                ),
       ),
     );
   }
@@ -255,9 +267,9 @@ class _ReviewQueueHero extends StatelessWidget {
                     totalCount == 0
                         ? 'Write your first note and it joins the queue.'
                         : dueCount == 0
-                            ? 'Nothing due right now. Come back tomorrow.'
-                            : 'Spaced repetition keeps what you read. '
-                                'Reviewing now pushes each note further out.',
+                        ? 'Nothing due right now. Come back tomorrow.'
+                        : 'Spaced repetition keeps what you read. '
+                              'Reviewing now pushes each note further out.',
                     style: TextStyle(
                       fontFamily: AppFonts.sans,
                       fontSize: 13,
@@ -314,8 +326,9 @@ class _NotebookCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final colors = context.appColors;
-    final accent =
-        Color(int.parse(progress.book.colorHex.replaceFirst('#', '0xFF')));
+    final accent = Color(
+      int.parse(progress.book.colorHex.replaceFirst('#', '0xFF')),
+    );
 
     return SizedBox(
       width: 132,
@@ -406,8 +419,8 @@ class _NoteCard extends ConsumerWidget {
         ? scheme.secondary
         : Color(int.parse(book.colorHex.replaceFirst('#', '0xFF')));
 
-    final due = note.reviewDueAt != null &&
-        !note.reviewDueAt!.isAfter(DateTime.now());
+    final due =
+        note.reviewDueAt != null && !note.reviewDueAt!.isAfter(DateTime.now());
     final tags = note.tagsCsv.split(',').where((t) => t.trim().isNotEmpty);
 
     return Tappable(
@@ -429,11 +442,18 @@ class _NoteCard extends ConsumerWidget {
                 Container(
                   width: 7,
                   height: 7,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: accent),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accent,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Overline(book?.name ?? 'Note', color: accent, letterSpacing: 0.5),
+                  child: Overline(
+                    book?.name ?? 'Note',
+                    color: accent,
+                    letterSpacing: 0.5,
+                  ),
                 ),
                 Text(
                   _relative(note.updatedAt),
@@ -476,7 +496,10 @@ class _NoteCard extends ConsumerWidget {
                 for (final tag in tags) ...[
                   Container(
                     margin: const EdgeInsets.only(right: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: scheme.surfaceContainer,
                       border: Border.all(color: scheme.outlineVariant),

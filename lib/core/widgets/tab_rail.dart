@@ -16,6 +16,7 @@ class AppTabRail<T> extends StatelessWidget {
     super.key,
     required this.value,
     required this.labels,
+    this.icons = const {},
     required this.onChanged,
     this.height = 38,
     this.fontSize = 13,
@@ -25,6 +26,9 @@ class AppTabRail<T> extends StatelessWidget {
 
   /// Ordered: the map's iteration order is the display order.
   final Map<T, String> labels;
+
+  /// Optional glyphs let compact tabs retain their meaning at a glance.
+  final Map<T, IconData> icons;
 
   final ValueChanged<T> onChanged;
   final double height;
@@ -62,7 +66,7 @@ class AppTabRail<T> extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: entry.key == value
-                          ? scheme.surface
+                          ? scheme.primary
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                       // Kit: the selected pill lifts off the track.
@@ -76,18 +80,35 @@ class AppTabRail<T> extends StatelessWidget {
                             ]
                           : null,
                     ),
-                    child: Text(
-                      entry.value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: AppFonts.sans,
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.w700,
-                        color: entry.key == value
-                            ? scheme.onSurface
-                            : scheme.onSurfaceVariant,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (icons[entry.key] case final icon?) ...[
+                          Icon(
+                            icon,
+                            size: fontSize + 4,
+                            color: entry.key == value
+                                ? scheme.onPrimary
+                                : scheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 7),
+                        ],
+                        Flexible(
+                          child: Text(
+                            entry.value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppFonts.sans,
+                              fontSize: fontSize,
+                              fontWeight: FontWeight.w700,
+                              color: entry.key == value
+                                  ? scheme.onPrimary
+                                  : scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

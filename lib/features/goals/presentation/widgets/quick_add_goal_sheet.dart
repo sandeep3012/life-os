@@ -135,11 +135,22 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              _isEditMode ? 'Edit goal' : 'New goal',
-              style: Theme.of(context).textTheme.titleLarge,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _isEditMode ? 'Edit goal' : 'New goal',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Cancel',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(LucideIcons.x),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             TextField(
               controller: _titleController,
               autofocus: !_isEditMode,
@@ -227,7 +238,10 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
               if (_reminderEnabled) ...[
                 DropdownButtonFormField<int>(
                   initialValue: _reminderDaysBefore,
-                  decoration: const InputDecoration(labelText: 'Remind'),
+                  decoration: const InputDecoration(
+                    labelText: 'Remind',
+                    prefixIcon: Icon(LucideIcons.bellRing, size: 18),
+                  ),
                   items: [
                     for (final (value, label) in _reminderDaysOptions)
                       DropdownMenuItem(value: value, child: Text(label)),

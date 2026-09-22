@@ -52,7 +52,10 @@ class TaskTile extends StatelessWidget {
               IconButton(
                 tooltip: done ? 'Mark incomplete' : 'Mark complete',
                 onPressed: onToggle,
-                icon: _TaskCheckbox(done: done, color: colors.tasks),
+                icon: _TaskCheckbox(
+                  done: done,
+                  color: theme.colorScheme.primary,
+                ),
               ),
               SizedBox(width: compact ? 2 : 12),
               Expanded(

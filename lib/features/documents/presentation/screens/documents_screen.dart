@@ -9,6 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/widgets/collection_layout.dart';
+import '../../../../app/router/app_sidebar.dart';
 import '../../../tags/application/tags_providers.dart';
 import '../../application/documents_providers.dart';
 import '../widgets/document_tile.dart';
@@ -59,6 +60,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
           };
 
     return Scaffold(
+      drawer: const AppSidebar(),
       appBar: AppBar(
         title: const Text('Documents'),
         actions: const [

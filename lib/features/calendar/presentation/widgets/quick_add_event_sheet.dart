@@ -363,7 +363,10 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
           if (_reminderEnabled) ...[
             DropdownButtonFormField<int>(
               initialValue: _reminderMinutesBefore,
-              decoration: const InputDecoration(labelText: 'Remind'),
+              decoration: const InputDecoration(
+                labelText: 'Remind',
+                prefixIcon: Icon(LucideIcons.bellRing, size: 18),
+              ),
               items: [
                 for (final (value, label) in _reminderPresets)
                   DropdownMenuItem(value: value, child: Text(label)),
@@ -376,6 +379,10 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
               labels: const {
                 ReminderMode.notification: 'Notification',
                 ReminderMode.alarm: 'Alarm',
+              },
+              icons: const {
+                ReminderMode.notification: LucideIcons.bell,
+                ReminderMode.alarm: LucideIcons.alarmClock,
               },
               onChanged: (value) => setState(() => _reminderMode = value),
             ),

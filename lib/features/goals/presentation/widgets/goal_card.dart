@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/goal_progress.dart';
 import 'goal_ring.dart';
@@ -49,13 +48,7 @@ class GoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = context.appColors;
     final goal = data.goal;
-    final color = switch (goal.type) {
-      'financial' => colors.finance,
-      'habit' => colors.habits,
-      _ => colors.goals,
-    };
 
     final target = goal.targetValue;
     final progressLabel = !data.progressReady
@@ -78,7 +71,7 @@ class GoalCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GoalRing(ratio: data.ratio, color: color),
+                GoalRing(ratio: data.ratio),
                 const SizedBox(height: 14),
                 Text(
                   goal.title,
@@ -117,7 +110,7 @@ class GoalCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              GoalRing(ratio: data.ratio, color: color),
+              GoalRing(ratio: data.ratio),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

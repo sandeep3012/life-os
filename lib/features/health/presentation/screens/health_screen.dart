@@ -43,39 +43,47 @@ class _HealthScreenState extends ConsumerState<HealthScreen> {
       drawer: const AppSidebar(),
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 8, bottom: 14),
-              child: Builder(
-                builder: (context) => AppTopBar(
-                  centerText: 'Health',
-                  centerIsTitle: true,
-                  showTrailing: false,
-                  onMenu: () => Scaffold.of(context).openDrawer(),
+        child:
+            ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 14),
+                      child: Builder(
+                        builder: (context) => AppTopBar(
+                          centerText: 'Health',
+                          centerIsTitle: true,
+                          showTrailing: false,
+                          onMenu: () => Scaffold.of(context).openDrawer(),
+                        ),
+                      ),
+                    ),
+                    AppTabRail<_HealthTab>(
+                      value: _tab,
+                      labels: const {
+                        _HealthTab.medication: 'Medication',
+                        _HealthTab.gym: 'Gym',
+                      },
+                      icons: const {
+                        _HealthTab.medication: LucideIcons.pill,
+                        _HealthTab.gym: LucideIcons.dumbbell,
+                      },
+                      onChanged: (tab) => setState(() => _tab = tab),
+                    ),
+                    if (_tab == _HealthTab.medication)
+                      const _MedicationView()
+                    else
+                      const _GymView(),
+                  ],
+                )
+                .animate()
+                .fadeIn(duration: AppMotion.screenEnter)
+                .slideY(
+                  begin: 0.02,
+                  end: 0.0,
+                  duration: AppMotion.screenEnter,
+                  curve: AppMotion.standard,
                 ),
-              ),
-            ),
-            AppTabRail<_HealthTab>(
-              value: _tab,
-              labels: const {
-                _HealthTab.medication: 'Medication',
-                _HealthTab.gym: 'Gym',
-              },
-              onChanged: (tab) => setState(() => _tab = tab),
-            ),
-            if (_tab == _HealthTab.medication)
-              const _MedicationView()
-            else
-              const _GymView(),
-          ],
-        ).animate().fadeIn(duration: AppMotion.screenEnter).slideY(
-              begin: 0.02,
-              end: 0.0,
-              duration: AppMotion.screenEnter,
-              curve: AppMotion.standard,
-            ),
       ),
     );
   }
@@ -113,8 +121,8 @@ class _MedicationView extends ConsumerWidget {
           nextLabel: total == 0
               ? 'No medication scheduled today.'
               : next.isEmpty
-                  ? 'All doses logged. Nicely done.'
-                  : 'Next up: ${next.first.medication.name}',
+              ? 'All doses logged. Nicely done.'
+              : 'Next up: ${next.first.medication.name}',
         ),
 
         for (final entry in grouped.entries) ...[
@@ -369,8 +377,9 @@ class _DoseRow extends ConsumerWidget {
                       fontSize: 14.5,
                       fontWeight: FontWeight.w700,
                       color: scheme.onSurface,
-                      decoration:
-                          dose.taken ? TextDecoration.lineThrough : null,
+                      decoration: dose.taken
+                          ? TextDecoration.lineThrough
+                          : null,
                       decorationColor: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -481,7 +490,11 @@ class _RefillBanner extends StatelessWidget {
               color: colors.warning.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(LucideIcons.triangleAlert, size: 17, color: colors.warning),
+            child: Icon(
+              LucideIcons.triangleAlert,
+              size: 17,
+              color: colors.warning,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -582,7 +595,9 @@ class _GymView extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: Overline(workout.day.label, color: colors.text3)),
+                  Expanded(
+                    child: Overline(workout.day.label, color: colors.text3),
+                  ),
                   Tappable(
                     haptic: TapHaptic.light,
                     semanticLabel: 'Edit session',
@@ -599,7 +614,9 @@ class _GymView extends ConsumerWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                workout.day.focus.isEmpty ? workout.day.label : workout.day.focus,
+                workout.day.focus.isEmpty
+                    ? workout.day.label
+                    : workout.day.focus,
                 style: TextStyle(
                   fontFamily: AppFonts.serif,
                   fontSize: 26,
@@ -672,7 +689,13 @@ class _WeeklyPlanList extends ConsumerWidget {
   final Map<int, List<WorkoutDay>> plan;
 
   static const _names = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
   ];
 
   @override
@@ -821,11 +844,11 @@ class _ExerciseRow extends ConsumerWidget {
                   Text(
                     session.setCount == 0
                         ? (exercise.scheme.isEmpty
-                            ? 'No sets logged'
-                            : 'Target ${exercise.scheme} · no sets logged')
+                              ? 'No sets logged'
+                              : 'Target ${exercise.scheme} · no sets logged')
                         : '${session.setCount} sets · '
-                            'top ${ExerciseSession.formatKg(session.topWeightGrams)} · '
-                            '${session.totalReps} reps',
+                              'top ${ExerciseSession.formatKg(session.topWeightGrams)} · '
+                              '${session.totalReps} reps',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -844,7 +867,10 @@ class _ExerciseRow extends ConsumerWidget {
               enforceMinTouchTarget: true,
               onTap: () => showLogSetSheet(context, exercise),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: colors.accentSoft,
                   borderRadius: BorderRadius.circular(AppSpacing.chipRadius),

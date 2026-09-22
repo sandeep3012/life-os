@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/finance_providers.dart';
@@ -35,7 +36,10 @@ Future<void> showTransferMoneyDialog(
             children: [
               DropdownButtonFormField<String>(
                 initialValue: fromId,
-                decoration: const InputDecoration(labelText: 'From account'),
+                decoration: const InputDecoration(
+                  labelText: 'From account',
+                  prefixIcon: Icon(LucideIcons.landmark, size: 18),
+                ),
                 items: [
                   for (final account in accounts)
                     DropdownMenuItem(
@@ -48,7 +52,10 @@ Future<void> showTransferMoneyDialog(
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: toId,
-                decoration: const InputDecoration(labelText: 'To account'),
+                decoration: const InputDecoration(
+                  labelText: 'To account',
+                  prefixIcon: Icon(LucideIcons.landmark, size: 18),
+                ),
                 items: [
                   for (final account in accounts)
                     DropdownMenuItem(

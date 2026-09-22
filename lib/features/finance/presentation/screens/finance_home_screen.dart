@@ -11,6 +11,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/widgets/dashed_action_button.dart';
+import '../../../../core/widgets/tab_rail.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../../spend_analyzer/presentation/widgets/budget_bar.dart';
 import '../../application/finance_providers.dart';
@@ -516,20 +518,19 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: SegmentedButton<_FinanceSection>(
-                            segments: const [
-                              ButtonSegment(
-                                value: _FinanceSection.transactions,
-                                label: Text('Transactions'),
-                              ),
-                              ButtonSegment(
-                                value: _FinanceSection.budgets,
-                                label: Text('Budgets'),
-                              ),
-                            ],
-                            selected: {_section},
-                            onSelectionChanged: (s) =>
-                                setState(() => _section = s.first),
+                          child: AppTabRail<_FinanceSection>(
+                            value: _section,
+                            labels: const {
+                              _FinanceSection.transactions: 'Transactions',
+                              _FinanceSection.budgets: 'Budgets',
+                            },
+                            icons: const {
+                              _FinanceSection.transactions:
+                                  LucideIcons.arrowLeftRight,
+                              _FinanceSection.budgets: LucideIcons.walletCards,
+                            },
+                            onChanged: (section) =>
+                                setState(() => _section = section),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -889,14 +890,15 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
       entries.add(
         Padding(
           padding: const EdgeInsets.only(top: 20, bottom: 24),
-          child: OutlinedButton.icon(
-            onPressed: () => Navigator.of(context, rootNavigator: true).push(
+          child: DashedActionButton(
+            label: 'See more transactions',
+            icon: LucideIcons.arrowRight,
+            color: context.appColors.accentInk,
+            onTap: () => Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute<void>(
                 builder: (_) => const TransactionHistoryScreen(),
               ),
             ),
-            icon: const Icon(LucideIcons.arrowRight),
-            label: const Text('See more transactions'),
           ),
         ),
       );

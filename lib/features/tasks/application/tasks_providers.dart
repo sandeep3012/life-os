@@ -8,6 +8,7 @@ import '../../settings/application/settings_providers.dart';
 import '../../../core/scheduling/repeat_schedule.dart';
 import '../data/tasks_repository.dart';
 import '../domain/task_priority.dart';
+import '../domain/task_date_window.dart';
 
 final tasksRepositoryProvider = Provider<TasksRepository>((ref) {
   return TasksRepository(ref.watch(appDatabaseProvider));
@@ -16,6 +17,40 @@ final tasksRepositoryProvider = Provider<TasksRepository>((ref) {
 final allTasksProvider = StreamProvider<List<Task>>((ref) {
   return ref.watch(tasksRepositoryProvider).watchAllTasks();
 });
+
+class SelectedTaskDay extends Notifier<DateTime> {
+  @override
+  DateTime build() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  void select(DateTime day) => state = DateTime(day.year, day.month, day.day);
+}
+
+final selectedTaskDayProvider =
+    NotifierProvider.autoDispose<SelectedTaskDay, DateTime>(
+      SelectedTaskDay.new,
+    );
+
+class SelectedTaskPeriod extends Notifier<TaskPeriod> {
+  @override
+  TaskPeriod build() => TaskPeriod.week;
+  void select(TaskPeriod period) => state = period;
+}
+
+final selectedTaskPeriodProvider =
+    NotifierProvider.autoDispose<SelectedTaskPeriod, TaskPeriod>(
+      SelectedTaskPeriod.new,
+    );
+
+// The list and date-strip markers share a query whenever their windows match.
+final taskWindowTasksProvider = StreamProvider.autoDispose
+    .family<List<Task>, TaskDateWindow>((ref, window) {
+      return ref
+          .watch(tasksRepositoryProvider)
+          .watchTasksInRange(window.start, window.end);
+    });
 
 final taskCategoriesProvider = StreamProvider<List<Category>>(
   (ref) => ref.watch(tasksRepositoryProvider).watchCategories(),

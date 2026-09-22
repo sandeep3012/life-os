@@ -6,6 +6,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../../core/widgets/app_top_bar.dart';
+import '../../../../core/widgets/inline_add_button.dart';
+import '../../../../core/widgets/progress_ring.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/tab_rail.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -34,6 +36,15 @@ class TasksHabitsScreen extends ConsumerStatefulWidget {
 
 class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
   late _Section _section;
+
+  /// Whether the list's inline "Build a new …" row is on screen; the FAB
+  /// shows only while it is not.
+  bool _inlineAddVisible = false;
+
+  void _onInlineAddVisibility(bool visible) {
+    if (!mounted || _inlineAddVisible == visible) return;
+    setState(() => _inlineAddVisible = visible);
+  }
 
   @override
   void initState() {
@@ -78,28 +89,46 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
                   _Section.tasks: 'Tasks',
                   _Section.habits: 'Habits',
                 },
+                icons: const {
+                  _Section.tasks: LucideIcons.circleCheckBig,
+                  _Section.habits: LucideIcons.sprout,
+                },
                 onChanged: (value) => setState(() => _section = value),
               ),
             ),
             const SizedBox(height: 8),
             Expanded(
               child: _section == _Section.tasks
-                  ? const PlannerTasksPane()
-                  : const _HabitsPane(),
+                  ? PlannerTasksPane(
+                      onAdd: _addTask,
+                      onAddVisibilityChanged: _onInlineAddVisibility,
+                    )
+                  : _HabitsPane(
+                      onAdd: _addHabit,
+                      onAddVisibilityChanged: _onInlineAddVisibility,
+                    ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: _section == _Section.tasks ? 'New task' : 'New habit',
-        onPressed: () => _section == _Section.tasks ? _addTask() : _addHabit(),
-        child: const Icon(LucideIcons.plus),
-      ),
+      // One add affordance at a time: the dashed row at the end of the list
+      // while it is on screen, the FAB once it has scrolled away.
+      floatingActionButton: _inlineAddVisible
+          ? null
+          : FloatingActionButton(
+              tooltip: _section == _Section.tasks ? 'New task' : 'New habit',
+              onPressed: () =>
+                  _section == _Section.tasks ? _addTask() : _addHabit(),
+              child: const Icon(LucideIcons.plus),
+            ),
     );
   }
 
   Future<void> _addTask() async {
-    final result = await showQuickAddTaskSheet(context);
+    final result = await showQuickAddTaskSheet(
+      context,
+      initialDueDate: ref.read(selectedTaskDayProvider),
+    );
     if (result == null) return;
     await ref
         .read(tasksControllerProvider)
@@ -252,7 +281,13 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
 }
 
 class _HabitsPane extends ConsumerStatefulWidget {
-  const _HabitsPane();
+  const _HabitsPane({
+    required this.onAdd,
+    required this.onAddVisibilityChanged,
+  });
+
+  final VoidCallback onAdd;
+  final ValueChanged<bool> onAddVisibilityChanged;
 
   @override
   ConsumerState<_HabitsPane> createState() => _HabitsPaneState();
@@ -275,9 +310,19 @@ class _HabitsPaneState extends ConsumerState<_HabitsPane> {
     final categories = ref.watch(habitCategoriesProvider).value ?? const [];
     final layout = ref.watch(habitLayoutProvider);
     if (progress.isEmpty) {
-      return const _EmptyState(
-        icon: LucideIcons.flame,
-        message: 'No habits yet — add one to start a streak.',
+      return ListView(
+        padding: const EdgeInsets.only(bottom: 100),
+        children: [
+          const _EmptyState(
+            icon: LucideIcons.flame,
+            message: 'No habits yet — add one to start a streak.',
+          ),
+          InlineAddButton(
+            label: 'Build a new habit',
+            onTap: widget.onAdd,
+            onVisibilityChanged: widget.onAddVisibilityChanged,
+          ),
+        ],
       );
     }
     final selected =
@@ -390,6 +435,11 @@ class _HabitsPaneState extends ConsumerState<_HabitsPane> {
             const Divider(height: 1, indent: 56),
           ],
         ],
+        InlineAddButton(
+          label: 'Build a new habit',
+          onTap: widget.onAdd,
+          onVisibilityChanged: widget.onAddVisibilityChanged,
+        ),
       ],
     );
   }
@@ -415,23 +465,15 @@ class _WeekSummary extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            SizedBox(
-              width: 64,
-              height: 64,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    value: ratio,
-                    strokeWidth: 7,
-                    color: context.appColors.habits,
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  ),
-                  Text(
-                    '${(ratio * 100).round()}%',
-                    style: theme.textTheme.labelLarge,
-                  ),
-                ],
+            ProgressRing(
+              progress: ratio,
+              size: 64,
+              strokeWidth: 7,
+              color: theme.colorScheme.primary,
+              trackColor: theme.colorScheme.onSurface.withValues(alpha: 0.18),
+              child: Text(
+                '${(ratio * 100).round()}%',
+                style: theme.textTheme.labelLarge,
               ),
             ),
             const SizedBox(width: 16),
@@ -499,15 +541,15 @@ class _WeekdayDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final theme = Theme.of(context);
     return Container(
       width: 18,
       height: 18,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: active
-            ? colors.habits
-            : Theme.of(context).colorScheme.surfaceContainerHighest,
+            ? theme.colorScheme.primary
+            : theme.colorScheme.surfaceContainerHighest,
         shape: BoxShape.circle,
       ),
       child: Text(
@@ -516,8 +558,8 @@ class _WeekdayDot extends StatelessWidget {
           fontSize: 9,
           fontWeight: FontWeight.w700,
           color: active
-              ? Colors.white
-              : Theme.of(context).colorScheme.onSurfaceVariant,
+              ? theme.colorScheme.onPrimary
+              : theme.colorScheme.onSurfaceVariant,
         ),
       ),
     );

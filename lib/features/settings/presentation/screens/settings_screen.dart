@@ -14,6 +14,12 @@ import '../../../../core/services/demo_data_service.dart';
 import '../../../../core/services/backup_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../app/router/app_sidebar.dart';
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/initial_well.dart';
+import '../../../../core/widgets/section_header.dart';
+import '../../../../core/widgets/tab_rail.dart';
 import '../../../finance/presentation/screens/account_type_management_screen.dart';
 import '../../../finance/presentation/screens/category_management_screen.dart';
 import '../../application/app_lock_providers.dart';
@@ -31,6 +37,7 @@ class SettingsScreen extends ConsumerWidget {
     final controller = ref.read(settingsControllerProvider);
 
     return Scaffold(
+      drawer: const AppSidebar(),
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
@@ -40,18 +47,11 @@ class SettingsScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      LucideIcons.user,
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
+                  InitialWell(
+                    color: context.appColors.accentInk,
+                    size: 52,
+                    radius: AppSpacing.tileRadius,
+                    icon: LucideIcons.smartphone,
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -77,15 +77,19 @@ class SettingsScreen extends ConsumerWidget {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: SegmentedButton<ThemeMode>(
-                segments: const [
-                  ButtonSegment(value: ThemeMode.light, label: Text('Light')),
-                  ButtonSegment(value: ThemeMode.system, label: Text('System')),
-                  ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
-                ],
-                selected: {settings.themeMode},
-                onSelectionChanged: (selection) =>
-                    controller.setThemeMode(selection.first),
+              child: AppTabRail<ThemeMode>(
+                value: settings.themeMode,
+                labels: const {
+                  ThemeMode.light: 'Light',
+                  ThemeMode.system: 'System',
+                  ThemeMode.dark: 'Dark',
+                },
+                icons: const {
+                  ThemeMode.light: LucideIcons.sun,
+                  ThemeMode.system: LucideIcons.monitor,
+                  ThemeMode.dark: LucideIcons.moon,
+                },
+                onChanged: controller.setThemeMode,
               ),
             ),
           ),
@@ -140,6 +144,7 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 _SettingSwitch(
+                  icon: LucideIcons.vibrate,
                   title: 'Haptic feedback',
                   subtitle: 'Vibration for interactions and calendar saves',
                   value: settings.hapticsEnabled,
@@ -147,6 +152,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 _SettingSwitch(
+                  icon: LucideIcons.sparkles,
                   title: 'Save feedback',
                   subtitle: 'Show a visual response after a successful save',
                   value:
@@ -169,24 +175,20 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        SegmentedButton<SaveFeedbackMode>(
-                          segments: const [
-                            ButtonSegment(
-                              value: SaveFeedbackMode.animation,
-                              label: Text('Animation'),
-                            ),
-                            ButtonSegment(
-                              value: SaveFeedbackMode.confirmation,
-                              label: Text('Confirmation'),
-                            ),
-                          ],
-                          selected: {
-                            settings.saveConfirmationsEnabled
-                                ? SaveFeedbackMode.confirmation
-                                : SaveFeedbackMode.animation,
+                        AppTabRail<SaveFeedbackMode>(
+                          value: settings.saveConfirmationsEnabled
+                              ? SaveFeedbackMode.confirmation
+                              : SaveFeedbackMode.animation,
+                          labels: const {
+                            SaveFeedbackMode.animation: 'Animation',
+                            SaveFeedbackMode.confirmation: 'Confirmation',
                           },
-                          onSelectionChanged: (selection) => controller
-                              .setSaveFeedbackMode(selection.first),
+                          icons: const {
+                            SaveFeedbackMode.animation: LucideIcons.sparkles,
+                            SaveFeedbackMode.confirmation:
+                                LucideIcons.badgeCheck,
+                          },
+                          onChanged: controller.setSaveFeedbackMode,
                         ),
                       ],
                     ),
@@ -200,6 +202,7 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 _SettingSwitch(
+                  icon: LucideIcons.bellRing,
                   title: 'Task reminders',
                   subtitle: 'Alert before a task is due',
                   value: settings.taskReminders,
@@ -207,6 +210,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 _SettingSwitch(
+                  icon: LucideIcons.sprout,
                   title: 'Habit reminders',
                   subtitle: 'Daily nudge for habits not yet logged',
                   value: settings.habitReminders,
@@ -222,6 +226,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 _SettingSwitch(
+                  icon: LucideIcons.lightbulb,
                   title: 'AI insight alerts',
                   subtitle: 'Notify when new insights appear',
                   value: settings.aiInsightAlerts,
@@ -231,20 +236,30 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
-          const ExpansionTile(
-            title: Text('Reminder status'),
-            children: [ReminderStatusCard()],
+          const SizedBox(height: 10),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: Theme(
+              // ExpansionTile draws its own top/bottom rules when open; the
+              // card already provides the edge.
+              data: theme.copyWith(dividerColor: Colors.transparent),
+              child: const ExpansionTile(
+                leading: _IconWell(LucideIcons.clock3),
+                title: Text('Reminder status'),
+                subtitle: Text('Permission and queued alerts'),
+                children: [ReminderStatusCard(embedded: true)],
+              ),
+            ),
           ),
           const _SectionTitle('Finance'),
           Card(
             child: Column(
               children: [
-                ListTile(
-                  title: const Text('Categories'),
-                  subtitle: const Text(
-                    'Add, edit, or remove transaction/budget categories',
-                  ),
-                  trailing: const Icon(LucideIcons.chevronRight),
+                _SettingRow(
+                  icon: LucideIcons.tags,
+                  title: 'Categories',
+                  subtitle:
+                      'Add, edit, or remove transaction/budget categories',
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => const CategoryManagementScreen(),
@@ -252,10 +267,10 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 const Divider(height: 1),
-                ListTile(
-                  title: const Text('Account types'),
-                  subtitle: const Text('Add, edit, or remove account types'),
-                  trailing: const Icon(LucideIcons.chevronRight),
+                _SettingRow(
+                  icon: LucideIcons.landmark,
+                  title: 'Account types',
+                  subtitle: 'Add, edit, or remove account types',
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => const AccountTypeManagementScreen(),
@@ -263,12 +278,11 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 const Divider(height: 1),
-                ListTile(
-                  title: const Text('Currency'),
-                  subtitle: Text(
-                    '${currencySymbolFor(settings.currencyCode)} · ${settings.currencyCode}',
-                  ),
-                  trailing: const Icon(LucideIcons.chevronRight),
+                _SettingRow(
+                  icon: LucideIcons.coins,
+                  title: 'Currency',
+                  subtitle:
+                      '${currencySymbolFor(settings.currencyCode)} · ${settings.currencyCode}',
                   onTap: () =>
                       _pickCurrency(context, ref, settings.currencyCode),
                 ),
@@ -298,6 +312,7 @@ class SettingsScreen extends ConsumerWidget {
           const _SectionTitle('More'),
           Card(
             child: ListTile(
+              leading: const _IconWell(LucideIcons.cloudOff),
               title: const Text('Multi-device sync'),
               subtitle: const Text('Not available yet'),
               trailing: Container(
@@ -818,6 +833,7 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
       child: Column(
         children: [
           _SettingSwitch(
+            icon: LucideIcons.lockKeyhole,
             title: 'App lock',
             subtitle: 'Require a PIN or biometrics to open the app',
             value: settings.appLockEnabled,
@@ -825,13 +841,14 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
           ),
           if (settings.appLockEnabled) ...[
             const Divider(height: 1),
-            ListTile(
-              title: const Text('Change PIN'),
-              trailing: const Icon(LucideIcons.chevronRight),
+            _SettingRow(
+              icon: LucideIcons.keyRound,
+              title: 'Change PIN',
               onTap: _onChangePin,
             ),
             const Divider(height: 1),
             _SettingSwitch(
+              icon: LucideIcons.scanFace,
               title: 'Use biometrics',
               subtitle: canUseBiometrics
                   ? 'Unlock with Face ID or fingerprint'
@@ -946,18 +963,20 @@ class _BackupCardState extends ConsumerState<_BackupCard> {
     return Card(
       child: Column(
         children: [
-          ListTile(
-            title: const Text('Export data'),
-            subtitle: const Text('Save everything as a backup file'),
+          _SettingRow(
+            icon: LucideIcons.upload,
+            title: 'Export data',
+            subtitle: 'Save everything as a backup file',
             trailing: _op == _BackupOp.exporting
                 ? const _MiniSpinner()
                 : const Icon(LucideIcons.chevronRight),
             onTap: busy ? null : _export,
           ),
           const Divider(height: 1),
-          ListTile(
-            title: const Text('Import data'),
-            subtitle: const Text('Restore from a backup file'),
+          _SettingRow(
+            icon: LucideIcons.download,
+            title: 'Import data',
+            subtitle: 'Restore from a backup file',
             trailing: _op == _BackupOp.importing
                 ? const _MiniSpinner()
                 : const Icon(LucideIcons.chevronRight),
@@ -990,20 +1009,77 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 24, 4, 10),
-      child: Text(title, style: Theme.of(context).textTheme.titleSmall),
+      padding: const EdgeInsets.fromLTRB(6, 26, 6, 10),
+      child: Overline(title),
+    );
+  }
+}
+
+/// The 40px accent well that leads every settings row, so each group scans
+/// as a list of like items rather than bare text.
+class _IconWell extends StatelessWidget {
+  const _IconWell(this.icon);
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return InitialWell(
+      color: context.appColors.accentInk,
+      size: 40,
+      radius: AppSpacing.iconButtonRadius,
+      icon: icon,
+    );
+  }
+}
+
+/// A tappable settings row: icon well, title, optional subtitle, and a chevron
+/// unless the caller supplies its own trailing (e.g. a busy spinner).
+class _SettingRow extends StatelessWidget {
+  const _SettingRow({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListTile(
+      leading: _IconWell(icon),
+      title: Text(title, style: theme.textTheme.bodyMedium),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+      trailing: trailing ?? const Icon(LucideIcons.chevronRight, size: 18),
+      onTap: onTap,
     );
   }
 }
 
 class _SettingSwitch extends StatelessWidget {
   const _SettingSwitch({
+    this.icon,
     required this.title,
     required this.subtitle,
     required this.value,
     required this.onChanged,
   });
 
+  final IconData? icon;
   final String title;
   final String subtitle;
   final bool value;
@@ -1012,6 +1088,7 @@ class _SettingSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SwitchListTile(
+      secondary: icon == null ? null : _IconWell(icon!),
       title: Text(title, style: Theme.of(context).textTheme.bodyMedium),
       subtitle: Text(
         subtitle,
