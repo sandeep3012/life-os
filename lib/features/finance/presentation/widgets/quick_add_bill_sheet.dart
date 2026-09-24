@@ -44,6 +44,7 @@ Future<QuickAddBillResult?> showQuickAddBillSheet(
   required List<AccountType> accountTypes,
   required List<Category> categories,
   required String currencySymbol,
+  Bill? initial,
 }) {
   return showCompactEditorSheet<QuickAddBillResult>(
     context: context,
@@ -52,6 +53,7 @@ Future<QuickAddBillResult?> showQuickAddBillSheet(
       accountTypes: accountTypes,
       categories: categories,
       currencySymbol: currencySymbol,
+      initial: initial,
     ),
   );
 }
@@ -62,6 +64,7 @@ class _QuickAddBillSheet extends StatefulWidget {
     required this.accountTypes,
     required this.categories,
     required this.currencySymbol,
+    this.initial,
   });
 
   final List<Account> accounts;
@@ -71,20 +74,34 @@ class _QuickAddBillSheet extends StatefulWidget {
   final List<Category> categories;
   final String currencySymbol;
 
+  /// Non-null when editing an existing bill.
+  final Bill? initial;
+
   @override
   State<_QuickAddBillSheet> createState() => _QuickAddBillSheetState();
 }
 
 class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
-  final _nameController = TextEditingController();
-  final _amountController = TextEditingController();
-  String? _accountId;
-  String? _categoryId;
-  DateTime _dueDate = DateTime.now().add(const Duration(days: 1));
-  String _frequency = 'monthly';
-  bool _reminderEnabled = true;
-  ReminderMode _reminderMode = ReminderMode.notification;
-  int _reminderDaysBefore = 0;
+  late final _nameController = TextEditingController(
+    text: widget.initial?.name,
+  );
+  late final _amountController = TextEditingController(
+    text: widget.initial == null
+        ? null
+        : (widget.initial!.amountMinor / 100).toStringAsFixed(2),
+  );
+  late String? _accountId = widget.initial?.accountId;
+  late String? _categoryId = widget.initial?.categoryId;
+  late DateTime _dueDate =
+      widget.initial?.dueDate ?? DateTime.now().add(const Duration(days: 1));
+  late String _frequency = widget.initial?.frequency ?? 'monthly';
+  late bool _reminderEnabled = widget.initial?.reminderEnabled ?? true;
+  late ReminderMode _reminderMode = widget.initial == null
+      ? ReminderMode.notification
+      : ReminderMode.fromStorage(widget.initial!.reminderMode);
+  late int _reminderDaysBefore = widget.initial?.reminderDaysBefore ?? 0;
+
+  bool get _isEditing => widget.initial != null;
 
   @override
   void initState() {
@@ -117,7 +134,7 @@ class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
         (double.tryParse(_amountController.text.trim()) ?? 0) > 0;
 
     return CompactEditorSheet(
-      title: 'New bill',
+      title: _isEditing ? 'Edit bill' : 'New bill',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,7 +283,7 @@ class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
                         );
                       }
                     : null,
-                child: const Text('Add bill'),
+                child: Text(_isEditing ? 'Save changes' : 'Add bill'),
               ),
             ),
           ],

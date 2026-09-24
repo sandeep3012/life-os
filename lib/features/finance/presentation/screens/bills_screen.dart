@@ -7,6 +7,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
@@ -18,7 +19,12 @@ const _frequencyLabels = {'once': 'One-time', 'monthly': 'Monthly', 'yearly': 'Y
 class BillsScreen extends ConsumerWidget {
   const BillsScreen({super.key});
 
-  Future<void> _addBill(BuildContext context, WidgetRef ref) async {
+  /// Opens the sheet for a new bill, or for [existing] to edit it.
+  static Future<void> openSheet(
+    BuildContext context,
+    WidgetRef ref, {
+    Bill? existing,
+  }) async {
     final accounts = ref.read(transactableAccountsProvider);
     if (accounts.isEmpty) return;
     final categories = ref.read(categoriesProvider).value ?? const [];
@@ -29,21 +35,45 @@ class BillsScreen extends ConsumerWidget {
       accountTypes: accountTypes,
       categories: categories,
       currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+      initial: existing,
     );
     if (result == null) return;
-    await ref
-        .read(financeControllerProvider)
-        .addBill(
-          name: result.name,
-          accountId: result.accountId,
-          categoryId: result.categoryId,
-          amountMinor: result.amountMinor,
-          dueDate: result.dueDate,
-          frequency: result.frequency,
-          reminderEnabled: result.reminderEnabled,
-          reminderMode: result.reminderMode,
-          reminderDaysBefore: result.reminderDaysBefore,
-        );
+    final controller = ref.read(financeControllerProvider);
+    if (existing == null) {
+      await controller.addBill(
+        name: result.name,
+        accountId: result.accountId,
+        categoryId: result.categoryId,
+        amountMinor: result.amountMinor,
+        dueDate: result.dueDate,
+        frequency: result.frequency,
+        reminderEnabled: result.reminderEnabled,
+        reminderMode: result.reminderMode,
+        reminderDaysBefore: result.reminderDaysBefore,
+      );
+    } else {
+      await controller.updateBill(
+        id: existing.id,
+        name: result.name,
+        accountId: result.accountId,
+        categoryId: result.categoryId,
+        amountMinor: result.amountMinor,
+        dueDate: result.dueDate,
+        frequency: result.frequency,
+        reminderEnabled: result.reminderEnabled,
+        reminderMode: result.reminderMode,
+        reminderDaysBefore: result.reminderDaysBefore,
+      );
+    }
+    if (!context.mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: existing == null ? 'Bill saved' : 'Bill updated',
+      message: existing == null
+          ? '“${result.name}” is due ${DateFormat.yMMMd().format(result.dueDate)}.'
+          : 'Changes to “${result.name}” were saved.',
+    );
   }
 
   @override
@@ -51,6 +81,12 @@ class BillsScreen extends ConsumerWidget {
     final bills = ref.watch(upcomingBillsProvider);
     final categories = ref.watch(categoriesProvider).value ?? const [];
     final categoryById = {for (final c in categories) c.id: c};
+    // Keeps the accounts stream alive for [openSheet], which reads it rather
+    // than watching it. Riverpod disposes an unlistened StreamProvider before
+    // its first emission, so without this the add button reads an empty list
+    // and returns without opening anything. The recurring screen already
+    // watches accounts for its rows, which is why only this one was affected.
+    ref.watch(accountsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bills')),
@@ -66,7 +102,7 @@ class BillsScreen extends ConsumerWidget {
               },
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _addBill(context, ref),
+        onPressed: () => openSheet(context, ref),
         icon: const Icon(LucideIcons.plus),
         label: const Text('New bill'),
       ),
@@ -126,6 +162,7 @@ class _BillTile extends ConsumerWidget {
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
+      onTap: () => BillsScreen.openSheet(context, ref, existing: bill),
       leading: Container(
         width: 38,
         height: 38,

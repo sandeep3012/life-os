@@ -430,6 +430,43 @@ class FinanceController {
     await _repo.generateDueRecurringTransactions();
   }
 
+  /// Edits a schedule. Transactions it already generated stay put — they are
+  /// money that moved — but when the cadence or start date changes the next
+  /// due date is recomputed so the schedule fires from the new settings.
+  ///
+  /// Generation runs afterwards for the same reason it does on create: a
+  /// schedule moved to today or earlier should appear straight away rather
+  /// than waiting for the next app-open catch-up.
+  Future<void> updateRecurringTransaction({
+    required RecurringTransaction existing,
+    required String accountId,
+    String? categoryId,
+    required String merchant,
+    required int amountMinor,
+    required String frequency,
+    required DateTime startDate,
+    DateTime? endDate,
+    String? note,
+    String? paymentMode,
+  }) async {
+    final scheduleMoved =
+        existing.frequency != frequency ||
+        !dateOnly(existing.nextDueDate).isAtSameMomentAs(dateOnly(startDate));
+    await _repo.updateRecurringTransaction(
+      id: existing.id,
+      accountId: accountId,
+      categoryId: categoryId,
+      merchant: merchant,
+      amountMinor: amountMinor,
+      frequency: frequency,
+      nextDueDate: scheduleMoved ? startDate : null,
+      endDate: endDate,
+      note: note,
+      paymentMode: paymentMode,
+    );
+    await _repo.generateDueRecurringTransactions();
+  }
+
   Future<void> setRecurringTransactionActive(String id, bool active) =>
       _repo.setRecurringTransactionActive(id, active);
 
@@ -460,6 +497,36 @@ class FinanceController {
       reminderDaysBefore: reminderDaysBefore,
     );
     await _scheduleBillReminder(bill, reminderMode);
+  }
+
+  /// Edits a bill and re-points its reminder at the saved values — the old
+  /// one is cancelled first, since the due date or lead time may have moved.
+  Future<void> updateBill({
+    required String id,
+    required String name,
+    String? accountId,
+    String? categoryId,
+    required int amountMinor,
+    required DateTime dueDate,
+    required String frequency,
+    required bool reminderEnabled,
+    required ReminderMode reminderMode,
+    required int reminderDaysBefore,
+  }) async {
+    await _notifications.cancelBillReminder(id);
+    final bill = await _repo.updateBill(
+      id: id,
+      name: name,
+      accountId: accountId,
+      categoryId: categoryId,
+      amountMinor: amountMinor,
+      dueDate: dueDate,
+      frequency: frequency,
+      reminderEnabled: reminderEnabled,
+      reminderMode: reminderMode.storageValue,
+      reminderDaysBefore: reminderDaysBefore,
+    );
+    if (bill.active) await _scheduleBillReminder(bill, reminderMode);
   }
 
   /// Pays the bill from [accountId] and, for a repeating bill, reschedules

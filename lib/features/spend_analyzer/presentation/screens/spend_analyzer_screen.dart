@@ -13,11 +13,18 @@ import '../widgets/payment_mode_breakdown.dart';
 import '../widgets/weekly_trend_chart.dart';
 import '../../../../app/theme/app_fonts.dart';
 
-class SpendAnalyzerScreen extends ConsumerWidget {
+class SpendAnalyzerScreen extends ConsumerStatefulWidget {
   const SpendAnalyzerScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SpendAnalyzerScreen> createState() => _SpendAnalyzerScreenState();
+}
+
+class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
+  bool _showAmounts = true;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.appColors;
     final month = ref.watch(selectedAnalyzerMonthProvider);
@@ -108,7 +115,33 @@ class SpendAnalyzerScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Text('By category', style: theme.textTheme.titleSmall),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('By category', style: theme.textTheme.titleSmall),
+              if (breakdown.isNotEmpty)
+                GestureDetector(
+                  onTap: () => setState(() => _showAmounts = !_showAmounts),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _showAmounts ? 'Hide amounts' : 'Show amounts',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        _showAmounts ? LucideIcons.eye : LucideIcons.eyeOff,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 10),
           Card(
             child: Padding(
@@ -118,7 +151,12 @@ class SpendAnalyzerScreen extends ConsumerWidget {
                       padding: EdgeInsets.symmetric(vertical: 12),
                       child: Text('No spending logged for this month yet.'),
                     )
-                  : CategoryDonutChart(breakdown: breakdown, totalMinor: total, currencyCode: currencyCode),
+                  : CategoryDonutChart(
+                      breakdown: breakdown,
+                      totalMinor: total,
+                      currencyCode: currencyCode,
+                      showAmounts: _showAmounts,
+                    ),
             ),
           ),
           const SizedBox(height: 20),
@@ -159,7 +197,6 @@ class SpendAnalyzerScreen extends ConsumerWidget {
     );
   }
 
-  void _shiftMonth(WidgetRef ref, int delta) {
-    ref.read(selectedAnalyzerMonthProvider.notifier).shiftBy(delta);
-  }
+  void _shiftMonth(WidgetRef ref, int delta) =>
+      ref.read(selectedAnalyzerMonthProvider.notifier).shiftBy(delta);
 }

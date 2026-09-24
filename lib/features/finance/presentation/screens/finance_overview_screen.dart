@@ -222,15 +222,15 @@ class _FinanceOverviewScreenState extends ConsumerState<FinanceOverviewScreen> {
                           for (final entry in breakdown)
                             DonutSegment(
                               share: entry.share,
-                              color: categoryColor(entry.category.id),
+                              color: categoryColor(entry.category?.id),
                             ),
                         ],
                         legend: [
                           for (final entry in breakdown.take(5))
                             DonutLegendEntry(
-                              name: entry.category.name,
+                              name: entry.label,
                               share: entry.share,
-                              color: categoryColor(entry.category.id),
+                              color: categoryColor(entry.category?.id),
                             ),
                         ],
                       ),
