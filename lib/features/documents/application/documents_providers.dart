@@ -22,9 +22,12 @@ final documentsListProvider = StreamProvider<List<Document>>((ref) {
   return ref.watch(documentsRepositoryProvider).watchDocuments();
 });
 
+final pinnedDocumentsProvider = StreamProvider<List<Document>>((ref) {
+  return ref.watch(documentsRepositoryProvider).watchPinnedDocuments();
+});
+
 /// Resolves a single document by id — used wherever another module (e.g. a
-/// transaction's attached receipt) holds a `Documents.id` foreign key and
-/// needs to render its thumbnail/title without importing the whole list.
+/// transaction's attached receipt) holds a `Documents.id` foreign key.
 final documentByIdProvider = Provider.family<Document?, String?>((ref, id) {
   if (id == null) return null;
   final documents = ref.watch(documentsListProvider).value ?? const [];
@@ -34,7 +37,7 @@ final documentByIdProvider = Provider.family<Document?, String?>((ref, id) {
   return null;
 });
 
-/// Folder name -> document count, for the folder grid's subtitle.
+/// Folder ID -> document count, for the folder grid subtitle.
 final documentCountByFolderProvider = Provider<Map<String, int>>((ref) {
   final documents = ref.watch(documentsListProvider).value ?? const [];
   final counts = <String, int>{};
@@ -53,23 +56,44 @@ class DocumentsController {
 
   Future<void> createFolder(String name) => _repo.createFolder(name);
 
+  Future<void> deleteFolder(String id) => _repo.deleteFolder(id);
+
   Future<void> importDocument({
     required File source,
     required String originalName,
     String? title,
     String? folderId,
+    bool isPinned = false,
+    String? documentType,
   }) {
     return _repo.importAndCreateDocument(
       source: source,
       originalName: originalName,
       title: title,
       folderId: folderId,
+      isPinned: isPinned,
+      documentType: documentType,
     );
   }
 
-  Future<void> updateDocument({required String id, required String title, String? folderId}) {
-    return _repo.updateDocument(id: id, title: title, folderId: folderId);
+  Future<void> updateDocument({
+    required String id,
+    required String title,
+    String? folderId,
+    bool isPinned = false,
+    String? documentType,
+  }) {
+    return _repo.updateDocument(
+      id: id,
+      title: title,
+      folderId: folderId,
+      isPinned: isPinned,
+      documentType: documentType,
+    );
   }
+
+  Future<void> pinDocument(String id, {required bool pinned}) =>
+      _repo.pinDocument(id, pinned: pinned);
 
   Future<void> deleteDocument(Document document) => _repo.deleteDocument(document);
 }

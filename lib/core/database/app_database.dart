@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -266,6 +266,12 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 24) {
         await m.addColumn(appSettings, appSettings.balancesVisible);
+      }
+      if (from < 25) {
+        // v24 -> v25: documents gain a pin flag (Quick Access strip) and an
+        // optional semantic type label (identity, financial, medical, etc.)
+        await m.addColumn(documents, documents.isPinned);
+        await m.addColumn(documents, documents.documentType);
       }
     },
   );

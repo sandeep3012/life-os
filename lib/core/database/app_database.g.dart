@@ -2186,6 +2186,32 @@ class $DocumentsTable extends Documents
       'REFERENCES folders (id)',
     ),
   );
+  static const VerificationMeta _isPinnedMeta = const VerificationMeta(
+    'isPinned',
+  );
+  @override
+  late final GeneratedColumn<bool> isPinned = GeneratedColumn<bool>(
+    'is_pinned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_pinned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _documentTypeMeta = const VerificationMeta(
+    'documentType',
+  );
+  @override
+  late final GeneratedColumn<String> documentType = GeneratedColumn<String>(
+    'document_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2207,6 +2233,8 @@ class $DocumentsTable extends Documents
     mimeType,
     sizeBytes,
     folderId,
+    isPinned,
+    documentType,
     createdAt,
   ];
   @override
@@ -2269,6 +2297,21 @@ class $DocumentsTable extends Documents
         folderId.isAcceptableOrUnknown(data['folder_id']!, _folderIdMeta),
       );
     }
+    if (data.containsKey('is_pinned')) {
+      context.handle(
+        _isPinnedMeta,
+        isPinned.isAcceptableOrUnknown(data['is_pinned']!, _isPinnedMeta),
+      );
+    }
+    if (data.containsKey('document_type')) {
+      context.handle(
+        _documentTypeMeta,
+        documentType.isAcceptableOrUnknown(
+          data['document_type']!,
+          _documentTypeMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2312,6 +2355,14 @@ class $DocumentsTable extends Documents
         DriftSqlType.string,
         data['${effectivePrefix}folder_id'],
       ),
+      isPinned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_pinned'],
+      )!,
+      documentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}document_type'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2333,6 +2384,8 @@ class Document extends DataClass implements Insertable<Document> {
   final String mimeType;
   final int sizeBytes;
   final String? folderId;
+  final bool isPinned;
+  final String? documentType;
   final DateTime createdAt;
   const Document({
     required this.id,
@@ -2342,6 +2395,8 @@ class Document extends DataClass implements Insertable<Document> {
     required this.mimeType,
     required this.sizeBytes,
     this.folderId,
+    required this.isPinned,
+    this.documentType,
     required this.createdAt,
   });
   @override
@@ -2357,6 +2412,10 @@ class Document extends DataClass implements Insertable<Document> {
     map['size_bytes'] = Variable<int>(sizeBytes);
     if (!nullToAbsent || folderId != null) {
       map['folder_id'] = Variable<String>(folderId);
+    }
+    map['is_pinned'] = Variable<bool>(isPinned);
+    if (!nullToAbsent || documentType != null) {
+      map['document_type'] = Variable<String>(documentType);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -2375,6 +2434,10 @@ class Document extends DataClass implements Insertable<Document> {
       folderId: folderId == null && nullToAbsent
           ? const Value.absent()
           : Value(folderId),
+      isPinned: Value(isPinned),
+      documentType: documentType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(documentType),
       createdAt: Value(createdAt),
     );
   }
@@ -2392,6 +2455,8 @@ class Document extends DataClass implements Insertable<Document> {
       mimeType: serializer.fromJson<String>(json['mimeType']),
       sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
       folderId: serializer.fromJson<String?>(json['folderId']),
+      isPinned: serializer.fromJson<bool>(json['isPinned']),
+      documentType: serializer.fromJson<String?>(json['documentType']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2406,6 +2471,8 @@ class Document extends DataClass implements Insertable<Document> {
       'mimeType': serializer.toJson<String>(mimeType),
       'sizeBytes': serializer.toJson<int>(sizeBytes),
       'folderId': serializer.toJson<String?>(folderId),
+      'isPinned': serializer.toJson<bool>(isPinned),
+      'documentType': serializer.toJson<String?>(documentType),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2418,6 +2485,8 @@ class Document extends DataClass implements Insertable<Document> {
     String? mimeType,
     int? sizeBytes,
     Value<String?> folderId = const Value.absent(),
+    bool? isPinned,
+    Value<String?> documentType = const Value.absent(),
     DateTime? createdAt,
   }) => Document(
     id: id ?? this.id,
@@ -2429,6 +2498,8 @@ class Document extends DataClass implements Insertable<Document> {
     mimeType: mimeType ?? this.mimeType,
     sizeBytes: sizeBytes ?? this.sizeBytes,
     folderId: folderId.present ? folderId.value : this.folderId,
+    isPinned: isPinned ?? this.isPinned,
+    documentType: documentType.present ? documentType.value : this.documentType,
     createdAt: createdAt ?? this.createdAt,
   );
   Document copyWithCompanion(DocumentsCompanion data) {
@@ -2442,6 +2513,10 @@ class Document extends DataClass implements Insertable<Document> {
       mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
       sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
       folderId: data.folderId.present ? data.folderId.value : this.folderId,
+      isPinned: data.isPinned.present ? data.isPinned.value : this.isPinned,
+      documentType: data.documentType.present
+          ? data.documentType.value
+          : this.documentType,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2456,6 +2531,8 @@ class Document extends DataClass implements Insertable<Document> {
           ..write('mimeType: $mimeType, ')
           ..write('sizeBytes: $sizeBytes, ')
           ..write('folderId: $folderId, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('documentType: $documentType, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -2470,6 +2547,8 @@ class Document extends DataClass implements Insertable<Document> {
     mimeType,
     sizeBytes,
     folderId,
+    isPinned,
+    documentType,
     createdAt,
   );
   @override
@@ -2483,6 +2562,8 @@ class Document extends DataClass implements Insertable<Document> {
           other.mimeType == this.mimeType &&
           other.sizeBytes == this.sizeBytes &&
           other.folderId == this.folderId &&
+          other.isPinned == this.isPinned &&
+          other.documentType == this.documentType &&
           other.createdAt == this.createdAt);
 }
 
@@ -2494,6 +2575,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
   final Value<String> mimeType;
   final Value<int> sizeBytes;
   final Value<String?> folderId;
+  final Value<bool> isPinned;
+  final Value<String?> documentType;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const DocumentsCompanion({
@@ -2504,6 +2587,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     this.mimeType = const Value.absent(),
     this.sizeBytes = const Value.absent(),
     this.folderId = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.documentType = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2515,6 +2600,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     required String mimeType,
     this.sizeBytes = const Value.absent(),
     this.folderId = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.documentType = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : title = Value(title),
@@ -2528,6 +2615,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     Expression<String>? mimeType,
     Expression<int>? sizeBytes,
     Expression<String>? folderId,
+    Expression<bool>? isPinned,
+    Expression<String>? documentType,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -2539,6 +2628,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
       if (mimeType != null) 'mime_type': mimeType,
       if (sizeBytes != null) 'size_bytes': sizeBytes,
       if (folderId != null) 'folder_id': folderId,
+      if (isPinned != null) 'is_pinned': isPinned,
+      if (documentType != null) 'document_type': documentType,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2552,6 +2643,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     Value<String>? mimeType,
     Value<int>? sizeBytes,
     Value<String?>? folderId,
+    Value<bool>? isPinned,
+    Value<String?>? documentType,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -2563,6 +2656,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
       mimeType: mimeType ?? this.mimeType,
       sizeBytes: sizeBytes ?? this.sizeBytes,
       folderId: folderId ?? this.folderId,
+      isPinned: isPinned ?? this.isPinned,
+      documentType: documentType ?? this.documentType,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2592,6 +2687,12 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     if (folderId.present) {
       map['folder_id'] = Variable<String>(folderId.value);
     }
+    if (isPinned.present) {
+      map['is_pinned'] = Variable<bool>(isPinned.value);
+    }
+    if (documentType.present) {
+      map['document_type'] = Variable<String>(documentType.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2611,6 +2712,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
           ..write('mimeType: $mimeType, ')
           ..write('sizeBytes: $sizeBytes, ')
           ..write('folderId: $folderId, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('documentType: $documentType, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -18879,6 +18982,8 @@ typedef $$DocumentsTableCreateCompanionBuilder =
       required String mimeType,
       Value<int> sizeBytes,
       Value<String?> folderId,
+      Value<bool> isPinned,
+      Value<String?> documentType,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -18891,6 +18996,8 @@ typedef $$DocumentsTableUpdateCompanionBuilder =
       Value<String> mimeType,
       Value<int> sizeBytes,
       Value<String?> folderId,
+      Value<bool> isPinned,
+      Value<String?> documentType,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -18971,6 +19078,16 @@ class $$DocumentsTableFilterComposer
 
   ColumnFilters<int> get sizeBytes => $composableBuilder(
     column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get documentType => $composableBuilder(
+    column: $table.documentType,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -19067,6 +19184,16 @@ class $$DocumentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get documentType => $composableBuilder(
+    column: $table.documentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -19124,6 +19251,14 @@ class $$DocumentsTableAnnotationComposer
 
   GeneratedColumn<int> get sizeBytes =>
       $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPinned =>
+      $composableBuilder(column: $table.isPinned, builder: (column) => column);
+
+  GeneratedColumn<String> get documentType => $composableBuilder(
+    column: $table.documentType,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -19212,6 +19347,8 @@ class $$DocumentsTableTableManager
                 Value<String> mimeType = const Value.absent(),
                 Value<int> sizeBytes = const Value.absent(),
                 Value<String?> folderId = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
+                Value<String?> documentType = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DocumentsCompanion(
@@ -19222,6 +19359,8 @@ class $$DocumentsTableTableManager
                 mimeType: mimeType,
                 sizeBytes: sizeBytes,
                 folderId: folderId,
+                isPinned: isPinned,
+                documentType: documentType,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -19234,6 +19373,8 @@ class $$DocumentsTableTableManager
                 required String mimeType,
                 Value<int> sizeBytes = const Value.absent(),
                 Value<String?> folderId = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
+                Value<String?> documentType = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DocumentsCompanion.insert(
@@ -19244,6 +19385,8 @@ class $$DocumentsTableTableManager
                 mimeType: mimeType,
                 sizeBytes: sizeBytes,
                 folderId: folderId,
+                isPinned: isPinned,
+                documentType: documentType,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
