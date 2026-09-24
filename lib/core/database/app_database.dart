@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -277,6 +277,10 @@ class AppDatabase extends _$AppDatabase {
         // v25 -> v26: folders gain an optional icon name so users can pick
         // a recognisable icon when creating a document folder.
         await m.addColumn(folders, folders.iconName);
+      }
+      if (from < 27) {
+        // v26 -> v27: folders gain an optional hex colour accent.
+        await m.addColumn(folders, folders.colorHex);
       }
     },
   );

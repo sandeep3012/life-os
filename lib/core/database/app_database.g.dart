@@ -1771,6 +1771,17 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _colorHexMeta = const VerificationMeta(
+    'colorHex',
+  );
+  @override
+  late final GeneratedColumn<String> colorHex = GeneratedColumn<String>(
+    'color_hex',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _scopeMeta = const VerificationMeta('scope');
   @override
   late final GeneratedColumn<String> scope = GeneratedColumn<String>(
@@ -1811,6 +1822,7 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
     id,
     name,
     iconName,
+    colorHex,
     scope,
     parentFolderId,
     createdAt,
@@ -1842,6 +1854,12 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
       context.handle(
         _iconNameMeta,
         iconName.isAcceptableOrUnknown(data['icon_name']!, _iconNameMeta),
+      );
+    }
+    if (data.containsKey('color_hex')) {
+      context.handle(
+        _colorHexMeta,
+        colorHex.isAcceptableOrUnknown(data['color_hex']!, _colorHexMeta),
       );
     }
     if (data.containsKey('scope')) {
@@ -1888,6 +1906,10 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
         DriftSqlType.string,
         data['${effectivePrefix}icon_name'],
       ),
+      colorHex: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color_hex'],
+      ),
       scope: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}scope'],
@@ -1913,6 +1935,7 @@ class Folder extends DataClass implements Insertable<Folder> {
   final String id;
   final String name;
   final String? iconName;
+  final String? colorHex;
 
   /// notes | documents
   final String scope;
@@ -1922,6 +1945,7 @@ class Folder extends DataClass implements Insertable<Folder> {
     required this.id,
     required this.name,
     this.iconName,
+    this.colorHex,
     required this.scope,
     this.parentFolderId,
     required this.createdAt,
@@ -1933,6 +1957,9 @@ class Folder extends DataClass implements Insertable<Folder> {
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || iconName != null) {
       map['icon_name'] = Variable<String>(iconName);
+    }
+    if (!nullToAbsent || colorHex != null) {
+      map['color_hex'] = Variable<String>(colorHex);
     }
     map['scope'] = Variable<String>(scope);
     if (!nullToAbsent || parentFolderId != null) {
@@ -1949,6 +1976,9 @@ class Folder extends DataClass implements Insertable<Folder> {
       iconName: iconName == null && nullToAbsent
           ? const Value.absent()
           : Value(iconName),
+      colorHex: colorHex == null && nullToAbsent
+          ? const Value.absent()
+          : Value(colorHex),
       scope: Value(scope),
       parentFolderId: parentFolderId == null && nullToAbsent
           ? const Value.absent()
@@ -1966,6 +1996,7 @@ class Folder extends DataClass implements Insertable<Folder> {
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       iconName: serializer.fromJson<String?>(json['iconName']),
+      colorHex: serializer.fromJson<String?>(json['colorHex']),
       scope: serializer.fromJson<String>(json['scope']),
       parentFolderId: serializer.fromJson<String?>(json['parentFolderId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1978,6 +2009,7 @@ class Folder extends DataClass implements Insertable<Folder> {
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
       'iconName': serializer.toJson<String?>(iconName),
+      'colorHex': serializer.toJson<String?>(colorHex),
       'scope': serializer.toJson<String>(scope),
       'parentFolderId': serializer.toJson<String?>(parentFolderId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1988,6 +2020,7 @@ class Folder extends DataClass implements Insertable<Folder> {
     String? id,
     String? name,
     Value<String?> iconName = const Value.absent(),
+    Value<String?> colorHex = const Value.absent(),
     String? scope,
     Value<String?> parentFolderId = const Value.absent(),
     DateTime? createdAt,
@@ -1995,6 +2028,7 @@ class Folder extends DataClass implements Insertable<Folder> {
     id: id ?? this.id,
     name: name ?? this.name,
     iconName: iconName.present ? iconName.value : this.iconName,
+    colorHex: colorHex.present ? colorHex.value : this.colorHex,
     scope: scope ?? this.scope,
     parentFolderId: parentFolderId.present
         ? parentFolderId.value
@@ -2006,6 +2040,7 @@ class Folder extends DataClass implements Insertable<Folder> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       iconName: data.iconName.present ? data.iconName.value : this.iconName,
+      colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       scope: data.scope.present ? data.scope.value : this.scope,
       parentFolderId: data.parentFolderId.present
           ? data.parentFolderId.value
@@ -2020,6 +2055,7 @@ class Folder extends DataClass implements Insertable<Folder> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('iconName: $iconName, ')
+          ..write('colorHex: $colorHex, ')
           ..write('scope: $scope, ')
           ..write('parentFolderId: $parentFolderId, ')
           ..write('createdAt: $createdAt')
@@ -2028,8 +2064,15 @@ class Folder extends DataClass implements Insertable<Folder> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, iconName, scope, parentFolderId, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    iconName,
+    colorHex,
+    scope,
+    parentFolderId,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2037,6 +2080,7 @@ class Folder extends DataClass implements Insertable<Folder> {
           other.id == this.id &&
           other.name == this.name &&
           other.iconName == this.iconName &&
+          other.colorHex == this.colorHex &&
           other.scope == this.scope &&
           other.parentFolderId == this.parentFolderId &&
           other.createdAt == this.createdAt);
@@ -2046,6 +2090,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
   final Value<String> id;
   final Value<String> name;
   final Value<String?> iconName;
+  final Value<String?> colorHex;
   final Value<String> scope;
   final Value<String?> parentFolderId;
   final Value<DateTime> createdAt;
@@ -2054,6 +2099,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.iconName = const Value.absent(),
+    this.colorHex = const Value.absent(),
     this.scope = const Value.absent(),
     this.parentFolderId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2063,6 +2109,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     this.id = const Value.absent(),
     required String name,
     this.iconName = const Value.absent(),
+    this.colorHex = const Value.absent(),
     required String scope,
     this.parentFolderId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2073,6 +2120,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     Expression<String>? id,
     Expression<String>? name,
     Expression<String>? iconName,
+    Expression<String>? colorHex,
     Expression<String>? scope,
     Expression<String>? parentFolderId,
     Expression<DateTime>? createdAt,
@@ -2082,6 +2130,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (iconName != null) 'icon_name': iconName,
+      if (colorHex != null) 'color_hex': colorHex,
       if (scope != null) 'scope': scope,
       if (parentFolderId != null) 'parent_folder_id': parentFolderId,
       if (createdAt != null) 'created_at': createdAt,
@@ -2093,6 +2142,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     Value<String>? id,
     Value<String>? name,
     Value<String?>? iconName,
+    Value<String?>? colorHex,
     Value<String>? scope,
     Value<String?>? parentFolderId,
     Value<DateTime>? createdAt,
@@ -2102,6 +2152,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
       id: id ?? this.id,
       name: name ?? this.name,
       iconName: iconName ?? this.iconName,
+      colorHex: colorHex ?? this.colorHex,
       scope: scope ?? this.scope,
       parentFolderId: parentFolderId ?? this.parentFolderId,
       createdAt: createdAt ?? this.createdAt,
@@ -2120,6 +2171,9 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     }
     if (iconName.present) {
       map['icon_name'] = Variable<String>(iconName.value);
+    }
+    if (colorHex.present) {
+      map['color_hex'] = Variable<String>(colorHex.value);
     }
     if (scope.present) {
       map['scope'] = Variable<String>(scope.value);
@@ -2142,6 +2196,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('iconName: $iconName, ')
+          ..write('colorHex: $colorHex, ')
           ..write('scope: $scope, ')
           ..write('parentFolderId: $parentFolderId, ')
           ..write('createdAt: $createdAt, ')
@@ -18522,6 +18577,7 @@ typedef $$FoldersTableCreateCompanionBuilder =
       Value<String> id,
       required String name,
       Value<String?> iconName,
+      Value<String?> colorHex,
       required String scope,
       Value<String?> parentFolderId,
       Value<DateTime> createdAt,
@@ -18532,6 +18588,7 @@ typedef $$FoldersTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> name,
       Value<String?> iconName,
+      Value<String?> colorHex,
       Value<String> scope,
       Value<String?> parentFolderId,
       Value<DateTime> createdAt,
@@ -18618,6 +18675,11 @@ class $$FoldersTableFilterComposer
 
   ColumnFilters<String> get iconName => $composableBuilder(
     column: $table.iconName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get colorHex => $composableBuilder(
+    column: $table.colorHex,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18729,6 +18791,11 @@ class $$FoldersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get colorHex => $composableBuilder(
+    column: $table.colorHex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get scope => $composableBuilder(
     column: $table.scope,
     builder: (column) => ColumnOrderings(column),
@@ -18780,6 +18847,9 @@ class $$FoldersTableAnnotationComposer
 
   GeneratedColumn<String> get iconName =>
       $composableBuilder(column: $table.iconName, builder: (column) => column);
+
+  GeneratedColumn<String> get colorHex =>
+      $composableBuilder(column: $table.colorHex, builder: (column) => column);
 
   GeneratedColumn<String> get scope =>
       $composableBuilder(column: $table.scope, builder: (column) => column);
@@ -18896,6 +18966,7 @@ class $$FoldersTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> iconName = const Value.absent(),
+                Value<String?> colorHex = const Value.absent(),
                 Value<String> scope = const Value.absent(),
                 Value<String?> parentFolderId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -18904,6 +18975,7 @@ class $$FoldersTableTableManager
                 id: id,
                 name: name,
                 iconName: iconName,
+                colorHex: colorHex,
                 scope: scope,
                 parentFolderId: parentFolderId,
                 createdAt: createdAt,
@@ -18914,6 +18986,7 @@ class $$FoldersTableTableManager
                 Value<String> id = const Value.absent(),
                 required String name,
                 Value<String?> iconName = const Value.absent(),
+                Value<String?> colorHex = const Value.absent(),
                 required String scope,
                 Value<String?> parentFolderId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -18922,6 +18995,7 @@ class $$FoldersTableTableManager
                 id: id,
                 name: name,
                 iconName: iconName,
+                colorHex: colorHex,
                 scope: scope,
                 parentFolderId: parentFolderId,
                 createdAt: createdAt,

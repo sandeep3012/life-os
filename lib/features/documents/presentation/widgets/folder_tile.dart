@@ -26,6 +26,9 @@ class FolderTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = context.appColors;
     final folderIcon = FolderIcon.fromName(folder.iconName);
+    final accentColor = folder.colorHex != null
+        ? Color(int.parse(folder.colorHex!.replaceFirst('#', '0xFF')))
+        : colors.documents;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -46,10 +49,10 @@ class FolderTile extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: colors.documents.withValues(alpha: 0.14),
+                      color: accentColor.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(folderIcon.icon, color: colors.documents, size: 20),
+                    child: Icon(folderIcon.icon, color: accentColor, size: 20),
                   ),
                   const Spacer(),
                   if (onDelete != null)

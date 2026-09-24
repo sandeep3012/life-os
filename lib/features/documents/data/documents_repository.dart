@@ -30,12 +30,13 @@ class DocumentsRepository {
         .watch();
   }
 
-  Future<void> createFolder(String name, {String? iconName}) {
+  Future<void> createFolder(String name, {String? iconName, String? colorHex}) {
     return _db.into(_db.folders).insert(
       FoldersCompanion.insert(
         name: name,
         scope: 'documents',
         iconName: Value(iconName),
+        colorHex: Value(colorHex),
       ),
     );
   }

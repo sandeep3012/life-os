@@ -53,10 +53,15 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
 
     final query = _searchController.text.trim().toLowerCase();
     final showingFilteredView = query.isNotEmpty || _selectedTypeFilter != null;
-    // In the "All Documents" list: exclude pinned docs when no filter is active
-    // (they are already shown in Quick Access); include everything when filtering.
+    // Unfiled list (no filter active): exclude docs already in a folder or
+    // pinned in Quick Access — they are reachable via those entry points.
+    // When a search/type filter is active, search across ALL docs so nothing
+    // is hidden from the user.
     final filtered = allDocs.where((d) {
-      if (d.isPinned && !showingFilteredView) return false;
+      if (!showingFilteredView) {
+        if (d.isPinned) return false;       // shown in Quick Access
+        if (d.folderId != null) return false; // shown in its folder
+      }
       final matchesQuery = query.isEmpty || d.title.toLowerCase().contains(query);
       final matchesType = _selectedTypeFilter == null || d.documentType == _selectedTypeFilter;
       return matchesQuery && matchesType;
@@ -211,7 +216,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
 
           // ── Documents list ────────────────────────────────────────────
           _SectionHeader(
-            title: showingFilteredView ? 'Results' : 'All Documents',
+            title: showingFilteredView ? 'Results' : 'Unfiled',
             action: showingFilteredView
                 ? TextButton(
                     onPressed: () => setState(() {
@@ -236,7 +241,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                   child: Text(
                     allDocs.isEmpty
                         ? 'No documents yet — tap + Add to import one.'
-                        : 'No documents match.',
+                        : showingFilteredView
+                            ? 'No documents match.'
+                            : 'All documents are organised into folders.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -280,9 +287,11 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
   Future<void> _createFolder() async {
     final result = await _showCreateFolderSheet(context);
     if (result == null || !mounted) return;
-    await ref
-        .read(documentsControllerProvider)
-        .createFolder(result.name, iconName: result.iconName);
+    await ref.read(documentsControllerProvider).createFolder(
+          result.name,
+          iconName: result.iconName,
+          colorHex: result.colorHex,
+        );
   }
 
   Future<void> _editDocument(Document document) async {
@@ -367,10 +376,31 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
 enum _ImportSource { file, camera }
 
 class _CreateFolderResult {
-  const _CreateFolderResult({required this.name, required this.iconName});
+  const _CreateFolderResult({
+    required this.name,
+    required this.iconName,
+    required this.colorHex,
+  });
   final String name;
   final String iconName;
+  final String colorHex;
 }
+
+// Palette of folder accent colours.
+const _folderColors = [
+  ('Ocean',    '#4B7BA6'),
+  ('Terracotta', '#C2703D'),
+  ('Sage',     '#3E7C5A'),
+  ('Lavender', '#7C6BC4'),
+  ('Teal',     '#3FA6A0'),
+  ('Rose',     '#B85C6E'),
+  ('Amber',    '#C49A3D'),
+  ('Forest',   '#2D6B4F'),
+  ('Slate',    '#5A6B7C'),
+  ('Plum',     '#7A3D8C'),
+  ('Coral',    '#D4624A'),
+  ('Steel',    '#4A6B8C'),
+];
 
 Future<_CreateFolderResult?> _showCreateFolderSheet(BuildContext context) {
   return showModalBottomSheet<_CreateFolderResult>(
@@ -388,6 +418,7 @@ class _CreateFolderSheet extends StatefulWidget {
 class _CreateFolderSheetState extends State<_CreateFolderSheet> {
   final _controller = TextEditingController();
   String _selectedIcon = FolderIcon.general.name;
+  String _selectedColorHex = _folderColors.first.$2;
 
   @override
   void initState() {
@@ -483,6 +514,56 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
                 ),
             ],
           ),
+          const SizedBox(height: 16),
+          Text(
+            'Colour',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final (label, hex) in _folderColors)
+                GestureDetector(
+                  onTap: () => setState(() => _selectedColorHex = hex),
+                  child: Tooltip(
+                    message: label,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 130),
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Color(int.parse(hex.replaceFirst('#', '0xFF'))),
+                        shape: BoxShape.circle,
+                        border: _selectedColorHex == hex
+                            ? Border.all(
+                                color: colors.onSurface,
+                                width: 2.5,
+                              )
+                            : Border.all(color: Colors.transparent, width: 2.5),
+                        boxShadow: _selectedColorHex == hex
+                            ? [
+                                BoxShadow(
+                                  color: Color(int.parse(
+                                    hex.replaceFirst('#', '0xFF'),
+                                  )).withValues(alpha: 0.4),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: _selectedColorHex == hex
+                          ? const Icon(Icons.check, size: 18, color: Colors.white)
+                          : null,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
@@ -493,6 +574,7 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
                         _CreateFolderResult(
                           name: _controller.text.trim(),
                           iconName: _selectedIcon,
+                          colorHex: _selectedColorHex,
                         ),
                       ),
               child: const Text('Create folder'),
