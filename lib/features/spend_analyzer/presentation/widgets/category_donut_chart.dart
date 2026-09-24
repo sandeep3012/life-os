@@ -11,11 +11,13 @@ class CategoryDonutChart extends StatefulWidget {
     required this.breakdown,
     required this.totalMinor,
     required this.currencyCode,
+    this.showAmounts = true,
   });
 
   final List<CategorySpend> breakdown;
   final int totalMinor;
   final String currencyCode;
+  final bool showAmounts;
 
   @override
   State<CategoryDonutChart> createState() => _CategoryDonutChartState();
@@ -156,21 +158,23 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
                           ),
                         ),
                       ),
-                      Text(
-                        formatMinor(
-                          entry.totalMinor,
-                          currencyCode: widget.currencyCode,
-                          showDecimals: false,
+                      if (widget.showAmounts) ...[
+                        Text(
+                          formatMinor(
+                            entry.totalMinor,
+                            currencyCode: widget.currencyCode,
+                            showDecimals: false,
+                          ),
+                          style: TextStyle(
+                            fontFamily: AppFonts.numeric,
+                            fontFeatures: AppFonts.tabular,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                        style: TextStyle(
-                          fontFamily: AppFonts.numeric,
-                          fontFeatures: AppFonts.tabular,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
+                        const SizedBox(width: 10),
+                      ],
                       SizedBox(
                         width: 36,
                         child: Text(
