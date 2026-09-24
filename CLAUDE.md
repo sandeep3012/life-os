@@ -418,3 +418,10 @@ test against, without touching your working tree.
   set up yet.
 - Data export/backup is unimplemented (mentioned as "Soon" in Settings UI).
 - No CI configured.
+
+## Git workflow rules
+
+- **Never create a new branch unless the user explicitly says so** (e.g. "create a branch", "new branch", "commit on a new branch"). If the user just says "commit", commit to whatever branch is currently checked out.
+- **Branch names** should be short, kebab-case, and reflect the feature or fix (e.g. `feature/spend-analyzer-amount-toggle`, `fix/bill-sheet-accounts`). Ask if the purpose is ambiguous.
+- **Before creating a branch**, check `git status`. If there are no uncommitted changes and no obvious reason to branch, ask the user what the branch is for rather than creating an empty one.
+- **Commit messages** must accurately describe every change made in the current work session — not just the last edit. List the key changes as bullet points in the body when more than one logical change is included. Never write a generic message like "fix" or "update".
