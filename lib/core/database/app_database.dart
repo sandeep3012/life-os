@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 27;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -266,6 +266,21 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 24) {
         await m.addColumn(appSettings, appSettings.balancesVisible);
+      }
+      if (from < 25) {
+        // v24 -> v25: documents gain a pin flag (Quick Access strip) and an
+        // optional semantic type label (identity, financial, medical, etc.)
+        await m.addColumn(documents, documents.isPinned);
+        await m.addColumn(documents, documents.documentType);
+      }
+      if (from < 26) {
+        // v25 -> v26: folders gain an optional icon name so users can pick
+        // a recognisable icon when creating a document folder.
+        await m.addColumn(folders, folders.iconName);
+      }
+      if (from < 27) {
+        // v26 -> v27: folders gain an optional hex colour accent.
+        await m.addColumn(folders, folders.colorHex);
       }
     },
   );

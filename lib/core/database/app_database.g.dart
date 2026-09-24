@@ -1760,6 +1760,28 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _iconNameMeta = const VerificationMeta(
+    'iconName',
+  );
+  @override
+  late final GeneratedColumn<String> iconName = GeneratedColumn<String>(
+    'icon_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _colorHexMeta = const VerificationMeta(
+    'colorHex',
+  );
+  @override
+  late final GeneratedColumn<String> colorHex = GeneratedColumn<String>(
+    'color_hex',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _scopeMeta = const VerificationMeta('scope');
   @override
   late final GeneratedColumn<String> scope = GeneratedColumn<String>(
@@ -1799,6 +1821,8 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    iconName,
+    colorHex,
     scope,
     parentFolderId,
     createdAt,
@@ -1825,6 +1849,18 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('icon_name')) {
+      context.handle(
+        _iconNameMeta,
+        iconName.isAcceptableOrUnknown(data['icon_name']!, _iconNameMeta),
+      );
+    }
+    if (data.containsKey('color_hex')) {
+      context.handle(
+        _colorHexMeta,
+        colorHex.isAcceptableOrUnknown(data['color_hex']!, _colorHexMeta),
+      );
     }
     if (data.containsKey('scope')) {
       context.handle(
@@ -1866,6 +1902,14 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      iconName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon_name'],
+      ),
+      colorHex: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color_hex'],
+      ),
       scope: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}scope'],
@@ -1890,6 +1934,8 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
 class Folder extends DataClass implements Insertable<Folder> {
   final String id;
   final String name;
+  final String? iconName;
+  final String? colorHex;
 
   /// notes | documents
   final String scope;
@@ -1898,6 +1944,8 @@ class Folder extends DataClass implements Insertable<Folder> {
   const Folder({
     required this.id,
     required this.name,
+    this.iconName,
+    this.colorHex,
     required this.scope,
     this.parentFolderId,
     required this.createdAt,
@@ -1907,6 +1955,12 @@ class Folder extends DataClass implements Insertable<Folder> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || iconName != null) {
+      map['icon_name'] = Variable<String>(iconName);
+    }
+    if (!nullToAbsent || colorHex != null) {
+      map['color_hex'] = Variable<String>(colorHex);
+    }
     map['scope'] = Variable<String>(scope);
     if (!nullToAbsent || parentFolderId != null) {
       map['parent_folder_id'] = Variable<String>(parentFolderId);
@@ -1919,6 +1973,12 @@ class Folder extends DataClass implements Insertable<Folder> {
     return FoldersCompanion(
       id: Value(id),
       name: Value(name),
+      iconName: iconName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(iconName),
+      colorHex: colorHex == null && nullToAbsent
+          ? const Value.absent()
+          : Value(colorHex),
       scope: Value(scope),
       parentFolderId: parentFolderId == null && nullToAbsent
           ? const Value.absent()
@@ -1935,6 +1995,8 @@ class Folder extends DataClass implements Insertable<Folder> {
     return Folder(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      iconName: serializer.fromJson<String?>(json['iconName']),
+      colorHex: serializer.fromJson<String?>(json['colorHex']),
       scope: serializer.fromJson<String>(json['scope']),
       parentFolderId: serializer.fromJson<String?>(json['parentFolderId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1946,6 +2008,8 @@ class Folder extends DataClass implements Insertable<Folder> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
+      'iconName': serializer.toJson<String?>(iconName),
+      'colorHex': serializer.toJson<String?>(colorHex),
       'scope': serializer.toJson<String>(scope),
       'parentFolderId': serializer.toJson<String?>(parentFolderId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1955,12 +2019,16 @@ class Folder extends DataClass implements Insertable<Folder> {
   Folder copyWith({
     String? id,
     String? name,
+    Value<String?> iconName = const Value.absent(),
+    Value<String?> colorHex = const Value.absent(),
     String? scope,
     Value<String?> parentFolderId = const Value.absent(),
     DateTime? createdAt,
   }) => Folder(
     id: id ?? this.id,
     name: name ?? this.name,
+    iconName: iconName.present ? iconName.value : this.iconName,
+    colorHex: colorHex.present ? colorHex.value : this.colorHex,
     scope: scope ?? this.scope,
     parentFolderId: parentFolderId.present
         ? parentFolderId.value
@@ -1971,6 +2039,8 @@ class Folder extends DataClass implements Insertable<Folder> {
     return Folder(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      iconName: data.iconName.present ? data.iconName.value : this.iconName,
+      colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       scope: data.scope.present ? data.scope.value : this.scope,
       parentFolderId: data.parentFolderId.present
           ? data.parentFolderId.value
@@ -1984,6 +2054,8 @@ class Folder extends DataClass implements Insertable<Folder> {
     return (StringBuffer('Folder(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('iconName: $iconName, ')
+          ..write('colorHex: $colorHex, ')
           ..write('scope: $scope, ')
           ..write('parentFolderId: $parentFolderId, ')
           ..write('createdAt: $createdAt')
@@ -1992,13 +2064,23 @@ class Folder extends DataClass implements Insertable<Folder> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, scope, parentFolderId, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    iconName,
+    colorHex,
+    scope,
+    parentFolderId,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Folder &&
           other.id == this.id &&
           other.name == this.name &&
+          other.iconName == this.iconName &&
+          other.colorHex == this.colorHex &&
           other.scope == this.scope &&
           other.parentFolderId == this.parentFolderId &&
           other.createdAt == this.createdAt);
@@ -2007,6 +2089,8 @@ class Folder extends DataClass implements Insertable<Folder> {
 class FoldersCompanion extends UpdateCompanion<Folder> {
   final Value<String> id;
   final Value<String> name;
+  final Value<String?> iconName;
+  final Value<String?> colorHex;
   final Value<String> scope;
   final Value<String?> parentFolderId;
   final Value<DateTime> createdAt;
@@ -2014,6 +2098,8 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
   const FoldersCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.iconName = const Value.absent(),
+    this.colorHex = const Value.absent(),
     this.scope = const Value.absent(),
     this.parentFolderId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2022,6 +2108,8 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
   FoldersCompanion.insert({
     this.id = const Value.absent(),
     required String name,
+    this.iconName = const Value.absent(),
+    this.colorHex = const Value.absent(),
     required String scope,
     this.parentFolderId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2031,6 +2119,8 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
   static Insertable<Folder> custom({
     Expression<String>? id,
     Expression<String>? name,
+    Expression<String>? iconName,
+    Expression<String>? colorHex,
     Expression<String>? scope,
     Expression<String>? parentFolderId,
     Expression<DateTime>? createdAt,
@@ -2039,6 +2129,8 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (iconName != null) 'icon_name': iconName,
+      if (colorHex != null) 'color_hex': colorHex,
       if (scope != null) 'scope': scope,
       if (parentFolderId != null) 'parent_folder_id': parentFolderId,
       if (createdAt != null) 'created_at': createdAt,
@@ -2049,6 +2141,8 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
   FoldersCompanion copyWith({
     Value<String>? id,
     Value<String>? name,
+    Value<String?>? iconName,
+    Value<String?>? colorHex,
     Value<String>? scope,
     Value<String?>? parentFolderId,
     Value<DateTime>? createdAt,
@@ -2057,6 +2151,8 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     return FoldersCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      iconName: iconName ?? this.iconName,
+      colorHex: colorHex ?? this.colorHex,
       scope: scope ?? this.scope,
       parentFolderId: parentFolderId ?? this.parentFolderId,
       createdAt: createdAt ?? this.createdAt,
@@ -2072,6 +2168,12 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (iconName.present) {
+      map['icon_name'] = Variable<String>(iconName.value);
+    }
+    if (colorHex.present) {
+      map['color_hex'] = Variable<String>(colorHex.value);
     }
     if (scope.present) {
       map['scope'] = Variable<String>(scope.value);
@@ -2093,6 +2195,8 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     return (StringBuffer('FoldersCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('iconName: $iconName, ')
+          ..write('colorHex: $colorHex, ')
           ..write('scope: $scope, ')
           ..write('parentFolderId: $parentFolderId, ')
           ..write('createdAt: $createdAt, ')
@@ -2186,6 +2290,32 @@ class $DocumentsTable extends Documents
       'REFERENCES folders (id)',
     ),
   );
+  static const VerificationMeta _isPinnedMeta = const VerificationMeta(
+    'isPinned',
+  );
+  @override
+  late final GeneratedColumn<bool> isPinned = GeneratedColumn<bool>(
+    'is_pinned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_pinned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _documentTypeMeta = const VerificationMeta(
+    'documentType',
+  );
+  @override
+  late final GeneratedColumn<String> documentType = GeneratedColumn<String>(
+    'document_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2207,6 +2337,8 @@ class $DocumentsTable extends Documents
     mimeType,
     sizeBytes,
     folderId,
+    isPinned,
+    documentType,
     createdAt,
   ];
   @override
@@ -2269,6 +2401,21 @@ class $DocumentsTable extends Documents
         folderId.isAcceptableOrUnknown(data['folder_id']!, _folderIdMeta),
       );
     }
+    if (data.containsKey('is_pinned')) {
+      context.handle(
+        _isPinnedMeta,
+        isPinned.isAcceptableOrUnknown(data['is_pinned']!, _isPinnedMeta),
+      );
+    }
+    if (data.containsKey('document_type')) {
+      context.handle(
+        _documentTypeMeta,
+        documentType.isAcceptableOrUnknown(
+          data['document_type']!,
+          _documentTypeMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2312,6 +2459,14 @@ class $DocumentsTable extends Documents
         DriftSqlType.string,
         data['${effectivePrefix}folder_id'],
       ),
+      isPinned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_pinned'],
+      )!,
+      documentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}document_type'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2333,6 +2488,8 @@ class Document extends DataClass implements Insertable<Document> {
   final String mimeType;
   final int sizeBytes;
   final String? folderId;
+  final bool isPinned;
+  final String? documentType;
   final DateTime createdAt;
   const Document({
     required this.id,
@@ -2342,6 +2499,8 @@ class Document extends DataClass implements Insertable<Document> {
     required this.mimeType,
     required this.sizeBytes,
     this.folderId,
+    required this.isPinned,
+    this.documentType,
     required this.createdAt,
   });
   @override
@@ -2357,6 +2516,10 @@ class Document extends DataClass implements Insertable<Document> {
     map['size_bytes'] = Variable<int>(sizeBytes);
     if (!nullToAbsent || folderId != null) {
       map['folder_id'] = Variable<String>(folderId);
+    }
+    map['is_pinned'] = Variable<bool>(isPinned);
+    if (!nullToAbsent || documentType != null) {
+      map['document_type'] = Variable<String>(documentType);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -2375,6 +2538,10 @@ class Document extends DataClass implements Insertable<Document> {
       folderId: folderId == null && nullToAbsent
           ? const Value.absent()
           : Value(folderId),
+      isPinned: Value(isPinned),
+      documentType: documentType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(documentType),
       createdAt: Value(createdAt),
     );
   }
@@ -2392,6 +2559,8 @@ class Document extends DataClass implements Insertable<Document> {
       mimeType: serializer.fromJson<String>(json['mimeType']),
       sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
       folderId: serializer.fromJson<String?>(json['folderId']),
+      isPinned: serializer.fromJson<bool>(json['isPinned']),
+      documentType: serializer.fromJson<String?>(json['documentType']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2406,6 +2575,8 @@ class Document extends DataClass implements Insertable<Document> {
       'mimeType': serializer.toJson<String>(mimeType),
       'sizeBytes': serializer.toJson<int>(sizeBytes),
       'folderId': serializer.toJson<String?>(folderId),
+      'isPinned': serializer.toJson<bool>(isPinned),
+      'documentType': serializer.toJson<String?>(documentType),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2418,6 +2589,8 @@ class Document extends DataClass implements Insertable<Document> {
     String? mimeType,
     int? sizeBytes,
     Value<String?> folderId = const Value.absent(),
+    bool? isPinned,
+    Value<String?> documentType = const Value.absent(),
     DateTime? createdAt,
   }) => Document(
     id: id ?? this.id,
@@ -2429,6 +2602,8 @@ class Document extends DataClass implements Insertable<Document> {
     mimeType: mimeType ?? this.mimeType,
     sizeBytes: sizeBytes ?? this.sizeBytes,
     folderId: folderId.present ? folderId.value : this.folderId,
+    isPinned: isPinned ?? this.isPinned,
+    documentType: documentType.present ? documentType.value : this.documentType,
     createdAt: createdAt ?? this.createdAt,
   );
   Document copyWithCompanion(DocumentsCompanion data) {
@@ -2442,6 +2617,10 @@ class Document extends DataClass implements Insertable<Document> {
       mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
       sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
       folderId: data.folderId.present ? data.folderId.value : this.folderId,
+      isPinned: data.isPinned.present ? data.isPinned.value : this.isPinned,
+      documentType: data.documentType.present
+          ? data.documentType.value
+          : this.documentType,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2456,6 +2635,8 @@ class Document extends DataClass implements Insertable<Document> {
           ..write('mimeType: $mimeType, ')
           ..write('sizeBytes: $sizeBytes, ')
           ..write('folderId: $folderId, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('documentType: $documentType, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -2470,6 +2651,8 @@ class Document extends DataClass implements Insertable<Document> {
     mimeType,
     sizeBytes,
     folderId,
+    isPinned,
+    documentType,
     createdAt,
   );
   @override
@@ -2483,6 +2666,8 @@ class Document extends DataClass implements Insertable<Document> {
           other.mimeType == this.mimeType &&
           other.sizeBytes == this.sizeBytes &&
           other.folderId == this.folderId &&
+          other.isPinned == this.isPinned &&
+          other.documentType == this.documentType &&
           other.createdAt == this.createdAt);
 }
 
@@ -2494,6 +2679,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
   final Value<String> mimeType;
   final Value<int> sizeBytes;
   final Value<String?> folderId;
+  final Value<bool> isPinned;
+  final Value<String?> documentType;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const DocumentsCompanion({
@@ -2504,6 +2691,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     this.mimeType = const Value.absent(),
     this.sizeBytes = const Value.absent(),
     this.folderId = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.documentType = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2515,6 +2704,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     required String mimeType,
     this.sizeBytes = const Value.absent(),
     this.folderId = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.documentType = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : title = Value(title),
@@ -2528,6 +2719,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     Expression<String>? mimeType,
     Expression<int>? sizeBytes,
     Expression<String>? folderId,
+    Expression<bool>? isPinned,
+    Expression<String>? documentType,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -2539,6 +2732,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
       if (mimeType != null) 'mime_type': mimeType,
       if (sizeBytes != null) 'size_bytes': sizeBytes,
       if (folderId != null) 'folder_id': folderId,
+      if (isPinned != null) 'is_pinned': isPinned,
+      if (documentType != null) 'document_type': documentType,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2552,6 +2747,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     Value<String>? mimeType,
     Value<int>? sizeBytes,
     Value<String?>? folderId,
+    Value<bool>? isPinned,
+    Value<String?>? documentType,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -2563,6 +2760,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
       mimeType: mimeType ?? this.mimeType,
       sizeBytes: sizeBytes ?? this.sizeBytes,
       folderId: folderId ?? this.folderId,
+      isPinned: isPinned ?? this.isPinned,
+      documentType: documentType ?? this.documentType,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -2592,6 +2791,12 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
     if (folderId.present) {
       map['folder_id'] = Variable<String>(folderId.value);
     }
+    if (isPinned.present) {
+      map['is_pinned'] = Variable<bool>(isPinned.value);
+    }
+    if (documentType.present) {
+      map['document_type'] = Variable<String>(documentType.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2611,6 +2816,8 @@ class DocumentsCompanion extends UpdateCompanion<Document> {
           ..write('mimeType: $mimeType, ')
           ..write('sizeBytes: $sizeBytes, ')
           ..write('folderId: $folderId, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('documentType: $documentType, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -18369,6 +18576,8 @@ typedef $$FoldersTableCreateCompanionBuilder =
     FoldersCompanion Function({
       Value<String> id,
       required String name,
+      Value<String?> iconName,
+      Value<String?> colorHex,
       required String scope,
       Value<String?> parentFolderId,
       Value<DateTime> createdAt,
@@ -18378,6 +18587,8 @@ typedef $$FoldersTableUpdateCompanionBuilder =
     FoldersCompanion Function({
       Value<String> id,
       Value<String> name,
+      Value<String?> iconName,
+      Value<String?> colorHex,
       Value<String> scope,
       Value<String?> parentFolderId,
       Value<DateTime> createdAt,
@@ -18459,6 +18670,16 @@ class $$FoldersTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get iconName => $composableBuilder(
+    column: $table.iconName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get colorHex => $composableBuilder(
+    column: $table.colorHex,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18565,6 +18786,16 @@ class $$FoldersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get iconName => $composableBuilder(
+    column: $table.iconName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get colorHex => $composableBuilder(
+    column: $table.colorHex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get scope => $composableBuilder(
     column: $table.scope,
     builder: (column) => ColumnOrderings(column),
@@ -18613,6 +18844,12 @@ class $$FoldersTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get iconName =>
+      $composableBuilder(column: $table.iconName, builder: (column) => column);
+
+  GeneratedColumn<String> get colorHex =>
+      $composableBuilder(column: $table.colorHex, builder: (column) => column);
 
   GeneratedColumn<String> get scope =>
       $composableBuilder(column: $table.scope, builder: (column) => column);
@@ -18728,6 +18965,8 @@ class $$FoldersTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String?> iconName = const Value.absent(),
+                Value<String?> colorHex = const Value.absent(),
                 Value<String> scope = const Value.absent(),
                 Value<String?> parentFolderId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -18735,6 +18974,8 @@ class $$FoldersTableTableManager
               }) => FoldersCompanion(
                 id: id,
                 name: name,
+                iconName: iconName,
+                colorHex: colorHex,
                 scope: scope,
                 parentFolderId: parentFolderId,
                 createdAt: createdAt,
@@ -18744,6 +18985,8 @@ class $$FoldersTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 required String name,
+                Value<String?> iconName = const Value.absent(),
+                Value<String?> colorHex = const Value.absent(),
                 required String scope,
                 Value<String?> parentFolderId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -18751,6 +18994,8 @@ class $$FoldersTableTableManager
               }) => FoldersCompanion.insert(
                 id: id,
                 name: name,
+                iconName: iconName,
+                colorHex: colorHex,
                 scope: scope,
                 parentFolderId: parentFolderId,
                 createdAt: createdAt,
@@ -18879,6 +19124,8 @@ typedef $$DocumentsTableCreateCompanionBuilder =
       required String mimeType,
       Value<int> sizeBytes,
       Value<String?> folderId,
+      Value<bool> isPinned,
+      Value<String?> documentType,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -18891,6 +19138,8 @@ typedef $$DocumentsTableUpdateCompanionBuilder =
       Value<String> mimeType,
       Value<int> sizeBytes,
       Value<String?> folderId,
+      Value<bool> isPinned,
+      Value<String?> documentType,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -18971,6 +19220,16 @@ class $$DocumentsTableFilterComposer
 
   ColumnFilters<int> get sizeBytes => $composableBuilder(
     column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get documentType => $composableBuilder(
+    column: $table.documentType,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -19067,6 +19326,16 @@ class $$DocumentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get documentType => $composableBuilder(
+    column: $table.documentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -19124,6 +19393,14 @@ class $$DocumentsTableAnnotationComposer
 
   GeneratedColumn<int> get sizeBytes =>
       $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPinned =>
+      $composableBuilder(column: $table.isPinned, builder: (column) => column);
+
+  GeneratedColumn<String> get documentType => $composableBuilder(
+    column: $table.documentType,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -19212,6 +19489,8 @@ class $$DocumentsTableTableManager
                 Value<String> mimeType = const Value.absent(),
                 Value<int> sizeBytes = const Value.absent(),
                 Value<String?> folderId = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
+                Value<String?> documentType = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DocumentsCompanion(
@@ -19222,6 +19501,8 @@ class $$DocumentsTableTableManager
                 mimeType: mimeType,
                 sizeBytes: sizeBytes,
                 folderId: folderId,
+                isPinned: isPinned,
+                documentType: documentType,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -19234,6 +19515,8 @@ class $$DocumentsTableTableManager
                 required String mimeType,
                 Value<int> sizeBytes = const Value.absent(),
                 Value<String?> folderId = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
+                Value<String?> documentType = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DocumentsCompanion.insert(
@@ -19244,6 +19527,8 @@ class $$DocumentsTableTableManager
                 mimeType: mimeType,
                 sizeBytes: sizeBytes,
                 folderId: folderId,
+                isPinned: isPinned,
+                documentType: documentType,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

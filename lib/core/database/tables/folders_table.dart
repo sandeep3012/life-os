@@ -8,6 +8,10 @@ import 'package:uuid/uuid.dart';
 class Folders extends Table {
   TextColumn get id => text().clientDefault(() => const Uuid().v4())();
   TextColumn get name => text()();
+  // Lucide icon name for document folders (null = default folder icon).
+  TextColumn get iconName => text().nullable()();
+  // Hex colour for the folder accent (e.g. '#4B7BA6'). Null = module default.
+  TextColumn get colorHex => text().nullable()();
 
   /// notes | documents
   TextColumn get scope => text()();

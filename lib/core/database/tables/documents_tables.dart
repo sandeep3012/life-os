@@ -14,6 +14,10 @@ class Documents extends Table {
   TextColumn get mimeType => text()();
   IntColumn get sizeBytes => integer().withDefault(const Constant(0))();
   TextColumn get folderId => text().nullable().references(Folders, #id)();
+  // Pinned docs appear in the Quick Access strip at the top of Documents screen.
+  BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
+  // Optional semantic category — one of the DocumentType constant strings.
+  TextColumn get documentType => text().nullable()();
 
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();

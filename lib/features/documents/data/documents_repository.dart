@@ -23,10 +23,44 @@ class DocumentsRepository {
     )..orderBy([(d) => OrderingTerm.desc(d.createdAt)])).watch();
   }
 
-  Future<void> createFolder(String name) {
+  Stream<List<Document>> watchPinnedDocuments() {
+    return (_db.select(_db.documents)
+          ..where((d) => d.isPinned.equals(true))
+          ..orderBy([(d) => OrderingTerm.desc(d.createdAt)]))
+        .watch();
+  }
+
+  Future<void> createFolder(String name, {String? iconName, String? colorHex}) {
     return _db.into(_db.folders).insert(
-      FoldersCompanion.insert(name: name, scope: 'documents'),
+      FoldersCompanion.insert(
+        name: name,
+        scope: 'documents',
+        iconName: Value(iconName),
+        colorHex: Value(colorHex),
+      ),
     );
+  }
+
+  Future<void> updateFolder(
+    String id, {
+    required String name,
+    String? iconName,
+    String? colorHex,
+  }) {
+    return (_db.update(_db.folders)..where((f) => f.id.equals(id))).write(
+      FoldersCompanion(
+        name: Value(name),
+        iconName: Value(iconName),
+        colorHex: Value(colorHex),
+      ),
+    );
+  }
+
+  Future<void> deleteFolder(String id) async {
+    // Un-assign documents from this folder, then delete the folder.
+    await (_db.update(_db.documents)..where((d) => d.folderId.equals(id)))
+        .write(const DocumentsCompanion(folderId: Value(null)));
+    await (_db.delete(_db.folders)..where((f) => f.id.equals(id))).go();
   }
 
   Future<void> importAndCreateDocument({
@@ -34,6 +68,8 @@ class DocumentsRepository {
     required String originalName,
     String? title,
     String? folderId,
+    bool isPinned = false,
+    String? documentType,
   }) async {
     final stored = await _storage.importFile(source, originalName: originalName);
     await _db.into(_db.documents).insert(
@@ -44,6 +80,8 @@ class DocumentsRepository {
         mimeType: stored.mimeType,
         sizeBytes: Value(stored.sizeBytes),
         folderId: Value(folderId),
+        isPinned: Value(isPinned),
+        documentType: Value(documentType),
       ),
     );
   }
@@ -52,9 +90,22 @@ class DocumentsRepository {
     required String id,
     required String title,
     String? folderId,
+    bool isPinned = false,
+    String? documentType,
   }) {
     return (_db.update(_db.documents)..where((d) => d.id.equals(id))).write(
-      DocumentsCompanion(title: Value(title), folderId: Value(folderId)),
+      DocumentsCompanion(
+        title: Value(title),
+        folderId: Value(folderId),
+        isPinned: Value(isPinned),
+        documentType: Value(documentType),
+      ),
+    );
+  }
+
+  Future<void> pinDocument(String id, {required bool pinned}) {
+    return (_db.update(_db.documents)..where((d) => d.id.equals(id))).write(
+      DocumentsCompanion(isPinned: Value(pinned)),
     );
   }
 
