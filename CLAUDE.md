@@ -425,3 +425,9 @@ test against, without touching your working tree.
 - **Branch names** should be short, kebab-case, and reflect the feature or fix (e.g. `feature/spend-analyzer-amount-toggle`, `fix/bill-sheet-accounts`). Ask if the purpose is ambiguous.
 - **Before creating a branch**, check `git status`. If there are no uncommitted changes and no obvious reason to branch, ask the user what the branch is for rather than creating an empty one.
 - **Commit messages** must accurately describe every change made in the current work session — not just the last edit. List the key changes as bullet points in the body when more than one logical change is included. Never write a generic message like "fix" or "update".
+
+## Code change workflow rules
+
+- **Do not build** (`flutter build`, `flutter run`) after a code change unless the user explicitly asks.
+- **Do not commit** after a code change unless the user explicitly asks.
+- **Tests**: after a code change, run only the test file(s) directly related to what was changed — not the full `flutter test` suite. If no relevant test file exists, run `flutter analyze` only and note that no targeted test exists.
