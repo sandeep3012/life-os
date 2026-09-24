@@ -441,6 +441,43 @@ class FinanceRepository {
     );
   }
 
+  /// Edits a schedule in place. Occurrences it already generated are real
+  /// [Transaction] rows and are deliberately left alone — they record money
+  /// that actually moved. Only the schedule going forward changes.
+  ///
+  /// [nextDueDate] is passed when the cadence or start date moved, so the
+  /// schedule fires from the new settings rather than its stale date.
+  Future<void> updateRecurringTransaction({
+    required String id,
+    required String accountId,
+    String? categoryId,
+    required String merchant,
+    required int amountMinor,
+    required String frequency,
+    DateTime? nextDueDate,
+    DateTime? endDate,
+    String? note,
+    String? paymentMode,
+  }) {
+    return (_db.update(
+      _db.recurringTransactions,
+    )..where((r) => r.id.equals(id))).write(
+      RecurringTransactionsCompanion(
+        accountId: Value(accountId),
+        categoryId: Value(categoryId),
+        merchant: Value(merchant),
+        amountMinor: Value(amountMinor),
+        frequency: Value(frequency),
+        nextDueDate: nextDueDate == null
+            ? const Value.absent()
+            : Value(nextDueDate),
+        endDate: Value(endDate),
+        note: Value(note),
+        paymentMode: Value(paymentMode),
+      ),
+    );
+  }
+
   Future<void> setRecurringTransactionActive(String id, bool active) {
     return (_db.update(
       _db.recurringTransactions,
@@ -521,6 +558,37 @@ class FinanceRepository {
         reminderDaysBefore: Value(reminderDaysBefore),
       ),
     );
+  }
+
+  /// Edits a bill in place. Payment history lives in [Transactions] and is
+  /// untouched; `lastPaidDate` and `active` keep whatever the pay/skip flow
+  /// last set them to.
+  Future<Bill> updateBill({
+    required String id,
+    required String name,
+    String? accountId,
+    String? categoryId,
+    required int amountMinor,
+    required DateTime dueDate,
+    required String frequency,
+    required bool reminderEnabled,
+    required String reminderMode,
+    required int reminderDaysBefore,
+  }) async {
+    await (_db.update(_db.bills)..where((b) => b.id.equals(id))).write(
+      BillsCompanion(
+        name: Value(name),
+        accountId: Value(accountId),
+        categoryId: Value(categoryId),
+        amountMinor: Value(amountMinor),
+        dueDate: Value(dueDate),
+        frequency: Value(frequency),
+        reminderEnabled: Value(reminderEnabled),
+        reminderMode: Value(reminderMode),
+        reminderDaysBefore: Value(reminderDaysBefore),
+      ),
+    );
+    return (_db.select(_db.bills)..where((b) => b.id.equals(id))).getSingle();
   }
 
   Future<void> deleteBill(String id) {

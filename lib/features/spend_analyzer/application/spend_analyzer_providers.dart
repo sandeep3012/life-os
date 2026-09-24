@@ -62,17 +62,25 @@ final categoryBreakdownProvider = Provider<List<CategorySpend>>((ref) {
   final categories = ref.watch(categoriesProvider).value ?? const [];
   final categoryById = {for (final c in categories) c.id: c};
 
+  // Spend whose category is missing, or points at a category that has since
+  // been deleted, is collected under one "Uncategorized" slice rather than
+  // dropped — otherwise the donut silently disagrees with the month's total.
   final totals = <String, int>{};
+  var uncategorizedMinor = 0;
   for (final t in txns) {
     final id = t.categoryId;
-    if (id == null) continue;
+    if (id == null || !categoryById.containsKey(id)) {
+      uncategorizedMinor += t.amountMinor.abs();
+      continue;
+    }
     totals[id] = (totals[id] ?? 0) + t.amountMinor.abs();
   }
-  final grandTotal = totals.values.fold<int>(0, (a, b) => a + b);
+  final grandTotal =
+      totals.values.fold<int>(0, (a, b) => a + b) + uncategorizedMinor;
   if (grandTotal == 0) return const [];
 
   final entries =
-      totals.entries.where((e) => categoryById.containsKey(e.key)).map((e) {
+      totals.entries.map((e) {
         return CategorySpend(
           category: categoryById[e.key]!,
           totalMinor: e.value,
@@ -80,6 +88,16 @@ final categoryBreakdownProvider = Provider<List<CategorySpend>>((ref) {
         );
       }).toList()
         ..sort((a, b) => b.totalMinor.compareTo(a.totalMinor));
+  if (uncategorizedMinor > 0) {
+    // Always last: it is a remainder, not a category competing for attention.
+    entries.add(
+      CategorySpend(
+        category: null,
+        totalMinor: uncategorizedMinor,
+        share: uncategorizedMinor / grandTotal,
+      ),
+    );
+  }
   return entries;
 });
 

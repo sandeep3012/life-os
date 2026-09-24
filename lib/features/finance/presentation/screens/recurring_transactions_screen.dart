@@ -7,6 +7,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../widgets/quick_add_recurring_transaction_sheet.dart';
@@ -21,7 +22,12 @@ const _frequencyLabels = {
 class RecurringTransactionsScreen extends ConsumerWidget {
   const RecurringTransactionsScreen({super.key});
 
-  Future<void> _addRecurring(BuildContext context, WidgetRef ref) async {
+  /// Opens the sheet for a new schedule, or for [existing] to edit it.
+  static Future<void> openSheet(
+    BuildContext context,
+    WidgetRef ref, {
+    RecurringTransaction? existing,
+  }) async {
     final accounts = ref.read(transactableAccountsProvider);
     if (accounts.isEmpty) return;
     final categories = ref.read(categoriesProvider).value ?? const [];
@@ -32,20 +38,46 @@ class RecurringTransactionsScreen extends ConsumerWidget {
       accountTypes: accountTypes,
       categories: categories,
       currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+      initial: existing,
     );
     if (result == null) return;
-    await ref
-        .read(financeControllerProvider)
-        .addRecurringTransaction(
-          accountId: result.accountId,
-          categoryId: result.categoryId,
-          merchant: result.merchant,
-          amountMinor: result.amountMinor,
-          frequency: result.frequency,
-          startDate: result.startDate,
-          endDate: result.endDate,
-          paymentMode: result.paymentMode,
-        );
+    final controller = ref.read(financeControllerProvider);
+    if (existing == null) {
+      await controller.addRecurringTransaction(
+        accountId: result.accountId,
+        categoryId: result.categoryId,
+        merchant: result.merchant,
+        amountMinor: result.amountMinor,
+        frequency: result.frequency,
+        startDate: result.startDate,
+        endDate: result.endDate,
+        paymentMode: result.paymentMode,
+      );
+    } else {
+      await controller.updateRecurringTransaction(
+        existing: existing,
+        accountId: result.accountId,
+        categoryId: result.categoryId,
+        merchant: result.merchant,
+        amountMinor: result.amountMinor,
+        frequency: result.frequency,
+        startDate: result.startDate,
+        endDate: result.endDate,
+        paymentMode: result.paymentMode,
+      );
+    }
+    if (!context.mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: existing == null
+          ? 'Recurring transaction saved'
+          : 'Recurring transaction updated',
+      message: existing == null
+          ? '“${result.merchant}” repeats from '
+                '${DateFormat.yMMMd().format(result.startDate)}.'
+          : 'Changes to “${result.merchant}” were saved.',
+    );
   }
 
   @override
@@ -74,7 +106,7 @@ class RecurringTransactionsScreen extends ConsumerWidget {
               },
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _addRecurring(context, ref),
+        onPressed: () => openSheet(context, ref),
         icon: const Icon(LucideIcons.plus),
         label: const Text('New recurring'),
       ),
@@ -103,6 +135,11 @@ class _RecurringTile extends ConsumerWidget {
       opacity: schedule.active ? 1 : 0.5,
       child: ListTile(
         contentPadding: EdgeInsets.zero,
+        onTap: () => RecurringTransactionsScreen.openSheet(
+          context,
+          ref,
+          existing: schedule,
+        ),
         leading: Container(
           width: 38,
           height: 38,

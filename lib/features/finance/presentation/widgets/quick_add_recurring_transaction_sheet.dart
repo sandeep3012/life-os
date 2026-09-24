@@ -48,6 +48,7 @@ Future<QuickAddRecurringTransactionResult?> showQuickAddRecurringTransactionShee
   required List<AccountType> accountTypes,
   required List<Category> categories,
   required String currencySymbol,
+  RecurringTransaction? initial,
 }) {
   return showCompactEditorSheet<QuickAddRecurringTransactionResult>(
     context: context,
@@ -56,6 +57,7 @@ Future<QuickAddRecurringTransactionResult?> showQuickAddRecurringTransactionShee
       accountTypes: accountTypes,
       categories: categories,
       currencySymbol: currencySymbol,
+      initial: initial,
     ),
   );
 }
@@ -66,6 +68,7 @@ class _QuickAddRecurringTransactionSheet extends StatefulWidget {
     required this.accountTypes,
     required this.categories,
     required this.currencySymbol,
+    this.initial,
   });
 
   final List<Account> accounts;
@@ -75,6 +78,9 @@ class _QuickAddRecurringTransactionSheet extends StatefulWidget {
   final List<Category> categories;
   final String currencySymbol;
 
+  /// Non-null when editing an existing schedule.
+  final RecurringTransaction? initial;
+
   @override
   State<_QuickAddRecurringTransactionSheet> createState() =>
       _QuickAddRecurringTransactionSheetState();
@@ -82,15 +88,25 @@ class _QuickAddRecurringTransactionSheet extends StatefulWidget {
 
 class _QuickAddRecurringTransactionSheetState
     extends State<_QuickAddRecurringTransactionSheet> {
-  final _merchantController = TextEditingController();
-  final _amountController = TextEditingController();
-  late String _accountId = widget.accounts.first.id;
-  String? _categoryId;
-  bool _isExpense = true;
-  String? _paymentMode;
-  String _frequency = 'monthly';
-  DateTime _startDate = DateTime.now();
-  DateTime? _endDate;
+  late final _merchantController = TextEditingController(
+    text: widget.initial?.merchant,
+  );
+  // Amounts are stored signed (expense is negative); the field edits the
+  // magnitude and the Expense/Income rail carries the sign.
+  late final _amountController = TextEditingController(
+    text: widget.initial == null
+        ? null
+        : (widget.initial!.amountMinor.abs() / 100).toStringAsFixed(2),
+  );
+  late String _accountId = widget.initial?.accountId ?? widget.accounts.first.id;
+  late String? _categoryId = widget.initial?.categoryId;
+  late bool _isExpense = (widget.initial?.amountMinor ?? -1) < 0;
+  late String? _paymentMode = widget.initial?.paymentMode;
+  late String _frequency = widget.initial?.frequency ?? 'monthly';
+  late DateTime _startDate = widget.initial?.nextDueDate ?? DateTime.now();
+  late DateTime? _endDate = widget.initial?.endDate;
+
+  bool get _isEditing => widget.initial != null;
 
   @override
   void initState() {
@@ -133,7 +149,9 @@ class _QuickAddRecurringTransactionSheetState
         (double.tryParse(_amountController.text.trim()) ?? 0) > 0;
 
     return CompactEditorSheet(
-      title: 'New recurring transaction',
+      title: _isEditing
+          ? 'Edit recurring transaction'
+          : 'New recurring transaction',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,7 +251,9 @@ class _QuickAddRecurringTransactionSheetState
               onTap: _pickStartDate,
               borderRadius: BorderRadius.circular(12),
               child: InputDecorator(
-                decoration: const InputDecoration(labelText: 'Starts'),
+                decoration: InputDecoration(
+                  labelText: _isEditing ? 'Next due' : 'Starts',
+                ),
                 child: Row(
                   children: [
                     Icon(
@@ -296,7 +316,9 @@ class _QuickAddRecurringTransactionSheetState
                         );
                       }
                     : null,
-                child: const Text('Add recurring transaction'),
+                child: Text(
+                  _isEditing ? 'Save changes' : 'Add recurring transaction',
+                ),
               ),
             ),
           ],
