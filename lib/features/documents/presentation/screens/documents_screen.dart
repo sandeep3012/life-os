@@ -7,10 +7,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import 'package:go_router/go_router.dart';
+
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../core/database/app_database.dart';
 import '../../application/documents_providers.dart';
 import '../../domain/document_type.dart';
+import '../../domain/folder_icon.dart';
 import '../widgets/document_tile.dart';
 import '../widgets/folder_tile.dart';
 import '../widgets/pinned_document_card.dart';
@@ -26,7 +29,6 @@ class DocumentsScreen extends ConsumerStatefulWidget {
 class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
   final _searchController = TextEditingController();
   bool _searchVisible = false;
-  String? _selectedFolderId;
   String? _selectedTypeFilter;
 
   @override
@@ -50,20 +52,15 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     final counts = ref.watch(documentCountByFolderProvider);
 
     final query = _searchController.text.trim().toLowerCase();
+    final showingFilteredView = query.isNotEmpty || _selectedTypeFilter != null;
+    // In the "All Documents" list: exclude pinned docs when no filter is active
+    // (they are already shown in Quick Access); include everything when filtering.
     final filtered = allDocs.where((d) {
-      if (d.isPinned && _selectedFolderId == null && query.isEmpty && _selectedTypeFilter == null) {
-        // Pinned docs shown in Quick Access, skip in main list when no filter.
-        return false;
-      }
-      final matchesFolder = _selectedFolderId == null || d.folderId == _selectedFolderId;
+      if (d.isPinned && !showingFilteredView) return false;
       final matchesQuery = query.isEmpty || d.title.toLowerCase().contains(query);
       final matchesType = _selectedTypeFilter == null || d.documentType == _selectedTypeFilter;
-      return matchesFolder && matchesQuery && matchesType;
+      return matchesQuery && matchesType;
     }).toList();
-
-    // When a filter is active, also include pinned docs in the list.
-    final showingFilteredView =
-        _selectedFolderId != null || query.isNotEmpty || _selectedTypeFilter != null;
 
     return Scaffold(
       drawer: const AppSidebar(),
@@ -93,7 +90,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
       ),
       body: CustomScrollView(
         slivers: [
-          // ── Quick Access (pinned) ──────────────────────────────────────
+          // ── Quick Access (pinned) ─────────────────────────────────────
           if (pinnedDocs.isNotEmpty && !showingFilteredView) ...[
             _SectionHeader(
               title: 'Quick Access',
@@ -191,17 +188,18 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                 crossAxisCount: 2,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
-                childAspectRatio: 1.7,
+                childAspectRatio: 1.55,
                 children: [
                   for (final f in folders)
                     FolderTile(
                       key: ValueKey(f.id),
                       folder: f,
                       count: counts[f.id] ?? 0,
-                      selected: _selectedFolderId == f.id,
-                      onTap: () => setState(
-                        () => _selectedFolderId =
-                            _selectedFolderId == f.id ? null : f.id,
+                      onTap: () => context.push(
+                        Uri(
+                          path: '/more/documents/folder/${f.id}',
+                          queryParameters: {'name': f.name},
+                        ).toString(),
                       ),
                       onDelete: () => ref
                           .read(documentsControllerProvider)
@@ -213,18 +211,10 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
 
           // ── Documents list ────────────────────────────────────────────
           _SectionHeader(
-            title: _selectedFolderId != null
-                ? folders
-                    .where((f) => f.id == _selectedFolderId)
-                    .firstOrNull
-                    ?.name ?? 'Documents'
-                : showingFilteredView
-                    ? 'Results'
-                    : 'All Documents',
-            action: _selectedFolderId != null || showingFilteredView
+            title: showingFilteredView ? 'Results' : 'All Documents',
+            action: showingFilteredView
                 ? TextButton(
                     onPressed: () => setState(() {
-                      _selectedFolderId = null;
                       _selectedTypeFilter = null;
                       _searchController.clear();
                     }),
@@ -288,9 +278,11 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
   }
 
   Future<void> _createFolder() async {
-    final name = await _promptFolderName(context);
-    if (name == null || !mounted) return;
-    await ref.read(documentsControllerProvider).createFolder(name);
+    final result = await _showCreateFolderSheet(context);
+    if (result == null || !mounted) return;
+    await ref
+        .read(documentsControllerProvider)
+        .createFolder(result.name, iconName: result.iconName);
   }
 
   Future<void> _editDocument(Document document) async {
@@ -374,36 +366,142 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
 
 enum _ImportSource { file, camera }
 
-/// Dialog that prompts the user to enter a folder name.
-Future<String?> _promptFolderName(BuildContext context) {
-  final controller = TextEditingController();
-  return showDialog<String>(
+class _CreateFolderResult {
+  const _CreateFolderResult({required this.name, required this.iconName});
+  final String name;
+  final String iconName;
+}
+
+Future<_CreateFolderResult?> _showCreateFolderSheet(BuildContext context) {
+  return showModalBottomSheet<_CreateFolderResult>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('New folder'),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        decoration: const InputDecoration(hintText: 'Folder name'),
-        onSubmitted: (v) {
-          if (v.trim().isNotEmpty) Navigator.of(ctx).pop(v.trim());
-        },
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final v = controller.text.trim();
-            if (v.isNotEmpty) Navigator.of(ctx).pop(v);
-          },
-          child: const Text('Create'),
-        ),
-      ],
-    ),
+    isScrollControlled: true,
+    builder: (ctx) => _CreateFolderSheet(),
   );
+}
+
+class _CreateFolderSheet extends StatefulWidget {
+  @override
+  State<_CreateFolderSheet> createState() => _CreateFolderSheetState();
+}
+
+class _CreateFolderSheetState extends State<_CreateFolderSheet> {
+  final _controller = TextEditingController();
+  String _selectedIcon = FolderIcon.general.name;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('New folder', style: theme.textTheme.titleLarge),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Folder name'),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Icon',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final fi in FolderIcon.all)
+                GestureDetector(
+                  onTap: () => setState(() => _selectedIcon = fi.name),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 130),
+                    width: 60,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _selectedIcon == fi.name
+                          ? colors.primary.withValues(alpha: 0.12)
+                          : colors.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: _selectedIcon == fi.name
+                          ? Border.all(
+                              color: colors.primary.withValues(alpha: 0.4),
+                            )
+                          : null,
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          fi.icon,
+                          size: 22,
+                          color: _selectedIcon == fi.name
+                              ? colors.primary
+                              : colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          fi.label,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: _selectedIcon == fi.name
+                                ? colors.primary
+                                : colors.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _controller.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.of(context).pop(
+                        _CreateFolderResult(
+                          name: _controller.text.trim(),
+                          iconName: _selectedIcon,
+                        ),
+                      ),
+              child: const Text('Create folder'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Private helpers ────────────────────────────────────────────────────────────

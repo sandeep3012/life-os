@@ -24,6 +24,7 @@ Future<QuickAddDocumentDetails?> showQuickAddDocumentDetailsSheet(
   required String suggestedTitle,
   required List<Folder> folders,
   Document? initial,
+  String? defaultFolderId,
 }) {
   return showModalBottomSheet<QuickAddDocumentDetails>(
     context: context,
@@ -32,6 +33,7 @@ Future<QuickAddDocumentDetails?> showQuickAddDocumentDetailsSheet(
       suggestedTitle: suggestedTitle,
       folders: folders,
       initial: initial,
+      defaultFolderId: defaultFolderId,
     ),
   );
 }
@@ -41,11 +43,13 @@ class _DetailsSheet extends StatefulWidget {
     required this.suggestedTitle,
     required this.folders,
     this.initial,
+    this.defaultFolderId,
   });
 
   final String suggestedTitle;
   final List<Folder> folders;
   final Document? initial;
+  final String? defaultFolderId;
 
   @override
   State<_DetailsSheet> createState() => _DetailsSheetState();
@@ -55,7 +59,7 @@ class _DetailsSheetState extends State<_DetailsSheet> {
   late final _titleController = TextEditingController(
     text: widget.initial?.title ?? widget.suggestedTitle,
   );
-  late String? _folderId = widget.initial?.folderId;
+  late String? _folderId = widget.initial?.folderId ?? widget.defaultFolderId;
   late bool _isPinned = widget.initial?.isPinned ?? false;
   late String? _documentType = widget.initial?.documentType;
 

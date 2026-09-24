@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
+import '../../domain/folder_icon.dart';
 
-/// Grid card for a folder — designed for a 2-column SliverGrid.
+/// Grid card for a folder — sits in a 2-column SliverGrid with
+/// childAspectRatio ~1.55.  Tapping navigates into the folder; long-press or
+/// the ⋯ button offers deletion.
 class FolderTile extends StatelessWidget {
   const FolderTile({
     super.key,
     required this.folder,
     required this.count,
-    required this.selected,
     required this.onTap,
     this.onDelete,
   });
 
   final Folder folder;
   final int count;
-  final bool selected;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
 
@@ -25,63 +25,54 @@ class FolderTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.appColors;
+    final folderIcon = FolderIcon.fromName(folder.iconName);
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      color: selected ? colors.documents.withValues(alpha: 0.12) : null,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: selected
-            ? BorderSide(color: colors.documents.withValues(alpha: 0.4), width: 1.5)
-            : BorderSide.none,
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
-        onLongPress: onDelete != null
-            ? () => _confirmDelete(context, colors)
-            : null,
+        onLongPress: onDelete != null ? () => _confirmDelete(context, colors) : null,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       color: colors.documents.withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      LucideIcons.folderOpen,
-                      color: colors.documents,
-                      size: 22,
-                    ),
+                    child: Icon(folderIcon.icon, color: colors.documents, size: 20),
                   ),
                   const Spacer(),
                   if (onDelete != null)
                     GestureDetector(
                       onTap: () => _confirmDelete(context, colors),
-                      child: Icon(
-                        LucideIcons.ellipsis,
-                        size: 16,
-                        color: theme.colorScheme.onSurfaceVariant,
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.more_horiz,
+                          size: 16,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 folder.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
-              const SizedBox(height: 2),
               Text(
                 '$count ${count == 1 ? 'document' : 'documents'}',
                 style: theme.textTheme.labelSmall?.copyWith(

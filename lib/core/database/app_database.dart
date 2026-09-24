@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -272,6 +272,11 @@ class AppDatabase extends _$AppDatabase {
         // optional semantic type label (identity, financial, medical, etc.)
         await m.addColumn(documents, documents.isPinned);
         await m.addColumn(documents, documents.documentType);
+      }
+      if (from < 26) {
+        // v25 -> v26: folders gain an optional icon name so users can pick
+        // a recognisable icon when creating a document folder.
+        await m.addColumn(folders, folders.iconName);
       }
     },
   );

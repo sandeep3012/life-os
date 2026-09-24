@@ -1760,6 +1760,17 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _iconNameMeta = const VerificationMeta(
+    'iconName',
+  );
+  @override
+  late final GeneratedColumn<String> iconName = GeneratedColumn<String>(
+    'icon_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _scopeMeta = const VerificationMeta('scope');
   @override
   late final GeneratedColumn<String> scope = GeneratedColumn<String>(
@@ -1799,6 +1810,7 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    iconName,
     scope,
     parentFolderId,
     createdAt,
@@ -1825,6 +1837,12 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('icon_name')) {
+      context.handle(
+        _iconNameMeta,
+        iconName.isAcceptableOrUnknown(data['icon_name']!, _iconNameMeta),
+      );
     }
     if (data.containsKey('scope')) {
       context.handle(
@@ -1866,6 +1884,10 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      iconName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon_name'],
+      ),
       scope: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}scope'],
@@ -1890,6 +1912,7 @@ class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
 class Folder extends DataClass implements Insertable<Folder> {
   final String id;
   final String name;
+  final String? iconName;
 
   /// notes | documents
   final String scope;
@@ -1898,6 +1921,7 @@ class Folder extends DataClass implements Insertable<Folder> {
   const Folder({
     required this.id,
     required this.name,
+    this.iconName,
     required this.scope,
     this.parentFolderId,
     required this.createdAt,
@@ -1907,6 +1931,9 @@ class Folder extends DataClass implements Insertable<Folder> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || iconName != null) {
+      map['icon_name'] = Variable<String>(iconName);
+    }
     map['scope'] = Variable<String>(scope);
     if (!nullToAbsent || parentFolderId != null) {
       map['parent_folder_id'] = Variable<String>(parentFolderId);
@@ -1919,6 +1946,9 @@ class Folder extends DataClass implements Insertable<Folder> {
     return FoldersCompanion(
       id: Value(id),
       name: Value(name),
+      iconName: iconName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(iconName),
       scope: Value(scope),
       parentFolderId: parentFolderId == null && nullToAbsent
           ? const Value.absent()
@@ -1935,6 +1965,7 @@ class Folder extends DataClass implements Insertable<Folder> {
     return Folder(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      iconName: serializer.fromJson<String?>(json['iconName']),
       scope: serializer.fromJson<String>(json['scope']),
       parentFolderId: serializer.fromJson<String?>(json['parentFolderId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1946,6 +1977,7 @@ class Folder extends DataClass implements Insertable<Folder> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
+      'iconName': serializer.toJson<String?>(iconName),
       'scope': serializer.toJson<String>(scope),
       'parentFolderId': serializer.toJson<String?>(parentFolderId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1955,12 +1987,14 @@ class Folder extends DataClass implements Insertable<Folder> {
   Folder copyWith({
     String? id,
     String? name,
+    Value<String?> iconName = const Value.absent(),
     String? scope,
     Value<String?> parentFolderId = const Value.absent(),
     DateTime? createdAt,
   }) => Folder(
     id: id ?? this.id,
     name: name ?? this.name,
+    iconName: iconName.present ? iconName.value : this.iconName,
     scope: scope ?? this.scope,
     parentFolderId: parentFolderId.present
         ? parentFolderId.value
@@ -1971,6 +2005,7 @@ class Folder extends DataClass implements Insertable<Folder> {
     return Folder(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      iconName: data.iconName.present ? data.iconName.value : this.iconName,
       scope: data.scope.present ? data.scope.value : this.scope,
       parentFolderId: data.parentFolderId.present
           ? data.parentFolderId.value
@@ -1984,6 +2019,7 @@ class Folder extends DataClass implements Insertable<Folder> {
     return (StringBuffer('Folder(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('iconName: $iconName, ')
           ..write('scope: $scope, ')
           ..write('parentFolderId: $parentFolderId, ')
           ..write('createdAt: $createdAt')
@@ -1992,13 +2028,15 @@ class Folder extends DataClass implements Insertable<Folder> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, scope, parentFolderId, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, iconName, scope, parentFolderId, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Folder &&
           other.id == this.id &&
           other.name == this.name &&
+          other.iconName == this.iconName &&
           other.scope == this.scope &&
           other.parentFolderId == this.parentFolderId &&
           other.createdAt == this.createdAt);
@@ -2007,6 +2045,7 @@ class Folder extends DataClass implements Insertable<Folder> {
 class FoldersCompanion extends UpdateCompanion<Folder> {
   final Value<String> id;
   final Value<String> name;
+  final Value<String?> iconName;
   final Value<String> scope;
   final Value<String?> parentFolderId;
   final Value<DateTime> createdAt;
@@ -2014,6 +2053,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
   const FoldersCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.iconName = const Value.absent(),
     this.scope = const Value.absent(),
     this.parentFolderId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2022,6 +2062,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
   FoldersCompanion.insert({
     this.id = const Value.absent(),
     required String name,
+    this.iconName = const Value.absent(),
     required String scope,
     this.parentFolderId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2031,6 +2072,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
   static Insertable<Folder> custom({
     Expression<String>? id,
     Expression<String>? name,
+    Expression<String>? iconName,
     Expression<String>? scope,
     Expression<String>? parentFolderId,
     Expression<DateTime>? createdAt,
@@ -2039,6 +2081,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (iconName != null) 'icon_name': iconName,
       if (scope != null) 'scope': scope,
       if (parentFolderId != null) 'parent_folder_id': parentFolderId,
       if (createdAt != null) 'created_at': createdAt,
@@ -2049,6 +2092,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
   FoldersCompanion copyWith({
     Value<String>? id,
     Value<String>? name,
+    Value<String?>? iconName,
     Value<String>? scope,
     Value<String?>? parentFolderId,
     Value<DateTime>? createdAt,
@@ -2057,6 +2101,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     return FoldersCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      iconName: iconName ?? this.iconName,
       scope: scope ?? this.scope,
       parentFolderId: parentFolderId ?? this.parentFolderId,
       createdAt: createdAt ?? this.createdAt,
@@ -2072,6 +2117,9 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (iconName.present) {
+      map['icon_name'] = Variable<String>(iconName.value);
     }
     if (scope.present) {
       map['scope'] = Variable<String>(scope.value);
@@ -2093,6 +2141,7 @@ class FoldersCompanion extends UpdateCompanion<Folder> {
     return (StringBuffer('FoldersCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('iconName: $iconName, ')
           ..write('scope: $scope, ')
           ..write('parentFolderId: $parentFolderId, ')
           ..write('createdAt: $createdAt, ')
@@ -18472,6 +18521,7 @@ typedef $$FoldersTableCreateCompanionBuilder =
     FoldersCompanion Function({
       Value<String> id,
       required String name,
+      Value<String?> iconName,
       required String scope,
       Value<String?> parentFolderId,
       Value<DateTime> createdAt,
@@ -18481,6 +18531,7 @@ typedef $$FoldersTableUpdateCompanionBuilder =
     FoldersCompanion Function({
       Value<String> id,
       Value<String> name,
+      Value<String?> iconName,
       Value<String> scope,
       Value<String?> parentFolderId,
       Value<DateTime> createdAt,
@@ -18562,6 +18613,11 @@ class $$FoldersTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get iconName => $composableBuilder(
+    column: $table.iconName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18668,6 +18724,11 @@ class $$FoldersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get iconName => $composableBuilder(
+    column: $table.iconName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get scope => $composableBuilder(
     column: $table.scope,
     builder: (column) => ColumnOrderings(column),
@@ -18716,6 +18777,9 @@ class $$FoldersTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get iconName =>
+      $composableBuilder(column: $table.iconName, builder: (column) => column);
 
   GeneratedColumn<String> get scope =>
       $composableBuilder(column: $table.scope, builder: (column) => column);
@@ -18831,6 +18895,7 @@ class $$FoldersTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String?> iconName = const Value.absent(),
                 Value<String> scope = const Value.absent(),
                 Value<String?> parentFolderId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -18838,6 +18903,7 @@ class $$FoldersTableTableManager
               }) => FoldersCompanion(
                 id: id,
                 name: name,
+                iconName: iconName,
                 scope: scope,
                 parentFolderId: parentFolderId,
                 createdAt: createdAt,
@@ -18847,6 +18913,7 @@ class $$FoldersTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 required String name,
+                Value<String?> iconName = const Value.absent(),
                 required String scope,
                 Value<String?> parentFolderId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -18854,6 +18921,7 @@ class $$FoldersTableTableManager
               }) => FoldersCompanion.insert(
                 id: id,
                 name: name,
+                iconName: iconName,
                 scope: scope,
                 parentFolderId: parentFolderId,
                 createdAt: createdAt,

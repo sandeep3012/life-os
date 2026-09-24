@@ -22,6 +22,7 @@ import '../../features/learn/presentation/screens/learn_screen.dart';
 import '../../features/learn/presentation/screens/note_reader_screen.dart';
 import '../../features/notes/presentation/screens/notes_screen.dart';
 import '../../features/documents/presentation/screens/documents_screen.dart';
+import '../../features/documents/presentation/screens/folder_documents_screen.dart';
 import '../../features/goals/presentation/screens/goals_screen.dart';
 import '../../features/ai_analyser/presentation/screens/ai_analyser_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
@@ -155,6 +156,15 @@ GoRouter createAppRouter() => GoRouter(
                 GoRoute(
                   path: 'documents',
                   builder: (context, state) => const DocumentsScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'folder/:folderId',
+                      builder: (context, state) => FolderDocumentsScreen(
+                        folderId: state.pathParameters['folderId']!,
+                        folderName: state.uri.queryParameters['name'] ?? 'Folder',
+                      ),
+                    ),
+                  ],
                 ),
                 GoRoute(
                   path: 'goals',

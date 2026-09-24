@@ -54,7 +54,8 @@ class DocumentsController {
 
   final DocumentsRepository _repo;
 
-  Future<void> createFolder(String name) => _repo.createFolder(name);
+  Future<void> createFolder(String name, {String? iconName}) =>
+      _repo.createFolder(name, iconName: iconName);
 
   Future<void> deleteFolder(String id) => _repo.deleteFolder(id);
 
