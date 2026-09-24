@@ -41,6 +41,21 @@ class DocumentsRepository {
     );
   }
 
+  Future<void> updateFolder(
+    String id, {
+    required String name,
+    String? iconName,
+    String? colorHex,
+  }) {
+    return (_db.update(_db.folders)..where((f) => f.id.equals(id))).write(
+      FoldersCompanion(
+        name: Value(name),
+        iconName: Value(iconName),
+        colorHex: Value(colorHex),
+      ),
+    );
+  }
+
   Future<void> deleteFolder(String id) async {
     // Un-assign documents from this folder, then delete the folder.
     await (_db.update(_db.documents)..where((d) => d.folderId.equals(id)))

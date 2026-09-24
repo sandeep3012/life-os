@@ -13,12 +13,14 @@ class FolderTile extends StatelessWidget {
     required this.folder,
     required this.count,
     required this.onTap,
+    this.onEdit,
     this.onDelete,
   });
 
   final Folder folder;
   final int count;
   final VoidCallback onTap;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   @override
@@ -35,7 +37,6 @@ class FolderTile extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
-        onLongPress: onDelete != null ? () => _confirmDelete(context, colors) : null,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
           child: Column(
@@ -55,17 +56,12 @@ class FolderTile extends StatelessWidget {
                     child: Icon(folderIcon.icon, color: accentColor, size: 20),
                   ),
                   const Spacer(),
-                  if (onDelete != null)
-                    GestureDetector(
-                      onTap: () => _confirmDelete(context, colors),
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(
-                          Icons.more_horiz,
-                          size: 16,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
+                  if (onEdit != null || onDelete != null)
+                    _FolderMenu(
+                      onEdit: onEdit,
+                      onDelete: onDelete != null
+                          ? () => _confirmDelete(context, colors)
+                          : null,
                     ),
                 ],
               ),
@@ -113,3 +109,44 @@ class FolderTile extends StatelessWidget {
     if (confirmed == true) onDelete?.call();
   }
 }
+
+class _FolderMenu extends StatelessWidget {
+  const _FolderMenu({this.onEdit, this.onDelete});
+
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<_FolderAction>(
+      padding: EdgeInsets.zero,
+      icon: Icon(
+        Icons.more_horiz,
+        size: 18,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      onSelected: (action) {
+        switch (action) {
+          case _FolderAction.edit:
+            onEdit?.call();
+          case _FolderAction.delete:
+            onDelete?.call();
+        }
+      },
+      itemBuilder: (_) => [
+        if (onEdit != null)
+          const PopupMenuItem(
+            value: _FolderAction.edit,
+            child: Text('Edit'),
+          ),
+        if (onDelete != null)
+          const PopupMenuItem(
+            value: _FolderAction.delete,
+            child: Text('Delete'),
+          ),
+      ],
+    );
+  }
+}
+
+enum _FolderAction { edit, delete }

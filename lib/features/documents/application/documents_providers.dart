@@ -57,6 +57,14 @@ class DocumentsController {
   Future<void> createFolder(String name, {String? iconName, String? colorHex}) =>
       _repo.createFolder(name, iconName: iconName, colorHex: colorHex);
 
+  Future<void> updateFolder(
+    String id, {
+    required String name,
+    String? iconName,
+    String? colorHex,
+  }) =>
+      _repo.updateFolder(id, name: name, iconName: iconName, colorHex: colorHex);
+
   Future<void> deleteFolder(String id) => _repo.deleteFolder(id);
 
   Future<void> importDocument({

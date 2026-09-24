@@ -206,6 +206,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                           queryParameters: {'name': f.name},
                         ).toString(),
                       ),
+                      onEdit: () => _editFolder(f),
                       onDelete: () => ref
                           .read(documentsControllerProvider)
                           .deleteFolder(f.id),
@@ -289,6 +290,17 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     if (result == null || !mounted) return;
     await ref.read(documentsControllerProvider).createFolder(
           result.name,
+          iconName: result.iconName,
+          colorHex: result.colorHex,
+        );
+  }
+
+  Future<void> _editFolder(Folder folder) async {
+    final result = await _showCreateFolderSheet(context, initial: folder);
+    if (result == null || !mounted) return;
+    await ref.read(documentsControllerProvider).updateFolder(
+          folder.id,
+          name: result.name,
           iconName: result.iconName,
           colorHex: result.colorHex,
         );
@@ -402,23 +414,33 @@ const _folderColors = [
   ('Steel',    '#4A6B8C'),
 ];
 
-Future<_CreateFolderResult?> _showCreateFolderSheet(BuildContext context) {
+Future<_CreateFolderResult?> _showCreateFolderSheet(
+  BuildContext context, {
+  Folder? initial,
+}) {
   return showModalBottomSheet<_CreateFolderResult>(
     context: context,
     isScrollControlled: true,
-    builder: (ctx) => _CreateFolderSheet(),
+    builder: (ctx) => _CreateFolderSheet(initial: initial),
   );
 }
 
 class _CreateFolderSheet extends StatefulWidget {
+  const _CreateFolderSheet({this.initial});
+  final Folder? initial;
+
   @override
   State<_CreateFolderSheet> createState() => _CreateFolderSheetState();
 }
 
 class _CreateFolderSheetState extends State<_CreateFolderSheet> {
-  final _controller = TextEditingController();
-  String _selectedIcon = FolderIcon.general.name;
-  String _selectedColorHex = _folderColors.first.$2;
+  late final _controller = TextEditingController(
+    text: widget.initial?.name ?? '',
+  );
+  late String _selectedIcon =
+      widget.initial?.iconName ?? FolderIcon.general.name;
+  late String _selectedColorHex =
+      widget.initial?.colorHex ?? _folderColors.first.$2;
 
   @override
   void initState() {
@@ -448,7 +470,10 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('New folder', style: theme.textTheme.titleLarge),
+          Text(
+            widget.initial != null ? 'Edit folder' : 'New folder',
+            style: theme.textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
           TextField(
             controller: _controller,
@@ -577,7 +602,7 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
                           colorHex: _selectedColorHex,
                         ),
                       ),
-              child: const Text('Create folder'),
+              child: Text(widget.initial != null ? 'Save changes' : 'Create folder'),
             ),
           ),
         ],
