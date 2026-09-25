@@ -4,32 +4,43 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_fonts.dart';
-import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/database/app_database.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/tappable.dart';
 import '../../application/learn_providers.dart';
 
-/// Captures a study note: which notebook it belongs to (picking or creating
-/// one), a title, the body, a recall prompt and tags.
+/// Captures a study note — or edits one when [initial] is set: which notebook
+/// it belongs to (picking or creating one), a title, the body, a recall prompt
+/// and tags.
 ///
-/// The body is entered as plain text and stored as a single prose block; the
-/// reader's quote and code treatments exist in the model for richer notes, and
-/// this sheet keeps capture fast rather than exposing a block editor.
+/// The body is a single text field over the note's blocks, round-tripped
+/// through [NoteBlock.toEditableText] so quotes (`> `) and code (``` fences)
+/// survive an edit instead of being flattened into prose.
 class NoteEditorSheet extends ConsumerStatefulWidget {
-  const NoteEditorSheet({super.key});
+  const NoteEditorSheet({super.key, this.initial});
+
+  final LearnNote? initial;
 
   @override
   ConsumerState<NoteEditorSheet> createState() => _NoteEditorSheetState();
 }
 
 class _NoteEditorSheetState extends ConsumerState<NoteEditorSheet> {
-  final _title = TextEditingController();
-  final _body = TextEditingController();
-  final _prompt = TextEditingController();
-  final _tags = TextEditingController();
+  late final _title = TextEditingController(text: widget.initial?.title);
+  late final _body = TextEditingController(
+    text: widget.initial == null
+        ? null
+        : NoteBlock.toEditableText(NoteBlock.decode(widget.initial!.bodyJson)),
+  );
+  late final _prompt = TextEditingController(text: widget.initial?.prompt);
+  late final _tags = TextEditingController(text: widget.initial?.tagsCsv);
   final _newBook = TextEditingController();
 
-  String? _bookId;
+  late String? _bookId = widget.initial?.bookId;
   bool _creatingBook = false;
+
+  bool get _isEditing => widget.initial != null;
 
   @override
   void dispose() {
@@ -54,18 +65,39 @@ class _NoteEditorSheetState extends ConsumerState<NoteEditorSheet> {
       bookId = await controller.addBook(name);
     }
 
-    final body = _body.text.trim();
-    await controller.addNote(
-      bookId: bookId,
-      title: title,
-      excerpt: body.length > 140 ? '${body.substring(0, 140)}…' : body,
-      body: body.isEmpty ? const [] : [NoteBlock(type: 'p', text: body)],
-      prompt: _prompt.text.trim(),
-      tagsCsv: _tags.text.trim(),
-      minutes: (body.split(RegExp(r'\s+')).length / 200).ceil().clamp(1, 60),
-    );
+    final blocks = NoteBlock.fromEditableText(_body.text.trim());
+    // The excerpt and read time come from the words, not the markup, so a
+    // leading quote or code fence doesn't leak `>` or ``` into the list.
+    final plain = blocks.map((b) => b.text).join(' ').trim();
+    final excerpt = plain.length > 140 ? '${plain.substring(0, 140)}…' : plain;
+    final minutes = plain.isEmpty
+        ? 1
+        : (plain.split(RegExp(r'\s+')).length / 200).ceil().clamp(1, 60);
 
-    if (mounted) Navigator.of(context).pop();
+    if (_isEditing) {
+      await controller.updateNote(
+        id: widget.initial!.id,
+        bookId: bookId,
+        title: title,
+        excerpt: excerpt,
+        body: blocks,
+        prompt: _prompt.text.trim(),
+        tagsCsv: _tags.text.trim(),
+        minutes: minutes,
+      );
+    } else {
+      await controller.addNote(
+        bookId: bookId,
+        title: title,
+        excerpt: excerpt,
+        body: blocks,
+        prompt: _prompt.text.trim(),
+        tagsCsv: _tags.text.trim(),
+        minutes: minutes,
+      );
+    }
+
+    if (mounted) Navigator.of(context).pop(title);
   }
 
   @override
@@ -77,188 +109,170 @@ class _NoteEditorSheetState extends ConsumerState<NoteEditorSheet> {
     final books = ref.watch(learnBooksProvider).value ?? const [];
     final needsNewBook = _creatingBook || books.isEmpty;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.sheetRadius),
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: scheme.outline,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'New note',
-                  style: TextStyle(
-                    fontFamily: AppFonts.serif,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
+    return CompactEditorSheet(
+      title: _isEditing ? 'Edit note' : 'New note',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 16),
 
-                Text(
-                  'Notebook',
-                  style: TextStyle(
-                    fontFamily: AppFonts.sans,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (needsNewBook)
-                  TextField(
-                    controller: _newBook,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      hintText: 'Notebook name',
-                      suffixIcon: books.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: 'Pick an existing notebook',
-                              icon: const Icon(LucideIcons.x, size: 18),
-                              onPressed: () =>
-                                  setState(() => _creatingBook = false),
-                            ),
-                    ),
-                  )
-                else
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      for (final book in books)
-                        Tappable(
-                          haptic: TapHaptic.selection,
-                          semanticLabel: book.name,
-                          selected: book.id == _bookId,
-                          onTap: () => setState(() => _bookId = book.id),
-                          child: Container(
-                            height: 38,
-                            padding: const EdgeInsets.symmetric(horizontal: 13),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: book.id == _bookId
-                                  ? colors.accentSoft
-                                  : scheme.surface,
-                              border: Border.all(
-                                color: book.id == _bookId
-                                    ? scheme.secondary
-                                    : scheme.outline,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              book.name,
-                              style: TextStyle(
-                                fontFamily: AppFonts.sans,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: book.id == _bookId
-                                    ? colors.accentInk
-                                    : scheme.onSurface,
-                              ),
-                            ),
-                          ),
+          Text(
+            'Notebook',
+            style: TextStyle(
+              fontFamily: AppFonts.sans,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (needsNewBook)
+            TextField(
+              controller: _newBook,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                hintText: 'Notebook name',
+                suffixIcon: books.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Pick an existing notebook',
+                        icon: const Icon(LucideIcons.x, size: 18),
+                        onPressed: () => setState(() => _creatingBook = false),
+                      ),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final book in books)
+                  Tappable(
+                    haptic: TapHaptic.selection,
+                    semanticLabel: book.name,
+                    selected: book.id == _bookId,
+                    onTap: () => setState(() => _bookId = book.id),
+                    child: Container(
+                      height: 38,
+                      padding: const EdgeInsets.symmetric(horizontal: 13),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: book.id == _bookId
+                            ? colors.accentSoft
+                            : scheme.surface,
+                        border: Border.all(
+                          color: book.id == _bookId
+                              ? scheme.secondary
+                              : scheme.outline,
                         ),
-                      Tappable(
-                        haptic: TapHaptic.light,
-                        semanticLabel: 'New notebook',
-                        onTap: () => setState(() => _creatingBook = true),
-                        child: Container(
-                          height: 38,
-                          padding: const EdgeInsets.symmetric(horizontal: 13),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: scheme.outline),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '+ New',
-                            style: TextStyle(
-                              fontFamily: AppFonts.sans,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        book.name,
+                        style: TextStyle(
+                          fontFamily: AppFonts.sans,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: book.id == _bookId
+                              ? colors.accentInk
+                              : scheme.onSurface,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _title,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(labelText: 'Title'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _body,
-                  maxLines: 5,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Note',
-                    alignLabelWithHint: true,
+                Tappable(
+                  haptic: TapHaptic.light,
+                  semanticLabel: 'New notebook',
+                  onTap: () => setState(() => _creatingBook = true),
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 13),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: scheme.outline),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '+ New',
+                      style: TextStyle(
+                        fontFamily: AppFonts.sans,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _prompt,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Recall prompt',
-                    hintText: 'What question should this answer later?',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _tags,
-                  decoration: const InputDecoration(
-                    labelText: 'Tags',
-                    hintText: 'comma, separated',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: _save,
-                  child: const Text('Save note'),
                 ),
               ],
             ),
+
+          const SizedBox(height: 14),
+          TextField(
+            controller: _title,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(labelText: 'Title'),
           ),
-        ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _body,
+            maxLines: 5,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Note',
+              // The markup is the only way to keep quotes and code apart in a
+              // single field, so it has to be discoverable here.
+              helperText: 'Start a line with > for a quote; wrap code in ```',
+              alignLabelWithHint: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _prompt,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Recall prompt',
+              hintText: 'What question should this answer later?',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _tags,
+            decoration: const InputDecoration(
+              labelText: 'Tags',
+              hintText: 'comma, separated',
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _save,
+              child: Text(_isEditing ? 'Save changes' : 'Save note'),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-Future<void> showNoteEditorSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+Future<void> showNoteEditorSheet(
+  BuildContext context,
+  WidgetRef ref, {
+  LearnNote? initial,
+}) async {
+  final saved = await showCompactEditorSheet<String>(
     context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
-    builder: (context) => const NoteEditorSheet(),
+    builder: (context) => NoteEditorSheet(initial: initial),
+  );
+  if (saved == null || !context.mounted) return;
+  await showSaveFeedback(
+    context,
+    ref,
+    title: initial == null ? 'Note saved' : 'Note updated',
+    message: initial == null
+        ? '“$saved” is in your notebook.'
+        : 'Changes to “$saved” were saved.',
   );
 }

@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_fonts.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
 import '../../../../core/widgets/tappable.dart';
 import '../../application/health_providers.dart';
 
@@ -48,142 +49,111 @@ class _LogSetSheetState extends ConsumerState<LogSetSheet> {
       _seeded = true;
     }
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.sheetRadius),
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: scheme.outline,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  widget.exercise.name,
-                  style: TextStyle(
-                    fontFamily: AppFonts.serif,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                if (widget.exercise.scheme.isNotEmpty)
-                  Text(
-                    'Target ${widget.exercise.scheme}',
-                    style: TextStyle(
-                      fontFamily: AppFonts.sans,
-                      fontSize: 12.5,
-                      color: colors.text3,
-                    ),
-                  ),
+    return CompactEditorSheet(
+      title: widget.exercise.name,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.exercise.scheme.isNotEmpty)
+            Text(
+              'Target ${widget.exercise.scheme}',
+              style: TextStyle(
+                fontFamily: AppFonts.sans,
+                fontSize: 12.5,
+                color: colors.text3,
+              ),
+            ),
 
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _Stepper(
-                        label: 'Weight',
-                        value: ExerciseSession.formatKg((_weightKg * 1000).round()),
-                        onDecrement: _weightKg <= 0
-                            ? null
-                            : () => setState(() {
-                                  _weightKg =
-                                      (_weightKg - _weightStep).clamp(0, 500);
-                                }),
-                        onIncrement: () => setState(() {
-                          _weightKg = (_weightKg + _weightStep).clamp(0, 500);
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: _Stepper(
+                  label: 'Weight',
+                  value: ExerciseSession.formatKg((_weightKg * 1000).round()),
+                  onDecrement: _weightKg <= 0
+                      ? null
+                      : () => setState(() {
+                          _weightKg = (_weightKg - _weightStep).clamp(0, 500);
                         }),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _Stepper(
-                        label: 'Reps',
-                        value: '$_reps',
-                        onDecrement: _reps <= 1
-                            ? null
-                            : () => setState(() => _reps--),
-                        onIncrement: () => setState(() => _reps++),
-                      ),
-                    ),
-                  ],
+                  onIncrement: () => setState(() {
+                    _weightKg = (_weightKg + _weightStep).clamp(0, 500);
+                  }),
                 ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _Stepper(
+                  label: 'Reps',
+                  value: '$_reps',
+                  onDecrement: _reps <= 1
+                      ? null
+                      : () => setState(() => _reps--),
+                  onIncrement: () => setState(() => _reps++),
+                ),
+              ),
+            ],
+          ),
 
-                const SizedBox(height: 14),
-                FilledButton.icon(
-                  onPressed: () async {
-                    await ref.read(healthControllerProvider).logSet(
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () async {
+                await ref
+                    .read(healthControllerProvider)
+                    .logSet(
                       exerciseId: widget.exercise.id,
                       reps: _reps,
                       weightKg: _weightKg,
                     );
-                  },
-                  icon: const Icon(LucideIcons.plus, size: 18),
-                  label: Text('Log set ${session.setCount + 1}'),
-                ),
-
-                if (session.sets.isNotEmpty) ...[
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          "Today's sets",
-                          style: TextStyle(
-                            fontFamily: AppFonts.sans,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        '${session.setCount} sets · '
-                        '${ExerciseSession.formatKg(session.volumeGrams)} volume',
-                        style: TextStyle(
-                          fontFamily: AppFonts.numeric,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: colors.text3,
-                          fontFeatures: AppFonts.tabular,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  for (final set in session.sets)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 7),
-                      child: _SetRow(
-                        set: set,
-                        onDelete: () => ref
-                            .read(healthControllerProvider)
-                            .deleteSet(set.id),
-                      ),
-                    ),
-                ],
-              ],
+              },
+              icon: const Icon(LucideIcons.plus, size: 18),
+              label: Text('Log set ${session.setCount + 1}'),
             ),
           ),
-        ),
+
+          if (session.sets.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    "Today's sets",
+                    style: TextStyle(
+                      fontFamily: AppFonts.sans,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${session.setCount} sets · '
+                  '${ExerciseSession.formatKg(session.volumeGrams)} volume',
+                  style: TextStyle(
+                    fontFamily: AppFonts.numeric,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: colors.text3,
+                    fontFeatures: AppFonts.tabular,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (final set in session.sets)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 7),
+                child: _SetRow(
+                  set: set,
+                  onDelete: () =>
+                      ref.read(healthControllerProvider).deleteSet(set.id),
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }
@@ -298,8 +268,8 @@ class _StepButton extends StatelessWidget {
           color: filled
               ? scheme.onPrimary
               : enabled
-                  ? scheme.onSurface
-                  : scheme.outline,
+              ? scheme.onSurface
+              : scheme.outline,
         ),
       ),
     );
@@ -362,10 +332,8 @@ class _SetRow extends StatelessWidget {
 }
 
 Future<void> showLogSetSheet(BuildContext context, Exercise exercise) {
-  return showModalBottomSheet<void>(
+  return showCompactEditorSheet<void>(
     context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
     builder: (context) => LogSetSheet(exercise: exercise),
   );
 }

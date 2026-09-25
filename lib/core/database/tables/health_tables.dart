@@ -34,6 +34,12 @@ class Medications extends Table {
   TextColumn get timesCsv => text().withDefault(const Constant('08:00'))();
 
   BoolColumn get reminderEnabled => boolean().withDefault(const Constant(false))();
+
+  /// notification | alarm — see `ReminderMode`. Mirrors tasks, habits, bills,
+  /// goals and events, so one dose reminder can be loud and another quiet.
+  TextColumn get reminderMode =>
+      text().withDefault(const Constant('notification'))();
+
   BoolColumn get active => boolean().withDefault(const Constant(true))();
 
   DateTimeColumn get createdAt =>

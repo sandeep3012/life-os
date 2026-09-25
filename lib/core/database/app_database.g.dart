@@ -11835,6 +11835,18 @@ class $MedicationsTable extends Medications
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _reminderModeMeta = const VerificationMeta(
+    'reminderMode',
+  );
+  @override
+  late final GeneratedColumn<String> reminderMode = GeneratedColumn<String>(
+    'reminder_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('notification'),
+  );
   static const VerificationMeta _activeMeta = const VerificationMeta('active');
   @override
   late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
@@ -11872,6 +11884,7 @@ class $MedicationsTable extends Medications
     daysCsv,
     timesCsv,
     reminderEnabled,
+    reminderMode,
     active,
     createdAt,
   ];
@@ -11949,6 +11962,15 @@ class $MedicationsTable extends Medications
         ),
       );
     }
+    if (data.containsKey('reminder_mode')) {
+      context.handle(
+        _reminderModeMeta,
+        reminderMode.isAcceptableOrUnknown(
+          data['reminder_mode']!,
+          _reminderModeMeta,
+        ),
+      );
+    }
     if (data.containsKey('active')) {
       context.handle(
         _activeMeta,
@@ -12010,6 +12032,10 @@ class $MedicationsTable extends Medications
         DriftSqlType.bool,
         data['${effectivePrefix}reminder_enabled'],
       )!,
+      reminderMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reminder_mode'],
+      )!,
       active: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}active'],
@@ -12054,6 +12080,10 @@ class Medication extends DataClass implements Insertable<Medication> {
   /// Dose times as comma-separated 24h `HH:mm`, e.g. `08:00,22:30`.
   final String timesCsv;
   final bool reminderEnabled;
+
+  /// notification | alarm — see `ReminderMode`. Mirrors tasks, habits, bills,
+  /// goals and events, so one dose reminder can be loud and another quiet.
+  final String reminderMode;
   final bool active;
   final DateTime createdAt;
   const Medication({
@@ -12067,6 +12097,7 @@ class Medication extends DataClass implements Insertable<Medication> {
     required this.daysCsv,
     required this.timesCsv,
     required this.reminderEnabled,
+    required this.reminderMode,
     required this.active,
     required this.createdAt,
   });
@@ -12085,6 +12116,7 @@ class Medication extends DataClass implements Insertable<Medication> {
     map['days_csv'] = Variable<String>(daysCsv);
     map['times_csv'] = Variable<String>(timesCsv);
     map['reminder_enabled'] = Variable<bool>(reminderEnabled);
+    map['reminder_mode'] = Variable<String>(reminderMode);
     map['active'] = Variable<bool>(active);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -12104,6 +12136,7 @@ class Medication extends DataClass implements Insertable<Medication> {
       daysCsv: Value(daysCsv),
       timesCsv: Value(timesCsv),
       reminderEnabled: Value(reminderEnabled),
+      reminderMode: Value(reminderMode),
       active: Value(active),
       createdAt: Value(createdAt),
     );
@@ -12125,6 +12158,7 @@ class Medication extends DataClass implements Insertable<Medication> {
       daysCsv: serializer.fromJson<String>(json['daysCsv']),
       timesCsv: serializer.fromJson<String>(json['timesCsv']),
       reminderEnabled: serializer.fromJson<bool>(json['reminderEnabled']),
+      reminderMode: serializer.fromJson<String>(json['reminderMode']),
       active: serializer.fromJson<bool>(json['active']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -12143,6 +12177,7 @@ class Medication extends DataClass implements Insertable<Medication> {
       'daysCsv': serializer.toJson<String>(daysCsv),
       'timesCsv': serializer.toJson<String>(timesCsv),
       'reminderEnabled': serializer.toJson<bool>(reminderEnabled),
+      'reminderMode': serializer.toJson<String>(reminderMode),
       'active': serializer.toJson<bool>(active),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -12159,6 +12194,7 @@ class Medication extends DataClass implements Insertable<Medication> {
     String? daysCsv,
     String? timesCsv,
     bool? reminderEnabled,
+    String? reminderMode,
     bool? active,
     DateTime? createdAt,
   }) => Medication(
@@ -12172,6 +12208,7 @@ class Medication extends DataClass implements Insertable<Medication> {
     daysCsv: daysCsv ?? this.daysCsv,
     timesCsv: timesCsv ?? this.timesCsv,
     reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+    reminderMode: reminderMode ?? this.reminderMode,
     active: active ?? this.active,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -12191,6 +12228,9 @@ class Medication extends DataClass implements Insertable<Medication> {
       reminderEnabled: data.reminderEnabled.present
           ? data.reminderEnabled.value
           : this.reminderEnabled,
+      reminderMode: data.reminderMode.present
+          ? data.reminderMode.value
+          : this.reminderMode,
       active: data.active.present ? data.active.value : this.active,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -12209,6 +12249,7 @@ class Medication extends DataClass implements Insertable<Medication> {
           ..write('daysCsv: $daysCsv, ')
           ..write('timesCsv: $timesCsv, ')
           ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderMode: $reminderMode, ')
           ..write('active: $active, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -12227,6 +12268,7 @@ class Medication extends DataClass implements Insertable<Medication> {
     daysCsv,
     timesCsv,
     reminderEnabled,
+    reminderMode,
     active,
     createdAt,
   );
@@ -12244,6 +12286,7 @@ class Medication extends DataClass implements Insertable<Medication> {
           other.daysCsv == this.daysCsv &&
           other.timesCsv == this.timesCsv &&
           other.reminderEnabled == this.reminderEnabled &&
+          other.reminderMode == this.reminderMode &&
           other.active == this.active &&
           other.createdAt == this.createdAt);
 }
@@ -12259,6 +12302,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
   final Value<String> daysCsv;
   final Value<String> timesCsv;
   final Value<bool> reminderEnabled;
+  final Value<String> reminderMode;
   final Value<bool> active;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
@@ -12273,6 +12317,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
     this.daysCsv = const Value.absent(),
     this.timesCsv = const Value.absent(),
     this.reminderEnabled = const Value.absent(),
+    this.reminderMode = const Value.absent(),
     this.active = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -12288,6 +12333,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
     this.daysCsv = const Value.absent(),
     this.timesCsv = const Value.absent(),
     this.reminderEnabled = const Value.absent(),
+    this.reminderMode = const Value.absent(),
     this.active = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -12303,6 +12349,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
     Expression<String>? daysCsv,
     Expression<String>? timesCsv,
     Expression<bool>? reminderEnabled,
+    Expression<String>? reminderMode,
     Expression<bool>? active,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -12318,6 +12365,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
       if (daysCsv != null) 'days_csv': daysCsv,
       if (timesCsv != null) 'times_csv': timesCsv,
       if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
+      if (reminderMode != null) 'reminder_mode': reminderMode,
       if (active != null) 'active': active,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -12335,6 +12383,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
     Value<String>? daysCsv,
     Value<String>? timesCsv,
     Value<bool>? reminderEnabled,
+    Value<String>? reminderMode,
     Value<bool>? active,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
@@ -12350,6 +12399,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
       daysCsv: daysCsv ?? this.daysCsv,
       timesCsv: timesCsv ?? this.timesCsv,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
+      reminderMode: reminderMode ?? this.reminderMode,
       active: active ?? this.active,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -12389,6 +12439,9 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
     if (reminderEnabled.present) {
       map['reminder_enabled'] = Variable<bool>(reminderEnabled.value);
     }
+    if (reminderMode.present) {
+      map['reminder_mode'] = Variable<String>(reminderMode.value);
+    }
     if (active.present) {
       map['active'] = Variable<bool>(active.value);
     }
@@ -12414,6 +12467,7 @@ class MedicationsCompanion extends UpdateCompanion<Medication> {
           ..write('daysCsv: $daysCsv, ')
           ..write('timesCsv: $timesCsv, ')
           ..write('reminderEnabled: $reminderEnabled, ')
+          ..write('reminderMode: $reminderMode, ')
           ..write('active: $active, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -25887,6 +25941,7 @@ typedef $$MedicationsTableCreateCompanionBuilder =
       Value<String> daysCsv,
       Value<String> timesCsv,
       Value<bool> reminderEnabled,
+      Value<String> reminderMode,
       Value<bool> active,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -25903,6 +25958,7 @@ typedef $$MedicationsTableUpdateCompanionBuilder =
       Value<String> daysCsv,
       Value<String> timesCsv,
       Value<bool> reminderEnabled,
+      Value<String> reminderMode,
       Value<bool> active,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -25987,6 +26043,11 @@ class $$MedicationsTableFilterComposer
 
   ColumnFilters<bool> get reminderEnabled => $composableBuilder(
     column: $table.reminderEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reminderMode => $composableBuilder(
+    column: $table.reminderMode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -26085,6 +26146,11 @@ class $$MedicationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get reminderMode => $composableBuilder(
+    column: $table.reminderMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get active => $composableBuilder(
     column: $table.active,
     builder: (column) => ColumnOrderings(column),
@@ -26136,6 +26202,11 @@ class $$MedicationsTableAnnotationComposer
 
   GeneratedColumn<bool> get reminderEnabled => $composableBuilder(
     column: $table.reminderEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get reminderMode => $composableBuilder(
+    column: $table.reminderMode,
     builder: (column) => column,
   );
 
@@ -26209,6 +26280,7 @@ class $$MedicationsTableTableManager
                 Value<String> daysCsv = const Value.absent(),
                 Value<String> timesCsv = const Value.absent(),
                 Value<bool> reminderEnabled = const Value.absent(),
+                Value<String> reminderMode = const Value.absent(),
                 Value<bool> active = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -26223,6 +26295,7 @@ class $$MedicationsTableTableManager
                 daysCsv: daysCsv,
                 timesCsv: timesCsv,
                 reminderEnabled: reminderEnabled,
+                reminderMode: reminderMode,
                 active: active,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -26239,6 +26312,7 @@ class $$MedicationsTableTableManager
                 Value<String> daysCsv = const Value.absent(),
                 Value<String> timesCsv = const Value.absent(),
                 Value<bool> reminderEnabled = const Value.absent(),
+                Value<String> reminderMode = const Value.absent(),
                 Value<bool> active = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -26253,6 +26327,7 @@ class $$MedicationsTableTableManager
                 daysCsv: daysCsv,
                 timesCsv: timesCsv,
                 reminderEnabled: reminderEnabled,
+                reminderMode: reminderMode,
                 active: active,
                 createdAt: createdAt,
                 rowid: rowid,

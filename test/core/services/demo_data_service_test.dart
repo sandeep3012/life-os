@@ -43,8 +43,8 @@ void main() {
 
       expect(await service.hasDemoData, isFalse);
       final summary = await service.generate();
-      expect(summary.transactions, 624);
-      expect(summary.tasks, 192);
+      expect(summary.transactions, 636);
+      expect(summary.tasks, 214);
       expect(await db.customSelect('PRAGMA foreign_key_check').get(), isEmpty);
       expect(
         await (db.select(db.habitLogs)..where(
@@ -118,15 +118,15 @@ void main() {
 
     final summary = await service.generate(months: 2);
 
-    expect(summary.transactions, 52);
-    expect(summary.tasks, 16);
-    expect(summary.events, 8);
+    expect(summary.transactions, 64);
+    expect(summary.tasks, 38);
+    expect(summary.events, 46);
     expect(summary.habitLogs, greaterThan(0));
     expect(await service.hasDemoData, isTrue);
 
     final subtasks = await db.select(db.subtasks).get();
     final tasks = await db.select(db.tasks).get();
-    expect(subtasks, hasLength(4));
+    expect(subtasks, hasLength(13));
     for (final subtask in subtasks) {
       expect(tasks.any((task) => task.id == subtask.taskId), isTrue);
     }

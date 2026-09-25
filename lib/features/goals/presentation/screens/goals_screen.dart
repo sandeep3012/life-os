@@ -9,6 +9,7 @@ import '../../../../core/widgets/collection_layout.dart';
 import '../../../../core/widgets/inline_add_button.dart';
 import '../../../finance/application/finance_providers.dart';
 import '../../../settings/application/settings_providers.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../application/goals_providers.dart';
 import '../widgets/goal_card.dart';
 import '../widgets/quick_add_goal_sheet.dart';
@@ -132,5 +133,14 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
             linkedId: result.link!.id,
           );
     }
+    // Same wording as the add menu's goal path, which already acknowledged —
+    // this screen's own "New goal" button was the one that saved silently.
+    if (!mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Goal saved',
+      message: '“${result.title}” is being tracked.',
+    );
   }
 }

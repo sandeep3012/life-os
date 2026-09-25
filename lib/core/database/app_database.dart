@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 28;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -281,6 +281,13 @@ class AppDatabase extends _$AppDatabase {
       if (from < 27) {
         // v26 -> v27: folders gain an optional hex colour accent.
         await m.addColumn(folders, folders.colorHex);
+      }
+      if (from < 28) {
+        // v27 -> v28: a medication's reminder can be an alarm rather than a
+        // notification, the same choice tasks/habits/bills/goals/events all
+        // offer. Existing rows default to 'notification', which is what they
+        // effectively were.
+        await m.addColumn(medications, medications.reminderMode);
       }
     },
   );

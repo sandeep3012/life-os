@@ -6,6 +6,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_fonts.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/tappable.dart';
 import '../../application/health_providers.dart';
 
@@ -99,7 +101,7 @@ class _WorkoutPlanSheetState extends ConsumerState<WorkoutPlanSheet> {
         endMinute: _toMinutes(_end),
       );
     }
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) Navigator.of(context).pop(label);
   }
 
   @override
@@ -108,171 +110,144 @@ class _WorkoutPlanSheetState extends ConsumerState<WorkoutPlanSheet> {
     final scheme = theme.colorScheme;
     final colors = context.appColors;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.sheetRadius),
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: scheme.outline,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  _isEdit ? 'Edit session' : 'New training session',
-                  style: TextStyle(
-                    fontFamily: AppFonts.serif,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _label,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Session',
-                    hintText: 'Push Day',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _focus,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Focus',
-                    hintText: 'Chest & Triceps',
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-                _Label(_isEdit ? 'Day' : 'Repeats on'),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    for (var day = 1; day <= 7; day++) ...[
-                      if (day > 1) const SizedBox(width: 6),
-                      Expanded(
-                        child: Tappable(
-                          haptic: TapHaptic.selection,
-                          semanticLabel: 'Day $day',
-                          selected: _weekdays.contains(day),
-                          // Editing moves one session, so the day is fixed;
-                          // creating can fan the same session across the week.
-                          onTap: _isEdit
-                              ? null
-                              : () => setState(() {
-                                    if (!_weekdays.remove(day)) _weekdays.add(day);
-                                  }),
-                          child: Container(
-                            height: 40,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: _weekdays.contains(day)
-                                  ? colors.accentSoft
-                                  : scheme.surface,
-                              border: Border.all(
-                                color: _weekdays.contains(day)
-                                    ? scheme.secondary
-                                    : scheme.outline,
-                              ),
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.chipRadius),
-                            ),
-                            child: Text(
-                              _dayLabels[day - 1],
-                              style: TextStyle(
-                                fontFamily: AppFonts.sans,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: _weekdays.contains(day)
-                                    ? colors.accentInk
-                                    : scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                if (!_isEdit && _weekdays.length > 1) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Adds this session to ${_weekdays.length} days.',
-                    style: TextStyle(
-                      fontFamily: AppFonts.sans,
-                      fontSize: 12,
-                      color: colors.text3,
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 16),
-                _Label('Time'),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _TimeField(
-                        label: 'Starts',
-                        value: _start,
-                        onTap: () => _pickTime(isStart: true),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _TimeField(
-                        label: 'Ends',
-                        value: _end,
-                        onTap: () => _pickTime(isStart: false),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-                FilledButton(
-                  onPressed: _save,
-                  child: Text(_isEdit ? 'Save session' : 'Add to plan'),
-                ),
-                if (_isEdit) ...[
-                  const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: () async {
-                      await ref
-                          .read(healthControllerProvider)
-                          .deleteWorkoutDay(widget.initial!.id);
-                      if (context.mounted) Navigator.of(context).pop();
-                    },
-                    style: TextButton.styleFrom(foregroundColor: colors.critical),
-                    // Kit's copy rule: name the consequence.
-                    child: const Text('Remove session and its logged sets'),
-                  ),
-                ],
-              ],
+    return CompactEditorSheet(
+      title: _isEdit ? 'Edit session' : 'New training session',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 16),
+          TextField(
+            controller: _label,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              labelText: 'Session',
+              hintText: 'Push Day',
             ),
           ),
-        ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _focus,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Focus',
+              hintText: 'Chest & Triceps',
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          _Label(_isEdit ? 'Day' : 'Repeats on'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              for (var day = 1; day <= 7; day++) ...[
+                if (day > 1) const SizedBox(width: 6),
+                Expanded(
+                  child: Tappable(
+                    haptic: TapHaptic.selection,
+                    semanticLabel: 'Day $day',
+                    selected: _weekdays.contains(day),
+                    // Editing moves one session, so the day is fixed;
+                    // creating can fan the same session across the week.
+                    onTap: _isEdit
+                        ? null
+                        : () => setState(() {
+                            if (!_weekdays.remove(day)) _weekdays.add(day);
+                          }),
+                    child: Container(
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _weekdays.contains(day)
+                            ? colors.accentSoft
+                            : scheme.surface,
+                        border: Border.all(
+                          color: _weekdays.contains(day)
+                              ? scheme.secondary
+                              : scheme.outline,
+                        ),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.chipRadius,
+                        ),
+                      ),
+                      child: Text(
+                        _dayLabels[day - 1],
+                        style: TextStyle(
+                          fontFamily: AppFonts.sans,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: _weekdays.contains(day)
+                              ? colors.accentInk
+                              : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          if (!_isEdit && _weekdays.length > 1) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Adds this session to ${_weekdays.length} days.',
+              style: TextStyle(
+                fontFamily: AppFonts.sans,
+                fontSize: 12,
+                color: colors.text3,
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+          _Label('Time'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _TimeField(
+                  label: 'Starts',
+                  value: _start,
+                  onTap: () => _pickTime(isStart: true),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _TimeField(
+                  label: 'Ends',
+                  value: _end,
+                  onTap: () => _pickTime(isStart: false),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _save,
+              child: Text(_isEdit ? 'Save session' : 'Add to plan'),
+            ),
+          ),
+          if (_isEdit) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () async {
+                  await ref
+                      .read(healthControllerProvider)
+                      .deleteWorkoutDay(widget.initial!.id);
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                style: TextButton.styleFrom(foregroundColor: colors.critical),
+                // Kit's copy rule: name the consequence.
+                child: const Text('Remove session and its logged sets'),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -363,13 +338,21 @@ class _Label extends StatelessWidget {
 }
 
 Future<void> showWorkoutPlanSheet(
-  BuildContext context, {
+  BuildContext context,
+  WidgetRef ref, {
   WorkoutDay? initial,
-}) {
-  return showModalBottomSheet<void>(
+}) async {
+  final saved = await showCompactEditorSheet<String>(
     context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
     builder: (context) => WorkoutPlanSheet(initial: initial),
+  );
+  if (saved == null || !context.mounted) return;
+  await showSaveFeedback(
+    context,
+    ref,
+    title: initial == null ? 'Session saved' : 'Session updated',
+    message: initial == null
+        ? '“$saved” is in your weekly plan.'
+        : 'Changes to “$saved” were saved.',
   );
 }

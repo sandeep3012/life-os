@@ -65,7 +65,11 @@ final todayDosesProvider = Provider<List<MedicationDose>>((ref) {
 /// Comp's slot grouping: `am` → Morning, `pm` → Afternoon, `night` → Night.
 final dosesBySlotProvider = Provider<Map<String, List<MedicationDose>>>((ref) {
   final doses = ref.watch(todayDosesProvider);
-  final grouped = <String, List<MedicationDose>>{'am': [], 'pm': [], 'night': []};
+  final grouped = <String, List<MedicationDose>>{
+    'am': [],
+    'pm': [],
+    'night': [],
+  };
   for (final dose in doses) {
     (grouped[dose.medication.slot] ??= []).add(dose);
   }
@@ -77,10 +81,9 @@ final dosesBySlotProvider = Provider<Map<String, List<MedicationDose>>>((ref) {
 /// comp's amber refill banner.
 final lowStockMedicationProvider = Provider<Medication?>((ref) {
   final meds = ref.watch(medicationsProvider).value ?? const [];
-  final low = meds
-      .where((m) => m.stockLeft != null && m.stockLeft! <= 7)
-      .toList()
-    ..sort((a, b) => a.stockLeft!.compareTo(b.stockLeft!));
+  final low =
+      meds.where((m) => m.stockLeft != null && m.stockLeft! <= 7).toList()
+        ..sort((a, b) => a.stockLeft!.compareTo(b.stockLeft!));
   return low.isEmpty ? null : low.first;
 });
 
@@ -118,8 +121,7 @@ class ExerciseSession {
       sets.fold(0, (m, s) => s.weightGrams > m ? s.weightGrams : m);
 
   /// Weight × reps summed across the session, in grams.
-  int get volumeGrams =>
-      sets.fold(0, (sum, s) => sum + s.weightGrams * s.reps);
+  int get volumeGrams => sets.fold(0, (sum, s) => sum + s.weightGrams * s.reps);
 
   /// Kilograms for display, e.g. `62.5`.
   static double kg(int grams) => grams / 1000;
@@ -127,19 +129,24 @@ class ExerciseSession {
   /// Trims a trailing `.0` so whole numbers read as "60 kg" not "60.0 kg".
   static String formatKg(int grams) {
     final value = kg(grams);
-    final text = value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1);
+    final text = value.toStringAsFixed(
+      value.truncateToDouble() == value ? 0 : 1,
+    );
     return '$text kg';
   }
 }
 
 /// Today's sets for a given exercise.
-final exerciseSessionProvider =
-    Provider.family<ExerciseSession, String>((ref, exerciseId) {
+final exerciseSessionProvider = Provider.family<ExerciseSession, String>((
+  ref,
+  exerciseId,
+) {
   final today = dateOnly(DateTime.now());
-  final sets = (ref.watch(exerciseSetLogsProvider).value ?? const [])
-      .where((l) => l.exerciseId == exerciseId && dateOnly(l.date) == today)
-      .toList()
-    ..sort((a, b) => a.setNumber.compareTo(b.setNumber));
+  final sets =
+      (ref.watch(exerciseSetLogsProvider).value ?? const [])
+          .where((l) => l.exerciseId == exerciseId && dateOnly(l.date) == today)
+          .toList()
+        ..sort((a, b) => a.setNumber.compareTo(b.setNumber));
   return ExerciseSession(sets: sets);
 });
 
@@ -154,8 +161,10 @@ final weeklyPlanProvider = Provider<Map<int, List<WorkoutDay>>>((ref) {
 });
 
 /// Exercises belonging to one training day, in order.
-final exercisesForDayProvider =
-    Provider.family<List<Exercise>, String>((ref, workoutDayId) {
+final exercisesForDayProvider = Provider.family<List<Exercise>, String>((
+  ref,
+  workoutDayId,
+) {
   return (ref.watch(exercisesProvider).value ?? const [])
       .where((e) => e.workoutDayId == workoutDayId)
       .toList()
@@ -175,10 +184,10 @@ class TodayWorkout {
   final List<Exercise> exercises;
   final Set<String> completedIds;
 
-  int get doneCount => exercises.where((e) => completedIds.contains(e.id)).length;
+  int get doneCount =>
+      exercises.where((e) => completedIds.contains(e.id)).length;
 
-  double get progress =>
-      exercises.isEmpty ? 0 : doneCount / exercises.length;
+  double get progress => exercises.isEmpty ? 0 : doneCount / exercises.length;
 
   /// The first exercise not yet ticked off — the hero's "Up next".
   Exercise? get nextExercise {
@@ -190,14 +199,20 @@ class TodayWorkout {
 
   DateTime get start {
     final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day)
-        .add(Duration(minutes: day.startMinute));
+    return DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).add(Duration(minutes: day.startMinute));
   }
 
   DateTime get end {
     final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day)
-        .add(Duration(minutes: day.endMinute));
+    return DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).add(Duration(minutes: day.endMinute));
   }
 
   /// True while the current time sits inside the block's window.
@@ -220,10 +235,12 @@ final todayWorkoutProvider = Provider<TodayWorkout?>((ref) {
   final today = dateOnly(now);
   final exerciseIds = exercises.map((e) => e.id).toSet();
   final completed = (ref.watch(workoutLogsProvider).value ?? const [])
-      .where((l) =>
-          l.completed &&
-          dateOnly(l.date) == today &&
-          exerciseIds.contains(l.exerciseId))
+      .where(
+        (l) =>
+            l.completed &&
+            dateOnly(l.date) == today &&
+            exerciseIds.contains(l.exerciseId),
+      )
       .map((l) => l.exerciseId)
       .toSet();
 
@@ -290,6 +307,12 @@ class HealthController {
     );
   }
 
+  Future<void> updateExercise({
+    required String id,
+    required String name,
+    required String scheme,
+  }) => _repo.updateExercise(id: id, name: name, scheme: scheme);
+
   Future<void> deleteExercise(String id) => _repo.deleteExercise(id);
 
   /// Logs one set of an exercise for today. [weightKg] is converted to the
@@ -317,6 +340,7 @@ class HealthController {
     required String daysCsv,
     required String timesCsv,
     required bool reminderEnabled,
+    required String reminderMode,
     int? stockLeft,
     String colorHex = '#4B7BA6',
   }) {
@@ -328,6 +352,7 @@ class HealthController {
       daysCsv: daysCsv,
       timesCsv: timesCsv,
       reminderEnabled: reminderEnabled,
+      reminderMode: reminderMode,
       stockLeft: stockLeft,
       colorHex: colorHex,
     );
@@ -342,6 +367,7 @@ class HealthController {
     required String daysCsv,
     required String timesCsv,
     required bool reminderEnabled,
+    required String reminderMode,
     int? stockLeft,
   }) {
     return _repo.updateMedication(
@@ -353,6 +379,7 @@ class HealthController {
       daysCsv: daysCsv,
       timesCsv: timesCsv,
       reminderEnabled: reminderEnabled,
+      reminderMode: reminderMode,
       stockLeft: stockLeft,
     );
   }

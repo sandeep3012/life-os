@@ -493,14 +493,21 @@ class NotificationService {
       }
       final alarm = r.mode == ReminderMode.alarm;
       final android = switch (r.kind) {
-        'habit' => alarm ? _habitAlarmChannel : _habitChannel,
+        // A dose reminder is the same kind of personal-routine nudge a habit
+        // check-in is, so it shares that channel rather than adding one the
+        // user would have to configure separately.
+        'habit' || 'medication' => alarm ? _habitAlarmChannel : _habitChannel,
         'event' => alarm ? _eventAlarmChannel : _eventChannel,
         _ => alarm ? _taskAlarmChannel : _taskChannel,
       };
       await _plugin.zonedSchedule(
         id: r.id,
         title: r.title,
-        body: r.kind == 'habit' ? 'Time to check in' : 'Scheduled reminder',
+        body: switch (r.kind) {
+          'habit' => 'Time to check in',
+          'medication' => 'Time for your dose',
+          _ => 'Scheduled reminder',
+        },
         payload: payload,
         scheduledDate: tz.TZDateTime.from(r.time, tz.local),
         notificationDetails: NotificationDetails(

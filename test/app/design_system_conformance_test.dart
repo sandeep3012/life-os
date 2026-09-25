@@ -148,13 +148,16 @@ void main() {
 
   group('brand assets', () {
     // These only fail at `flutter build` otherwise, long after the mistake.
+    // The launcher icon and splash are deliberately still the pre-rebrand
+    // indigo mark: the rebrand restyled the app's interior, but the icon and
+    // splash were reverted to the original by request. They are therefore the
+    // one place the kit's palette does not apply, and these tests guard that
+    // intentional exception rather than the kit.
     test('launcher and splash assets exist and are PNGs', () {
       const expected = [
         'assets/icon/icon.png',
         'assets/icon/icon_foreground.png',
-        'assets/icon/icon_background.png',
         'assets/icon/splash_logo.png',
-        'assets/icon/splash_logo_dark.png',
       ];
       for (final path in expected) {
         final file = File(path);
@@ -169,19 +172,29 @@ void main() {
     });
 
     test('pubspec points the adaptive icon at the ring-only foreground', () {
-      // Kit §1: handing the full-bleed square to the foreground slot lets the
-      // OS mask and parallax clip the dot off the ring.
+      // Handing the full-bleed square to the foreground slot lets the OS mask
+      // and parallax clip the dot off the ring, so the foreground stays the
+      // ring-only asset and the background stays a flat colour.
       final pubspec = File('pubspec.yaml').readAsStringSync();
       expect(
         pubspec,
         contains('adaptive_icon_foreground: assets/icon/icon_foreground.png'),
       );
-      expect(
-        pubspec,
-        contains('adaptive_icon_background: assets/icon/icon_background.png'),
-      );
-      // The pre-rebrand violet must not survive anywhere in the icon config.
-      expect(pubspec, isNot(contains('6750E7')));
+      expect(pubspec, contains('adaptive_icon_background: "#6750E7"'));
+      // The splash plate and the icon ground have to stay the same indigo, or
+      // the launch hand-off flashes a different colour than the icon.
+      expect(pubspec, contains('color: "#6750E7"'));
+    });
+
+    test('no dark splash asset is referenced now the mark is indigo', () {
+      // The single mark reads against both the indigo and the near-black
+      // plate, so both themes point at the same file. A stale reference to a
+      // dark variant would fail only at `flutter_native_splash:create` time.
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      expect(pubspec, isNot(contains('splash_logo_dark.png')));
+      expect(pubspec, isNot(contains('icon_background.png')));
+      expect(File('assets/icon/splash_logo_dark.png').existsSync(), isFalse);
+      expect(File('assets/icon/icon_background.png').existsSync(), isFalse);
     });
 
     test('the three font families the kit names are registered', () {

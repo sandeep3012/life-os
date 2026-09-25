@@ -37,6 +37,8 @@ class ScheduleCoordinator {
             db.appSettings,
             db.bills,
             db.goals,
+            db.medications,
+            db.medicationLogs,
           },
         )
         .watch()
@@ -158,6 +160,54 @@ class ScheduleCoordinator {
           if (++count >= 60) break;
         }
       }
+      // Medications. Unlike a habit, one can be due several times a day, so a
+      // reminder is per dose time rather than per day. There is no global
+      // medication toggle in Settings and inventing one would be a surprise —
+      // the per-medication switch is the control.
+      final medications = await db.select(db.medications).get();
+      final doseLogs = await db.select(db.medicationLogs).get();
+      final dosed = {
+        for (final l in doseLogs.where((l) => l.taken))
+          '${l.medicationId}:${RepeatSchedule.day(l.date).toIso8601String()}',
+      };
+      for (final m in medications) {
+        if (!m.active || !m.reminderEnabled) continue;
+        final times = _parseTimes(m.timesCsv);
+        if (times.isEmpty) continue;
+        final days = m.daysCsv
+            .split(',')
+            .map((d) => int.tryParse(d.trim()))
+            .whereType<int>()
+            .toSet();
+        // Same bound as habits: a per-item cap keeps one medication from
+        // crowding every other reminder out of the global queue.
+        var count = 0;
+        for (var offset = 0; offset < 60 && count < 30; offset++) {
+          final date = DateTime(today.year, today.month, today.day + offset);
+          // 'daily' applies every day; 'weekly' and 'alt' both express
+          // themselves as an explicit set of weekdays.
+          if (m.frequency != 'daily' && !days.contains(date.weekday)) continue;
+          final day = RepeatSchedule.day(date).toIso8601String();
+          // A dose is logged per day, so once it's ticked the rest of that
+          // day's reminders are noise.
+          if (dosed.contains('${m.id}:$day')) continue;
+          for (final (hour, minute) in times) {
+            final time = DateTime(date.year, date.month, date.day, hour, minute);
+            if (!time.isAfter(now)) continue;
+            reminders.add(
+              ScheduledReminder(
+                key: 'medication:${m.id}:$day:$hour:$minute',
+                title: m.name,
+                time: time,
+                kind: 'medication',
+                mode: ReminderMode.fromStorage(m.reminderMode),
+              ),
+            );
+            if (++count >= 30) break;
+          }
+        }
+      }
+
       reminders.sort((a, b) {
         final c = a.time.compareTo(b.time);
         return c != 0 ? c : a.key.compareTo(b.key);
@@ -180,6 +230,23 @@ class ScheduleCoordinator {
         requestRefresh();
       }
     }
+  }
+
+  /// `HH:mm[,HH:mm...]` as stored on a medication. Anything unparseable is
+  /// dropped rather than throwing — a malformed row shouldn't stop every other
+  /// reminder in the app from being scheduled.
+  static List<(int, int)> _parseTimes(String csv) {
+    final result = <(int, int)>[];
+    for (final part in csv.split(',')) {
+      final bits = part.trim().split(':');
+      if (bits.length != 2) continue;
+      final hour = int.tryParse(bits[0]);
+      final minute = int.tryParse(bits[1]);
+      if (hour == null || minute == null) continue;
+      if (hour < 0 || hour > 23 || minute < 0 || minute > 59) continue;
+      result.add((hour, minute));
+    }
+    return result;
   }
 
   void dispose() {

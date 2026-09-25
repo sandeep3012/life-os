@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/reminders/reminder_mode.dart';
+import '../../../../core/widgets/tab_rail.dart';
 import '../../../../core/widgets/compact_editor_sheet.dart';
 
 class LinkOption {
@@ -229,22 +230,19 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
                       setState(() => _reminderDaysBefore = v ?? 0),
                 ),
                 const SizedBox(height: 8),
-                SegmentedButton<ReminderMode>(
-                  segments: const [
-                    ButtonSegment(
-                      value: ReminderMode.notification,
-                      label: Text('Notification'),
-                      icon: Icon(LucideIcons.bell, size: 16),
-                    ),
-                    ButtonSegment(
-                      value: ReminderMode.alarm,
-                      label: Text('Alarm'),
-                      icon: Icon(LucideIcons.alarmClock, size: 16),
-                    ),
-                  ],
-                  selected: {_reminderMode},
-                  onSelectionChanged: (s) =>
-                      setState(() => _reminderMode = s.first),
+                // The rail, like tasks/habits/events/bills — Material's
+                // SegmentedButton draws no track in this design.
+                AppTabRail<ReminderMode>(
+                  value: _reminderMode,
+                  labels: const {
+                    ReminderMode.notification: 'Notification',
+                    ReminderMode.alarm: 'Alarm',
+                  },
+                  icons: const {
+                    ReminderMode.notification: LucideIcons.bell,
+                    ReminderMode.alarm: LucideIcons.alarmClock,
+                  },
+                  onChanged: (v) => setState(() => _reminderMode = v),
                 ),
               ],
             ],

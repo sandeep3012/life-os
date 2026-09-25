@@ -11,7 +11,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_fonts.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/widgets/app_top_bar.dart';
-import '../../../../core/widgets/dashed_action_button.dart';
+import '../../../../core/widgets/inline_add_button.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../../core/widgets/tab_rail.dart';
 import '../../../../core/widgets/surface_card.dart';
@@ -33,6 +33,16 @@ enum _LearnTab { recent, starred, due }
 
 class _LearnScreenState extends ConsumerState<LearnScreen> {
   _LearnTab _tab = _LearnTab.recent;
+
+  /// Whether the inline "Write a new note" row is on screen; the FAB shows
+  /// only while it is not, so there is one add affordance at a time. Same
+  /// contract as the Planner.
+  bool _inlineAddVisible = false;
+
+  void _onInlineAddVisibility(bool visible) {
+    if (!mounted || _inlineAddVisible == visible) return;
+    setState(() => _inlineAddVisible = visible);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,8 +73,10 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                         builder: (context) => AppTopBar(
                           centerText: 'Learn',
                           centerIsTitle: true,
-                          trailingIcon: LucideIcons.plus,
-                          onTrailing: () => showNoteEditorSheet(context),
+                          // Adding is the inline row's job, with the FAB
+                          // standing in once it scrolls away — a third entry
+                          // point in the header was one too many.
+                          showTrailing: false,
                           onMenu: () => Scaffold.of(context).openDrawer(),
                         ),
                       ),
@@ -160,9 +172,13 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                         ),
 
                     const SizedBox(height: 2),
-                    DashedActionButton(
+                    // The list already insets 20pt horizontally, so the row
+                    // supplies no padding of its own.
+                    InlineAddButton(
                       label: 'Write a new note',
-                      onTap: () => showNoteEditorSheet(context),
+                      onTap: () => showNoteEditorSheet(context, ref),
+                      onVisibilityChanged: _onInlineAddVisibility,
+                      padding: EdgeInsets.zero,
                     ),
                   ],
                 )
@@ -175,6 +191,13 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                   curve: AppMotion.standard,
                 ),
       ),
+      floatingActionButton: _inlineAddVisible
+          ? null
+          : FloatingActionButton(
+              tooltip: 'New note',
+              onPressed: () => showNoteEditorSheet(context, ref),
+              child: const Icon(LucideIcons.plus),
+            ),
     );
   }
 }
@@ -246,17 +269,23 @@ class _ReviewQueueHero extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Text(
-                          dueCount == 1
-                              ? 'note due for revision'
-                              : 'notes due for revision',
-                          style: TextStyle(
-                            fontFamily: AppFonts.sans,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: onHero.withValues(alpha: 0.85),
+                      // A bare Row can't shrink below its children's
+                      // intrinsic width, so the label has to be allowed to
+                      // wrap — a three-digit count, a long translation or a
+                      // raised text scale otherwise overflows the hero.
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(
+                            dueCount == 1
+                                ? 'note due for revision'
+                                : 'notes due for revision',
+                            style: TextStyle(
+                              fontFamily: AppFonts.sans,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: onHero.withValues(alpha: 0.85),
+                            ),
                           ),
                         ),
                       ),

@@ -95,19 +95,33 @@ class AccountCard extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  formatMinorMasked(
-                    account.balanceMinor,
-                    currencyCode: currencyCode,
-                    visible: settings.balancesVisible,
-                    showDecimals: false,
-                  ),
-                  style: TextStyle(
-                    fontFamily: AppFonts.numeric,
-                    fontFeatures: AppFonts.tabular,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
-                    color: negative ? colors.critical : theme.colorScheme.onSurface,
+                // The card sits in a fixed-height strip, so this figure's box
+                // has to be predictable: without an explicit `height` the line
+                // box is whatever the font's own metrics say, which is what
+                // overflowed the strip. scaleDown then keeps a crore-scale
+                // balance inside the card's 126pt of content width instead of
+                // ellipsising a number, which would be unreadable.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    formatMinorMasked(
+                      account.balanceMinor,
+                      currencyCode: currencyCode,
+                      visible: settings.balancesVisible,
+                      showDecimals: false,
+                    ),
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontFamily: AppFonts.numeric,
+                      fontFeatures: AppFonts.tabular,
+                      fontSize: 19,
+                      height: 1.1,
+                      fontWeight: FontWeight.w700,
+                      color: negative
+                          ? colors.critical
+                          : theme.colorScheme.onSurface,
+                    ),
                   ),
                 ),
               ],

@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/reminders/reminder_mode.dart';
+import '../../../../core/widgets/tab_rail.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../../../core/widgets/compact_editor_sheet.dart';
 import 'account_option_row.dart';
@@ -243,21 +244,21 @@ class _QuickAddBillSheetState extends State<_QuickAddBillSheet> {
                 onChanged: (v) => setState(() => _reminderDaysBefore = v ?? 0),
               ),
               const SizedBox(height: 8),
-              SegmentedButton<ReminderMode>(
-                segments: const [
-                  ButtonSegment(
-                    value: ReminderMode.notification,
-                    label: Text('Notification'),
-                    icon: Icon(LucideIcons.bell, size: 16),
-                  ),
-                  ButtonSegment(
-                    value: ReminderMode.alarm,
-                    label: Text('Alarm'),
-                    icon: Icon(LucideIcons.alarmClock, size: 16),
-                  ),
-                ],
-                selected: {_reminderMode},
-                onSelectionChanged: (s) => setState(() => _reminderMode = s.first),
+              // AppTabRail, not Material's SegmentedButton: this design's
+              // segments are borderless and transparent, so SegmentedButton
+              // renders no track and dissolves into the page. Tasks, habits
+              // and events all use the rail for exactly this choice.
+              AppTabRail<ReminderMode>(
+                value: _reminderMode,
+                labels: const {
+                  ReminderMode.notification: 'Notification',
+                  ReminderMode.alarm: 'Alarm',
+                },
+                icons: const {
+                  ReminderMode.notification: LucideIcons.bell,
+                  ReminderMode.alarm: LucideIcons.alarmClock,
+                },
+                onChanged: (v) => setState(() => _reminderMode = v),
               ),
             ],
             const SizedBox(height: 16),

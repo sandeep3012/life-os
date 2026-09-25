@@ -43,6 +43,15 @@ class _InlineAddButtonState extends State<InlineAddButton> {
   bool _checkScheduled = false;
   bool? _reported;
 
+  /// Forces the next check to report even if the value hasn't changed from
+  /// this row's point of view. Set on every rebuild, because the host may have
+  /// been told something different in the meantime — on a tab switch the
+  /// outgoing row's `dispose` microtask lands *after* the incoming row's
+  /// post-frame check, overwriting a correct `true` with a stale `false`.
+  /// Without this the incoming row would stay silent, believing it had already
+  /// reported, and the FAB would be stuck on.
+  bool _forceReport = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -89,13 +98,23 @@ class _InlineAddButtonState extends State<InlineAddButton> {
       final middle = top + box.size.height / 2;
       visible = middle >= 0 && middle <= viewportBox.size.height;
     }
-    if (_reported == visible) return;
+    if (!_forceReport && _reported == visible) return;
+    _forceReport = false;
     _reported = visible;
     widget.onVisibilityChanged(visible);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Scrolling is not the only thing that moves this row. The list above it
+    // grows when its data stream emits — on Health and Learn the first frame
+    // renders an empty list, so the row starts on screen and is pushed far
+    // below the fold a frame later. Checking only on scroll left the FAB
+    // hidden with no way to reach it. A rebuild is exactly when the content
+    // above can have changed, so re-check then; the check is debounced to one
+    // per frame and only reports on a change, so this cannot loop.
+    _forceReport = true;
+    _scheduleCheck();
     return Padding(
       padding: widget.padding,
       child: DashedActionButton(

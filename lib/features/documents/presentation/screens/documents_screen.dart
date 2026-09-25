@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../application/documents_providers.dart';
 import '../../domain/document_type.dart';
 import '../../domain/folder_icon.dart';
@@ -293,6 +294,13 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
           iconName: result.iconName,
           colorHex: result.colorHex,
         );
+    if (!mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Folder saved',
+      message: '“${result.name}” is ready for documents.',
+    );
   }
 
   Future<void> _editFolder(Folder folder) async {
@@ -304,6 +312,13 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
           iconName: result.iconName,
           colorHex: result.colorHex,
         );
+    if (!mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Folder updated',
+      message: 'Changes to “${result.name}” were saved.',
+    );
   }
 
   Future<void> _editDocument(Document document) async {
@@ -322,6 +337,13 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
           isPinned: details.isPinned,
           documentType: details.documentType,
         );
+    if (!mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Document updated',
+      message: 'Changes to “${details.title}” were saved.',
+    );
   }
 
   Future<void> _pickImportSource() async {
@@ -382,6 +404,13 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
           isPinned: details.isPinned,
           documentType: details.documentType,
         );
+    if (!mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Document saved',
+      message: '“${details.title}” was added to your documents.',
+    );
   }
 }
 

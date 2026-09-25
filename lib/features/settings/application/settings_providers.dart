@@ -74,6 +74,18 @@ String themeModeToValue(ThemeMode mode) => switch (mode) {
   ThemeMode.system => 'system',
 };
 
+/// Whether the stored settings have actually been read yet.
+///
+/// [settingsProvider] can't express this: it collapses "still loading" and
+/// "loaded, nothing saved" into the same defaults, which is right for every
+/// caller except the one that picks the theme. An error counts as loaded —
+/// defaults are then the honest answer, and blocking the app on an
+/// unreadable settings row would be worse than showing it in green.
+final settingsLoadedProvider = Provider<bool>((ref) {
+  final row = ref.watch(_settingsStreamProvider);
+  return row.hasValue || row.hasError;
+});
+
 final settingsProvider = Provider<ResolvedSettings>((ref) {
   final row = ref.watch(_settingsStreamProvider).value;
   if (row == null) return ResolvedSettings.defaults;
