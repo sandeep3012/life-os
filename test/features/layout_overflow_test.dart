@@ -299,6 +299,18 @@ void main() {
     expect(find.text('This month spent'), findsOneWidget);
     expect(find.text("Today's to-dos"), findsOneWidget);
 
+    // The stat cards and "Habits to keep" rows used to turn clipping off, so
+    // cards slid out past the page margin to the device edge. They should stop
+    // at the margin, like Learn's notebook row.
+    final rows = tester
+        .widgetList<ListView>(find.byType(ListView))
+        .where((l) => l.scrollDirection == Axis.horizontal)
+        .toList();
+    expect(rows, isNotEmpty);
+    for (final row in rows) {
+      expect(row.clipBehavior, isNot(Clip.none));
+    }
+
     await disposeCleanly(tester);
   });
 
