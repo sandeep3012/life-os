@@ -446,9 +446,10 @@ class _DashboardStatRail extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 138,
+      // Clipped at the page's 20pt margin, like Learn's notebook row, so
+      // cards never slide out to the device edge while scrolling.
       child: ListView(
         scrollDirection: Axis.horizontal,
-        clipBehavior: Clip.none,
         children: [
           _DashboardStatCard(
             icon: LucideIcons.walletCards,
@@ -726,9 +727,9 @@ class _HabitGrid extends ConsumerWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final cardWidth = (constraints.maxWidth - 11) / 2;
+          // Clipped at the page margin, as above.
           return ListView.separated(
             scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
             itemCount: pages.length,
             separatorBuilder: (_, _) => const SizedBox(width: 11),
             itemBuilder: (context, pageIndex) {

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/theme/app_fonts.dart';
-import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/database/app_database.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../application/health_providers.dart';
 
-/// Adds an exercise to a training session.
+/// Adds an exercise to a training session, or edits one when [initial] is set.
 ///
 /// The scheme ("4×10") is free text on purpose — it's the plan as written in a
 /// notebook, not arithmetic the app computes from. What actually happened is
@@ -15,18 +16,24 @@ class AddExerciseSheet extends ConsumerStatefulWidget {
     super.key,
     required this.workoutDayId,
     required this.position,
+    this.initial,
   });
 
   final String workoutDayId;
   final int position;
+  final Exercise? initial;
 
   @override
   ConsumerState<AddExerciseSheet> createState() => _AddExerciseSheetState();
 }
 
 class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
-  final _name = TextEditingController();
-  final _scheme = TextEditingController(text: '3×10');
+  late final _name = TextEditingController(text: widget.initial?.name ?? '');
+  late final _scheme = TextEditingController(
+    text: widget.initial?.scheme ?? '3×10',
+  );
+
+  bool get _isEditing => widget.initial != null;
 
   @override
   void dispose() {
@@ -38,101 +45,86 @@ class _AddExerciseSheetState extends ConsumerState<AddExerciseSheet> {
   Future<void> _save() async {
     final name = _name.text.trim();
     if (name.isEmpty) return;
-    await ref.read(healthControllerProvider).addExercise(
-      workoutDayId: widget.workoutDayId,
-      name: name,
-      scheme: _scheme.text.trim(),
-      position: widget.position,
-    );
-    if (mounted) Navigator.of(context).pop();
+    final controller = ref.read(healthControllerProvider);
+    if (_isEditing) {
+      await controller.updateExercise(
+        id: widget.initial!.id,
+        name: name,
+        scheme: _scheme.text.trim(),
+      );
+    } else {
+      await controller.addExercise(
+        workoutDayId: widget.workoutDayId,
+        name: name,
+        scheme: _scheme.text.trim(),
+        position: widget.position,
+      );
+    }
+    if (mounted) Navigator.of(context).pop(name);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.sheetRadius),
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: scheme.outline,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Add an exercise',
-                  style: TextStyle(
-                    fontFamily: AppFonts.serif,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _name,
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Exercise',
-                    hintText: 'Incline dumbbell press',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _scheme,
-                  decoration: const InputDecoration(
-                    labelText: 'Target',
-                    hintText: '4×10',
-                  ),
-                ),
-                const SizedBox(height: 18),
-                FilledButton(
-                  onPressed: _save,
-                  child: const Text('Add exercise'),
-                ),
-              ],
+    return CompactEditorSheet(
+      title: _isEditing ? 'Edit exercise' : 'Add an exercise',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 16),
+          TextField(
+            controller: _name,
+            autofocus: !_isEditing,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              labelText: 'Exercise',
+              hintText: 'Incline dumbbell press',
             ),
           ),
-        ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _scheme,
+            decoration: const InputDecoration(
+              labelText: 'Target',
+              hintText: '4×10',
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _save,
+              child: Text(_isEditing ? 'Save changes' : 'Add exercise'),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
 Future<void> showAddExerciseSheet(
-  BuildContext context, {
+  BuildContext context,
+  WidgetRef ref, {
   required String workoutDayId,
   required int position,
-}) {
-  return showModalBottomSheet<void>(
+  Exercise? initial,
+}) async {
+  final saved = await showCompactEditorSheet<String>(
     context: context,
-    backgroundColor: Colors.transparent,
-    isScrollControlled: true,
     builder: (context) => AddExerciseSheet(
       workoutDayId: workoutDayId,
       position: position,
+      initial: initial,
     ),
+  );
+  if (saved == null || !context.mounted) return;
+  await showSaveFeedback(
+    context,
+    ref,
+    title: initial == null ? 'Exercise saved' : 'Exercise updated',
+    message: initial == null
+        ? '“$saved” was added to the session.'
+        : 'Changes to “$saved” were saved.',
   );
 }

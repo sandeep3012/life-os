@@ -7,6 +7,7 @@ import '../../../../core/utils/currency_utils.dart';
 import '../../../finance/application/finance_providers.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../../tasks/application/tasks_providers.dart';
+import '../../../../core/widgets/save_feedback.dart';
 import '../../application/goals_providers.dart';
 import '../../domain/goal_progress.dart';
 import '../widgets/goal_card.dart';
@@ -272,6 +273,13 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
           reminderMode: result.reminderMode,
           reminderDaysBefore: result.reminderDaysBefore,
         );
+    if (!context.mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Goal updated',
+      message: 'Changes to “${result.title}” were saved.',
+    );
   }
 }
 

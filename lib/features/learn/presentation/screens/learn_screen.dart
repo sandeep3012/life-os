@@ -11,7 +11,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_fonts.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/widgets/app_top_bar.dart';
-import '../../../../core/widgets/dashed_action_button.dart';
+import '../../../../core/widgets/inline_add_button.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../../core/widgets/tab_rail.dart';
 import '../../../../core/widgets/surface_card.dart';
@@ -34,6 +34,20 @@ enum _LearnTab { recent, starred, due }
 class _LearnScreenState extends ConsumerState<LearnScreen> {
   _LearnTab _tab = _LearnTab.recent;
 
+  /// Notebook the list is narrowed to, set by tapping its card. Combines with
+  /// the Recent / Starred / Due tabs rather than replacing them.
+  String? _bookId;
+
+  /// Whether the inline "Write a new note" row is on screen; the FAB shows
+  /// only while it is not, so there is one add affordance at a time. Same
+  /// contract as the Planner.
+  bool _inlineAddVisible = false;
+
+  void _onInlineAddVisibility(bool visible) {
+    if (!mounted || _inlineAddVisible == visible) return;
+    setState(() => _inlineAddVisible = visible);
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -43,11 +57,13 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
     final notes = ref.watch(learnNotesProvider).value ?? const [];
     final due = ref.watch(dueNotesProvider);
 
+    // A notebook that has since been archived or deleted no longer filters.
+    final bookId = books.any((b) => b.book.id == _bookId) ? _bookId : null;
     final visible = switch (_tab) {
       _LearnTab.recent => notes,
       _LearnTab.starred => notes.where((n) => n.starred).toList(),
       _LearnTab.due => due,
-    };
+    }.where((n) => bookId == null || n.bookId == bookId).toList();
 
     return Scaffold(
       drawer: const AppSidebar(),
@@ -63,8 +79,10 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                         builder: (context) => AppTopBar(
                           centerText: 'Learn',
                           centerIsTitle: true,
-                          trailingIcon: LucideIcons.plus,
-                          onTrailing: () => showNoteEditorSheet(context),
+                          // Adding is the inline row's job, with the FAB
+                          // standing in once it scrolls away — a third entry
+                          // point in the header was one too many.
+                          showTrailing: false,
                           onMenu: () => Scaffold.of(context).openDrawer(),
                         ),
                       ),
@@ -82,15 +100,33 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                     const SizedBox(height: 20),
                     SectionHeader(
                       title: 'Notebooks',
-                      trailing: Text(
-                        '${notes.length} ${notes.length == 1 ? 'note' : 'notes'}',
-                        style: TextStyle(
-                          fontFamily: AppFonts.sans,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
+                      // While a notebook is picked, the count gives way to the
+                      // way back out of the filter.
+                      trailing: bookId != null
+                          ? Tappable(
+                              haptic: TapHaptic.light,
+                              semanticLabel: 'Show all notebooks',
+                              enforceMinTouchTarget: true,
+                              onTap: () => setState(() => _bookId = null),
+                              child: Text(
+                                'Show all',
+                                style: TextStyle(
+                                  fontFamily: AppFonts.sans,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: colors.accentInk,
+                                ),
+                              ),
+                            )
+                          : Text(
+                              '${notes.length} ${notes.length == 1 ? 'note' : 'notes'}',
+                              style: TextStyle(
+                                fontFamily: AppFonts.sans,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
                     ),
                     const SizedBox(height: 11),
                     if (books.isEmpty)
@@ -109,8 +145,16 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                           scrollDirection: Axis.horizontal,
                           itemCount: books.length,
                           separatorBuilder: (_, _) => const SizedBox(width: 9),
-                          itemBuilder: (context, i) =>
-                              _NotebookCard(progress: books[i]),
+                          itemBuilder: (context, i) => _NotebookCard(
+                            progress: books[i],
+                            selected: books[i].book.id == bookId,
+                            // Tapping the picked notebook again clears it.
+                            onTap: () => setState(
+                              () => _bookId = books[i].book.id == bookId
+                                  ? null
+                                  : books[i].book.id,
+                            ),
+                          ),
                         ),
                       ),
 
@@ -138,12 +182,14 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 24),
                         child: Center(
                           child: Text(
-                            switch (_tab) {
-                              _LearnTab.recent => 'Nothing written yet.',
-                              _LearnTab.starred => 'No starred notes.',
-                              _LearnTab.due =>
-                                'Nothing due — you are all caught up.',
-                            },
+                            bookId != null
+                                ? 'No matching notes in this notebook.'
+                                : switch (_tab) {
+                                    _LearnTab.recent => 'Nothing written yet.',
+                                    _LearnTab.starred => 'No starred notes.',
+                                    _LearnTab.due =>
+                                      'Nothing due — you are all caught up.',
+                                  },
                             style: TextStyle(
                               fontFamily: AppFonts.sans,
                               fontSize: 14,
@@ -160,9 +206,13 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                         ),
 
                     const SizedBox(height: 2),
-                    DashedActionButton(
+                    // The list already insets 20pt horizontally, so the row
+                    // supplies no padding of its own.
+                    InlineAddButton(
                       label: 'Write a new note',
-                      onTap: () => showNoteEditorSheet(context),
+                      onTap: () => showNoteEditorSheet(context, ref),
+                      onVisibilityChanged: _onInlineAddVisibility,
+                      padding: EdgeInsets.zero,
                     ),
                   ],
                 )
@@ -175,6 +225,13 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
                   curve: AppMotion.standard,
                 ),
       ),
+      floatingActionButton: _inlineAddVisible
+          ? null
+          : FloatingActionButton(
+              tooltip: 'New note',
+              onPressed: () => showNoteEditorSheet(context, ref),
+              child: const Icon(LucideIcons.plus),
+            ),
     );
   }
 }
@@ -246,17 +303,23 @@ class _ReviewQueueHero extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Text(
-                          dueCount == 1
-                              ? 'note due for revision'
-                              : 'notes due for revision',
-                          style: TextStyle(
-                            fontFamily: AppFonts.sans,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: onHero.withValues(alpha: 0.85),
+                      // A bare Row can't shrink below its children's
+                      // intrinsic width, so the label has to be allowed to
+                      // wrap — a three-digit count, a long translation or a
+                      // raised text scale otherwise overflows the hero.
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(
+                            dueCount == 1
+                                ? 'note due for revision'
+                                : 'notes due for revision',
+                            style: TextStyle(
+                              fontFamily: AppFonts.sans,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: onHero.withValues(alpha: 0.85),
+                            ),
                           ),
                         ),
                       ),
@@ -318,9 +381,15 @@ class _ReviewQueueHero extends StatelessWidget {
 
 /// Comp: a 132px radius-19 card with a 4px colour spine down its leading edge.
 class _NotebookCard extends StatelessWidget {
-  const _NotebookCard({required this.progress});
+  const _NotebookCard({
+    required this.progress,
+    required this.selected,
+    required this.onTap,
+  });
 
   final BookProgress progress;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -330,70 +399,91 @@ class _NotebookCard extends StatelessWidget {
       int.parse(progress.book.colorHex.replaceFirst('#', '0xFF')),
     );
 
-    return SizedBox(
-      width: 132,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(19),
-        child: Stack(
-          children: [
-            SurfaceCard(
-              padding: const EdgeInsets.all(14),
-              radius: 19,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(11),
+    return Tappable(
+      haptic: TapHaptic.selection,
+      semanticLabel: 'Show notes in ${progress.book.name}',
+      selected: selected,
+      onTap: onTap,
+      child: SizedBox(
+        width: 132,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(19),
+          child: Stack(
+            children: [
+              SurfaceCard(
+                padding: const EdgeInsets.all(14),
+                radius: 19,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      child: Icon(
+                        LucideIcons.bookOpen,
+                        size: 16,
+                        color: accent,
+                      ),
                     ),
-                    child: Icon(LucideIcons.bookOpen, size: 16, color: accent),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    progress.book.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: AppFonts.sans,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
+                    const SizedBox(height: 10),
+                    Text(
+                      progress.book.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: AppFonts.sans,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${progress.noteCount} '
-                    '${progress.noteCount == 1 ? 'note' : 'notes'}',
-                    style: TextStyle(
-                      fontFamily: AppFonts.sans,
-                      fontSize: 11.5,
-                      color: colors.text3,
+                    const SizedBox(height: 2),
+                    Text(
+                      '${progress.noteCount} '
+                      '${progress.noteCount == 1 ? 'note' : 'notes'}',
+                      style: TextStyle(
+                        fontFamily: AppFonts.sans,
+                        fontSize: 11.5,
+                        color: colors.text3,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 9),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: LinearProgressIndicator(
-                      value: progress.ratio,
-                      minHeight: 4,
-                      backgroundColor: scheme.outlineVariant,
-                      valueColor: AlwaysStoppedAnimation<Color>(accent),
+                    const SizedBox(height: 9),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: progress.ratio,
+                        minHeight: 4,
+                        backgroundColor: scheme.outlineVariant,
+                        valueColor: AlwaysStoppedAnimation<Color>(accent),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              child: Container(width: 4, color: accent),
-            ),
-          ],
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: Container(width: 4, color: accent),
+              ),
+              if (selected)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: accent, width: 2),
+                        borderRadius: BorderRadius.circular(19),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

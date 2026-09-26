@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/widgets/save_feedback.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -90,7 +92,23 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 
   Future<void> _saveAndClose() async {
+    final isNew = _noteId == null;
+    final title = _titleController.text.trim();
     await _persist();
+    if (!mounted) return;
+    // Only the deliberate save is acknowledged. The debounced autosave above
+    // reports itself through the status chip instead — an overlay on every
+    // pause in typing would be unusable.
+    if (title.isNotEmpty) {
+      await showSaveFeedback(
+        context,
+        ref,
+        title: isNew ? 'Note saved' : 'Note updated',
+        message: isNew
+            ? '“$title” is in your notes.'
+            : 'Changes to “$title” were saved.',
+      );
+    }
     if (mounted) Navigator.of(context).pop();
   }
 

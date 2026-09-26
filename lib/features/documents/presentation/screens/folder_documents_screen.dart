@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../../core/database/app_database.dart' show Document;
+import '../../../../core/widgets/save_feedback.dart';
 import '../../application/documents_providers.dart';
 import '../widgets/document_tile.dart';
 import '../widgets/quick_add_document_details_sheet.dart';
@@ -90,6 +91,13 @@ class FolderDocumentsScreen extends ConsumerWidget {
           isPinned: details.isPinned,
           documentType: details.documentType,
         );
+    if (!context.mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Document updated',
+      message: 'Changes to “${details.title}” were saved.',
+    );
   }
 
   Future<void> _pickImportSource(BuildContext context, WidgetRef ref) async {
@@ -151,6 +159,13 @@ class FolderDocumentsScreen extends ConsumerWidget {
           isPinned: details.isPinned,
           documentType: details.documentType,
         );
+    if (!context.mounted) return;
+    await showSaveFeedback(
+      context,
+      ref,
+      title: 'Document saved',
+      message: '“${details.title}” was added to $folderName.',
+    );
   }
 }
 

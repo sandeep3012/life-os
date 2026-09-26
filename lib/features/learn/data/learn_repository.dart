@@ -19,18 +19,20 @@ class LearnRepository {
   }
 
   Stream<List<LearnNote>> watchNotes() {
-    return (_db.select(_db.learnNotes)
-          ..orderBy([(n) => OrderingTerm.desc(n.updatedAt)]))
-        .watch();
+    return (_db.select(
+      _db.learnNotes,
+    )..orderBy([(n) => OrderingTerm.desc(n.updatedAt)])).watch();
   }
 
   Future<String> createBook({
     required String name,
     String colorHex = '#4B7BA6',
   }) async {
-    final row = await _db.into(_db.learnBooks).insertReturning(
-      LearnBooksCompanion.insert(name: name, colorHex: Value(colorHex)),
-    );
+    final row = await _db
+        .into(_db.learnBooks)
+        .insertReturning(
+          LearnBooksCompanion.insert(name: name, colorHex: Value(colorHex)),
+        );
     return row.id;
   }
 
@@ -43,25 +45,28 @@ class LearnRepository {
     String tagsCsv = '',
     int minutes = 3,
   }) async {
-    final row = await _db.into(_db.learnNotes).insertReturning(
-      LearnNotesCompanion.insert(
-        bookId: bookId,
-        title: title,
-        excerpt: Value(excerpt),
-        bodyJson: Value(bodyJson),
-        prompt: Value(prompt),
-        tagsCsv: Value(tagsCsv),
-        minutes: Value(minutes),
-        // New material is due immediately — the point of the review queue.
-        reviewDueAt: Value(DateTime.now()),
-      ),
-    );
+    final row = await _db
+        .into(_db.learnNotes)
+        .insertReturning(
+          LearnNotesCompanion.insert(
+            bookId: bookId,
+            title: title,
+            excerpt: Value(excerpt),
+            bodyJson: Value(bodyJson),
+            prompt: Value(prompt),
+            tagsCsv: Value(tagsCsv),
+            minutes: Value(minutes),
+            // New material is due immediately — the point of the review queue.
+            reviewDueAt: Value(DateTime.now()),
+          ),
+        );
     return row.id;
   }
 
   Future<void> setStarred(String id, bool starred) {
-    return (_db.update(_db.learnNotes)..where((n) => n.id.equals(id)))
-        .write(LearnNotesCompanion(starred: Value(starred)));
+    return (_db.update(_db.learnNotes)..where((n) => n.id.equals(id))).write(
+      LearnNotesCompanion(starred: Value(starred)),
+    );
   }
 
   /// Marks a note reviewed and schedules the next repetition.
@@ -76,8 +81,9 @@ class LearnRepository {
         : DateTime.now().difference(previous).inDays.clamp(1, 64);
     final next = (elapsed * 2).clamp(1, 64);
 
-    return (_db.update(_db.learnNotes)..where((n) => n.id.equals(note.id)))
-        .write(
+    return (_db.update(
+      _db.learnNotes,
+    )..where((n) => n.id.equals(note.id))).write(
       LearnNotesCompanion(
         lastReviewedAt: Value(DateTime.now()),
         reviewDueAt: Value(DateTime.now().add(Duration(days: next))),
@@ -90,6 +96,33 @@ class LearnRepository {
     return (_db.update(_db.learnNotes)..where((n) => n.id.equals(id))).write(
       LearnNotesCompanion(
         reviewDueAt: Value(DateTime.now().add(const Duration(days: 1))),
+      ),
+    );
+  }
+
+  /// Rewrites a note's content. Review scheduling (`reviewDueAt`,
+  /// `lastReviewedAt`) and the star are left alone — editing what a note says
+  /// shouldn't reset where it sits in the spaced-repetition queue.
+  Future<void> updateNote({
+    required String id,
+    required String bookId,
+    required String title,
+    required String excerpt,
+    required String bodyJson,
+    required String prompt,
+    required String tagsCsv,
+    required int minutes,
+  }) {
+    return (_db.update(_db.learnNotes)..where((n) => n.id.equals(id))).write(
+      LearnNotesCompanion(
+        bookId: Value(bookId),
+        title: Value(title),
+        excerpt: Value(excerpt),
+        bodyJson: Value(bodyJson),
+        prompt: Value(prompt),
+        tagsCsv: Value(tagsCsv),
+        minutes: Value(minutes),
+        updatedAt: Value(DateTime.now()),
       ),
     );
   }

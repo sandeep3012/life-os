@@ -16,6 +16,7 @@ import 'package:life_manager/features/calendar/presentation/screens/calendar_scr
 import 'package:life_manager/features/finance/data/finance_repository.dart';
 import 'package:life_manager/features/finance/presentation/screens/finance_overview_screen.dart';
 import 'package:life_manager/features/finance/presentation/screens/net_worth_screen.dart';
+import 'package:life_manager/features/finance/presentation/widgets/account_card.dart';
 import 'package:life_manager/features/health/presentation/screens/health_screen.dart';
 import 'package:life_manager/features/habits/presentation/screens/habits_overview_screen.dart';
 import 'package:life_manager/features/home/presentation/screens/home_screen.dart';
@@ -140,6 +141,75 @@ void main() {
     await disposeCleanly(tester);
   });
 
+  /// The account strip pins every card to a fixed height, so the card's
+  /// content has to fit that box no matter how tall the font's own metrics or
+  /// the user's text scale make it. The balance figure originally had no
+  /// explicit line height, so its box was whatever the font decided — 4pt too
+  /// tall on device. Both a long balance and an enlarged text scale are
+  /// covered, since either one alone would have passed before the fix.
+  testWidgets('account cards fit the fixed-height strip', (tester) async {
+    usePhoneViewport(tester);
+    final finance = FinanceRepository(db, FileStorageService());
+    await finance.ensureDefaultCategories();
+    await finance.createAccount(
+      name: 'Brokerage Portfolio',
+      type: 'Savings',
+      // Crore-scale: the widest figure the card ever has to show.
+      balanceMinor: 154275000,
+    );
+    await finance.createAccount(
+      name: 'Home Loan',
+      type: 'Loan',
+      balanceMinor: -487500000,
+    );
+    final accounts = await db.select(db.accounts).get();
+
+    for (final scale in [1.0, 1.3]) {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            notificationServiceProvider.overrideWithValue(
+              _FakeNotificationService(),
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+              child: Scaffold(
+                body: SizedBox(
+                  // Mirrors the strip in FinanceHomeScreen exactly; the card
+                  // is given a tight height there, which is the whole point.
+                  height: 100,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    children: [
+                      for (final account in accounts)
+                        AccountCard(account: account),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'account card overflowed at text scale $scale',
+      );
+    }
+
+    await disposeCleanly(tester);
+  });
+
   testWidgets('net worth chart stays inside its card', (tester) async {
     usePhoneViewport(tester);
     await seedFinance();
@@ -228,6 +298,18 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('This month spent'), findsOneWidget);
     expect(find.text("Today's to-dos"), findsOneWidget);
+
+    // The stat cards and "Habits to keep" rows used to turn clipping off, so
+    // cards slid out past the page margin to the device edge. They should stop
+    // at the margin, like Learn's notebook row.
+    final rows = tester
+        .widgetList<ListView>(find.byType(ListView))
+        .where((l) => l.scrollDirection == Axis.horizontal)
+        .toList();
+    expect(rows, isNotEmpty);
+    for (final row in rows) {
+      expect(row.clipBehavior, isNot(Clip.none));
+    }
 
     await disposeCleanly(tester);
   });
