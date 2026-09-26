@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/widgets/filter_pill.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import '../../application/documents_providers.dart';
 import '../../domain/document_type.dart';
@@ -135,14 +136,14 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    _FilterChip(
+                    FilterPill(
                       label: 'All',
                       selected: _selectedTypeFilter == null,
                       onTap: () => setState(() => _selectedTypeFilter = null),
                     ),
                     const SizedBox(width: 8),
                     for (final t in DocumentType.all) ...[
-                      _FilterChip(
+                      FilterPill(
                         label: t.label,
                         icon: t.icon,
                         color: t.color,
@@ -670,62 +671,3 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.icon,
-    this.color,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final IconData? icon;
-  final Color? color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final effectiveColor = color ?? theme.colorScheme.primary;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected
-              ? effectiveColor.withValues(alpha: 0.15)
-              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(20),
-          border: selected
-              ? Border.all(color: effectiveColor.withValues(alpha: 0.4))
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 13,
-                color: selected ? effectiveColor : theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? effectiveColor : theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
