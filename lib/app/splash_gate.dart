@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
+import 'launch_timeline.dart';
+
 /// Holds the native launch screen until the first screen is ready to show.
 ///
 /// Flutter's first frame is deferred, so the OS splash stays up while the app
@@ -22,12 +24,16 @@ abstract final class SplashGate {
     if (_held) return;
     _held = true;
     FlutterNativeSplash.preserve(widgetsBinding: binding);
-    _ceiling = Timer(maxHold, release);
+    _ceiling = Timer(maxHold, () => release(reason: 'ceiling'));
+    binding.waitUntilFirstFrameRasterized.then(
+      (_) => LaunchTimeline.mark('first frame on screen'),
+    );
   }
 
   /// Idempotent, and a no-op if [hold] never ran (tests, in-app restarts).
-  static void release() {
+  static void release({String reason = 'ready'}) {
     if (!_held) return;
+    LaunchTimeline.mark('splash released ($reason)');
     _held = false;
     _ceiling?.cancel();
     _ceiling = null;

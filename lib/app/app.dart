@@ -11,6 +11,7 @@ import '../features/settings/application/app_lock_providers.dart';
 import '../features/settings/application/settings_providers.dart';
 import '../features/settings/presentation/screens/lock_screen.dart';
 import 'boot_plate.dart';
+import 'launch_timeline.dart';
 import 'router/app_router.dart';
 import 'splash_gate.dart';
 import 'theme/app_theme.dart';
@@ -55,7 +56,12 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     finance.ensureDefaultAccountTypes();
     finance.generateDueRecurringTransactions();
     ref.read(scheduleCoordinatorProvider).start();
-    ref.read(aiAnalyserControllerProvider).refresh().catchError((_) {});
+    LaunchTimeline.mark('background chores started');
+    ref
+        .read(aiAnalyserControllerProvider)
+        .refresh()
+        .then((_) => LaunchTimeline.mark('AI analyser finished'))
+        .catchError((_) {});
   }
 
   /// Releases the native splash once the first screen has its data, then
@@ -71,11 +77,13 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     if (_launchSettling) return;
     _launchSettling = true;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      LaunchTimeline.mark('landing screen built, waiting on its queries');
       try {
         await ref.read(appDatabaseProvider).customSelect('SELECT 1').get();
       } catch (_) {
         // A failed probe shouldn't strand the splash; release regardless.
       }
+      LaunchTimeline.mark('landing screen queries answered');
       if (!mounted) return;
       // The answers reach the widgets a beat after the probe resolves; give
       // them two frames to rebuild before the first one is shown.
@@ -134,6 +142,7 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     // fallback — seen if launch outlasts SplashGate.maxHold, or during the
     // in-app restart a theme change triggers.
     if (!ref.watch(settingsLoadedProvider)) return const BootPlate();
+    LaunchTimeline.mark('settings loaded, building app');
 
     _settleLaunch();
 

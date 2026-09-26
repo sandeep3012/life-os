@@ -42,24 +42,6 @@ class DemoDataService {
     return row != null;
   }
 
-  /// Older cleanup matched child IDs only. Manual check-ins on demo habits
-  /// have UUIDs, and could survive after their parent demo habit was removed.
-  Future<bool> get _hasOrphanedDemoRows async {
-    final row = await _db.customSelect(
-      '''
-            SELECT 1 WHERE EXISTS (SELECT 1 FROM habit_logs WHERE id LIKE ? OR habit_id LIKE ?)
-              OR EXISTS (SELECT 1 FROM habits WHERE id LIKE ?)
-              OR EXISTS (SELECT 1 FROM tasks WHERE id LIKE ?)
-              OR EXISTS (SELECT 1 FROM events WHERE id LIKE ?)
-              OR EXISTS (SELECT 1 FROM transactions WHERE id LIKE ?)
-              OR EXISTS (SELECT 1 FROM medications WHERE id LIKE ?)
-              OR EXISTS (SELECT 1 FROM learn_books WHERE id LIKE ?)
-          ''',
-      variables: List.generate(8, (_) => Variable<String>('$_demoPrefix%')),
-    ).getSingleOrNull();
-    return row != null;
-  }
-
   Future<DemoDataSummary> generate({int months = 24}) async {
     if (months < 1) {
       throw ArgumentError.value(months, 'months', 'Must be at least 1');
@@ -83,11 +65,12 @@ class DemoDataService {
           'Demo data already exists. Remove it before generating again.',
         );
       }
-      // Recovery and insertion are atomic: a failed generation must not
-      // leave cleanup partially applied.
-      if (await _hasOrphanedDemoRows) {
-        await remove();
-      }
+      // Always clear leftovers first. A probe for "stale rows" has to list
+      // every table a user can file things under, and the last one missed
+      // exercise sets — cleanup is idempotent, so just run it. Recovery and
+      // insertion share this transaction, so a failed generation can't leave
+      // cleanup half applied.
+      await remove();
       final categoryIds = await _ensureCategories();
       await _insertAccountTypes(now);
       final accountIds = await _insertAccounts(now);
@@ -475,118 +458,118 @@ class DemoDataService {
     );
   }
 
+  /// Removes all demo data, including rows the user created *under* demo
+  /// parents while exploring — a set logged against a demo exercise, a note in
+  /// a demo notebook. Those carry ordinary UUIDs, so matching on a row's own id
+  /// misses them: they then outlive their parent and collide with the next
+  /// generation (a set logged today against demo leg press blocked it).
+  ///
+  /// Anything the user filed that would still be theirs without the demo —
+  /// a real document or note in a demo folder, a real item tagged with a demo
+  /// category — is detached and kept rather than deleted.
   Future<void> remove() async {
+    Expression<bool> demo(GeneratedColumn<String> column) =>
+        column.like('$_demoPrefix%');
+
     await _db.transaction(() async {
-      // Children and polymorphic links must go before their parent records.
-      await (_db.delete(_db.entityTags)..where(
-            (row) =>
-                row.entityId.like('$_demoPrefix%') |
-                row.tagId.like('$_demoPrefix%'),
-          ))
-          .go();
+      // ── Detach real rows from demo parents that are about to go. ──
+      await (_db.update(_db.documents)
+            ..where((r) => demo(r.folderId) & demo(r.id).not()))
+          .write(const DocumentsCompanion(folderId: Value(null)));
+      await (_db.update(_db.notes)
+            ..where((r) => demo(r.folderId) & demo(r.id).not()))
+          .write(const NotesCompanion(folderId: Value(null)));
+      await (_db.update(_db.folders)
+            ..where((r) => demo(r.parentFolderId) & demo(r.id).not()))
+          .write(const FoldersCompanion(parentFolderId: Value(null)));
+      await (_db.update(_db.transactions)
+            ..where((r) => demo(r.receiptDocumentId) & demo(r.id).not()))
+          .write(const TransactionsCompanion(receiptDocumentId: Value(null)));
+      await (_db.update(_db.transactions)
+            ..where((r) => demo(r.categoryId) & demo(r.id).not()))
+          .write(const TransactionsCompanion(categoryId: Value(null)));
+      await (_db.update(_db.recurringTransactions)
+            ..where((r) => demo(r.categoryId) & demo(r.id).not()))
+          .write(const RecurringTransactionsCompanion(categoryId: Value(null)));
+      await (_db.update(_db.bills)
+            ..where((r) => demo(r.categoryId) & demo(r.id).not()))
+          .write(const BillsCompanion(categoryId: Value(null)));
+      await (_db.update(_db.bills)
+            ..where((r) => demo(r.accountId) & demo(r.id).not()))
+          .write(const BillsCompanion(accountId: Value(null)));
+      await (_db.update(_db.tasks)
+            ..where((r) => demo(r.categoryId) & demo(r.id).not()))
+          .write(const TasksCompanion(categoryId: Value(null)));
+      await (_db.update(_db.habits)
+            ..where((r) => demo(r.categoryId) & demo(r.id).not()))
+          .write(const HabitsCompanion(categoryId: Value(null)));
+
+      // ── Children: by their own id, or by a demo parent. ──
+      await (_db.delete(
+        _db.entityTags,
+      )..where((r) => demo(r.entityId) | demo(r.tagId))).go();
       await (_db.delete(
         _db.goalMilestones,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      )..where((r) => demo(r.id) | demo(r.goalId))).go();
       await (_db.delete(
         _db.goalLinks,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      )..where((r) => demo(r.id) | demo(r.goalId) | demo(r.linkedId))).go();
       await (_db.delete(
         _db.subtasks,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(_db.habitLogs)..where(
-            (row) =>
-                row.id.like('$_demoPrefix%') |
-                row.habitId.like('$_demoPrefix%'),
-          ))
-          .go();
+      )..where((r) => demo(r.id) | demo(r.taskId))).go();
+      await (_db.delete(
+        _db.habitLogs,
+      )..where((r) => demo(r.id) | demo(r.habitId))).go();
+      // A transaction or schedule on a demo account can't outlive it; these
+      // follow the check-in precedent above rather than being detached.
       await (_db.delete(
         _db.transactions,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.budgets,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      )..where((r) => demo(r.id) | demo(r.accountId))).go();
       await (_db.delete(
         _db.recurringTransactions,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      )..where((r) => demo(r.id) | demo(r.accountId))).go();
       await (_db.delete(
-        _db.bills,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.events,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.notes,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.tasks,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.goals,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.habits,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      // Documents are referenced by transactions (receipts), so they can
-      // only go once those are gone; folders own both notes and documents.
-      await (_db.delete(
-        _db.documents,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      // Child folders first: a single DELETE covering both a parent and its
-      // child gives no ordering guarantee, and the parent going first would
-      // trip the self-referential foreign key.
-      await (_db.delete(_db.folders)..where(
-            (row) =>
-                row.id.like('$_demoPrefix%') & row.parentFolderId.isNotNull(),
-          ))
-          .go();
-      await (_db.delete(
-        _db.folders,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.tags,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.insights,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.accounts,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.accountTypes,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.categories,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      // Health
+        _db.budgets,
+      )..where((r) => demo(r.id) | demo(r.categoryId))).go();
+      await (_db.delete(_db.bills)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.events)..where((r) => demo(r.id))).go();
+
       await (_db.delete(
         _db.exerciseSetLogs,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      )..where((r) => demo(r.id) | demo(r.exerciseId))).go();
       await (_db.delete(
         _db.workoutLogs,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      )..where((r) => demo(r.id) | demo(r.exerciseId))).go();
       await (_db.delete(
         _db.exercises,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      await (_db.delete(
-        _db.workoutDays,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      )..where((r) => demo(r.id) | demo(r.workoutDayId))).go();
       await (_db.delete(
         _db.medicationLogs,
-      )..where(
-        (row) =>
-            row.id.like('$_demoPrefix%') |
-            row.medicationId.like('$_demoPrefix%'),
-      )).go();
-      await (_db.delete(
-        _db.medications,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
-      // Learn
+      )..where((r) => demo(r.id) | demo(r.medicationId))).go();
       await (_db.delete(
         _db.learnNotes,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+      )..where((r) => demo(r.id) | demo(r.bookId))).go();
+
+      // ── Parents. ──
+      await (_db.delete(_db.notes)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.tasks)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.goals)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.habits)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.documents)..where((r) => demo(r.id))).go();
+      // Child folders first: one DELETE covering a parent and its child has
+      // no ordering guarantee, and the self-referential key would trip.
       await (_db.delete(
-        _db.learnBooks,
-      )..where((row) => row.id.like('$_demoPrefix%'))).go();
+        _db.folders,
+      )..where((r) => demo(r.id) & r.parentFolderId.isNotNull())).go();
+      await (_db.delete(_db.folders)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.tags)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.insights)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.accounts)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.accountTypes)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.categories)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.workoutDays)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.medications)..where((r) => demo(r.id))).go();
+      await (_db.delete(_db.learnBooks)..where((r) => demo(r.id))).go();
     });
   }
 
@@ -999,33 +982,240 @@ class DemoDataService {
   ) async {
     // (key, title, type, folderKey, mime, ext, sizeBytes, pinned)
     const defs = [
-      ('aadhaar', 'Aadhaar Card', 'identity', 'identity', 'image/jpeg', 'jpg', 842_113, true),
-      ('pan', 'PAN Card', 'identity', 'identity', 'image/jpeg', 'jpg', 512_004, true),
-      ('passport', 'Passport (2029 expiry)', 'identity', 'identity', 'application/pdf', 'pdf', 2_284_991, false),
-      ('driving', 'Driving Licence', 'identity', 'vehicle', 'image/png', 'png', 1_104_220, false),
-      ('salary', 'Salary Slip — March', 'financial', 'financial', 'application/pdf', 'pdf', 184_320, false),
-      ('form16', 'Form 16 (FY 2024-25)', 'financial', 'taxreturns', 'application/pdf', 'pdf', 398_117, true),
-      ('itr', 'ITR Acknowledgement', 'financial', 'taxreturns', 'application/pdf', 'pdf', 122_880, false),
-      ('bankstmt', 'Bank Statement — Q1', 'financial', 'financial', 'application/vnd.ms-excel', 'xls', 61_440, false),
-      ('healthins', 'Health Insurance Policy', 'insurance', 'insurance', 'application/pdf', 'pdf', 1_548_288, true),
-      ('motorins', 'Car Insurance Policy', 'insurance', 'insurance', 'application/pdf', 'pdf', 904_221, false),
-      ('lease', 'Rental Agreement', 'property', 'property', 'application/pdf', 'pdf', 3_211_776, false),
-      ('ecbill', 'Electricity Bill — Feb', 'property', 'property', 'image/jpeg', 'jpg', 288_004, false),
-      ('bloodtest', 'Blood Test Report', 'medical', 'medical', 'application/pdf', 'pdf', 442_368, false),
-      ('prescription', 'Prescription — Dr. Rao', 'medical', 'medical', 'image/jpeg', 'jpg', 196_608, false),
-      ('vaccine', 'Vaccination Certificate', 'medical', 'medical', 'application/pdf', 'pdf', 88_064, false),
-      ('degree', 'Degree Certificate', 'education', 'identity', 'application/pdf', 'pdf', 1_887_436, false),
-      ('resume', 'Resume 2026', 'education', null, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'docx', 45_056, false),
+      (
+        'aadhaar',
+        'Aadhaar Card',
+        'identity',
+        'identity',
+        'image/jpeg',
+        'jpg',
+        842_113,
+        true,
+      ),
+      (
+        'pan',
+        'PAN Card',
+        'identity',
+        'identity',
+        'image/jpeg',
+        'jpg',
+        512_004,
+        true,
+      ),
+      (
+        'passport',
+        'Passport (2029 expiry)',
+        'identity',
+        'identity',
+        'application/pdf',
+        'pdf',
+        2_284_991,
+        false,
+      ),
+      (
+        'driving',
+        'Driving Licence',
+        'identity',
+        'vehicle',
+        'image/png',
+        'png',
+        1_104_220,
+        false,
+      ),
+      (
+        'salary',
+        'Salary Slip — March',
+        'financial',
+        'financial',
+        'application/pdf',
+        'pdf',
+        184_320,
+        false,
+      ),
+      (
+        'form16',
+        'Form 16 (FY 2024-25)',
+        'financial',
+        'taxreturns',
+        'application/pdf',
+        'pdf',
+        398_117,
+        true,
+      ),
+      (
+        'itr',
+        'ITR Acknowledgement',
+        'financial',
+        'taxreturns',
+        'application/pdf',
+        'pdf',
+        122_880,
+        false,
+      ),
+      (
+        'bankstmt',
+        'Bank Statement — Q1',
+        'financial',
+        'financial',
+        'application/vnd.ms-excel',
+        'xls',
+        61_440,
+        false,
+      ),
+      (
+        'healthins',
+        'Health Insurance Policy',
+        'insurance',
+        'insurance',
+        'application/pdf',
+        'pdf',
+        1_548_288,
+        true,
+      ),
+      (
+        'motorins',
+        'Car Insurance Policy',
+        'insurance',
+        'insurance',
+        'application/pdf',
+        'pdf',
+        904_221,
+        false,
+      ),
+      (
+        'lease',
+        'Rental Agreement',
+        'property',
+        'property',
+        'application/pdf',
+        'pdf',
+        3_211_776,
+        false,
+      ),
+      (
+        'ecbill',
+        'Electricity Bill — Feb',
+        'property',
+        'property',
+        'image/jpeg',
+        'jpg',
+        288_004,
+        false,
+      ),
+      (
+        'bloodtest',
+        'Blood Test Report',
+        'medical',
+        'medical',
+        'application/pdf',
+        'pdf',
+        442_368,
+        false,
+      ),
+      (
+        'prescription',
+        'Prescription — Dr. Rao',
+        'medical',
+        'medical',
+        'image/jpeg',
+        'jpg',
+        196_608,
+        false,
+      ),
+      (
+        'vaccine',
+        'Vaccination Certificate',
+        'medical',
+        'medical',
+        'application/pdf',
+        'pdf',
+        88_064,
+        false,
+      ),
+      (
+        'degree',
+        'Degree Certificate',
+        'education',
+        'identity',
+        'application/pdf',
+        'pdf',
+        1_887_436,
+        false,
+      ),
+      (
+        'resume',
+        'Resume 2026',
+        'education',
+        null,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'docx',
+        45_056,
+        false,
+      ),
       // Unfiled + untyped — the plainest row the list has to render.
-      ('scratch', 'Scanned notes (untitled)', null, null, 'image/png', 'png', 733_184, false),
+      (
+        'scratch',
+        'Scanned notes (untitled)',
+        null,
+        null,
+        'image/png',
+        'png',
+        733_184,
+        false,
+      ),
       // Zero-byte file: the size formatter's lower edge.
-      ('empty', 'Empty placeholder.txt', 'other', null, 'text/plain', 'txt', 0, false),
+      (
+        'empty',
+        'Empty placeholder.txt',
+        'other',
+        null,
+        'text/plain',
+        'txt',
+        0,
+        false,
+      ),
       // Very large file: the size formatter's upper edge.
-      ('archive', 'Property documents archive', 'property', 'property', 'application/pdf', 'pdf', 48_234_496, false),
+      (
+        'archive',
+        'Property documents archive',
+        'property',
+        'property',
+        'application/pdf',
+        'pdf',
+        48_234_496,
+        false,
+      ),
       // Receipts, referenced by transactions below.
-      ('receipt1', 'Receipt — Fresh Market', 'financial', 'receipts', 'image/jpeg', 'jpg', 154_112, false),
-      ('receipt2', 'Receipt — Laptop stand', 'financial', 'receipts', 'image/jpeg', 'jpg', 231_424, false),
-      ('receipt3', 'Invoice — Annual hosting', 'financial', 'receipts', 'application/pdf', 'pdf', 76_800, false),
+      (
+        'receipt1',
+        'Receipt — Fresh Market',
+        'financial',
+        'receipts',
+        'image/jpeg',
+        'jpg',
+        154_112,
+        false,
+      ),
+      (
+        'receipt2',
+        'Receipt — Laptop stand',
+        'financial',
+        'receipts',
+        'image/jpeg',
+        'jpg',
+        231_424,
+        false,
+      ),
+      (
+        'receipt3',
+        'Invoice — Annual hosting',
+        'financial',
+        'receipts',
+        'application/pdf',
+        'pdf',
+        76_800,
+        false,
+      ),
     ];
 
     final ids = <String, String>{
@@ -1755,7 +1945,9 @@ class DemoDataService {
       TasksCompanion.insert(
         id: const Value('${_demoPrefix}task-edge-checklist'),
         title: 'Plan the weekend trip',
-        description: const Value('Everything that has to happen before Friday.'),
+        description: const Value(
+          'Everything that has to happen before Friday.',
+        ),
         dueDate: Value(DateTime(today.year, today.month, today.day + 4, 20)),
         priority: const Value('medium'),
         createdAt: Value(today.subtract(const Duration(days: 12))),
@@ -1777,9 +1969,7 @@ class DemoDataService {
       final isHead = i == 0;
       tasks.add(
         TasksCompanion.insert(
-          id: Value(
-            isHead ? recurrenceId : '${_demoPrefix}task-standup-$i',
-          ),
+          id: Value(isHead ? recurrenceId : '${_demoPrefix}task-standup-$i'),
           title: 'Daily stand-up notes',
           dueDate: Value(due),
           priority: const Value('low'),
@@ -1872,7 +2062,9 @@ class DemoDataService {
         GoalsCompanion.insert(
           id: const Value('${_demoPrefix}goal-edge-abandoned'),
           title: 'Run a marathon this year',
-          description: const Value('Dropped after an injury; kept for the record.'),
+          description: const Value(
+            'Dropped after an injury; kept for the record.',
+          ),
           type: const Value('habit'),
           status: const Value('abandoned'),
           targetDate: Value(DateTime(now.year, 10, 1)),
@@ -2221,9 +2413,7 @@ class DemoDataService {
       'reference',
       'archive',
     ];
-    final tagIds = {
-      for (final n in tagNames) n: '${_demoPrefix}tag-$n',
-    };
+    final tagIds = {for (final n in tagNames) n: '${_demoPrefix}tag-$n'};
 
     // (tag, entityType, entityId)
     final links = <(String, String, String)>[
@@ -2727,11 +2917,21 @@ class DemoDataService {
     ];
     // Which day each lift belongs to, so sessions land on the right weekday.
     const liftWeekday = {
-      'bench': 1, 'incline': 1, 'tricep': 1, 'lat-raise': 1,
-      'pullup': 3, 'row': 3, 'curl': 3,
-      'squat': 5, 'rdl': 5, 'legpress': 5,
-      'deadlift': 6, 'ohp': 6, 'lunge': 6,
-      'hipopener': 2, 'shoulder': 2,
+      'bench': 1,
+      'incline': 1,
+      'tricep': 1,
+      'lat-raise': 1,
+      'pullup': 3,
+      'row': 3,
+      'curl': 3,
+      'squat': 5,
+      'rdl': 5,
+      'legpress': 5,
+      'deadlift': 6,
+      'ohp': 6,
+      'lunge': 6,
+      'hipopener': 2,
+      'shoulder': 2,
     };
 
     final setRandom = Random(20260902);
@@ -2754,7 +2954,9 @@ class DemoDataService {
         workoutLogs.add(
           WorkoutLogsCompanion.insert(
             id: Value('${_demoPrefix}wl-$key-w$week'),
-            exerciseId: '$_demoPrefix' 'ex-$key',
+            exerciseId:
+                '$_demoPrefix'
+                'ex-$key',
             date: day,
             completed: const Value(true),
           ),
@@ -2767,12 +2969,16 @@ class DemoDataService {
           setLogs.add(
             ExerciseSetLogsCompanion.insert(
               id: Value('${_demoPrefix}sl-$key-w$week-s$s'),
-              exerciseId: '$_demoPrefix' 'ex-$key',
+              exerciseId:
+                  '$_demoPrefix'
+                  'ex-$key',
               date: day,
               setNumber: s,
               // Reps tail off on the last set, as they do in practice.
               reps: Value(
-                s == lift.$4 ? max(1, lift.$5 - 2 - setRandom.nextInt(2)) : lift.$5,
+                s == lift.$4
+                    ? max(1, lift.$5 - 2 - setRandom.nextInt(2))
+                    : lift.$5,
               ),
               weightGrams: Value(weight),
               createdAt: Value(day),
@@ -2844,7 +3050,8 @@ class DemoDataService {
         id: '${_demoPrefix}ln-riverpod-providers',
         bookId: '${_demoPrefix}book-flutter',
         title: 'Riverpod provider types',
-        excerpt: 'Provider, NotifierProvider, StreamProvider and when to use each.',
+        excerpt:
+            'Provider, NotifierProvider, StreamProvider and when to use each.',
         prompt: 'What is the difference between Provider and NotifierProvider?',
         tags: 'state,riverpod',
         minutes: 5,
@@ -2856,7 +3063,8 @@ class DemoDataService {
         id: '${_demoPrefix}ln-widget-lifecycle',
         bookId: '${_demoPrefix}book-flutter',
         title: 'Widget lifecycle methods',
-        excerpt: 'initState, didChangeDependencies, didUpdateWidget and dispose.',
+        excerpt:
+            'initState, didChangeDependencies, didUpdateWidget and dispose.',
         prompt: 'When does didChangeDependencies fire vs initState?',
         tags: 'widgets,lifecycle',
         minutes: 4,
@@ -2869,7 +3077,8 @@ class DemoDataService {
         id: '${_demoPrefix}ln-slivers',
         bookId: '${_demoPrefix}book-flutter',
         title: 'Slivers and custom scroll views',
-        excerpt: 'SliverList, SliverGrid, SliverAppBar — composing scrollable layouts.',
+        excerpt:
+            'SliverList, SliverGrid, SliverAppBar — composing scrollable layouts.',
         prompt: 'When should you prefer a SliverGrid over a GridView?',
         tags: 'layout,slivers',
         minutes: 6,
@@ -2882,7 +3091,8 @@ class DemoDataService {
         id: '${_demoPrefix}ln-compound-interest',
         bookId: '${_demoPrefix}book-finance',
         title: 'Compound interest',
-        excerpt: 'The eighth wonder of the world — time, rate and frequency interact.',
+        excerpt:
+            'The eighth wonder of the world — time, rate and frequency interact.',
         prompt: 'How does compounding frequency affect the final amount?',
         tags: 'investing,basics',
         minutes: 3,
@@ -2894,7 +3104,8 @@ class DemoDataService {
         id: '${_demoPrefix}ln-50-30-20',
         bookId: '${_demoPrefix}book-finance',
         title: '50/30/20 budgeting rule',
-        excerpt: '50% needs, 30% wants, 20% savings — a simple allocation framework.',
+        excerpt:
+            '50% needs, 30% wants, 20% savings — a simple allocation framework.',
         prompt: 'What category does an EMI payment fall under?',
         tags: 'budgeting,framework',
         minutes: 2,
@@ -2920,7 +3131,8 @@ class DemoDataService {
         bookId: '${_demoPrefix}book-psychology',
         title: 'The habit loop',
         excerpt: 'Cue → Routine → Reward — how automatic behaviours form.',
-        prompt: 'How can you change the routine while keeping the cue and reward?',
+        prompt:
+            'How can you change the routine while keeping the cue and reward?',
         tags: 'habits,behaviour',
         minutes: 4,
         starred: true,
@@ -2945,7 +3157,8 @@ class DemoDataService {
         bookId: '${_demoPrefix}book-productivity',
         title: 'Time blocking',
         excerpt: 'Assign every hour a job before the day starts.',
-        prompt: 'What is the difference between time blocking and a to-do list?',
+        prompt:
+            'What is the difference between time blocking and a to-do list?',
         tags: 'planning,focus',
         minutes: 3,
         starred: false,
@@ -2971,12 +3184,20 @@ class DemoDataService {
     String body(String intro, String quote, String code) => jsonEncode([
       {'t': 'p', 'text': intro},
       {'t': 'quote', 'text': quote},
-      {'t': 'p', 'text': 'In practice this shows up whenever the same '
-          'decision has to be made more than once, which is why it is worth '
-          'writing down rather than re-deriving each time.'},
+      {
+        't': 'p',
+        'text':
+            'In practice this shows up whenever the same '
+            'decision has to be made more than once, which is why it is worth '
+            'writing down rather than re-deriving each time.',
+      },
       {'t': 'code', 'text': code},
-      {'t': 'p', 'text': 'Revisit this before the next review to check the '
-          'summary above still matches how you would explain it out loud.'},
+      {
+        't': 'p',
+        'text':
+            'Revisit this before the next review to check the '
+            'summary above still matches how you would explain it out loud.',
+      },
     ]);
 
     await _db.batch((batch) {
@@ -3005,9 +3226,7 @@ class DemoDataService {
                   ? DateTime(now.year, now.month, now.day + n.reviewDue!)
                   : null,
             ),
-            lastReviewedAt: Value(
-              now.subtract(Duration(days: n.daysAgo)),
-            ),
+            lastReviewedAt: Value(now.subtract(Duration(days: n.daysAgo))),
             createdAt: Value(now.subtract(Duration(days: n.daysAgo + 5))),
             updatedAt: Value(now.subtract(Duration(days: n.daysAgo))),
           ),
@@ -3038,7 +3257,9 @@ class DemoDataService {
           id: const Value('${_demoPrefix}ln-unreviewed-tax'),
           bookId: '${_demoPrefix}book-finance',
           title: 'Old vs new tax regime',
-          excerpt: const Value('Which deductions survive, and the break-even income.'),
+          excerpt: const Value(
+            'Which deductions survive, and the break-even income.',
+          ),
           prompt: const Value('At what income do the two regimes converge?'),
           tagsCsv: const Value('tax,planning'),
           minutes: const Value(8),
@@ -3062,7 +3283,9 @@ class DemoDataService {
           id: const Value('${_demoPrefix}ln-archived-networking'),
           bookId: '${_demoPrefix}book-archived',
           title: 'TCP handshake',
-          excerpt: const Value('SYN, SYN-ACK, ACK — and why it costs a round trip.'),
+          excerpt: const Value(
+            'SYN, SYN-ACK, ACK — and why it costs a round trip.',
+          ),
           prompt: const Value('Why does TLS 1.3 need fewer round trips?'),
           tagsCsv: const Value('networking,certification'),
           minutes: const Value(5),
@@ -3097,9 +3320,7 @@ class DemoDataService {
           tagsCsv: const Value('cognition,attention,judgement'),
           minutes: const Value(24),
           starred: const Value(true),
-          reviewDueAt: Value(
-            DateTime(now.year, now.month, now.day + 21),
-          ),
+          reviewDueAt: Value(DateTime(now.year, now.month, now.day + 21)),
           lastReviewedAt: Value(now.subtract(const Duration(days: 40))),
           createdAt: Value(now.subtract(const Duration(days: 70))),
           updatedAt: Value(now.subtract(const Duration(days: 40))),
@@ -3153,9 +3374,7 @@ class DemoDataService {
             id: Value('$_demoPrefix note-$i'.replaceAll(' ', '')),
             title: content[i].$1,
             body: Value(content[i].$2),
-            folderId: Value(
-              i < 9 ? folderIds[folderRotation[i % 3]] : null,
-            ),
+            folderId: Value(i < 9 ? folderIds[folderRotation[i % 3]] : null),
             createdAt: Value(now.subtract(Duration(days: 25 * (i + 1)))),
             updatedAt: Value(now.subtract(Duration(days: 7 * i))),
           ),
