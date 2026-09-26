@@ -95,7 +95,11 @@ class NowHeroCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      _StatusDot(color: onHero, ring: colors.heroTrack, pulse: live),
+                      _StatusDot(
+                        color: onHero,
+                        ring: colors.heroTrack,
+                        pulse: live,
+                      ),
                       const SizedBox(width: 8),
                       Flexible(
                         child: Overline(
@@ -210,7 +214,10 @@ class NowHeroCard extends StatelessWidget {
                             style: _progressLabel(onHero),
                           ),
                         ),
-                        Text(progressRight ?? '', style: _progressLabel(onHero)),
+                        Text(
+                          progressRight ?? '',
+                          style: _progressLabel(onHero),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 6),
@@ -250,7 +257,11 @@ class NowHeroCard extends StatelessWidget {
 /// The comp's 8px dot inside a 4px ring (`box-shadow:0 0 0 4px var(--hero-track)`),
 /// with the ring pulsing when the block is actually live.
 class _StatusDot extends StatelessWidget {
-  const _StatusDot({required this.color, required this.ring, required this.pulse});
+  const _StatusDot({
+    required this.color,
+    required this.ring,
+    required this.pulse,
+  });
 
   final Color color;
   final Color ring;

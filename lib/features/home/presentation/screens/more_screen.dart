@@ -23,12 +23,37 @@ class MoreScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appColors = context.appColors;
     final entries = [
-      _MoreEntry('Search', LucideIcons.search, appColors.info, RoutePaths.search),
-      _MoreEntry('Notes', LucideIcons.notebookPen, appColors.notes, RoutePaths.notes),
-      _MoreEntry('Documents', LucideIcons.folders, appColors.documents, RoutePaths.documents),
+      _MoreEntry(
+        'Search',
+        LucideIcons.search,
+        appColors.info,
+        RoutePaths.search,
+      ),
+      _MoreEntry(
+        'Notes',
+        LucideIcons.notebookPen,
+        appColors.notes,
+        RoutePaths.notes,
+      ),
+      _MoreEntry(
+        'Documents',
+        LucideIcons.folders,
+        appColors.documents,
+        RoutePaths.documents,
+      ),
       _MoreEntry('Goals', LucideIcons.flag, appColors.goals, RoutePaths.goals),
-      _MoreEntry('AI Analyser', LucideIcons.chartLine, appColors.aiAnalyser, RoutePaths.aiAnalyser),
-      _MoreEntry('Settings', LucideIcons.settings, Colors.grey, RoutePaths.settings),
+      _MoreEntry(
+        'AI Analyser',
+        LucideIcons.chartLine,
+        appColors.aiAnalyser,
+        RoutePaths.aiAnalyser,
+      ),
+      _MoreEntry(
+        'Settings',
+        LucideIcons.settings,
+        Colors.grey,
+        RoutePaths.settings,
+      ),
     ];
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
@@ -59,7 +84,10 @@ class MoreScreen extends StatelessWidget {
                     child: Icon(entry.icon, size: 32, color: entry.color),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  Text(entry.label, style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    entry.label,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                 ],
               ),
             ),

@@ -8,11 +8,30 @@ import '../../finance/application/finance_providers.dart';
 import '../../goals/application/goals_providers.dart';
 import '../../habits/application/habits_providers.dart';
 import '../../habits/domain/habit_progress.dart';
+import '../../health/application/health_providers.dart';
 import '../../tasks/application/tasks_providers.dart';
 
 /// Total expense (positive figure) logged during the current calendar month.
 /// The dashboard labels this as "This month" so its amount always matches the
 /// period a person expects when opening the app mid-week.
+/// Whether every stream behind Home's numbers has delivered its first result.
+///
+/// The derived providers above fall back to empty lists until then, which is
+/// indistinguishable from genuinely having nothing: a slow load would show
+/// "₹0 spent" and "0 tasks" as if true. Home shows placeholders instead until
+/// this is true. An error counts as loaded — the screen should show what it
+/// has rather than wait forever.
+final homeDataLoadedProvider = Provider<bool>((ref) {
+  bool loaded(AsyncValue<Object?> value) => value.hasValue || value.hasError;
+  return loaded(ref.watch(transactionsProvider)) &&
+      loaded(ref.watch(allTasksProvider)) &&
+      loaded(ref.watch(habitsListProvider)) &&
+      loaded(ref.watch(habitLogsProvider)) &&
+      loaded(ref.watch(goalsListProvider)) &&
+      loaded(ref.watch(manualEventsProvider)) &&
+      loaded(ref.watch(workoutDaysProvider));
+});
+
 final monthSpendMinorProvider = Provider<int>((ref) {
   final transactions = ref.watch(transactionsProvider).value ?? const [];
   final now = DateTime.now();

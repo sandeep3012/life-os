@@ -6,7 +6,11 @@ import '../../../../core/utils/icon_lookup.dart';
 import '../../../habits/domain/habit_progress.dart';
 
 class HabitCheckInCard extends StatelessWidget {
-  const HabitCheckInCard({super.key, required this.progress, required this.onToggle});
+  const HabitCheckInCard({
+    super.key,
+    required this.progress,
+    required this.onToggle,
+  });
 
   final HabitProgress progress;
   final VoidCallback onToggle;
@@ -57,14 +61,20 @@ class HabitCheckInCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   atRisk
                       ? 'at risk · ${progress.streakDays}d'
                       : '${progress.streakDays} day${progress.streakDays == 1 ? '' : 's'}',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: accent),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: accent,
+                  ),
                 ),
               ],
             ),
