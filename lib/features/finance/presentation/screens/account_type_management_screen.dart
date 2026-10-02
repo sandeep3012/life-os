@@ -43,7 +43,11 @@ class AccountTypeManagementScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _openEditor(BuildContext context, WidgetRef ref, {AccountType? existing}) async {
+  Future<void> _openEditor(
+    BuildContext context,
+    WidgetRef ref, {
+    AccountType? existing,
+  }) async {
     final result = await showModalBottomSheet<_AccountTypeEditorResult>(
       context: context,
       isScrollControlled: true,
@@ -55,11 +59,19 @@ class AccountTypeManagementScreen extends ConsumerWidget {
     if (existing == null) {
       await controller.addAccountType(name: result.name, icon: result.icon);
     } else {
-      await controller.updateAccountType(id: existing.id, name: result.name, icon: result.icon);
+      await controller.updateAccountType(
+        id: existing.id,
+        name: result.name,
+        icon: result.icon,
+      );
     }
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref, AccountType type) async {
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    AccountType type,
+  ) async {
     final controller = ref.read(financeControllerProvider);
     final usage = await controller.accountTypeUsageCount(type.name);
     if (!context.mounted) return;
@@ -121,11 +133,14 @@ class _AccountTypeEditorSheet extends StatefulWidget {
   final AccountType? existing;
 
   @override
-  State<_AccountTypeEditorSheet> createState() => _AccountTypeEditorSheetState();
+  State<_AccountTypeEditorSheet> createState() =>
+      _AccountTypeEditorSheetState();
 }
 
 class _AccountTypeEditorSheetState extends State<_AccountTypeEditorSheet> {
-  late final _nameController = TextEditingController(text: widget.existing?.name);
+  late final _nameController = TextEditingController(
+    text: widget.existing?.name,
+  );
   late String _icon = widget.existing?.icon ?? pickableIcons.first;
 
   bool get _isEditing => widget.existing != null;
@@ -147,86 +162,114 @@ class _AccountTypeEditorSheetState extends State<_AccountTypeEditorSheet> {
     final theme = Theme.of(context);
     return SingleChildScrollView(
       child: Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(_isEditing ? 'Edit account type' : 'New account type', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _nameController,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(hintText: 'Type name'),
-          ),
-          const SizedBox(height: 12),
-          Text('Icon', style: theme.textTheme.labelMedium),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final name in pickableIcons)
-                InkWell(
-                  onTap: () => setState(() => _icon = name),
-                  borderRadius: BorderRadius.circular(999),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: _icon == name
-                          ? theme.colorScheme.primaryContainer
-                          : Colors.transparent,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _icon == name ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
-                        width: _icon == name ? 2 : 1,
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _isEditing ? 'Edit account type' : 'New account type',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(hintText: 'Type name'),
+            ),
+            const SizedBox(height: 12),
+            Text('Icon', style: theme.textTheme.labelMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final name in pickableIcons)
+                  InkWell(
+                    onTap: () => setState(() => _icon = name),
+                    borderRadius: BorderRadius.circular(999),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _icon == name
+                            ? theme.colorScheme.primaryContainer
+                            : Colors.transparent,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _icon == name
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.outlineVariant,
+                          width: _icon == name ? 2 : 1,
+                        ),
+                      ),
+                      child: Icon(
+                        resolveIcon(name),
+                        size: 20,
+                        color: _icon == name
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    child: Icon(
-                      resolveIcon(name),
-                      size: 20,
-                      color: _icon == name ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
-                    ),
                   ),
-                ),
-              for (final emoji in pickableEmojis)
-                InkWell(
-                  onTap: () => setState(() => _icon = emoji),
-                  borderRadius: BorderRadius.circular(999),
-                  child: Container(
-                    width: 40, height: 40, alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: _icon == emoji ? theme.colorScheme.primaryContainer : Colors.transparent,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: _icon == emoji ? theme.colorScheme.primary : theme.colorScheme.outlineVariant, width: _icon == emoji ? 2 : 1),
-                    ),
-                    child: Text(emoji, style: const TextStyle(fontSize: 20)),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _nameController.text.trim().isEmpty
-                  ? null
-                  : () => Navigator.of(context).pop(
-                      _AccountTypeEditorResult(name: _nameController.text.trim(), icon: _icon),
-                    ),
-              child: Text(_isEditing ? 'Save changes' : 'Add type'),
+              ],
             ),
-          ),
-        ],
-      ),
+            const SizedBox(height: 12),
+            Text('Colorful icons', style: theme.textTheme.labelMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final emoji in pickableEmojis)
+                  InkWell(
+                    onTap: () => setState(() => _icon = emoji),
+                    borderRadius: BorderRadius.circular(999),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: _icon == emoji
+                            ? theme.colorScheme.primaryContainer
+                            : Colors.transparent,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _icon == emoji
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.outlineVariant,
+                          width: _icon == emoji ? 2 : 1,
+                        ),
+                      ),
+                      child: EmojiGlyph(emoji),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _nameController.text.trim().isEmpty
+                    ? null
+                    : () => Navigator.of(context).pop(
+                        _AccountTypeEditorResult(
+                          name: _nameController.text.trim(),
+                          icon: _icon,
+                        ),
+                      ),
+                child: Text(_isEditing ? 'Save changes' : 'Add type'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

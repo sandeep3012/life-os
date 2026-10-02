@@ -8,6 +8,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/utils/category_color.dart';
 import '../../domain/payment_mode.dart';
 import '../../../../app/theme/app_fonts.dart';
 
@@ -31,7 +32,8 @@ class TransactionTile extends StatelessWidget {
     final colors = context.appColors;
     final isIncome = transaction.amountMinor >= 0;
     final color = category != null
-        ? Color(int.parse(category!.colorHex.replaceFirst('#', '0xFF')))
+        ? (categoryColor(category!.colorHex) ??
+              theme.colorScheme.onSurfaceVariant)
         : (isIncome ? colors.good : colors.warm);
     final mode = paymentModeById(transaction.paymentMode);
 
@@ -44,12 +46,14 @@ class TransactionTile extends StatelessWidget {
             Container(
               width: 38,
               height: 38,
+              alignment: Alignment.center,
               decoration: BoxDecoration(color: color.withValues(alpha: 0.16), shape: BoxShape.circle),
-              child: Icon(
-                category != null ? resolveIcon(category!.icon) : LucideIcons.arrowLeftRight,
-                size: 18,
-                color: color,
-              ),
+              // IconOrEmoji, not Icon(resolveIcon(...)): a category can carry a
+              // colourful emoji, which resolveIcon doesn't know and silently
+              // swaps for the default tag glyph.
+              child: category != null
+                  ? IconOrEmoji(value: category!.icon, size: 18, color: color)
+                  : Icon(LucideIcons.arrowLeftRight, size: 18, color: color),
             ),
             const SizedBox(width: 12),
             Expanded(

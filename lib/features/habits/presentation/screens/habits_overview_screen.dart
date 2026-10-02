@@ -17,10 +17,12 @@ import '../../../../core/widgets/section_header.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/surface_card.dart';
 import '../../../../core/widgets/tappable.dart';
+import '../../application/habit_celebrations.dart';
 import '../../application/habit_consistency_providers.dart';
 import '../../application/habits_providers.dart';
 import '../../domain/habit_progress.dart';
 import '../widgets/quick_add_habit_sheet.dart';
+import '../../../../core/utils/category_color.dart';
 
 /// The comp's Habits screen: a `CONSISTENCY · THIS WEEK` headline over a
 /// seven-day strip, then a card per habit carrying a progress ring, a streak
@@ -121,7 +123,7 @@ class HabitsOverviewScreen extends ConsumerWidget {
                     const SizedBox(height: 3),
                     Text(
                       habits.isEmpty
-                          ? 'No habits yet — build your first one below.'
+                          ? '🌱 No habits yet — build your first one below.'
                           : '${consistency.completedThisWeek} of '
                                 '${consistency.targetThisWeek} check-ins logged this week',
                       style: TextStyle(
@@ -326,9 +328,7 @@ class _HabitCard extends ConsumerWidget {
 
     final accent = progress.category == null
         ? scheme.secondary
-        : Color(
-            int.parse(progress.category!.colorHex.replaceFirst('#', '0xFF')),
-          );
+        : (categoryColor(progress.category!.colorHex) ?? scheme.secondary);
 
     return Tappable(
       onTap: () => context.push(RoutePaths.habitDetail(habit.id)),
@@ -443,9 +443,20 @@ class _HabitCard extends ConsumerWidget {
               selected: doneToday,
               onTap: !progress.isScheduledToday
                   ? null
-                  : () => ref
-                        .read(habitsControllerProvider)
-                        .toggleToday(habit, !doneToday),
+                  : () {
+                      final completing = !doneToday;
+                      ref
+                          .read(habitsControllerProvider)
+                          .toggleToday(habit, completing);
+                      if (completing) {
+                        celebrateStreakIfMilestone(
+                          context,
+                          ref,
+                          habitName: habit.name,
+                          newStreakDays: progress.streakDays + 1,
+                        );
+                      }
+                    },
               child: Container(
                 width: 44,
                 height: 44,

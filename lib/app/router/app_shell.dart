@@ -461,9 +461,14 @@ class AppFloatingNavBar extends StatelessWidget {
   }
 }
 
-/// The centre add button. Comp: 50px, radius 17, accent fill, `onAccent` plus,
-/// and an accent glow (`0 8px 18px -6px accent`). The plus rotates to 135° over
-/// 300ms while a sheet is open.
+/// The centre add button. Comp: 50px, radius 17, accent fill, `onAccent` plus.
+/// The plus rotates to 135° over 300ms while a sheet is open.
+///
+/// Deliberately flat: the comp's accent glow (`0 8px 18px -6px accent`) tinted
+/// the shadow with the accent itself, which reads as a coloured smudge under
+/// the button on every palette rather than as depth. The app's other
+/// `FloatingActionButton`s are `elevation: 0` at the same radius 17
+/// (`AppTheme.floatingActionButtonTheme`), so this matches them.
 class _AddButton extends StatelessWidget {
   const _AddButton({required this.onTap, required this.rotated});
 
@@ -486,13 +491,6 @@ class _AddButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: scheme.primary,
             borderRadius: BorderRadius.circular(17),
-            boxShadow: [
-              BoxShadow(
-                color: scheme.primary.withValues(alpha: 0.45),
-                blurRadius: 12,
-                offset: const Offset(0, 8),
-              ),
-            ],
           ),
           child: AnimatedRotation(
             turns: rotated ? AppMotion.fabRotationTurns : 0,

@@ -21,6 +21,7 @@ import '../../../ai_analyser/application/ai_analyser_providers.dart';
 import '../../../ai_analyser/presentation/widgets/insight_card.dart';
 import '../../../calendar/application/calendar_providers.dart';
 import '../../../calendar/domain/calendar_item.dart';
+import '../../../habits/application/habit_celebrations.dart';
 import '../../../habits/application/habits_providers.dart';
 import '../../../habits/domain/habit_progress.dart';
 import '../../../health/application/health_providers.dart';
@@ -216,14 +217,21 @@ class HomeScreen extends ConsumerWidget {
                           insights.isEmpty) ...[
                         const SizedBox(height: 22),
                         Center(
-                          child: Text(
-                            'Your dashboard fills in as you go',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: AppFonts.sans,
-                              fontSize: 14,
-                              color: colors.text3,
-                            ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('✨', style: TextStyle(fontSize: 32)),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Your dashboard fills in as you go',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: AppFonts.sans,
+                                  fontSize: 14,
+                                  color: colors.text3,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -803,8 +811,18 @@ class _HabitGrid extends ConsumerWidget {
       progress: ratio,
       complete: ratio >= 1,
       color: doneToday ? scheme.primary : colors.critical,
-      onTap: () =>
-          ref.read(habitsControllerProvider).toggleToday(habit, !doneToday),
+      onTap: () {
+        final completing = !doneToday;
+        ref.read(habitsControllerProvider).toggleToday(habit, completing);
+        if (completing) {
+          celebrateStreakIfMilestone(
+            context,
+            ref,
+            habitName: habit.name,
+            newStreakDays: progress.streakDays + 1,
+          );
+        }
+      },
     );
   }
 }

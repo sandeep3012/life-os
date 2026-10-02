@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../../core/widgets/app_top_bar.dart';
+import '../../../../core/widgets/empty_state_message.dart';
 import '../../../../core/widgets/inline_add_button.dart';
 import '../../../../core/widgets/progress_ring.dart';
 import '../../../../core/widgets/save_feedback.dart';
@@ -313,8 +314,8 @@ class _HabitsPaneState extends ConsumerState<_HabitsPane> {
       return ListView(
         padding: const EdgeInsets.only(bottom: 100),
         children: [
-          const _EmptyState(
-            icon: LucideIcons.flame,
+          const EmptyStateMessage(
+            emoji: '🔥',
             message: 'No habits yet — add one to start a streak.',
           ),
           InlineAddButton(
@@ -560,37 +561,6 @@ class _WeekdayDot extends StatelessWidget {
           color: active
               ? theme.colorScheme.onPrimary
               : theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.icon, required this.message});
-
-  final IconData icon;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 40, color: colors.tasks),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -11,6 +11,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/scheduling/repeat_schedule.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/utils/category_color.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import '../../application/tasks_providers.dart';
 import '../../domain/task_priority.dart';
@@ -85,9 +86,9 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
           final accent = category == null
               ? colors.tasks
               : _categoryColor(category.colorHex, colors.tasks);
-          final icon = category == null
-              ? LucideIcons.listChecks
-              : resolveIcon(category.icon);
+          final Widget icon = category == null
+              ? Icon(LucideIcons.listChecks, color: accent)
+              : IconOrEmoji(value: category.icon, size: 24, color: accent);
           final done = task.status == 'done';
 
           return ListView(
@@ -109,7 +110,7 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
                               color: accent.withValues(alpha: 0.16),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(icon, color: accent),
+                            child: icon,
                           ),
                           const SizedBox(width: 20),
                           Expanded(
@@ -323,13 +324,8 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
     );
   }
 
-  static Color _categoryColor(String value, Color fallback) {
-    try {
-      return Color(int.parse(value.replaceFirst('#', '0xFF')));
-    } catch (_) {
-      return fallback;
-    }
-  }
+  static Color _categoryColor(String value, Color fallback) =>
+      categoryColor(value) ?? fallback;
 
   static String _repeatLabel(RepeatSchedule? schedule) {
     if (schedule == null || schedule.frequency == 'none') {

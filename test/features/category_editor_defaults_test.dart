@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_manager/app/theme/app_theme.dart';
+import 'package:life_manager/core/utils/category_color.dart';
 import 'package:life_manager/core/utils/icon_lookup.dart';
 import 'package:life_manager/features/finance/presentation/screens/category_management_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -49,6 +51,100 @@ void main() {
     expect(saved!.colorHex, isNot(redHex));
     expect(saved!.icon, defaultCategoryIcon);
     expect(resolveIcon(saved!.icon), LucideIcons.tag);
+  });
+
+  testWidgets('"No color" saves a blank colour instead of forcing a swatch', (
+    tester,
+  ) async {
+    CategoryEditorResult? saved;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async =>
+                  saved = await showCategoryEditorSheet(context),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Misc');
+    await tester.pumpAndSettle();
+
+    final none = find.bySemanticsLabel('No color');
+    await tester.ensureVisible(none);
+    await tester.tap(none);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Add category'));
+    await tester.tap(find.text('Add category'));
+    await tester.pumpAndSettle();
+
+    expect(saved, isNotNull);
+    expect(saved!.colorHex, noCategoryColorHex);
+    expect(saved!.colorHex, isEmpty);
+  });
+
+  testWidgets('an emoji icon is laid out so it centres in its circle', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: IconOrEmoji(value: '🍽️', size: 18)),
+      ),
+    );
+
+    // Line height 1 with even leading: the default line box is lopsided and
+    // leaves emoji sitting low inside a centred circle.
+    final style = tester.widget<Text>(find.text('🍽️')).style!;
+    expect(style.height, 1);
+    expect(style.leadingDistribution, TextLeadingDistribution.even);
+    expect(style.fontSize, 18);
+  });
+
+  testWidgets('Apple platforms nudge the emoji up and right, others do not', (
+    tester,
+  ) async {
+    Offset shift() {
+      final t = tester
+          .widget<Transform>(
+            find.descendant(
+              of: find.byType(EmojiGlyph),
+              matching: find.byType(Transform),
+            ),
+          )
+          .transform
+          .getTranslation();
+      return Offset(t.x, t.y);
+    }
+
+    Future<void> pump() => tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: EmojiGlyph('🍽️', size: 20))),
+    );
+
+    // The pixel offset is measured on an iPhone: ~0.6pt left and ~1pt low of
+    // a 20pt glyph. Pin the direction and scale, not the pixels.
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    await pump();
+    expect(shift().dx, greaterThan(0));
+    expect(shift().dy, lessThan(0));
+    expect(shift().dy.abs(), lessThan(2));
+
+    // Unmount first: an identical const tree would otherwise not rebuild.
+    await tester.pumpWidget(const SizedBox());
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    await pump();
+    expect(shift().dx, 0);
+    expect(shift().dy, 0);
+
+    debugDefaultTargetPlatformOverride = null;
   });
 
   test('a blank or unknown icon falls back to the default tag glyph', () {

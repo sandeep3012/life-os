@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -66,28 +67,125 @@ const pickableIcons = [
 ];
 
 /// A curated set of Unicode choices that can be stored alongside Material
-/// icon names. Unicode strings are rendered as text by [IconOrEmoji].
-const pickableEmojis = ['🍽️', '🛒', '🚗', '🏠', '🎬', '💳', '🏥', '🎓', '✈️', '🏋️', '🐾', '👕', '🎮', '🎁', '🔧', '📶', '👛', '💰', '🏦', '☕', '🎵', '📚', '❤️', '⭐'];
+/// icon names. Unicode strings are rendered as text by [IconOrEmoji], full
+/// colour and expressive where the Lucide set above is deliberately flat and
+/// single-tone — offered as a separate "Colorful icons" group in the picker,
+/// never mixed into the plain [pickableIcons] one.
+const pickableEmojis = [
+  '🍽️',
+  '🛒',
+  '🚗',
+  '🏠',
+  '🎬',
+  '💳',
+  '🏥',
+  '🎓',
+  '✈️',
+  '🏋️',
+  '🐾',
+  '👕',
+  '🎮',
+  '🎁',
+  '🔧',
+  '📶',
+  '👛',
+  '💰',
+  '🏦',
+  '☕',
+  '🎵',
+  '📚',
+  '❤️',
+  '⭐',
+  '🔁',
+  '🏷️',
+  '🐷',
+  '💵',
+  '📈',
+  '💧',
+  '💪',
+  '🏃',
+  '🧘',
+  '😴',
+  '📓',
+  '🚶',
+  '⚖️',
+  '🤸',
+  '🏆',
+  '💼',
+  '💊',
+  '👣',
+  '📰',
+  '🎥',
+  '💡',
+  '🪪',
+  '🩺',
+  '🧾',
+  '🗂️',
+  '🎂',
+];
 
 /// The icon a category carries when none was chosen — matches the `icon`
 /// column's own default, and what [resolveIcon] falls back to.
 const defaultCategoryIcon = 'label';
 
-IconData resolveIcon(String? name) => _iconsByName[name] ?? _iconsByName[defaultCategoryIcon]!;
+IconData resolveIcon(String? name) =>
+    _iconsByName[name] ?? _iconsByName[defaultCategoryIcon]!;
 
 /// Blank counts as "no icon", not as an emoji — a row imported from an older
 /// backup can carry an empty string, which would otherwise render as nothing.
 bool isEmojiIcon(String? value) =>
     value != null && value.isNotEmpty && !_iconsByName.containsKey(value);
 
+/// An emoji, centred the way an [Icon] is.
+///
+/// A plain [Text] draws an emoji low and a touch left of centre. Fixing the
+/// line box is not enough: pinning the height to 1 with even leading centres
+/// the font's ascent and descent, but Apple Color Emoji draws its image low
+/// and left inside that box regardless — measured on an iPhone, the image
+/// centre sat ~0.8pt below and ~0.6pt left of a 20pt glyph's box centre while
+/// Lucide icons sat at 0. So Apple platforms get a small optical shift,
+/// proportional to [size]. Other platforms are left at the font's own
+/// placement until they've been measured.
+class EmojiGlyph extends StatelessWidget {
+  const EmojiGlyph(this.emoji, {super.key, this.size = 20, this.color});
+
+  final String emoji;
+  final double size;
+  final Color? color;
+
+  static bool get _isApple =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
+  @override
+  Widget build(BuildContext context) => Transform.translate(
+    offset: _isApple ? Offset(size * 0.03, -size * 0.05) : Offset.zero,
+    child: Text(
+      emoji,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontSize: size,
+        color: color,
+        height: 1,
+        leadingDistribution: TextLeadingDistribution.even,
+      ),
+    ),
+  );
+}
+
 class IconOrEmoji extends StatelessWidget {
-  const IconOrEmoji({super.key, required this.value, this.size = 20, this.color});
+  const IconOrEmoji({
+    super.key,
+    required this.value,
+    this.size = 20,
+    this.color,
+  });
   final String? value;
   final double size;
   final Color? color;
 
   @override
   Widget build(BuildContext context) => isEmojiIcon(value)
-      ? Text(value!, style: TextStyle(fontSize: size, color: color))
+      ? EmojiGlyph(value!, size: size, color: color)
       : Icon(resolveIcon(value), size: size, color: color);
 }

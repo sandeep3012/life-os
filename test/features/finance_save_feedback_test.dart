@@ -116,7 +116,10 @@ void main() {
   }
 
   testWidgets('saving a bill acknowledges itself', (tester) async {
-    await pumpHost(tester, (context, ref) => BillsScreen.openSheet(context, ref));
+    await pumpHost(
+      tester,
+      (context, ref) => BillsScreen.openSheet(context, ref),
+    );
     await useConfirmations(tester);
 
     await tester.tap(find.text('open'));
@@ -198,6 +201,52 @@ void main() {
     expect(find.byType(SuccessOverlay), findsOneWidget);
     expect(find.text('Recurring transaction saved'), findsOneWidget);
     expect((await db.select(db.recurringTransactions).get()), hasLength(1));
+
+    await finishOverlay(tester);
+    await disposeCleanly(tester);
+  });
+
+  testWidgets('marking a bill paid celebrates it, not just saves it', (
+    tester,
+  ) async {
+    await db
+        .into(db.bills)
+        .insert(
+          BillsCompanion.insert(
+            name: 'Broadband',
+            amountMinor: 70000,
+            dueDate: DateTime.now().add(const Duration(days: 5)),
+          ),
+        );
+
+    tester.view.physicalSize = const Size(392, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          notificationServiceProvider.overrideWithValue(_FakeNotifications()),
+        ],
+        child: MaterialApp(theme: AppTheme.light(), home: const BillsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(BillsScreen));
+    await ProviderScope.containerOf(context)
+        .read(settingsControllerProvider)
+        .setSaveFeedbackMode(SaveFeedbackMode.confirmation);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Mark as paid'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mark paid'));
+    await settleUntilOverlay(tester);
+
+    expect(find.byType(SuccessOverlay), findsOneWidget);
+    expect(find.text('Bill paid'), findsOneWidget);
 
     await finishOverlay(tester);
     await disposeCleanly(tester);

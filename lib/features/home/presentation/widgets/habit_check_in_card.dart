@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/utils/category_color.dart';
 import '../../../habits/domain/habit_progress.dart';
 
 class HabitCheckInCard extends StatelessWidget {
@@ -25,14 +26,16 @@ class HabitCheckInCard extends StatelessWidget {
     // wouldn't otherwise show one, same split as HabitTile.
     final accent = atRisk ? colors.critical : colors.habits;
     final category = progress.category;
-    final categoryColor = category == null
+    final categoryTint = category == null
         ? null
-        : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
-    final iconColor = categoryColor ?? accent;
+        : categoryColor(category.colorHex);
+    final iconColor = categoryTint ?? accent;
     final doneToday = progress.weekCompletion[DateTime.now().weekday] ?? false;
-    final icon = doneToday
-        ? LucideIcons.check
-        : (category == null ? LucideIcons.flame : resolveIcon(category.icon));
+    final Widget icon = doneToday
+        ? Icon(LucideIcons.check, size: 18, color: iconColor)
+        : category == null
+        ? Icon(LucideIcons.flame, size: 18, color: iconColor)
+        : IconOrEmoji(value: category.icon, size: 18, color: iconColor);
 
     return SizedBox(
       width: 140,
@@ -49,11 +52,12 @@ class HabitCheckInCard extends StatelessWidget {
                 Container(
                   width: 36,
                   height: 36,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: iconColor.withValues(alpha: 0.16),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 18, color: iconColor),
+                  child: icon,
                 ),
                 const SizedBox(height: 8),
                 Text(

@@ -7,6 +7,7 @@ import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/utils/category_color.dart';
 import '../../application/habits_providers.dart';
 
 /// A dedicated destination makes it clear that the user is viewing inactive
@@ -72,10 +73,10 @@ class _ArchivedHabitTile extends StatelessWidget {
     final colors = context.appColors;
     final color = category == null
         ? colors.habits
-        : Color(int.parse(category!.colorHex.replaceFirst('#', '0xFF')));
-    final icon = category == null
-        ? LucideIcons.flame
-        : resolveIcon(category!.icon);
+        : (categoryColor(category!.colorHex) ?? colors.habits);
+    final Widget icon = category == null
+        ? const Icon(LucideIcons.flame, size: 20)
+        : IconOrEmoji(value: category!.icon, size: 20);
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
@@ -83,7 +84,7 @@ class _ArchivedHabitTile extends StatelessWidget {
       leading: CircleAvatar(
         backgroundColor: color.withValues(alpha: 0.16),
         foregroundColor: color,
-        child: Icon(icon, size: 20),
+        child: icon,
       ),
       title: Text(habit.name),
       subtitle: const Text('Archived'),

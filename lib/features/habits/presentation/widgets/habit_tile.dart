@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/utils/category_color.dart';
 import '../../domain/habit_progress.dart';
 
 const _weekdayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -30,10 +31,10 @@ class HabitTile extends StatelessWidget {
     final today = DateTime.now().weekday;
     final completedToday = progress.weekCompletion[today] ?? false;
     final category = progress.category;
-    final categoryColor = category == null
+    final categoryTint = category == null
         ? null
-        : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
-    final iconColor = categoryColor ?? accent;
+        : categoryColor(category.colorHex);
+    final iconColor = categoryTint ?? accent;
     final iconValue = category?.icon;
 
     return Padding(
@@ -43,6 +44,7 @@ class HabitTile extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: iconColor.withValues(alpha: 0.16),
               shape: BoxShape.circle,

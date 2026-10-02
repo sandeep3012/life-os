@@ -7,14 +7,20 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/widgets/empty_state_message.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/utils/category_color.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import '../widgets/account_option_row.dart';
 import '../widgets/quick_add_bill_sheet.dart';
 
-const _frequencyLabels = {'once': 'One-time', 'monthly': 'Monthly', 'yearly': 'Yearly'};
+const _frequencyLabels = {
+  'once': 'One-time',
+  'monthly': 'Monthly',
+  'yearly': 'Yearly',
+};
 
 class BillsScreen extends ConsumerWidget {
   const BillsScreen({super.key});
@@ -34,7 +40,9 @@ class BillsScreen extends ConsumerWidget {
       accounts: accounts,
       accountTypes: accountTypes,
       categories: categories,
-      currencySymbol: currencySymbolFor(ref.read(settingsProvider).currencyCode),
+      currencySymbol: currencySymbolFor(
+        ref.read(settingsProvider).currencyCode,
+      ),
       initial: existing,
     );
     if (result == null) return;
@@ -98,7 +106,10 @@ class BillsScreen extends ConsumerWidget {
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final bill = bills[index];
-                return _BillTile(bill: bill, category: categoryById[bill.categoryId]);
+                return _BillTile(
+                  bill: bill,
+                  category: categoryById[bill.categoryId],
+                );
               },
             ),
       floatingActionButton: FloatingActionButton.extended(
@@ -132,7 +143,17 @@ class _BillTile extends ConsumerWidget {
       ),
     );
     if (chosen == null) return;
-    await ref.read(financeControllerProvider).markBillPaid(bill, accountId: chosen);
+    await ref
+        .read(financeControllerProvider)
+        .markBillPaid(bill, accountId: chosen);
+    if (!context.mounted) return;
+    await showCelebration(
+      context,
+      ref,
+      title: 'Bill paid',
+      message: '"${bill.name}" is settled.',
+      emoji: '🧾',
+    );
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
@@ -140,10 +161,18 @@ class _BillTile extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete bill?'),
-        content: Text('"${bill.name}" and its reminder will be removed. Past payments stay.'),
+        content: Text(
+          '"${bill.name}" and its reminder will be removed. Past payments stay.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -158,7 +187,15 @@ class _BillTile extends ConsumerWidget {
     final colors = context.appColors;
     final currencyCode = ref.watch(settingsProvider).currencyCode;
     final overdue = bill.dueDate.isBefore(dateOnly(DateTime.now()));
-    final color = overdue ? colors.critical : colors.finance;
+    // Matches transaction/recurring rows: the bill's own category colour,
+    // not one flat module accent for every bill — overdue still wins, since
+    // that's the more urgent thing to notice.
+    final color = overdue
+        ? colors.critical
+        : category != null
+        ? (categoryColor(category!.colorHex) ??
+              theme.colorScheme.onSurfaceVariant)
+        : colors.finance;
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -166,14 +203,21 @@ class _BillTile extends ConsumerWidget {
       leading: Container(
         width: 38,
         height: 38,
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.16), shape: BoxShape.circle),
-        child: Icon(
-          category != null ? resolveIcon(category!.icon) : LucideIcons.receipt,
-          size: 18,
-          color: color,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.16),
+          shape: BoxShape.circle,
+        ),
+        child: category != null
+            ? IconOrEmoji(value: category!.icon, size: 18, color: color)
+            : Icon(LucideIcons.receipt, size: 18, color: color),
+      ),
+      title: Text(
+        bill.name,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w600,
         ),
       ),
-      title: Text(bill.name, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
       subtitle: Text(
         '${_frequencyLabels[bill.frequency] ?? bill.frequency} · '
         '${overdue ? "Overdue" : "Due"} ${DateFormat.yMMMd().format(bill.dueDate)}',
@@ -184,7 +228,9 @@ class _BillTile extends ConsumerWidget {
         children: [
           Text(
             formatMinor(bill.amountMinor, currencyCode: currencyCode),
-            style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           IconButton(
             tooltip: 'Mark as paid',
@@ -238,8 +284,14 @@ class _PayFromDialogState extends State<_PayFromDialog> {
         onChanged: (v) => setState(() => _accountId = v ?? _accountId),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, _accountId), child: const Text('Mark paid')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _accountId),
+          child: const Text('Mark paid'),
+        ),
       ],
     );
   }
@@ -250,25 +302,11 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.receipt, size: 40, color: theme.colorScheme.onSurfaceVariant),
-            const SizedBox(height: 12),
-            Text('No bills tracked yet', style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
-            const SizedBox(height: 4),
-            Text(
-              'Add a bill to get reminded before it\'s due, and mark it paid when it is.',
-              style: theme.textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return const EmptyStateMessage(
+      emoji: '🧾',
+      title: 'No bills tracked yet',
+      message:
+          'Add a bill to get reminded before it\'s due, and mark it paid when it is.',
     );
   }
 }

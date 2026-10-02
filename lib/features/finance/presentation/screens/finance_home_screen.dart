@@ -12,6 +12,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/dashed_action_button.dart';
+import '../../../../core/widgets/empty_state_message.dart';
 import '../../../../core/widgets/tab_rail.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../../spend_analyzer/presentation/widgets/budget_bar.dart';
@@ -899,8 +900,10 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
       entries.add(
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 32),
-          child: Text(
-            'No transactions in this range. Try another date range or category.',
+          child: EmptyStateMessage(
+            emoji: '🧾',
+            message:
+                'No transactions in this range. Try another date range or category.',
           ),
         ),
       );

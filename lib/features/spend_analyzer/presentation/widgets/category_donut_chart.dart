@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/category_spend.dart';
 import '../../../../app/theme/app_fonts.dart';
+import '../../../../core/utils/category_color.dart';
 
 class CategoryDonutChart extends StatefulWidget {
   const CategoryDonutChart({
@@ -201,8 +202,11 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
 
 /// Uncategorized has no colour of its own, so it takes a neutral from the
 /// theme rather than borrowing a category hue and reading as a real category.
+/// A category the user left on "No color" takes a different neutral, so the
+/// two stay tellable apart in the legend.
 Color _sliceColor(BuildContext context, CategorySpend entry) {
   final category = entry.category;
   if (category == null) return Theme.of(context).colorScheme.outlineVariant;
-  return Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
+  return categoryColor(category.colorHex) ??
+      Theme.of(context).colorScheme.onSurfaceVariant;
 }

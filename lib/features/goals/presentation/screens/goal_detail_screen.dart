@@ -130,9 +130,25 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
                 const SizedBox(width: 16),
                 IconButton.filledTonal(
                   icon: const Icon(LucideIcons.plus),
-                  onPressed: () => ref
-                      .read(goalsControllerProvider)
-                      .updateProgress(goal.id, goal.currentValue + step),
+                  onPressed: () {
+                    final newValue = goal.currentValue + step;
+                    ref
+                        .read(goalsControllerProvider)
+                        .updateProgress(goal.id, newValue);
+                    final target = goal.targetValue;
+                    if (data.ratio < 1 &&
+                        target != null &&
+                        target > 0 &&
+                        newValue >= target) {
+                      showCelebration(
+                        context,
+                        ref,
+                        title: 'Goal reached!',
+                        message: '"${goal.title}" is complete.',
+                        emoji: '🏆',
+                      );
+                    }
+                  },
                 ),
               ],
             ),

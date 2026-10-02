@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/category_color.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../application/finance_providers.dart';
 
@@ -52,7 +53,8 @@ Future<CategoryEditorResult?> showCategoryEditorSheet(
   return showModalBottomSheet<CategoryEditorResult>(
     context: context,
     isScrollControlled: true,
-    builder: (context) => _CategoryEditorSheet(existing: existing, fixedKind: fixedKind),
+    builder: (context) =>
+        _CategoryEditorSheet(existing: existing, fixedKind: fixedKind),
   );
 }
 
@@ -73,7 +75,9 @@ class CategoryManagementScreen extends ConsumerWidget {
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final c = categories[index];
-                final color = Color(int.parse(c.colorHex.replaceFirst('#', '0xFF')));
+                final color =
+                    categoryColor(c.colorHex) ??
+                    Theme.of(context).colorScheme.onSurfaceVariant;
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
@@ -99,7 +103,11 @@ class CategoryManagementScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _openEditor(BuildContext context, WidgetRef ref, {Category? existing}) async {
+  Future<void> _openEditor(
+    BuildContext context,
+    WidgetRef ref, {
+    Category? existing,
+  }) async {
     final result = await showCategoryEditorSheet(context, existing: existing);
     if (result == null) return;
 
@@ -122,7 +130,11 @@ class CategoryManagementScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref, Category category) async {
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    Category category,
+  ) async {
     final controller = ref.read(financeControllerProvider);
     final usage = await controller.categoryUsageCount(category.id);
     if (!context.mounted) return;
@@ -182,12 +194,19 @@ class _CategoryEditorSheet extends StatefulWidget {
 }
 
 class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
-  late final _nameController = TextEditingController(text: widget.existing?.name);
+  late final _nameController = TextEditingController(
+    text: widget.existing?.name,
+  );
   late String _icon = widget.existing?.icon ?? defaultCategoryIcon;
   late String _colorHex = widget.existing?.colorHex ?? _defaultColorHex;
   late String _kind = widget.existing?.kind ?? widget.fixedKind ?? 'expense';
 
   bool get _isEditing => widget.existing != null;
+
+  /// The icon choices preview in the chosen colour; "No color" previews in a
+  /// neutral, which is also what the saved category renders with.
+  Color get _tint =>
+      categoryColor(_colorHex) ?? Theme.of(context).colorScheme.onSurfaceVariant;
 
   @override
   void initState() {
@@ -206,92 +225,108 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
     final theme = Theme.of(context);
     return SingleChildScrollView(
       child: Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(_isEditing ? 'Edit category' : 'New category', style: theme.textTheme.titleLarge),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _nameController,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(hintText: 'Category name'),
-          ),
-          if (widget.fixedKind == null) ...[
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _isEditing ? 'Edit category' : 'New category',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(hintText: 'Category name'),
+            ),
+            if (widget.fixedKind == null) ...[
+              const SizedBox(height: 12),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'expense', label: Text('Expense')),
+                  ButtonSegment(value: 'income', label: Text('Income')),
+                ],
+                selected: {_kind},
+                onSelectionChanged: (s) => setState(() => _kind = s.first),
+              ),
+            ],
             const SizedBox(height: 12),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'expense', label: Text('Expense')),
-                ButtonSegment(value: 'income', label: Text('Income')),
+            Text('Icon', style: theme.textTheme.labelMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final name in pickableIcons)
+                  _IconChoice(
+                    icon: resolveIcon(name),
+                    selected: _icon == name,
+                    color: _tint,
+                    onTap: () => setState(() => _icon = name),
+                  ),
               ],
-              selected: {_kind},
-              onSelectionChanged: (s) => setState(() => _kind = s.first),
+            ),
+            const SizedBox(height: 12),
+            Text('Colorful icons', style: theme.textTheme.labelMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final emoji in pickableEmojis)
+                  _IconChoice(
+                    emoji: emoji,
+                    selected: _icon == emoji,
+                    color: _tint,
+                    onTap: () => setState(() => _icon = emoji),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text('Color', style: theme.textTheme.labelMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _NoColorChoice(
+                  selected: _colorHex == noCategoryColorHex,
+                  onTap: () => setState(() => _colorHex = noCategoryColorHex),
+                ),
+                for (final hex in _paletteHex)
+                  _ColorChoice(
+                    color: Color(int.parse(hex.replaceFirst('#', '0xFF'))),
+                    selected: _colorHex == hex,
+                    onTap: () => setState(() => _colorHex = hex),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _nameController.text.trim().isEmpty
+                    ? null
+                    : () => Navigator.of(context).pop(
+                        CategoryEditorResult(
+                          name: _nameController.text.trim(),
+                          icon: _icon,
+                          colorHex: _colorHex,
+                          kind: _kind,
+                        ),
+                      ),
+                child: Text(_isEditing ? 'Save changes' : 'Add category'),
+              ),
             ),
           ],
-          const SizedBox(height: 12),
-          Text('Icon', style: theme.textTheme.labelMedium),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final name in pickableIcons)
-                _IconChoice(
-                  icon: resolveIcon(name),
-                  selected: _icon == name,
-                  color: Color(int.parse(_colorHex.replaceFirst('#', '0xFF'))),
-                  onTap: () => setState(() => _icon = name),
-                ),
-              for (final emoji in pickableEmojis)
-                _IconChoice(
-                  emoji: emoji,
-                  selected: _icon == emoji,
-                  color: Color(int.parse(_colorHex.replaceFirst('#', '0xFF'))),
-                  onTap: () => setState(() => _icon = emoji),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text('Color', style: theme.textTheme.labelMedium),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final hex in _paletteHex)
-                _ColorChoice(
-                  color: Color(int.parse(hex.replaceFirst('#', '0xFF'))),
-                  selected: _colorHex == hex,
-                  onTap: () => setState(() => _colorHex = hex),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _nameController.text.trim().isEmpty
-                  ? null
-                  : () => Navigator.of(context).pop(
-                      CategoryEditorResult(
-                        name: _nameController.text.trim(),
-                        icon: _icon,
-                        colorHex: _colorHex,
-                        kind: _kind,
-                      ),
-                    ),
-              child: Text(_isEditing ? 'Save changes' : 'Add category'),
-            ),
-          ),
-        ],
-      ),
+        ),
       ),
     );
   }
@@ -325,20 +360,32 @@ class _IconChoice extends StatelessWidget {
           color: selected ? color.withValues(alpha: 0.18) : Colors.transparent,
           shape: BoxShape.circle,
           border: Border.all(
-            color: selected ? color : Theme.of(context).colorScheme.outlineVariant,
+            color: selected
+                ? color
+                : Theme.of(context).colorScheme.outlineVariant,
             width: selected ? 2 : 1,
           ),
         ),
         child: emoji != null
-            ? Text(emoji!, style: const TextStyle(fontSize: 20))
-            : Icon(icon, size: 20, color: selected ? color : Theme.of(context).colorScheme.onSurfaceVariant),
+            ? EmojiGlyph(emoji!)
+            : Icon(
+                icon,
+                size: 20,
+                color: selected
+                    ? color
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
       ),
     );
   }
 }
 
 class _ColorChoice extends StatelessWidget {
-  const _ColorChoice({required this.color, required this.selected, required this.onTap});
+  const _ColorChoice({
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
 
   final Color color;
   final bool selected;
@@ -356,8 +403,51 @@ class _ColorChoice extends StatelessWidget {
           color: color,
           shape: BoxShape.circle,
           border: selected
-              ? Border.all(color: Theme.of(context).colorScheme.onSurface, width: 2.5)
+              ? Border.all(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  width: 2.5,
+                )
               : null,
+        ),
+      ),
+    );
+  }
+}
+
+/// The "No color" swatch: an empty ring with a slash, so it reads as the
+/// absence of a colour rather than as a very pale one.
+class _NoColorChoice extends StatelessWidget {
+  const _NoColorChoice({required this.selected, required this.onTap});
+
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'No color',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected ? scheme.onSurface : scheme.outlineVariant,
+              width: selected ? 2.5 : 1,
+            ),
+          ),
+          child: Icon(
+            LucideIcons.ban,
+            size: 16,
+            color: scheme.onSurfaceVariant,
+          ),
         ),
       ),
     );
