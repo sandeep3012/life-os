@@ -54,6 +54,11 @@ class AppMotion {
   /// switching, so these two are derived from its neighbours (the 300–420ms
   /// entries and the 220ms scrim/knob fades) rather than transcribed.
   static const navSwitch = Duration(milliseconds: 480);
+
+  /// The spend chart changing between weekly, monthly and yearly: the old bars
+  /// shrink away, then the new ones grow up one after another. Derived like
+  /// [navSwitch], since the handoff's table doesn't cover it.
+  static const chartSwitch = Duration(milliseconds: 800);
   static const navColor = Duration(milliseconds: 220);
 
   /// Add-menu tiles rise in sequence, [menuTileStagger] apart.

@@ -6,6 +6,7 @@ import '../../finance/application/finance_providers.dart';
 import '../../finance/domain/budget_progress.dart';
 import '../../finance/domain/payment_mode.dart';
 import '../domain/category_spend.dart';
+import '../domain/comparison_points.dart';
 import '../domain/payment_mode_spend.dart';
 
 class SelectedAnalyzerMonth extends Notifier<DateTime> {
@@ -21,7 +22,9 @@ class SelectedAnalyzerMonth extends Notifier<DateTime> {
 }
 
 final selectedAnalyzerMonthProvider =
-    NotifierProvider<SelectedAnalyzerMonth, DateTime>(SelectedAnalyzerMonth.new);
+    NotifierProvider<SelectedAnalyzerMonth, DateTime>(
+      SelectedAnalyzerMonth.new,
+    );
 
 List<Transaction> _inMonth(List<Transaction> all, DateTime month) {
   return all
@@ -79,15 +82,13 @@ final categoryBreakdownProvider = Provider<List<CategorySpend>>((ref) {
       totals.values.fold<int>(0, (a, b) => a + b) + uncategorizedMinor;
   if (grandTotal == 0) return const [];
 
-  final entries =
-      totals.entries.map((e) {
-        return CategorySpend(
-          category: categoryById[e.key]!,
-          totalMinor: e.value,
-          share: e.value / grandTotal,
-        );
-      }).toList()
-        ..sort((a, b) => b.totalMinor.compareTo(a.totalMinor));
+  final entries = totals.entries.map((e) {
+    return CategorySpend(
+      category: categoryById[e.key]!,
+      totalMinor: e.value,
+      share: e.value / grandTotal,
+    );
+  }).toList()..sort((a, b) => b.totalMinor.compareTo(a.totalMinor));
   if (uncategorizedMinor > 0) {
     // Always last: it is a remainder, not a category competing for attention.
     entries.add(
@@ -104,9 +105,12 @@ final categoryBreakdownProvider = Provider<List<CategorySpend>>((ref) {
 /// Expense total per calendar week (Mon-Sun) touching the selected month —
 /// feeds the trend line, at most ~5 points for a normal month.
 final weeklyTrendProvider = Provider<List<int>>((ref) {
+  // Same rule as the month total above it: a transfer is money moving between
+  // your own accounts, not spending. Leaving them in made the weeks add up to
+  // more than "Total spent".
   final txns = ref
       .watch(monthTransactionsProvider)
-      .where((t) => t.amountMinor < 0)
+      .where((t) => t.paymentMode != 'transfer' && t.amountMinor < 0)
       .toList();
   final month = ref.watch(selectedAnalyzerMonthProvider);
   final firstDay = DateTime(month.year, month.month, 1);
@@ -143,7 +147,8 @@ final paymentModeBreakdownProvider = Provider<List<PaymentModeSpend>>((ref) {
 
   final totals = <String, int>{};
   for (final t in txns) {
-    totals[t.paymentMode!] = (totals[t.paymentMode!] ?? 0) + t.amountMinor.abs();
+    totals[t.paymentMode!] =
+        (totals[t.paymentMode!] ?? 0) + t.amountMinor.abs();
   }
   final grandTotal = totals.values.fold<int>(0, (a, b) => a + b);
   if (grandTotal == 0) return const [];
@@ -154,7 +159,11 @@ final paymentModeBreakdownProvider = Provider<List<PaymentModeSpend>>((ref) {
             final mode = paymentModeById(e.key);
             return mode == null
                 ? null
-                : PaymentModeSpend(mode: mode, totalMinor: e.value, share: e.value / grandTotal);
+                : PaymentModeSpend(
+                    mode: mode,
+                    totalMinor: e.value,
+                    share: e.value / grandTotal,
+                  );
           })
           .whereType<PaymentModeSpend>()
           .toList()
@@ -174,3 +183,14 @@ final monthBudgetsWithProgressProvider = Provider<List<BudgetProgress>>((ref) {
     month: ref.watch(selectedAnalyzerMonthProvider),
   );
 });
+
+/// The bars for the comparison card in [period], ending at the month on screen.
+final comparisonPointsProvider =
+    Provider.family<List<ComparisonPoint>, ComparisonPeriod>((ref, period) {
+      return computeComparisonPoints(
+        period: period,
+        transactions: ref.watch(transactionsProvider).value ?? const [],
+        selectedMonth: ref.watch(selectedAnalyzerMonthProvider),
+        now: DateTime.now(),
+      );
+    });

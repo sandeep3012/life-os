@@ -1,12 +1,26 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_fonts.dart';
+import '../../../../core/utils/currency_utils.dart';
+import 'chart_style.dart';
 
 class WeeklyTrendChart extends StatelessWidget {
-  const WeeklyTrendChart({super.key, required this.weeklyTotalsMinor, required this.color});
+  const WeeklyTrendChart({
+    super.key,
+    required this.weeklyTotalsMinor,
+    required this.color,
+    required this.currencyCode,
+    this.height = 122,
+  });
 
   final List<int> weeklyTotalsMinor;
   final Color color;
+
+  /// For the amount under each week's label.
+  final String currencyCode;
+
+  /// The chart's height, or null to fill whatever room its parent gives it.
+  final double? height;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +38,8 @@ class WeeklyTrendChart extends StatelessWidget {
     final maxY = weeklyTotalsMinor.reduce((a, b) => a > b ? a : b) / 100;
 
     return SizedBox(
-      height: 108,
+      // 108 for the plot, plus the 14 the second label row (the amount) takes.
+      height: height,
       child: LineChart(
         LineChartData(
           minY: 0,
@@ -33,9 +48,12 @@ class WeeklyTrendChart extends StatelessWidget {
             show: true,
             drawVerticalLine: false,
             horizontalInterval: (maxY <= 0 ? 100 : maxY * 1.15) / 3,
+            // Dashed and light: the lines are a guide to the eye, and solid
+            // grey ones competed with the data line.
             getDrawingHorizontalLine: (value) => FlLine(
-              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+              color: chartGridColor(Theme.of(context).colorScheme),
               strokeWidth: 1,
+              dashArray: const [5, 4],
             ),
           ),
           titlesData: FlTitlesData(
@@ -45,22 +63,49 @@ class WeeklyTrendChart extends StatelessWidget {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 20,
+                // Two lines: the week, and what was spent in it.
+                reservedSize: 34,
+                // One label per week. Left to itself the axis steps by 0.5 over
+                // a range this small, and truncating 0.5 to 0 and 1.5 to 1 drew
+                // every week's label twice (W1 W1 W2 W2 ...).
+                interval: 1,
                 getTitlesWidget: (value, meta) {
-                  final index = value.toInt();
-                  if (index < 0 || index >= weeklyTotalsMinor.length) {
+                  final index = value.round();
+                  if (value != index.toDouble() ||
+                      index < 0 ||
+                      index >= weeklyTotalsMinor.length) {
                     return const SizedBox.shrink();
                   }
+                  final scheme = Theme.of(context).colorScheme;
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'W${index + 1}',
-                      style: TextStyle(
-                        fontFamily: AppFonts.numeric,
-                        fontFeatures: AppFonts.tabular,
-                        fontSize: 9,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'W${index + 1}',
+                          style: TextStyle(
+                            fontFamily: AppFonts.numeric,
+                            fontFeatures: AppFonts.tabular,
+                            fontSize: 9,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        Text(
+                          formatCompactMinor(
+                            weeklyTotalsMinor[index],
+                            currencyCode: currencyCode,
+                          ),
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: AppFonts.numeric,
+                            fontFeatures: AppFonts.tabular,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },

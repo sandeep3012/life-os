@@ -10,8 +10,14 @@ import '../../application/spend_analyzer_providers.dart';
 import '../widgets/budget_bar.dart';
 import '../widgets/category_donut_chart.dart';
 import '../widgets/payment_mode_breakdown.dart';
+import '../widgets/spend_comparison_card.dart';
+import '../widgets/swipe_cards.dart';
 import '../widgets/weekly_trend_chart.dart';
 import '../../../../app/theme/app_fonts.dart';
+
+/// How tall the swipe cards are. They used to be 304, which made them nearly
+/// square; this keeps them the wide rectangles the cards always were.
+const double _headerHeight = 236;
 
 class SpendAnalyzerScreen extends ConsumerStatefulWidget {
   const SpendAnalyzerScreen({super.key});
@@ -65,71 +71,87 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Total spent',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          Text(
-                            formatMinor(
-                              total,
-                              currencyCode: currencyCode,
-                              showDecimals: false,
-                            ),
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontFamily: AppFonts.serif,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (previousTotal > 0)
+          // Two cards to swipe between, side by side rather than stacked: this
+          // week-by-week view of the month, and spending against savings over
+          // time. The next card peeks in and the dots show where you are.
+          SwipeCards(
+            height: MediaQuery.textScalerOf(context).scale(_headerHeight),
+            children: [
+              SizedBox.expand(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Icon(
-                              delta >= 0
-                                  ? LucideIcons.arrowUp
-                                  : LucideIcons.arrowDown,
-                              size: 14,
-                              color: delta >= 0 ? colors.critical : colors.good,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Total spent',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                Text(
+                                  formatMinor(
+                                    total,
+                                    currencyCode: currencyCode,
+                                    showDecimals: false,
+                                  ),
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(fontFamily: AppFonts.serif),
+                                ),
+                              ],
                             ),
-                            Text(
-                              '${(delta.abs() * 100).toStringAsFixed(1)}% vs last month',
-                              style: TextStyle(
-                                fontFamily: AppFonts.numeric,
-                                fontFeatures: AppFonts.tabular,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: delta >= 0
-                                    ? colors.critical
-                                    : colors.good,
+                            if (previousTotal > 0)
+                              Row(
+                                children: [
+                                  Icon(
+                                    delta >= 0
+                                        ? LucideIcons.arrowUp
+                                        : LucideIcons.arrowDown,
+                                    size: 14,
+                                    color: delta >= 0
+                                        ? colors.critical
+                                        : colors.good,
+                                  ),
+                                  Text(
+                                    '${(delta.abs() * 100).toStringAsFixed(1)}% vs last month',
+                                    style: TextStyle(
+                                      fontFamily: AppFonts.numeric,
+                                      fontFeatures: AppFonts.tabular,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: delta >= 0
+                                          ? colors.critical
+                                          : colors.good,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
                           ],
                         ),
-                    ],
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: WeeklyTrendChart(
+                            weeklyTotalsMinor: weeklyTrend,
+                            color: colors.spend,
+                            currencyCode: currencyCode,
+                            height: null,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  WeeklyTrendChart(
-                    weeklyTotalsMinor: weeklyTrend,
-                    color: colors.spend,
-                  ),
-                ],
+                ),
               ),
-            ),
+              SpendComparisonCard(currencyCode: currencyCode),
+            ],
           ),
           const SizedBox(height: 20),
           Row(
