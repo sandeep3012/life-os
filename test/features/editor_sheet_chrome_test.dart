@@ -6,6 +6,9 @@ import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/core/widgets/compact_editor_sheet.dart';
+import 'package:life_manager/features/finance/presentation/screens/category_management_screen.dart';
+import 'package:life_manager/features/finance/presentation/widgets/quick_add_budget_sheet.dart';
+import 'package:life_manager/features/documents/presentation/widgets/quick_add_document_details_sheet.dart';
 import 'package:life_manager/features/finance/presentation/widgets/quick_add_account_sheet.dart';
 import 'package:life_manager/features/finance/presentation/widgets/quick_add_bill_sheet.dart';
 import 'package:life_manager/features/finance/presentation/widgets/quick_add_recurring_transaction_sheet.dart';
@@ -95,6 +98,24 @@ void main() {
       context,
       accountTypes: accountTypes,
       currencySymbol: '₹',
+    ),
+    'category': (context) async => showCategoryEditorSheet(context),
+    // Opened from the add-task / add-habit sheets and the planner categories
+    // screens with the kind fixed, which hides the Expense/Income toggle but
+    // must keep the same chrome.
+    'task category': (context) async =>
+        showCategoryEditorSheet(context, fixedKind: 'task'),
+    'habit category': (context) async =>
+        showCategoryEditorSheet(context, fixedKind: 'habit'),
+    'budget': (context) async => showQuickAddBudgetSheet(
+      context,
+      categories: const [],
+      currencySymbol: '₹',
+    ),
+    'document details': (context) async => showQuickAddDocumentDetailsSheet(
+      context,
+      suggestedTitle: 'Passport',
+      folders: const [],
     ),
     'goal': (context) async => showQuickAddGoalSheet(
       context,

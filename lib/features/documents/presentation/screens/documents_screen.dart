@@ -20,6 +20,7 @@ import '../widgets/document_tile.dart';
 import '../widgets/folder_tile.dart';
 import '../widgets/pinned_document_card.dart';
 import '../widgets/quick_add_document_details_sheet.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
 
 class DocumentsScreen extends ConsumerStatefulWidget {
   const DocumentsScreen({super.key});
@@ -448,9 +449,8 @@ Future<_CreateFolderResult?> _showCreateFolderSheet(
   BuildContext context, {
   Folder? initial,
 }) {
-  return showModalBottomSheet<_CreateFolderResult>(
+  return showCompactEditorSheet<_CreateFolderResult>(
     context: context,
-    isScrollControlled: true,
     builder: (ctx) => _CreateFolderSheet(initial: initial),
   );
 }
@@ -489,22 +489,12 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
     final theme = Theme.of(context);
     final colors = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
+    return CompactEditorSheet(
+      title: widget.initial != null ? 'Edit folder' : 'New folder',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            widget.initial != null ? 'Edit folder' : 'New folder',
-            style: theme.textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
           TextField(
             controller: _controller,
             autofocus: true,

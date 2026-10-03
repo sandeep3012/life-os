@@ -436,24 +436,177 @@ class AppFloatingNavBar extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            children: [
-              for (var i = 0; i < destinations.length; i++) ...[
-                // The add button sits in the middle of the run, matching the
-                // comp's Home · Finance · [+] · Planner · Calendar order.
-                if (onAdd != null && i == (destinations.length / 2).floor())
-                  _AddButton(onTap: onAdd!, rotated: addMenuOpen),
-                Expanded(
-                  child: _NavButton(
-                    destination: destinations[i],
-                    selected: i == selectedIndex,
-                    activeColor: scheme.primary,
-                    inactiveColor: colors.text3,
-                    onTap: () => onSelected(i),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Mirrors the Row below: the add button (50 + 6 either side)
+              // takes its slice out of the middle, and the destinations share
+              // the rest equally — so each tab's centre is known without
+              // measuring, which is what lets the highlight slide between them.
+              final addWidth = onAdd == null ? 0.0 : _AddButton.slotWidth;
+              final itemWidth =
+                  (constraints.maxWidth - addWidth) / destinations.length;
+              final addAt = (destinations.length / 2).floor();
+              double centreOf(int i) =>
+                  (onAdd != null && i >= addAt ? addWidth : 0) +
+                  i * itemWidth +
+                  itemWidth / 2;
+
+              return Stack(
+                children: [
+                  _NavHighlight(
+                    index: selectedIndex,
+                    centre: centreOf(selectedIndex),
+                    top: _NavButton.iconCentreY(constraints.maxHeight) -
+                        _NavHighlight.height / 2,
+                    color: colors.accentSoft,
                   ),
-                ),
-              ],
-            ],
+                  Row(
+                    children: [
+                      for (var i = 0; i < destinations.length; i++) ...[
+                        // The add button sits in the middle of the run,
+                        // matching the comp's Home · Finance · [+] · Planner ·
+                        // Calendar order.
+                        if (onAdd != null && i == addAt)
+                          _AddButton(onTap: onAdd!, rotated: addMenuOpen),
+                        Expanded(
+                          child: _NavButton(
+                            destination: destinations[i],
+                            selected: i == selectedIndex,
+                            activeColor: scheme.primary,
+                            inactiveColor: colors.text3,
+                            onTap: () => onSelected(i),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The soft capsule behind the selected tab's icon.
+///
+/// On a tab change it *stretches*: the edge facing the new tab sets off first
+/// and the trailing edge follows a beat later, so the capsule lengthens across
+/// the gap and then contracts onto the destination instead of sliding as a
+/// rigid block. A resize or a first build snaps without animating — only a
+/// change of [index] is a tab change.
+class _NavHighlight extends StatefulWidget {
+  const _NavHighlight({
+    required this.index,
+    required this.centre,
+    required this.top,
+    required this.color,
+  });
+
+  static const double width = 44;
+  static const double height = 28;
+
+  /// Which tab is selected; a change here (not of [centre]) triggers the
+  /// stretch.
+  final int index;
+
+  /// The selected tab's horizontal centre, in the bar's own coordinates.
+  final double centre;
+  final double top;
+  final Color color;
+
+  @override
+  State<_NavHighlight> createState() => _NavHighlightState();
+}
+
+class _NavHighlightState extends State<_NavHighlight>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: AppMotion.navSwitch,
+    value: 1,
+  );
+  late double _from = widget.centre;
+  late double _to = widget.centre;
+
+  @override
+  void didUpdateWidget(_NavHighlight old) {
+    super.didUpdateWidget(old);
+    if (widget.index != old.index) {
+      // Start from wherever the capsule currently is, so a second tap
+      // mid-flight redirects it rather than jumping back to the old tab.
+      final (left, right) = _edgesAt(
+        _controller.value,
+        MediaQuery.of(context).disableAnimations,
+      );
+      _from = (left + right) / 2;
+      _to = widget.centre;
+      _controller.duration = AppMotion.of(context, AppMotion.navSwitch);
+      _controller.forward(from: 0);
+    } else if (widget.centre != old.centre) {
+      _from = _to = widget.centre;
+      _controller.value = 1;
+    }
+  }
+
+  /// The capsule's left and right edges at animation time [t]. The edge facing
+  /// the destination leads and the other trails, which is the stretch.
+  (double, double) _edgesAt(double t, bool reduced) {
+    final lead = reduced
+        ? Curves.linear
+        : const Interval(0, 0.65, curve: AppMotion.emphasized);
+    final trail = reduced
+        ? Curves.linear
+        : const Interval(0.2, 1, curve: AppMotion.emphasized);
+    const half = _NavHighlight.width / 2;
+    final movingRight = _to >= _from;
+    final leftT = (movingRight ? trail : lead).transform(t);
+    final rightT = (movingRight ? lead : trail).transform(t);
+    return (
+      (_from - half) + ((_to - half) - (_from - half)) * leftT,
+      (_from + half) + ((_to + half) - (_from + half)) * rightT,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduced = MediaQuery.of(context).disableAnimations;
+
+    return Positioned.fill(
+      child: ExcludeSemantics(
+        child: IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              final (left, right) = _edgesAt(_controller.value, reduced);
+
+              return Stack(
+                children: [
+                  Positioned(
+                    left: left,
+                    top: widget.top,
+                    width: right - left,
+                    height: _NavHighlight.height,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: widget.color,
+                        borderRadius: BorderRadius.circular(
+                          _NavHighlight.height / 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -471,6 +624,10 @@ class AppFloatingNavBar extends StatelessWidget {
 /// (`AppTheme.floatingActionButtonTheme`), so this matches them.
 class _AddButton extends StatelessWidget {
   const _AddButton({required this.onTap, required this.rotated});
+
+  /// The button's 50px plus the 6px of padding either side — the width it takes
+  /// out of the bar, which the tab highlight needs to find each tab's centre.
+  static const double slotWidth = 62;
 
   final VoidCallback onTap;
   final bool rotated;
@@ -507,7 +664,10 @@ class _AddButton extends StatelessWidget {
 /// A single nav item. Icons 23px, labels 10px w700, accent when active and the
 /// third text tone otherwise. The press response and its haptic come from
 /// [Tappable], which carries the comp's universal `scale(.94)` behaviour.
-class _NavButton extends StatelessWidget {
+///
+/// Becoming selected pops the icon (dips, overshoots, settles) and cross-fades
+/// the icon and label colour, in step with the highlight arriving behind it.
+class _NavButton extends StatefulWidget {
   const _NavButton({
     required this.destination,
     required this.selected,
@@ -516,6 +676,14 @@ class _NavButton extends StatelessWidget {
     required this.onTap,
   });
 
+  /// Icon (23) + gap (3) + a 10px label's line, as laid out below.
+  static const double _contentHeight = 39;
+
+  /// Where the icon's centre sits vertically in a bar [barHeight] tall — the
+  /// column is centred, so the highlight uses this to sit behind the icon.
+  static double iconCentreY(double barHeight) =>
+      (barHeight - _contentHeight) / 2 + 23 / 2;
+
   final AppNavDestination destination;
   final bool selected;
   final Color activeColor;
@@ -523,34 +691,104 @@ class _NavButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_NavButton> createState() => _NavButtonState();
+}
+
+class _NavButtonState extends State<_NavButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pop = AnimationController(
+    vsync: this,
+    duration: AppMotion.navSwitch,
+    value: 1,
+  );
+
+  static final _scale = TweenSequence<double>([
+    TweenSequenceItem(
+      tween: Tween(begin: 0.8, end: 1.16).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 55,
+    ),
+    TweenSequenceItem(
+      tween: Tween(begin: 1.16, end: 1.0).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 45,
+    ),
+  ]);
+  static final _lift = TweenSequence<double>([
+    TweenSequenceItem(
+      tween: Tween(begin: 3.0, end: -3.0).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 55,
+    ),
+    TweenSequenceItem(
+      tween: Tween(begin: -3.0, end: 0.0).chain(CurveTween(curve: Curves.easeOut)),
+      weight: 45,
+    ),
+  ]);
+
+  @override
+  void didUpdateWidget(_NavButton old) {
+    super.didUpdateWidget(old);
+    if (widget.selected &&
+        !old.selected &&
+        !MediaQuery.of(context).disableAnimations) {
+      _pop.duration = AppMotion.navSwitch;
+      _pop.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pop.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final color = selected ? activeColor : inactiveColor;
+    final color = widget.selected ? widget.activeColor : widget.inactiveColor;
+    final fade = AppMotion.of(context, AppMotion.navColor);
 
     return Tappable(
-      onTap: onTap,
+      onTap: widget.onTap,
       // The handoff's haptics map doesn't name tab switching; selection is the
       // closest listed intent (it covers segmented-control switches).
       haptic: TapHaptic.selection,
-      semanticLabel: destination.label,
-      selected: selected,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            selected ? destination.selectedIcon : destination.icon,
-            size: 23,
-            color: color,
-          ),
-          const SizedBox(height: 3),
-          Text(
-            destination.label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ],
+      semanticLabel: widget.destination.label,
+      selected: widget.selected,
+      child: TweenAnimationBuilder<Color?>(
+        tween: ColorTween(end: color),
+        duration: fade,
+        builder: (context, animated, _) {
+          final tint = animated ?? color;
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedBuilder(
+                animation: _pop,
+                builder: (context, child) => Transform.translate(
+                  offset: Offset(0, _lift.evaluate(_pop)),
+                  child: Transform.scale(
+                    scale: _scale.evaluate(_pop),
+                    child: child,
+                  ),
+                ),
+                child: Icon(
+                  widget.selected
+                      ? widget.destination.selectedIcon
+                      : widget.destination.icon,
+                  size: 23,
+                  color: tint,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                widget.destination.label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: tint,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

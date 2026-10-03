@@ -4,6 +4,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
+import '../../../../core/widgets/inline_add_button.dart';
 import '../../application/finance_providers.dart';
 
 class AccountTypeManagementScreen extends ConsumerWidget {
@@ -13,32 +15,57 @@ class AccountTypeManagementScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final types = ref.watch(accountTypesProvider).value ?? const [];
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Account types')),
-      body: types.isEmpty
-          ? const Center(child: Text('No account types yet.'))
-          : ListView.separated(
-              padding: const EdgeInsets.all(20),
-              itemCount: types.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final t = types[index];
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(child: IconOrEmoji(value: t.icon)),
-                  title: Text(t.name),
-                  onTap: () => _openEditor(context, ref, existing: t),
-                  trailing: IconButton(
-                    icon: const Icon(LucideIcons.trash2),
-                    onPressed: () => _delete(context, ref, t),
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openEditor(context, ref),
-        icon: const Icon(LucideIcons.plus),
-        label: const Text('Add type'),
+    return InlineAddHost(
+      builder: (context, inlineAddVisible, onInlineAddVisibility) => Scaffold(
+        appBar: AppBar(title: const Text('Account types')),
+        body: types.isEmpty
+            ? const Center(child: Text('No account types yet.'))
+            : ListView.separated(
+                // The extended FAB floats over the list, so without room below
+                // the last row its trash button sits underneath it and can't be
+                // tapped. 20 (page margin) + 56 (FAB) + 16 (FAB margin) + 8, plus the
+                // bottom inset, which the FAB is lifted by but the list's body isn't.
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  20,
+                  20,
+                  100 + MediaQuery.viewPaddingOf(context).bottom,
+                ),
+                itemCount: types.length + 1,
+                separatorBuilder: (_, index) => index == types.length - 1
+                    ? const SizedBox.shrink()
+                    : const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  if (index == types.length) {
+                    return InlineAddButton(
+                      label: 'Add account type',
+                      onTap: () => _openEditor(context, ref),
+                      onVisibilityChanged: onInlineAddVisibility,
+                      padding: const EdgeInsets.only(top: 16),
+                    );
+                  }
+                  final t = types[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(child: IconOrEmoji(value: t.icon)),
+                    title: Text(t.name),
+                    onTap: () => _openEditor(context, ref, existing: t),
+                    trailing: IconButton(
+                      icon: const Icon(LucideIcons.trash2),
+                      onPressed: () => _delete(context, ref, t),
+                    ),
+                  );
+                },
+              ),
+        // One add affordance at a time: the dashed row at the end of the list
+        // while it is on screen, the FAB once it has scrolled away.
+        floatingActionButton: inlineAddVisible
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () => _openEditor(context, ref),
+                icon: const Icon(LucideIcons.plus),
+                label: const Text('Add type'),
+              ),
       ),
     );
   }
@@ -48,9 +75,8 @@ class AccountTypeManagementScreen extends ConsumerWidget {
     WidgetRef ref, {
     AccountType? existing,
   }) async {
-    final result = await showModalBottomSheet<_AccountTypeEditorResult>(
+    final result = await showCompactEditorSheet<_AccountTypeEditorResult>(
       context: context,
-      isScrollControlled: true,
       builder: (context) => _AccountTypeEditorSheet(existing: existing),
     );
     if (result == null) return;
@@ -160,116 +186,104 @@ class _AccountTypeEditorSheetState extends State<_AccountTypeEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _isEditing ? 'Edit account type' : 'New account type',
-              style: theme.textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              autofocus: true,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(hintText: 'Type name'),
-            ),
-            const SizedBox(height: 12),
-            Text('Icon', style: theme.textTheme.labelMedium),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final name in pickableIcons)
-                  InkWell(
-                    onTap: () => setState(() => _icon = name),
-                    borderRadius: BorderRadius.circular(999),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: _icon == name
-                            ? theme.colorScheme.primaryContainer
-                            : Colors.transparent,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: _icon == name
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.outlineVariant,
-                          width: _icon == name ? 2 : 1,
-                        ),
-                      ),
-                      child: Icon(
-                        resolveIcon(name),
-                        size: 20,
+    return CompactEditorSheet(
+      title: _isEditing ? 'Edit account type' : 'New account type',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _nameController,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(hintText: 'Type name'),
+          ),
+          const SizedBox(height: 12),
+          Text('Icon', style: theme.textTheme.labelMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final name in pickableIcons)
+                InkWell(
+                  onTap: () => setState(() => _icon = name),
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _icon == name
+                          ? theme.colorScheme.primaryContainer
+                          : Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(
                         color: _icon == name
                             ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
+                            : theme.colorScheme.outlineVariant,
+                        width: _icon == name ? 2 : 1,
                       ),
                     ),
+                    child: Icon(
+                      resolveIcon(name),
+                      size: 20,
+                      color: _icon == name
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text('Colorful icons', style: theme.textTheme.labelMedium),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final emoji in pickableEmojis)
-                  InkWell(
-                    onTap: () => setState(() => _icon = emoji),
-                    borderRadius: BorderRadius.circular(999),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('Colorful icons', style: theme.textTheme.labelMedium),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final emoji in pickableEmojis)
+                InkWell(
+                  onTap: () => setState(() => _icon = emoji),
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _icon == emoji
+                          ? theme.colorScheme.primaryContainer
+                          : Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(
                         color: _icon == emoji
-                            ? theme.colorScheme.primaryContainer
-                            : Colors.transparent,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: _icon == emoji
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.outlineVariant,
-                          width: _icon == emoji ? 2 : 1,
-                        ),
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.outlineVariant,
+                        width: _icon == emoji ? 2 : 1,
                       ),
-                      child: EmojiGlyph(emoji),
                     ),
+                    child: EmojiGlyph(emoji),
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _nameController.text.trim().isEmpty
-                    ? null
-                    : () => Navigator.of(context).pop(
-                        _AccountTypeEditorResult(
-                          name: _nameController.text.trim(),
-                          icon: _icon,
-                        ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _nameController.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.of(context).pop(
+                      _AccountTypeEditorResult(
+                        name: _nameController.text.trim(),
+                        icon: _icon,
                       ),
-                child: Text(_isEditing ? 'Save changes' : 'Add type'),
-              ),
+                    ),
+              child: Text(_isEditing ? 'Save changes' : 'Add type'),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

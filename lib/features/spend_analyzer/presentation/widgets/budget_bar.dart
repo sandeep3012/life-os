@@ -69,8 +69,13 @@ class BudgetBar extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: fillFraction.toDouble(),
                           minHeight: 10,
+                          // outlineVariant, as the Learn and Health bars use.
+                          // surfaceContainerHighest maps to `raised` in this
+                          // theme — the card's own white — so the track vanished
+                          // and only the limit tick showed; surfaceContainer is
+                          // too faint on some palettes (Indigo light is 1.04:1).
                           backgroundColor:
-                              Theme.of(context).colorScheme.surfaceContainerHighest,
+                              Theme.of(context).colorScheme.outlineVariant,
                           valueColor: AlwaysStoppedAnimation(color),
                         ),
                       ),

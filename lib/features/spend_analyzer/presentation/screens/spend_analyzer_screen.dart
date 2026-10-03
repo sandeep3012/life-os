@@ -17,7 +17,8 @@ class SpendAnalyzerScreen extends ConsumerStatefulWidget {
   const SpendAnalyzerScreen({super.key});
 
   @override
-  ConsumerState<SpendAnalyzerScreen> createState() => _SpendAnalyzerScreenState();
+  ConsumerState<SpendAnalyzerScreen> createState() =>
+      _SpendAnalyzerScreenState();
 }
 
 class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
@@ -28,6 +29,9 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
     final theme = Theme.of(context);
     final colors = context.appColors;
     final month = ref.watch(selectedAnalyzerMonthProvider);
+    // "Oct 2026": the screen browses months, so nothing here can say "this
+    // month" — it would be wrong for every month but the current one.
+    final monthLabel = DateFormat.yMMM().format(month);
     final total = ref.watch(monthExpenseTotalMinorProvider);
     final previousTotal = ref.watch(previousMonthExpenseTotalMinorProvider);
     final breakdown = ref.watch(categoryBreakdownProvider);
@@ -36,7 +40,9 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
     final paymentModeBreakdown = ref.watch(paymentModeBreakdownProvider);
     final currencyCode = ref.watch(settingsProvider).currencyCode;
 
-    final delta = previousTotal == 0 ? 0.0 : (total - previousTotal) / previousTotal;
+    final delta = previousTotal == 0
+        ? 0.0
+        : (total - previousTotal) / previousTotal;
 
     return Scaffold(
       appBar: AppBar(
@@ -79,7 +85,11 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
                             ),
                           ),
                           Text(
-                            formatMinor(total, currencyCode: currencyCode, showDecimals: false),
+                            formatMinor(
+                              total,
+                              currencyCode: currencyCode,
+                              showDecimals: false,
+                            ),
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontFamily: AppFonts.serif,
                             ),
@@ -90,7 +100,9 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
                         Row(
                           children: [
                             Icon(
-                              delta >= 0 ? LucideIcons.arrowUp : LucideIcons.arrowDown,
+                              delta >= 0
+                                  ? LucideIcons.arrowUp
+                                  : LucideIcons.arrowDown,
                               size: 14,
                               color: delta >= 0 ? colors.critical : colors.good,
                             ),
@@ -101,7 +113,9 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
                                 fontFeatures: AppFonts.tabular,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: delta >= 0 ? colors.critical : colors.good,
+                                color: delta >= 0
+                                    ? colors.critical
+                                    : colors.good,
                               ),
                             ),
                           ],
@@ -109,7 +123,10 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  WeeklyTrendChart(weeklyTotalsMinor: weeklyTrend, color: colors.spend),
+                  WeeklyTrendChart(
+                    weeklyTotalsMinor: weeklyTrend,
+                    color: colors.spend,
+                  ),
                 ],
               ),
             ),
@@ -147,14 +164,15 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: breakdown.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Text('No spending logged for this month yet.'),
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Text('No spending logged for $monthLabel yet.'),
                     )
                   : CategoryDonutChart(
                       breakdown: breakdown,
                       totalMinor: total,
                       currencyCode: currencyCode,
+                      monthLabel: monthLabel,
                       showAmounts: _showAmounts,
                     ),
             ),
@@ -173,7 +191,10 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
                   : Column(
                       children: [
                         for (final progress in budgetsProgress)
-                          BudgetBar(progress: progress, currencyCode: currencyCode),
+                          BudgetBar(
+                            progress: progress,
+                            currencyCode: currencyCode,
+                          ),
                       ],
                     ),
             ),
@@ -185,11 +206,16 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: paymentModeBreakdown.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Text('No payment mode tagged for this month yet.'),
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        'No payment mode tagged for $monthLabel yet.',
+                      ),
                     )
-                  : PaymentModeBreakdown(breakdown: paymentModeBreakdown, currencyCode: currencyCode),
+                  : PaymentModeBreakdown(
+                      breakdown: paymentModeBreakdown,
+                      currencyCode: currencyCode,
+                    ),
             ),
           ),
         ],

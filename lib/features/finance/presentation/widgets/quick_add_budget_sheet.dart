@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
 import 'account_option_row.dart' show dropdownIconGap;
 import '../../application/finance_providers.dart';
 import '../screens/category_management_screen.dart';
@@ -31,9 +32,8 @@ Future<QuickAddBudgetResult?> showQuickAddBudgetSheet(
   required String currencySymbol,
   Budget? initial,
 }) {
-  return showModalBottomSheet<QuickAddBudgetResult>(
+  return showCompactEditorSheet<QuickAddBudgetResult>(
     context: context,
-    isScrollControlled: true,
     builder: (context) => _QuickAddBudgetSheet(
       categories: categories,
       currencySymbol: currencySymbol,
@@ -47,14 +47,19 @@ Future<QuickAddBudgetResult?> showQuickAddBudgetSheet(
 const _addCategoryValue = '__add_category__';
 
 class _QuickAddBudgetSheet extends ConsumerStatefulWidget {
-  const _QuickAddBudgetSheet({required this.categories, required this.currencySymbol, this.initial});
+  const _QuickAddBudgetSheet({
+    required this.categories,
+    required this.currencySymbol,
+    this.initial,
+  });
 
   final List<Category> categories;
   final String currencySymbol;
   final Budget? initial;
 
   @override
-  ConsumerState<_QuickAddBudgetSheet> createState() => _QuickAddBudgetSheetState();
+  ConsumerState<_QuickAddBudgetSheet> createState() =>
+      _QuickAddBudgetSheetState();
 }
 
 class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
@@ -65,7 +70,8 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
   );
   late List<Category> _categories = List.of(widget.categories);
   late String? _categoryId =
-      widget.initial?.categoryId ?? (_categories.isEmpty ? null : _categories.first.id);
+      widget.initial?.categoryId ??
+      (_categories.isEmpty ? null : _categories.first.id);
   late String _period = widget.initial?.period ?? 'monthly';
   late DateTime _effectiveMonth = _startOfMonth(DateTime.now());
 
@@ -110,12 +116,14 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
       if (mounted) setState(() => _categoryFieldEpoch++);
       return;
     }
-    final category = await ref.read(financeControllerProvider).addCategory(
-      name: result.name,
-      icon: result.icon,
-      colorHex: result.colorHex,
-      kind: result.kind,
-    );
+    final category = await ref
+        .read(financeControllerProvider)
+        .addCategory(
+          name: result.name,
+          icon: result.icon,
+          colorHex: result.colorHex,
+          kind: result.kind,
+        );
     if (!mounted) return;
     setState(() {
       _categories = [..._categories, category];
@@ -127,25 +135,15 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
   @override
   Widget build(BuildContext context) {
     final canSubmit =
-        _categoryId != null && (double.tryParse(_limitController.text.trim()) ?? 0) > 0;
+        _categoryId != null &&
+        (double.tryParse(_limitController.text.trim()) ?? 0) > 0;
 
-    return SingleChildScrollView(
-      child: Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
+    return CompactEditorSheet(
+      title: _isEditing ? 'Edit budget' : 'New budget',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _isEditing ? 'Edit budget' : 'New budget',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             // DropdownButtonFormField is uncontrolled (it only reads
             // `initialValue` on first build) — keying on the value
@@ -193,7 +191,9 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
           TextField(
             controller: _limitController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(hintText: 'Limit (${widget.currencySymbol})'),
+            decoration: InputDecoration(
+              hintText: 'Limit (${widget.currencySymbol})',
+            ),
           ),
           const SizedBox(height: 12),
           SegmentedButton<String>(
@@ -212,7 +212,11 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
               decoration: const InputDecoration(labelText: 'Effective from'),
               child: Row(
                 children: [
-                  Icon(LucideIcons.calendarDays, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Icon(
+                    LucideIcons.calendarDays,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
                   Text(DateFormat.yMMMM().format(_effectiveMonth)),
                 ],
@@ -247,7 +251,6 @@ class _QuickAddBudgetSheetState extends ConsumerState<_QuickAddBudgetSheet> {
             ),
           ),
         ],
-      ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/app_database_provider.dart';
+import '../../../../core/widgets/inline_add_button.dart';
 import '../../../finance/application/finance_providers.dart';
 import '../../../finance/presentation/screens/category_management_screen.dart';
 import '../../../habits/application/habits_providers.dart';
@@ -20,38 +21,51 @@ class PlannerCategoriesScreen extends ConsumerWidget {
     final categories = kind == 'task'
         ? ref.watch(taskCategoriesProvider)
         : ref.watch(habitCategoriesProvider);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(kind == 'task' ? 'Task categories' : 'Habit categories'),
-      ),
-      body: categories.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) =>
-            const Center(child: Text('Could not load categories.')),
-        data: (items) => items.isEmpty
-            ? const Center(child: Text('No categories yet. Add one below.'))
-            : ListView.builder(
-                padding: const EdgeInsets.only(bottom: 100),
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final category = items[index];
-                  return ListTile(
-                    title: Text(category.name),
-                    subtitle: const Text('Tap to edit'),
-                    onTap: () => _edit(context, ref, category),
-                    trailing: IconButton(
-                      tooltip: 'Delete ${category.name}',
-                      icon: const Icon(LucideIcons.trash2),
-                      onPressed: () => _delete(context, ref, category),
-                    ),
-                  );
-                },
+    return InlineAddHost(
+      builder: (context, inlineAddVisible, onInlineAddVisibility) => Scaffold(
+        appBar: AppBar(
+          title: Text(kind == 'task' ? 'Task categories' : 'Habit categories'),
+        ),
+        body: categories.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, _) =>
+              const Center(child: Text('Could not load categories.')),
+          data: (items) => items.isEmpty
+              ? const Center(child: Text('No categories yet. Add one below.'))
+              : ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 100),
+                  itemCount: items.length + 1,
+                  itemBuilder: (context, index) {
+                    if (index == items.length) {
+                      return InlineAddButton(
+                        label: 'Add category',
+                        onTap: () => _edit(context, ref, null),
+                        onVisibilityChanged: onInlineAddVisibility,
+                      );
+                    }
+                    final category = items[index];
+                    return ListTile(
+                      title: Text(category.name),
+                      subtitle: const Text('Tap to edit'),
+                      onTap: () => _edit(context, ref, category),
+                      trailing: IconButton(
+                        tooltip: 'Delete ${category.name}',
+                        icon: const Icon(LucideIcons.trash2),
+                        onPressed: () => _delete(context, ref, category),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        // One add affordance at a time: the dashed row at the end of the list
+        // while it is on screen, the FAB once it has scrolled away.
+        floatingActionButton: inlineAddVisible
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () => _edit(context, ref, null),
+                icon: const Icon(LucideIcons.plus),
+                label: const Text('Add category'),
               ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _edit(context, ref, null),
-        icon: const Icon(LucideIcons.plus),
-        label: const Text('Add category'),
       ),
     );
   }

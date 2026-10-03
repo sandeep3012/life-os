@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/widgets/inline_add_button.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../../../core/utils/category_color.dart';
 import '../../../../core/widgets/empty_state_message.dart';
@@ -93,29 +94,54 @@ class RecurringTransactionsScreen extends ConsumerWidget {
     final accounts = ref.watch(accountsProvider).value ?? const [];
     final accountById = {for (final a in accounts) a.id: a};
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Recurring transactions')),
-      body: recurring.isEmpty
-          ? const _EmptyState()
-          : ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: recurring.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final schedule = recurring[index];
-                return _RecurringTile(
-                  schedule: schedule,
-                  category: categoryById[schedule.categoryId],
-                  accountName:
-                      accountById[schedule.accountId]?.name ??
-                      'Unknown account',
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => openSheet(context, ref),
-        icon: const Icon(LucideIcons.plus),
-        label: const Text('New recurring'),
+    return InlineAddHost(
+      builder: (context, inlineAddVisible, onInlineAddVisibility) => Scaffold(
+        appBar: AppBar(title: const Text('Recurring transactions')),
+        body: recurring.isEmpty
+            ? const _EmptyState()
+            : ListView.separated(
+                // The extended FAB floats over the list, so without room below the last
+                // row its trailing buttons sit underneath it and can't be tapped.
+                // 16 (page margin) + 56 (FAB) + 16 (FAB margin) + 12, plus the bottom
+                // inset, which the FAB is lifted by but the list's body isn't.
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  8,
+                  16,
+                  100 + MediaQuery.viewPaddingOf(context).bottom,
+                ),
+                itemCount: recurring.length + 1,
+                separatorBuilder: (_, index) => index == recurring.length - 1
+                    ? const SizedBox.shrink()
+                    : const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  if (index == recurring.length) {
+                    return InlineAddButton(
+                      label: 'Add recurring',
+                      onTap: () => openSheet(context, ref),
+                      onVisibilityChanged: onInlineAddVisibility,
+                      padding: const EdgeInsets.only(top: 16),
+                    );
+                  }
+                  final schedule = recurring[index];
+                  return _RecurringTile(
+                    schedule: schedule,
+                    category: categoryById[schedule.categoryId],
+                    accountName:
+                        accountById[schedule.accountId]?.name ??
+                        'Unknown account',
+                  );
+                },
+              ),
+        // One add affordance at a time: the dashed row at the end of the list
+        // while it is on screen, the FAB once it has scrolled away.
+        floatingActionButton: inlineAddVisible
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () => openSheet(context, ref),
+                icon: const Icon(LucideIcons.plus),
+                label: const Text('New recurring'),
+              ),
       ),
     );
   }

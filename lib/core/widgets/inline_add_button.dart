@@ -125,3 +125,37 @@ class _InlineAddButtonState extends State<InlineAddButton> {
     );
   }
 }
+
+/// Tracks whether an [InlineAddButton] is on screen, for screens that would
+/// otherwise have to become stateful just to hide their FAB.
+///
+/// Wrap the [Scaffold] in this, pass `onVisibilityChanged` to the list's
+/// [InlineAddButton], and give the Scaffold a `floatingActionButton` only while
+/// `inlineAddVisible` is false — one add affordance at a time. The flag starts
+/// false, so a screen whose list has no inline row (empty state) keeps its FAB.
+class InlineAddHost extends StatefulWidget {
+  const InlineAddHost({super.key, required this.builder});
+
+  final Widget Function(
+    BuildContext context,
+    bool inlineAddVisible,
+    ValueChanged<bool> onVisibilityChanged,
+  )
+  builder;
+
+  @override
+  State<InlineAddHost> createState() => _InlineAddHostState();
+}
+
+class _InlineAddHostState extends State<InlineAddHost> {
+  bool _visible = false;
+
+  void _onVisibility(bool visible) {
+    if (!mounted || _visible == visible) return;
+    setState(() => _visible = visible);
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      widget.builder(context, _visible, _onVisibility);
+}

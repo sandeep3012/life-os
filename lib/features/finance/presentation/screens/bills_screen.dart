@@ -8,6 +8,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/widgets/empty_state_message.dart';
+import '../../../../core/widgets/inline_add_button.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../../../core/utils/category_color.dart';
@@ -96,26 +97,51 @@ class BillsScreen extends ConsumerWidget {
     // watches accounts for its rows, which is why only this one was affected.
     ref.watch(accountsProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Bills')),
-      body: bills.isEmpty
-          ? const _EmptyState()
-          : ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: bills.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final bill = bills[index];
-                return _BillTile(
-                  bill: bill,
-                  category: categoryById[bill.categoryId],
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => openSheet(context, ref),
-        icon: const Icon(LucideIcons.plus),
-        label: const Text('New bill'),
+    return InlineAddHost(
+      builder: (context, inlineAddVisible, onInlineAddVisibility) => Scaffold(
+        appBar: AppBar(title: const Text('Bills')),
+        body: bills.isEmpty
+            ? const _EmptyState()
+            : ListView.separated(
+                // The extended FAB floats over the list, so without room below the last
+                // row its trailing buttons sit underneath it and can't be tapped.
+                // 16 (page margin) + 56 (FAB) + 16 (FAB margin) + 12, plus the bottom
+                // inset, which the FAB is lifted by but the list's body isn't.
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  8,
+                  16,
+                  100 + MediaQuery.viewPaddingOf(context).bottom,
+                ),
+                itemCount: bills.length + 1,
+                separatorBuilder: (_, index) => index == bills.length - 1
+                    ? const SizedBox.shrink()
+                    : const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  if (index == bills.length) {
+                    return InlineAddButton(
+                      label: 'Add bill',
+                      onTap: () => openSheet(context, ref),
+                      onVisibilityChanged: onInlineAddVisibility,
+                      padding: const EdgeInsets.only(top: 16),
+                    );
+                  }
+                  final bill = bills[index];
+                  return _BillTile(
+                    bill: bill,
+                    category: categoryById[bill.categoryId],
+                  );
+                },
+              ),
+        // One add affordance at a time: the dashed row at the end of the list
+        // while it is on screen, the FAB once it has scrolled away.
+        floatingActionButton: inlineAddVisible
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () => openSheet(context, ref),
+                icon: const Icon(LucideIcons.plus),
+                label: const Text('New bill'),
+              ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../tags/application/tags_providers.dart';
 import '../../../../core/widgets/collection_layout.dart';
+import '../../../../core/widgets/inline_add_button.dart';
 import '../../../../app/router/app_sidebar.dart';
 import '../../application/notes_providers.dart';
 import '../widgets/note_card.dart';
@@ -20,6 +21,21 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   final _searchController = TextEditingController();
   String? _selectedFolderId;
   String? _selectedTagId;
+
+  /// Whether the list's inline "Add note" row is on screen; the FAB shows only
+  /// while it is not — the same one-affordance rule as the Planner.
+  bool _inlineAddVisible = false;
+
+  void _onInlineAddVisibility(bool visible) {
+    if (!mounted || _inlineAddVisible == visible) return;
+    setState(() => _inlineAddVisible = visible);
+  }
+
+  void _addNote() => Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => NoteEditorScreen(initialFolderId: _selectedFolderId),
+    ),
+  );
 
   @override
   void initState() {
@@ -163,6 +179,12 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   layout: layout,
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
                   itemCount: filtered.length,
+                  footer: InlineAddButton(
+                    label: 'Add note',
+                    onTap: _addNote,
+                    onVisibilityChanged: _onInlineAddVisibility,
+                    padding: EdgeInsets.zero,
+                  ),
                   itemBuilder: (context, index) {
                     final note = filtered[index];
                     return NoteCard(
@@ -182,16 +204,15 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) =>
-                NoteEditorScreen(initialFolderId: _selectedFolderId),
-          ),
-        ),
-        icon: const Icon(LucideIcons.plus),
-        label: const Text('New note'),
-      ),
+      // One add affordance at a time: the dashed row at the end of the list
+      // while it is on screen, the FAB once it has scrolled away.
+      floatingActionButton: _inlineAddVisible
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _addNote,
+              icon: const Icon(LucideIcons.plus),
+              label: const Text('New note'),
+            ),
     );
   }
 }

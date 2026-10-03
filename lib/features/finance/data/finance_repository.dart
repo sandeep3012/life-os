@@ -125,21 +125,59 @@ class FinanceRepository {
     )..where((c) => c.id.equals(id))).getSingle();
   }
 
-  /// Rows referencing this category (transactions, budget versions) — the
-  /// gate for whether it can be deleted.
-  Future<int> categoryUsageCount(String categoryId) async {
-    final txnCount = await (_db.select(
-      _db.transactions,
-    )..where((t) => t.categoryId.equals(categoryId))).get().then((r) => r.length);
-    final budgetCount = await (_db.select(
-      _db.budgets,
-    )..where((b) => b.categoryId.equals(categoryId))).get().then((r) => r.length);
-    return txnCount + budgetCount;
+  /// Transactions recorded against this category — the only thing that blocks
+  /// deleting it, because they're the user's own data.
+  ///
+  /// Budgets are deliberately *not* counted. A budget is stored as a series of
+  /// versions, and deleting one from the UI leaves a `active = false` tombstone
+  /// behind whenever it had earlier history. Those rows are invisible in the
+  /// Budgets screen, so counting them made a category refuse to delete with
+  /// "1 in use" while no transaction or budget could be found anywhere.
+  Future<int> categoryTransactionCount(String categoryId) async {
+    final count = _db.transactions.id.count();
+    final query = _db.selectOnly(_db.transactions)
+      ..addColumns([count])
+      ..where(_db.transactions.categoryId.equals(categoryId));
+    return (await query.map((row) => row.read(count)).getSingle()) ?? 0;
   }
 
-  /// Only safe once [categoryUsageCount] is confirmed zero.
+  /// The budget currently in effect for the category — its latest version,
+  /// unless that version is a tombstone — or null if it has none. Used to tell
+  /// the user, before a delete, that a budget goes with the category.
+  Future<Budget?> categoryActiveBudget(String categoryId) async {
+    final versions = await (_db.select(
+      _db.budgets,
+    )..where((b) => b.categoryId.equals(categoryId))).get();
+    if (versions.isEmpty) return null;
+    DateTime effective(Budget b) => b.effectiveMonth ?? b.startDate;
+    versions.sort((a, b) => effective(a).compareTo(effective(b)));
+    return versions.last.active ? versions.last : null;
+  }
+
+  /// Deletes the category, its budget history, and clears it from anything
+  /// else that points at it (bills, recurring transactions, and any habit or
+  /// task, which share this table) so nothing is left referencing a row that no
+  /// longer exists.
+  ///
+  /// Refuses if transactions still use it; callers should check
+  /// [categoryTransactionCount] first to explain why.
   Future<void> deleteCategory(String id) {
-    return (_db.delete(_db.categories)..where((c) => c.id.equals(id))).go();
+    return _db.transaction(() async {
+      if (await categoryTransactionCount(id) > 0) {
+        throw StateError('Category $id still has transactions.');
+      }
+      await (_db.delete(_db.budgets)..where((b) => b.categoryId.equals(id))).go();
+      await (_db.update(_db.bills)..where((b) => b.categoryId.equals(id)))
+          .write(const BillsCompanion(categoryId: Value(null)));
+      await (_db.update(_db.recurringTransactions)
+            ..where((r) => r.categoryId.equals(id)))
+          .write(const RecurringTransactionsCompanion(categoryId: Value(null)));
+      await (_db.update(_db.habits)..where((h) => h.categoryId.equals(id)))
+          .write(const HabitsCompanion(categoryId: Value(null)));
+      await (_db.update(_db.tasks)..where((t) => t.categoryId.equals(id)))
+          .write(const TasksCompanion(categoryId: Value(null)));
+      await (_db.delete(_db.categories)..where((c) => c.id.equals(id))).go();
+    });
   }
 
   Future<void> createAccountType({required String name, required String icon}) {

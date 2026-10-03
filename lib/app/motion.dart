@@ -49,6 +49,13 @@ class AppMotion {
   /// 135°, expressed in turns for [AnimatedRotation].
   static const fabRotationTurns = 135 / 360;
 
+  /// Bottom-nav tab switch: the highlight stretches to the new tab and settles,
+  /// and the new tab's icon pops. The handoff's motion table doesn't name tab
+  /// switching, so these two are derived from its neighbours (the 300–420ms
+  /// entries and the 220ms scrim/knob fades) rather than transcribed.
+  static const navSwitch = Duration(milliseconds: 480);
+  static const navColor = Duration(milliseconds: 220);
+
   /// Add-menu tiles rise in sequence, [menuTileStagger] apart.
   static const menuTile = Duration(milliseconds: 340);
   static const menuTileStagger = Duration(milliseconds: 40);
