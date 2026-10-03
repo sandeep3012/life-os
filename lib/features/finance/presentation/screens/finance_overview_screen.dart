@@ -241,7 +241,10 @@ class _FinanceOverviewScreenState extends ConsumerState<FinanceOverviewScreen> {
                           for (final point in trend)
                             MonthBar(
                               label: DateFormat.MMM().format(point.month),
-                              topLabel: _compact(point.totalMinor, currency),
+                              topLabel: formatCompactMinor(
+                                point.totalMinor,
+                                currencyCode: currency,
+                              ),
                               value: point.totalMinor,
                             ),
                         ],
@@ -374,20 +377,6 @@ class _FinanceOverviewScreenState extends ConsumerState<FinanceOverviewScreen> {
     final category = matches.isEmpty ? null : matches.first;
     final date = DateFormat('d MMM').format(txn.date);
     return category == null ? date : '${category.name} · $date';
-  }
-
-  /// Comp bar labels are abbreviated (`₹96k`) so six of them fit across a phone.
-  static String _compact(int minor, String currencyCode) {
-    final symbol = currencySymbolFor(currencyCode);
-    final major = minor / 100;
-    if (major >= 10000000) {
-      return '$symbol${(major / 10000000).toStringAsFixed(1)}cr';
-    }
-    if (major >= 100000) {
-      return '$symbol${(major / 100000).toStringAsFixed(1)}L';
-    }
-    if (major >= 1000) return '$symbol${(major / 1000).round()}k';
-    return '$symbol${major.round()}';
   }
 }
 

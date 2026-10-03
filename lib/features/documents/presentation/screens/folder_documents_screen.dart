@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../../core/database/app_database.dart' show Document;
+import '../../../../core/widgets/inline_add_button.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import '../../application/documents_providers.dart';
 import '../widgets/document_tile.dart';
@@ -30,52 +31,67 @@ class FolderDocumentsScreen extends ConsumerWidget {
     final allDocs = ref.watch(documentsListProvider).value ?? const [];
     final folderDocs = allDocs.where((d) => d.folderId == folderId).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: const BackButton(),
-        title: Text(folderName),
-      ),
-      body: folderDocs.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(
-                  'No documents in this folder yet.\nTap + Add to import one.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+    return InlineAddHost(
+      builder: (context, inlineAddVisible, onInlineAddVisibility) => Scaffold(
+        appBar: AppBar(leading: const BackButton(), title: Text(folderName)),
+        body: folderDocs.isEmpty
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Text(
+                    'No documents in this folder yet.\nTap + Add to import one.',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                itemCount: folderDocs.length + 1,
+                itemBuilder: (context, i) {
+                  if (i == folderDocs.length) {
+                    return InlineAddButton(
+                      label: 'Add document',
+                      onTap: () => _pickImportSource(context, ref),
+                      onVisibilityChanged: onInlineAddVisibility,
+                      padding: const EdgeInsets.only(top: 12),
+                    );
+                  }
+                  final d = folderDocs[i];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: DocumentTile(
+                      key: ValueKey(d.id),
+                      grid: false,
+                      document: d,
+                      onDelete: () => ref
+                          .read(documentsControllerProvider)
+                          .deleteDocument(d),
+                      onTap: () => _editDocument(context, ref, d),
+                    ),
+                  );
+                },
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-              itemCount: folderDocs.length,
-              itemBuilder: (context, i) {
-                final d = folderDocs[i];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: DocumentTile(
-                    key: ValueKey(d.id),
-                    grid: false,
-                    document: d,
-                    onDelete: () =>
-                        ref.read(documentsControllerProvider).deleteDocument(d),
-                    onTap: () => _editDocument(context, ref, d),
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _pickImportSource(context, ref),
-        icon: const Icon(LucideIcons.plus),
-        label: const Text('Add'),
+        // One add affordance at a time: the dashed row at the end of the list
+        // while it is on screen, the FAB once it has scrolled away.
+        floatingActionButton: inlineAddVisible
+            ? null
+            : FloatingActionButton.extended(
+                onPressed: () => _pickImportSource(context, ref),
+                icon: const Icon(LucideIcons.plus),
+                label: const Text('Add'),
+              ),
       ),
     );
   }
 
   Future<void> _editDocument(
-      BuildContext context, WidgetRef ref, Document document) async {
+    BuildContext context,
+    WidgetRef ref,
+    Document document,
+  ) async {
     final folders = ref.read(documentFoldersProvider).value ?? const [];
     final details = await showQuickAddDocumentDetailsSheet(
       context,
@@ -84,7 +100,9 @@ class FolderDocumentsScreen extends ConsumerWidget {
       initial: document,
     );
     if (details == null) return;
-    await ref.read(documentsControllerProvider).updateDocument(
+    await ref
+        .read(documentsControllerProvider)
+        .updateDocument(
           id: document.id,
           title: details.title,
           folderId: details.folderId,
@@ -134,7 +152,9 @@ class FolderDocumentsScreen extends ConsumerWidget {
           name = picked.name;
         }
       case _ImportSource.camera:
-        final picked = await ImagePicker().pickImage(source: ImageSource.camera);
+        final picked = await ImagePicker().pickImage(
+          source: ImageSource.camera,
+        );
         if (picked != null) {
           file = File(picked.path);
           name = p.basename(picked.path);
@@ -151,7 +171,9 @@ class FolderDocumentsScreen extends ConsumerWidget {
     );
     if (details == null) return;
 
-    await ref.read(documentsControllerProvider).importDocument(
+    await ref
+        .read(documentsControllerProvider)
+        .importDocument(
           source: file,
           originalName: name,
           title: details.title,

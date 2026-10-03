@@ -11,6 +11,7 @@ import '../features/settings/application/app_lock_providers.dart';
 import '../features/settings/application/settings_providers.dart';
 import '../features/settings/presentation/screens/lock_screen.dart';
 import 'boot_plate.dart';
+import 'launch/launch_splash.dart';
 import 'launch_timeline.dart';
 import 'router/app_router.dart';
 import 'splash_gate.dart';
@@ -28,6 +29,21 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
   bool? _habitReminderScheduled;
   bool _choresStarted = false;
   bool _launchSettling = false;
+
+  /// Process-wide, so only the cold start plays the animation: the in-app
+  /// restart that applies a theme change remounts this widget and must not
+  /// replay it.
+  static bool _launchPlayed = false;
+  late final bool _playLaunch = SplashGate.coldStart && !_launchPlayed;
+  late bool _launchDone = !_playLaunch;
+  bool _dataReady = false;
+  // The splash has started fading, so the app underneath may paint and
+  // animate. Until then it's built but offstage with its tickers paused —
+  // otherwise Home repaints on every stream update and plays its entrance
+  // animation unseen, both stealing frames from the launch animation.
+  late bool _appRevealed = !_playLaunch;
+  final _appKey = GlobalKey(debugLabel: 'app');
+  final _splashKey = GlobalKey(debugLabel: 'launch splash');
   late final GoRouter _router;
 
   @override
@@ -37,6 +53,14 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     WidgetsBinding.instance.addObserver(this);
     // Touches no database, so it can't get in the way of the settings read.
     ref.read(notificationServiceProvider).init();
+    if (_playLaunch) _launchPlayed = true;
+  }
+
+  void _onLaunchFinished() {
+    if (!mounted) return;
+    setState(() => _launchDone = _appRevealed = true);
+    LaunchTimeline.mark('launch animation finished');
+    _startBackgroundChores();
   }
 
   /// Background maintenance, started only once the landing screen is up.
@@ -89,8 +113,15 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
       // them two frames to rebuild before the first one is shown.
       await WidgetsBinding.instance.endOfFrame;
       await WidgetsBinding.instance.endOfFrame;
-      SplashGate.release();
-      _startBackgroundChores();
+      if (!mounted) return;
+      if (_playLaunch) {
+        // The animation finishes its current item and fades; chores start
+        // after it, so they can't make it stutter.
+        setState(() => _dataReady = true);
+      } else {
+        SplashGate.release();
+        _startBackgroundChores();
+      }
     });
   }
 
@@ -137,11 +168,53 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
   @override
   Widget build(BuildContext context) {
     // The colour theme is stored in the database, so it isn't known on the
-    // first frames; painting the app now would flash the default theme. On a
-    // cold start the native splash is held over this, so the plate is only a
-    // fallback — seen if launch outlasts SplashGate.maxHold, or during the
-    // in-app restart a theme change triggers.
-    if (!ref.watch(settingsLoadedProvider)) return const BootPlate();
+    // first frames; painting the app then would flash the default theme. On a
+    // cold start the launch animation covers that time (and Home's data
+    // loading); otherwise — the in-app restart a theme change triggers — the
+    // boot plate does.
+    final Widget app;
+    if (!ref.watch(settingsLoadedProvider)) {
+      // Under the launch animation nothing needs to show yet; without it,
+      // the plate keeps the default theme from ever being painted.
+      app = _playLaunch ? const SizedBox.shrink() : const BootPlate();
+    } else {
+      app = _buildApp();
+    }
+    // One stable tree shape for the whole launch: the app keeps its state
+    // when the splash above it is removed, and the splash keeps its place
+    // (and its animation) when the app underneath switches from a
+    // placeholder to the real thing.
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          KeyedSubtree(
+            key: _appKey,
+            child: Offstage(
+              offstage: !_appRevealed,
+              child: TickerMode(enabled: _appRevealed, child: app),
+            ),
+          ),
+          if (!_launchDone)
+            KeyedSubtree(
+              key: _splashKey,
+              // It sits above MaterialApp, so it brings its own MediaQuery.
+              child: MediaQuery.fromView(
+                view: View.of(context),
+                child: LaunchSplash(
+                  ready: _dataReady,
+                  onLeaving: () => setState(() => _appRevealed = true),
+                  onFinished: _onLaunchFinished,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApp() {
     LaunchTimeline.mark('settings loaded, building app');
 
     _settleLaunch();

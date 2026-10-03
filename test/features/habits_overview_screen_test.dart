@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:life_manager/core/scheduling/repeat_schedule.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
 import 'package:life_manager/core/utils/date_utils.dart';
+import 'package:life_manager/core/widgets/success_overlay.dart';
 import 'package:life_manager/features/habits/data/habits_repository.dart';
 import 'package:life_manager/features/habits/presentation/screens/habits_overview_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -71,7 +73,7 @@ void main() {
 
     expect(find.text('Habits'), findsOneWidget);
     expect(
-      find.text('No habits yet — build your first one below.'),
+      find.text('🌱 No habits yet — build your first one below.'),
       findsOneWidget,
     );
     expect(find.text('Build a new habit'), findsOneWidget);
@@ -136,6 +138,60 @@ void main() {
     // Toggled state swaps the glyph for a tick.
     expect(find.byIcon(LucideIcons.check), findsOneWidget);
 
+    await _disposeCleanly(tester);
+  });
+
+  testWidgets('checking off a habit into a 7-day streak celebrates it', (
+    tester,
+  ) async {
+    // Confirmations on, seeded straight into the row: HabitsOverviewScreen
+    // doesn't itself watch settings, so a runtime toggle here would race an
+    // unlistened settings stream and never be observed (see the trap
+    // documented in CLAUDE.md) — seeding the row before the first pump avoids
+    // that by making it the very first (and only) value the stream emits.
+    await db
+        .into(db.appSettings)
+        .insert(
+          AppSettingsCompanion.insert(
+            id: const Value(0),
+            saveConfirmationsEnabled: const Value(true),
+          ),
+        );
+
+    final repo = HabitsRepository(db);
+    final id = await repo.createHabit(
+      'Read 20 pages',
+      schedule: RepeatSchedule(
+        start: DateTime.now().subtract(const Duration(days: 10)),
+        frequency: 'daily',
+      ),
+    );
+    // Six consecutive days done, ending yesterday — one more check-in today
+    // lands exactly on the first milestone.
+    final today = dateOnly(DateTime.now());
+    for (var i = 6; i >= 1; i--) {
+      await repo.setCompletedForDate(
+        id,
+        today.subtract(Duration(days: i)),
+        true,
+      );
+    }
+
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(LucideIcons.plus).first);
+    // Pump in steps rather than pumpAndSettle: the overlay's own dwell timer
+    // never truly settles until it fires.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 60));
+    }
+
+    expect(find.byType(SuccessOverlay), findsOneWidget);
+    expect(find.text('7-day streak!'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
     await _disposeCleanly(tester);
   });
 }

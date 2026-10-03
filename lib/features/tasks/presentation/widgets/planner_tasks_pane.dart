@@ -8,6 +8,7 @@ import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
+import '../../../../core/widgets/empty_state_message.dart';
 import '../../../../core/widgets/inline_add_button.dart';
 import '../../../../core/widgets/tab_rail.dart';
 import '../../application/tasks_providers.dart';
@@ -218,10 +219,11 @@ class _PlannerTasksPaneState extends ConsumerState<PlannerTasksPane> {
   }) {
     if (tasks.isEmpty) {
       return SliverList(
-        delegate: SliverChildListDelegate(const [
-          Padding(
+        delegate: SliverChildListDelegate([
+          const EmptyStateMessage(
+            emoji: '📝',
+            message: 'No tasks here.',
             padding: EdgeInsets.all(16),
-            child: Center(child: Text('No tasks here.')),
           ),
         ]),
       );
@@ -248,11 +250,10 @@ class _PlannerTasksPaneState extends ConsumerState<PlannerTasksPane> {
     required String sectionScope,
   }) {
     if (tasks.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('No tasks here.'),
-        ),
+      return const EmptyStateMessage(
+        emoji: '📝',
+        message: 'No tasks here.',
+        padding: EdgeInsets.all(16),
       );
     }
     final entries = _entriesFor(tasks, sectionScope);

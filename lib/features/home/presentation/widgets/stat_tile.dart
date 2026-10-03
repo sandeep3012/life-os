@@ -64,7 +64,9 @@ class StatTile extends StatelessWidget {
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleLarge?.copyWith(fontFamily: AppFonts.serif),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontFamily: AppFonts.serif,
+                  ),
                 ),
                 if (delta != null) ...[
                   const SizedBox(height: 4),
@@ -84,7 +86,9 @@ class StatTile extends StatelessWidget {
                             fontFeatures: AppFonts.tabular,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
-                            color: deltaColor ?? theme.colorScheme.onSurfaceVariant,
+                            color:
+                                deltaColor ??
+                                theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -98,8 +102,11 @@ class StatTile extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: progress!.clamp(0.0, 1.0).toDouble(),
                       minHeight: 4,
-                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                      valueColor: AlwaysStoppedAnimation(progressColor ?? accent),
+                      backgroundColor:
+                          theme.colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation(
+                        progressColor ?? accent,
+                      ),
                     ),
                   ),
                 ],

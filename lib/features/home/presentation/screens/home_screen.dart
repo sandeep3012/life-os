@@ -10,6 +10,7 @@ import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_fonts.dart';
+import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/date_utils.dart';
@@ -20,6 +21,7 @@ import '../../../ai_analyser/application/ai_analyser_providers.dart';
 import '../../../ai_analyser/presentation/widgets/insight_card.dart';
 import '../../../calendar/application/calendar_providers.dart';
 import '../../../calendar/domain/calendar_item.dart';
+import '../../../habits/application/habit_celebrations.dart';
 import '../../../habits/application/habits_providers.dart';
 import '../../../habits/domain/habit_progress.dart';
 import '../../../health/application/health_providers.dart';
@@ -52,6 +54,7 @@ class HomeScreen extends ConsumerWidget {
     final monthSpendMinor = ref.watch(monthSpendMinorProvider);
     final activeGoals = ref.watch(activeGoalCountProvider);
     final currencyCode = ref.watch(settingsProvider).currencyCode;
+    final loaded = ref.watch(homeDataLoadedProvider);
 
     final now = DateTime.now();
     // Habits have their own grid and tasks have their own list, so the hero
@@ -94,7 +97,9 @@ class HomeScreen extends ConsumerWidget {
                     _Greeting(text: _greeting(now), accent: scheme.secondary),
                     const SizedBox(height: 6),
                     Text(
-                      _summaryLine(todayTasks, habits.length),
+                      loaded
+                          ? _summaryLine(todayTasks, habits.length)
+                          : 'Getting your day ready…',
                       style: TextStyle(
                         fontFamily: AppFonts.sans,
                         fontSize: 14,
@@ -102,118 +107,134 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 20),
-                    _buildNowCard(
-                      ref.watch(todayWorkoutProvider),
-                      todayAgenda,
-                      now,
-                    ),
+                    // Until the data is in, placeholders stand where it will
+                    // go — never zeros that look real, and no layout jump.
+                    if (!loaded) ...[
+                      const SizedBox(height: 20),
+                      const _HomeSkeleton(),
+                    ] else ...[
+                      const SizedBox(height: 20),
+                      _buildNowCard(
+                        ref.watch(todayWorkoutProvider),
+                        todayAgenda,
+                        now,
+                      ),
 
-                    const SizedBox(height: 20),
-                    _DashboardStatRail(
-                      monthSpendMinor: monthSpendMinor,
-                      currencyCode: currencyCode,
-                      tasks: todayTasks,
-                      activeGoals: activeGoals,
-                    ),
+                      const SizedBox(height: 20),
+                      _DashboardStatRail(
+                        monthSpendMinor: monthSpendMinor,
+                        currencyCode: currencyCode,
+                        tasks: todayTasks,
+                        activeGoals: activeGoals,
+                      ),
 
-                    if (todayTasks.tasks.isNotEmpty) ...[
-                      const SizedBox(height: 24),
-                      SectionHeader(
-                        title: "Today's to-dos",
-                        trailing: Tappable(
-                          onTap: () => context.go(RoutePaths.tasksHabits),
-                          semanticLabel: 'See all tasks',
-                          child: Text(
-                            'See all',
-                            style: TextStyle(
-                              fontFamily: AppFonts.sans,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: colors.accentInk,
+                      if (todayTasks.tasks.isNotEmpty) ...[
+                        const SizedBox(height: 24),
+                        SectionHeader(
+                          title: "Today's to-dos",
+                          trailing: Tappable(
+                            onTap: () => context.go(RoutePaths.tasksHabits),
+                            semanticLabel: 'See all tasks',
+                            child: Text(
+                              'See all',
+                              style: TextStyle(
+                                fontFamily: AppFonts.sans,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: colors.accentInk,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 11),
-                      _TodayTaskList(tasks: todayTasks.tasks.take(4).toList()),
-                    ],
+                        const SizedBox(height: 11),
+                        _TodayTaskList(
+                          tasks: todayTasks.tasks.take(4).toList(),
+                        ),
+                      ],
 
-                    if (habits.isNotEmpty) ...[
-                      const SizedBox(height: 22),
-                      SectionHeader(
-                        title: 'Habits to keep',
-                        trailing: Tappable(
-                          onTap: () => context.go(RoutePaths.plannerHabits),
-                          semanticLabel: 'See all habits',
-                          child: Text(
-                            'See all',
-                            style: TextStyle(
-                              fontFamily: AppFonts.sans,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: colors.accentInk,
+                      if (habits.isNotEmpty) ...[
+                        const SizedBox(height: 22),
+                        SectionHeader(
+                          title: 'Habits to keep',
+                          trailing: Tappable(
+                            onTap: () => context.go(RoutePaths.plannerHabits),
+                            semanticLabel: 'See all habits',
+                            child: Text(
+                              'See all',
+                              style: TextStyle(
+                                fontFamily: AppFonts.sans,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: colors.accentInk,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 11),
-                      const _HabitGrid(),
-                    ],
+                        const SizedBox(height: 11),
+                        const _HabitGrid(),
+                      ],
 
-                    if (upcoming.isNotEmpty) ...[
-                      const SizedBox(height: 22),
-                      SectionHeader(
-                        title: 'Coming up',
-                        trailing: Tappable(
-                          onTap: () => context.go(RoutePaths.calendar),
-                          semanticLabel: 'Open calendar',
-                          child: Text(
-                            'Calendar',
-                            style: TextStyle(
-                              fontFamily: AppFonts.sans,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: colors.accentInk,
+                      if (upcoming.isNotEmpty) ...[
+                        const SizedBox(height: 22),
+                        SectionHeader(
+                          title: 'Coming up',
+                          trailing: Tappable(
+                            onTap: () => context.go(RoutePaths.calendar),
+                            semanticLabel: 'Open calendar',
+                            child: Text(
+                              'Calendar',
+                              style: TextStyle(
+                                fontFamily: AppFonts.sans,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: colors.accentInk,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 11),
-                      _UpcomingList(items: upcoming, now: now),
-                    ],
+                        const SizedBox(height: 11),
+                        _UpcomingList(items: upcoming, now: now),
+                      ],
 
-                    if (insights.isNotEmpty) ...[
-                      const SizedBox(height: 22),
-                      const SectionHeader(title: 'Worth knowing'),
-                      const SizedBox(height: 11),
-                      InsightCard(
-                        insight: insights.first,
-                        onDismiss: () => ref
-                            .read(aiAnalyserControllerProvider)
-                            .dismiss(insights.first.id),
-                      ),
-                    ],
+                      if (insights.isNotEmpty) ...[
+                        const SizedBox(height: 22),
+                        const SectionHeader(title: 'Worth knowing'),
+                        const SizedBox(height: 11),
+                        InsightCard(
+                          insight: insights.first,
+                          onDismiss: () => ref
+                              .read(aiAnalyserControllerProvider)
+                              .dismiss(insights.first.id),
+                        ),
+                      ],
 
-                    // The comp has no empty state — it's drawn with a full day of data —
-                    // but a first-run dashboard needs to say something, and the hero's
-                    // "Nothing scheduled" only speaks for the schedule.
-                    if (todayTasks.tasks.isEmpty &&
-                        habits.isEmpty &&
-                        upcoming.isEmpty &&
-                        insights.isEmpty) ...[
-                      const SizedBox(height: 22),
-                      Center(
-                        child: Text(
-                          'Your dashboard fills in as you go',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: AppFonts.sans,
-                            fontSize: 14,
-                            color: colors.text3,
+                      // The comp has no empty state — it's drawn with a full day of data —
+                      // but a first-run dashboard needs to say something, and the hero's
+                      // "Nothing scheduled" only speaks for the schedule.
+                      if (todayTasks.tasks.isEmpty &&
+                          habits.isEmpty &&
+                          upcoming.isEmpty &&
+                          insights.isEmpty) ...[
+                        const SizedBox(height: 22),
+                        Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('✨', style: TextStyle(fontSize: 32)),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Your dashboard fills in as you go',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: AppFonts.sans,
+                                  fontSize: 14,
+                                  color: colors.text3,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ],
                 )
@@ -790,8 +811,18 @@ class _HabitGrid extends ConsumerWidget {
       progress: ratio,
       complete: ratio >= 1,
       color: doneToday ? scheme.primary : colors.critical,
-      onTap: () =>
-          ref.read(habitsControllerProvider).toggleToday(habit, !doneToday),
+      onTap: () {
+        final completing = !doneToday;
+        ref.read(habitsControllerProvider).toggleToday(habit, completing);
+        if (completing) {
+          celebrateStreakIfMilestone(
+            context,
+            ref,
+            habitName: habit.name,
+            newStreakDays: progress.streakDays + 1,
+          );
+        }
+      },
     );
   }
 }
@@ -893,6 +924,93 @@ class _UpcomingListRow extends StatelessWidget {
           ),
           Icon(HomeScreen._iconFor(item.type), size: 16, color: color),
         ],
+      ),
+    );
+  }
+}
+
+/// Stand-in for Home's data sections while their streams load: the hero,
+/// the stat row and a to-do list, at their real sizes so nothing jumps when
+/// the data arrives.
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final bar = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.07);
+    Widget block(double w, double h, {double r = 6}) => Container(
+      width: w,
+      height: h,
+      decoration: BoxDecoration(
+        color: bar,
+        borderRadius: BorderRadius.circular(r),
+      ),
+    );
+
+    return Semantics(
+      label: 'Loading your day',
+      child: ExcludeSemantics(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            block(double.infinity, 200, r: AppSpacing.cardRadius),
+            const SizedBox(height: 20),
+            // Clipped at the page margin, like the real stat row.
+            SizedBox(
+              height: 138,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  for (var i = 0; i < 3; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: SizedBox(
+                        width: 172,
+                        child: SurfaceCard(
+                          padding: const EdgeInsets.all(15),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              block(90, 11),
+                              const SizedBox(height: 18),
+                              block(110, 24),
+                              const SizedBox(height: 12),
+                              block(70, 10),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            block(140, 18),
+            const SizedBox(height: 14),
+            for (var i = 0; i < 3; i++) ...[
+              SurfaceCard.row(
+                child: Row(
+                  children: [
+                    block(22, 22, r: 7),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          block(double.infinity, 12),
+                          const SizedBox(height: 8),
+                          block(60, 9),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 9),
+            ],
+          ],
+        ),
       ),
     );
   }

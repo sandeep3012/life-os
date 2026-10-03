@@ -413,7 +413,11 @@ class AppColors extends ThemeExtension<AppColors> {
       catRent: Color.lerp(catRent, other.catRent, t)!,
       catShopping: Color.lerp(catShopping, other.catShopping, t)!,
       catBills: Color.lerp(catBills, other.catBills, t)!,
-      catEntertainment: Color.lerp(catEntertainment, other.catEntertainment, t)!,
+      catEntertainment: Color.lerp(
+        catEntertainment,
+        other.catEntertainment,
+        t,
+      )!,
       catHealth: Color.lerp(catHealth, other.catHealth, t)!,
       catOther: Color.lerp(catOther, other.catOther, t)!,
       surfaceAlt: Color.lerp(surfaceAlt, other.surfaceAlt, t)!,

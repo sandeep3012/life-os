@@ -10,14 +10,21 @@ import '../../application/spend_analyzer_providers.dart';
 import '../widgets/budget_bar.dart';
 import '../widgets/category_donut_chart.dart';
 import '../widgets/payment_mode_breakdown.dart';
+import '../widgets/spend_comparison_card.dart';
+import '../widgets/swipe_cards.dart';
 import '../widgets/weekly_trend_chart.dart';
 import '../../../../app/theme/app_fonts.dart';
+
+/// How tall the swipe cards are. They used to be 304, which made them nearly
+/// square; this keeps them the wide rectangles the cards always were.
+const double _headerHeight = 236;
 
 class SpendAnalyzerScreen extends ConsumerStatefulWidget {
   const SpendAnalyzerScreen({super.key});
 
   @override
-  ConsumerState<SpendAnalyzerScreen> createState() => _SpendAnalyzerScreenState();
+  ConsumerState<SpendAnalyzerScreen> createState() =>
+      _SpendAnalyzerScreenState();
 }
 
 class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
@@ -28,6 +35,9 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
     final theme = Theme.of(context);
     final colors = context.appColors;
     final month = ref.watch(selectedAnalyzerMonthProvider);
+    // "Oct 2026": the screen browses months, so nothing here can say "this
+    // month" — it would be wrong for every month but the current one.
+    final monthLabel = DateFormat.yMMM().format(month);
     final total = ref.watch(monthExpenseTotalMinorProvider);
     final previousTotal = ref.watch(previousMonthExpenseTotalMinorProvider);
     final breakdown = ref.watch(categoryBreakdownProvider);
@@ -36,7 +46,9 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
     final paymentModeBreakdown = ref.watch(paymentModeBreakdownProvider);
     final currencyCode = ref.watch(settingsProvider).currencyCode;
 
-    final delta = previousTotal == 0 ? 0.0 : (total - previousTotal) / previousTotal;
+    final delta = previousTotal == 0
+        ? 0.0
+        : (total - previousTotal) / previousTotal;
 
     return Scaffold(
       appBar: AppBar(
@@ -59,60 +71,87 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Total spent',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          Text(
-                            formatMinor(total, currencyCode: currencyCode, showDecimals: false),
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontFamily: AppFonts.serif,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (previousTotal > 0)
+          // Two cards to swipe between, side by side rather than stacked: this
+          // week-by-week view of the month, and spending against savings over
+          // time. The next card peeks in and the dots show where you are.
+          SwipeCards(
+            height: MediaQuery.textScalerOf(context).scale(_headerHeight),
+            children: [
+              SizedBox.expand(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Icon(
-                              delta >= 0 ? LucideIcons.arrowUp : LucideIcons.arrowDown,
-                              size: 14,
-                              color: delta >= 0 ? colors.critical : colors.good,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Total spent',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                Text(
+                                  formatMinor(
+                                    total,
+                                    currencyCode: currencyCode,
+                                    showDecimals: false,
+                                  ),
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(fontFamily: AppFonts.serif),
+                                ),
+                              ],
                             ),
-                            Text(
-                              '${(delta.abs() * 100).toStringAsFixed(1)}% vs last month',
-                              style: TextStyle(
-                                fontFamily: AppFonts.numeric,
-                                fontFeatures: AppFonts.tabular,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: delta >= 0 ? colors.critical : colors.good,
+                            if (previousTotal > 0)
+                              Row(
+                                children: [
+                                  Icon(
+                                    delta >= 0
+                                        ? LucideIcons.arrowUp
+                                        : LucideIcons.arrowDown,
+                                    size: 14,
+                                    color: delta >= 0
+                                        ? colors.critical
+                                        : colors.good,
+                                  ),
+                                  Text(
+                                    '${(delta.abs() * 100).toStringAsFixed(1)}% vs last month',
+                                    style: TextStyle(
+                                      fontFamily: AppFonts.numeric,
+                                      fontFeatures: AppFonts.tabular,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: delta >= 0
+                                          ? colors.critical
+                                          : colors.good,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
                           ],
                         ),
-                    ],
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: WeeklyTrendChart(
+                            weeklyTotalsMinor: weeklyTrend,
+                            color: colors.spend,
+                            currencyCode: currencyCode,
+                            height: null,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  WeeklyTrendChart(weeklyTotalsMinor: weeklyTrend, color: colors.spend),
-                ],
+                ),
               ),
-            ),
+              SpendComparisonCard(currencyCode: currencyCode),
+            ],
           ),
           const SizedBox(height: 20),
           Row(
@@ -147,14 +186,15 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: breakdown.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: Text('No spending logged for this month yet.'),
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Text('No spending logged for $monthLabel yet.'),
                     )
                   : CategoryDonutChart(
                       breakdown: breakdown,
                       totalMinor: total,
                       currencyCode: currencyCode,
+                      monthLabel: monthLabel,
                       showAmounts: _showAmounts,
                     ),
             ),
@@ -173,7 +213,10 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
                   : Column(
                       children: [
                         for (final progress in budgetsProgress)
-                          BudgetBar(progress: progress, currencyCode: currencyCode),
+                          BudgetBar(
+                            progress: progress,
+                            currencyCode: currencyCode,
+                          ),
                       ],
                     ),
             ),
@@ -185,11 +228,16 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: paymentModeBreakdown.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 20),
-                      child: Text('No payment mode tagged for this month yet.'),
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        'No payment mode tagged for $monthLabel yet.',
+                      ),
                     )
-                  : PaymentModeBreakdown(breakdown: paymentModeBreakdown, currencyCode: currencyCode),
+                  : PaymentModeBreakdown(
+                      breakdown: paymentModeBreakdown,
+                      currencyCode: currencyCode,
+                    ),
             ),
           ),
         ],

@@ -18,11 +18,18 @@ abstract final class SplashGate {
   static const maxHold = Duration(seconds: 5);
 
   static bool _held = false;
+  static bool _everHeld = false;
   static Timer? _ceiling;
+
+  /// True once [hold] has run in this process, i.e. the app went through a
+  /// real cold start from `main`. The launch animation plays only then — not
+  /// in widget tests, and not on the in-app restart a theme change triggers.
+  static bool get coldStart => _everHeld;
 
   static void hold(WidgetsBinding binding) {
     if (_held) return;
     _held = true;
+    _everHeld = true;
     FlutterNativeSplash.preserve(widgetsBinding: binding);
     _ceiling = Timer(maxHold, () => release(reason: 'ceiling'));
     binding.waitUntilFirstFrameRasterized.then(

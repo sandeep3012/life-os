@@ -13,10 +13,19 @@ import '../../app/theme/app_fonts.dart';
 ///
 /// Present it with [showSuccessOverlay].
 class SuccessOverlay extends StatefulWidget {
-  const SuccessOverlay({super.key, required this.title, required this.message});
+  const SuccessOverlay({
+    super.key,
+    required this.title,
+    required this.message,
+    this.emoji,
+  });
 
   final String title;
   final String message;
+
+  /// Swaps the drawn checkmark for a colourful emoji — for a milestone worth
+  /// more than the routine save tick (a streak, a goal reached, a bill paid).
+  final String? emoji;
 
   @override
   State<SuccessOverlay> createState() => _SuccessOverlayState();
@@ -40,11 +49,17 @@ class _SuccessOverlayState extends State<SuccessOverlay>
   /// Comp `popIn`: overshoots to 1.06 at 60% before settling at 1.
   late final Animation<double> _scale = TweenSequence<double>([
     TweenSequenceItem(
-      tween: Tween(begin: 0.82, end: 1.06).chain(CurveTween(curve: Curves.easeOut)),
+      tween: Tween(
+        begin: 0.82,
+        end: 1.06,
+      ).chain(CurveTween(curve: Curves.easeOut)),
       weight: 60,
     ),
     TweenSequenceItem(
-      tween: Tween(begin: 1.06, end: 1.0).chain(CurveTween(curve: Curves.easeOut)),
+      tween: Tween(
+        begin: 1.06,
+        end: 1.0,
+      ).chain(CurveTween(curve: Curves.easeOut)),
       weight: 40,
     ),
   ]).animate(_pop);
@@ -54,9 +69,11 @@ class _SuccessOverlayState extends State<SuccessOverlay>
     super.initState();
     _pop.forward();
     _ring.forward();
-    Future<void>.delayed(AppMotion.successCheckDrawDelay, () {
-      if (mounted) _tick.forward();
-    });
+    if (widget.emoji == null) {
+      Future<void>.delayed(AppMotion.successCheckDrawDelay, () {
+        if (mounted) _tick.forward();
+      });
+    }
   }
 
   @override
@@ -120,19 +137,25 @@ class _SuccessOverlayState extends State<SuccessOverlay>
                         Container(
                           width: 72,
                           height: 72,
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: scheme.secondary,
                           ),
-                          child: AnimatedBuilder(
-                            animation: _tick,
-                            builder: (context, _) => CustomPaint(
-                              painter: _TickPainter(
-                                progress: _tick.value,
-                                color: scheme.onPrimary,
-                              ),
-                            ),
-                          ),
+                          child: widget.emoji != null
+                              ? Text(
+                                  widget.emoji!,
+                                  style: const TextStyle(fontSize: 34),
+                                )
+                              : AnimatedBuilder(
+                                  animation: _tick,
+                                  builder: (context, _) => CustomPaint(
+                                    painter: _TickPainter(
+                                      progress: _tick.value,
+                                      color: scheme.onPrimary,
+                                    ),
+                                  ),
+                                ),
                         ),
                       ],
                     ),
@@ -190,7 +213,8 @@ class _TickPainter extends CustomPainter {
       Offset(18 * s, 7.5 * s),
     ];
 
-    final full = (points[1] - points[0]).distance + (points[2] - points[1]).distance;
+    final full =
+        (points[1] - points[0]).distance + (points[2] - points[1]).distance;
     final target = full * progress.clamp(0.0, 1.0);
 
     final path = Path()..moveTo(points[0].dx, points[0].dy);
@@ -232,13 +256,15 @@ Future<void> showSuccessOverlay(
   BuildContext context, {
   required String title,
   required String message,
+  String? emoji,
 }) async {
   final navigator = Navigator.of(context, rootNavigator: true);
   final route = DialogRoute<void>(
     context: context,
     barrierColor: Colors.transparent,
     barrierDismissible: true,
-    builder: (context) => SuccessOverlay(title: title, message: message),
+    builder: (context) =>
+        SuccessOverlay(title: title, message: message, emoji: emoji),
   );
 
   navigator.push(route);

@@ -8,6 +8,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
+import '../../../../core/utils/category_color.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import '../../application/habits_providers.dart';
 import '../../domain/habit_schedule.dart';
@@ -109,13 +110,13 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
     final category = habit.categoryId == null
         ? null
         : categories.where((c) => c.id == habit.categoryId).firstOrNull;
-    final categoryColor = category == null
+    final categoryTint = category == null
         ? null
-        : Color(int.parse(category.colorHex.replaceFirst('#', '0xFF')));
-    final accent = categoryColor ?? theme.colorScheme.primary;
-    final icon = category == null
-        ? LucideIcons.flame
-        : resolveIcon(category.icon);
+        : categoryColor(category.colorHex);
+    final accent = categoryTint ?? theme.colorScheme.primary;
+    final Widget icon = category == null
+        ? Icon(LucideIcons.flame, color: accent)
+        : IconOrEmoji(value: category.icon, size: 24, color: accent);
     final historyState = ref.watch(habitLogHistoryProvider(widget.habitId));
     final history = historyState.value ?? const <HabitLog>[];
     final today = dateOnly(DateTime.now());
@@ -148,7 +149,7 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                           color: accent.withValues(alpha: 0.16),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(icon, color: accent),
+                        child: icon,
                       ),
                       const SizedBox(width: 12),
                       Expanded(

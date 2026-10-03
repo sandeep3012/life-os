@@ -63,7 +63,10 @@ class PaymentModeBreakdown extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: entry.share,
                           minHeight: 6,
-                          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                          // outlineVariant, as the Learn and Health bars use.
+                          // surfaceContainerHighest maps to `raised` here — the
+                          // card's own white — so the track was invisible.
+                          backgroundColor: theme.colorScheme.outlineVariant,
                           valueColor: AlwaysStoppedAnimation(colors.spend),
                         ),
                       ),

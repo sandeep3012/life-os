@@ -353,9 +353,14 @@ class FinanceController {
     return _repo.updateCategory(id: id, name: name, icon: icon, colorHex: colorHex, kind: kind);
   }
 
-  Future<int> categoryUsageCount(String categoryId) => _repo.categoryUsageCount(categoryId);
+  Future<int> categoryTransactionCount(String categoryId) =>
+      _repo.categoryTransactionCount(categoryId);
 
-  /// Callers must call [categoryUsageCount] first and confirm it's zero.
+  Future<Budget?> categoryActiveBudget(String categoryId) =>
+      _repo.categoryActiveBudget(categoryId);
+
+  /// Callers must check [categoryTransactionCount] first: a category that still
+  /// has transactions can't be deleted.
   Future<void> deleteCategory(String id) => _repo.deleteCategory(id);
 
   Future<void> addAccountType({required String name, required String icon}) {

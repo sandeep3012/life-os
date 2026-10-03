@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/widgets/compact_editor_sheet.dart';
 import '../../../tags/presentation/widgets/tag_chip_row.dart';
 import '../../domain/document_type.dart';
 
@@ -26,9 +27,8 @@ Future<QuickAddDocumentDetails?> showQuickAddDocumentDetailsSheet(
   Document? initial,
   String? defaultFolderId,
 }) {
-  return showModalBottomSheet<QuickAddDocumentDetails>(
+  return showCompactEditorSheet<QuickAddDocumentDetails>(
     context: context,
-    isScrollControlled: true,
     builder: (context) => _DetailsSheet(
       suggestedTitle: suggestedTitle,
       folders: folders,
@@ -81,32 +81,95 @@ class _DetailsSheetState extends State<_DetailsSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _isEditMode ? 'Edit document' : 'Save document',
-              style: theme.textTheme.titleLarge,
+    return CompactEditorSheet(
+      title: _isEditMode ? 'Edit document' : 'Save document',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _titleController,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Title'),
+          ),
+          const SizedBox(height: 16),
+          // Document type
+          Text(
+            'Type',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _titleController,
-              autofocus: true,
-              decoration: const InputDecoration(hintText: 'Title'),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              for (final t in DocumentType.all)
+                ChoiceChip(
+                  avatar: Icon(
+                    t.icon,
+                    size: 14,
+                    color: _documentType == t.value ? t.color : null,
+                  ),
+                  label: Text(t.label),
+                  selected: _documentType == t.value,
+                  onSelected: (_) => setState(
+                    () => _documentType = _documentType == t.value
+                        ? null
+                        : t.value,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Pin to Quick Access
+          InkWell(
+            onTap: () => setState(() => _isPinned = !_isPinned),
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Icon(
+                    LucideIcons.pin,
+                    size: 16,
+                    color: _isPinned
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pin to Quick Access',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          'Show this document at the top of your Documents screen',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: _isPinned,
+                    onChanged: (v) => setState(() => _isPinned = v),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            // Document type
+          ),
+          if (widget.folders.isNotEmpty) ...[
+            const SizedBox(height: 12),
             Text(
-              'Type',
+              'Folder',
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -116,110 +179,42 @@ class _DetailsSheetState extends State<_DetailsSheet> {
               spacing: 8,
               runSpacing: 6,
               children: [
-                for (final t in DocumentType.all)
+                ChoiceChip(
+                  label: const Text('No folder'),
+                  selected: _folderId == null,
+                  onSelected: (_) => setState(() => _folderId = null),
+                ),
+                for (final f in widget.folders)
                   ChoiceChip(
-                    avatar: Icon(t.icon, size: 14, color: _documentType == t.value ? t.color : null),
-                    label: Text(t.label),
-                    selected: _documentType == t.value,
-                    onSelected: (_) => setState(
-                      () => _documentType = _documentType == t.value ? null : t.value,
-                    ),
+                    label: Text(f.name),
+                    selected: _folderId == f.id,
+                    onSelected: (_) => setState(() => _folderId = f.id),
                   ),
               ],
             ),
-            const SizedBox(height: 16),
-            // Pin to Quick Access
-            InkWell(
-              onTap: () => setState(() => _isPinned = !_isPinned),
-              borderRadius: BorderRadius.circular(10),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Icon(
-                      LucideIcons.pin,
-                      size: 16,
-                      color: _isPinned
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Pin to Quick Access',
-                            style: theme.textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            'Show this document at the top of your Documents screen',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Switch(
-                      value: _isPinned,
-                      onChanged: (v) => setState(() => _isPinned = v),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (widget.folders.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Folder',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  ChoiceChip(
-                    label: const Text('No folder'),
-                    selected: _folderId == null,
-                    onSelected: (_) => setState(() => _folderId = null),
-                  ),
-                  for (final f in widget.folders)
-                    ChoiceChip(
-                      label: Text(f.name),
-                      selected: _folderId == f.id,
-                      onSelected: (_) => setState(() => _folderId = f.id),
-                    ),
-                ],
-              ),
-            ],
-            if (widget.initial != null) ...[
-              const SizedBox(height: 12),
-              TagChipRow(entityType: 'document', entityId: widget.initial!.id),
-            ],
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _titleController.text.trim().isEmpty
-                    ? null
-                    : () => Navigator.of(context).pop(
-                        QuickAddDocumentDetails(
-                          title: _titleController.text.trim(),
-                          folderId: _folderId,
-                          isPinned: _isPinned,
-                          documentType: _documentType,
-                        ),
-                      ),
-                child: Text(_isEditMode ? 'Save changes' : 'Save'),
-              ),
-            ),
           ],
-        ),
+          if (widget.initial != null) ...[
+            const SizedBox(height: 12),
+            TagChipRow(entityType: 'document', entityId: widget.initial!.id),
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _titleController.text.trim().isEmpty
+                  ? null
+                  : () => Navigator.of(context).pop(
+                      QuickAddDocumentDetails(
+                        title: _titleController.text.trim(),
+                        folderId: _folderId,
+                        isPinned: _isPinned,
+                        documentType: _documentType,
+                      ),
+                    ),
+              child: Text(_isEditMode ? 'Save changes' : 'Save'),
+            ),
+          ),
+        ],
       ),
     );
   }
