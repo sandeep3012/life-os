@@ -142,6 +142,10 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     if (!ref.read(settingsProvider).appLockEnabled) return;
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
+      // The system's Face ID / fingerprint dialog takes focus from the app, and
+      // reports as inactive or paused. Locking then would re-lock the app the
+      // moment it was unlocked.
+      if (ref.read(appLockServiceProvider).isAuthenticating) return;
       ref.read(isLockedProvider.notifier).lock();
     }
   }

@@ -53,4 +53,7 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Provides the Theme.AppCompat styles LaunchTheme now extends (local_auth
+    // needs them). Declared here so the theme resolves whatever else pulls it in.
+    implementation("androidx.appcompat:appcompat:1.7.0")
 }

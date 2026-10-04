@@ -4,8 +4,14 @@ import '../../../core/services/app_lock_service.dart';
 
 final appLockServiceProvider = Provider<AppLockService>((ref) => AppLockService());
 
-final canUseBiometricsProvider = FutureProvider<bool>((ref) {
-  return ref.watch(appLockServiceProvider).canUseBiometrics();
+/// Whether the phone has a screen lock (biometric or passcode) to unlock with.
+final canUseDeviceAuthProvider = FutureProvider.autoDispose<bool>((ref) {
+  return ref.watch(appLockServiceProvider).canUseDeviceAuth();
+});
+
+/// Whether an app PIN has been set. Invalidate after setting or clearing one.
+final hasPinProvider = FutureProvider.autoDispose<bool>((ref) {
+  return ref.watch(appLockServiceProvider).hasPin();
 });
 
 /// Session-only "is the lock screen currently up" flag — always starts

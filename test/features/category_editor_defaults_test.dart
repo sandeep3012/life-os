@@ -159,4 +159,21 @@ void main() {
     expect(isEmojiIcon('label'), isFalse);
     expect(isEmojiIcon('🍽️'), isTrue);
   });
+
+  test('every picker choice is unique and resolves to itself', () {
+    expect(pickableIcons.toSet(), hasLength(pickableIcons.length));
+    expect(pickableEmojis.toSet(), hasLength(pickableEmojis.length));
+
+    // A pickable name missing from the lookup would save fine and then
+    // render as the fallback tag — and be misread as an emoji.
+    for (final name in pickableIcons) {
+      expect(isEmojiIcon(name), isFalse, reason: name);
+      if (name != defaultCategoryIcon) {
+        expect(resolveIcon(name), isNot(LucideIcons.tag), reason: name);
+      }
+    }
+    for (final emoji in pickableEmojis) {
+      expect(isEmojiIcon(emoji), isTrue, reason: emoji);
+    }
+  });
 }
