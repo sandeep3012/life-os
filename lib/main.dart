@@ -5,11 +5,16 @@ import 'app/app.dart';
 import 'app/app_restart.dart';
 import 'app/launch_timeline.dart';
 import 'app/splash_gate.dart';
+import 'app/transitions/screen_reveal.dart';
 
 void main() {
   LaunchTimeline.start();
   final binding = WidgetsFlutterBinding.ensureInitialized();
   // The native splash stays up until LifeOSApp's first screen has its data.
   SplashGate.hold(binding);
-  runApp(const AppRestartBoundary(child: ProviderScope(child: LifeOSApp())));
+  runApp(
+    const ScreenReveal(
+      child: AppRestartBoundary(child: ProviderScope(child: LifeOSApp())),
+    ),
+  );
 }

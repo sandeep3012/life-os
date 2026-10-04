@@ -64,9 +64,22 @@ class _SuccessOverlayState extends State<SuccessOverlay>
     ),
   ]).animate(_pop);
 
+  bool _started = false;
+
+  /// Started here rather than in initState because reduced motion has to be
+  /// read from the context: then the card simply appears, settled and with
+  /// its tick drawn, and the route's own fade is the only motion.
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    if (MediaQuery.of(context).disableAnimations) {
+      _pop.value = 1;
+      _ring.value = 1;
+      _tick.value = 1;
+      return;
+    }
     _pop.forward();
     _ring.forward();
     if (widget.emoji == null) {

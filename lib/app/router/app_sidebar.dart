@@ -11,6 +11,8 @@ import '../../features/finance/presentation/widgets/transfer_money_dialog.dart';
 import '../../features/settings/application/settings_providers.dart';
 import '../../features/tasks/application/tasks_providers.dart';
 import '../../core/widgets/tappable.dart';
+import '../transitions/screen_reveal.dart';
+import '../motion.dart';
 
 /// The design's sidebar drawer: 290px wide, `bg` background, a 1px hairline down
 /// its trailing edge, a gradient-avatar header, a list of destinations with the
@@ -312,15 +314,26 @@ class AppSidebar extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  Switch(
-                    value: isDark,
-                    onChanged: (value) {
-                      ref
-                          .read(settingsControllerProvider)
-                          .setThemeMode(
-                            value ? ThemeMode.dark : ThemeMode.light,
-                          );
-                    },
+                  Builder(
+                    builder: (switchContext) => Switch(
+                      value: isDark,
+                      onChanged: (value) {
+                        final mode = value ? ThemeMode.dark : ThemeMode.light;
+                        ScreenReveal.run(
+                          style: revealStyleOf(
+                            switchContext,
+                            ref,
+                            RevealStyle.circle,
+                          ),
+                          origin: globalCenterOf(switchContext),
+                          change: () => ref
+                              .read(settingsControllerProvider)
+                              .setThemeMode(mode),
+                          isApplied: () =>
+                              ref.read(settingsProvider).themeMode == mode,
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -376,7 +389,10 @@ class _SidebarGroupState extends State<_SidebarGroup> {
                   ),
                   AnimatedRotation(
                     turns: _expanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 180),
+                    duration: AppMotion.of(
+                      context,
+                      const Duration(milliseconds: 180),
+                    ),
                     child: Icon(
                       LucideIcons.chevronDown,
                       size: 18,
@@ -391,7 +407,10 @@ class _SidebarGroupState extends State<_SidebarGroup> {
             child: AnimatedAlign(
               alignment: Alignment.topCenter,
               heightFactor: _expanded ? 1 : 0,
-              duration: const Duration(milliseconds: 180),
+              duration: AppMotion.of(
+                context,
+                const Duration(milliseconds: 180),
+              ),
               curve: Curves.easeOutCubic,
               child: Column(children: widget.children),
             ),

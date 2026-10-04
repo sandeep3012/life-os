@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -77,175 +76,158 @@ class HomeScreen extends ConsumerWidget {
       drawer: const AppSidebar(),
       body: SafeArea(
         bottom: false,
-        child:
-            ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 16),
-                      child: Builder(
-                        builder: (context) => AppTopBar(
-                          centerText: DateFormat(
-                            'EEE · d MMM yyyy',
-                          ).format(now),
-                          onMenu: () => Scaffold.of(context).openDrawer(),
-                          onAvatar: () => context.go(RoutePaths.settings),
-                        ),
-                      ),
-                    ),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 16),
+              child: Builder(
+                builder: (context) => AppTopBar(
+                  centerText: DateFormat('EEE · d MMM yyyy').format(now),
+                  onMenu: () => Scaffold.of(context).openDrawer(),
+                  onAvatar: () => context.go(RoutePaths.settings),
+                ),
+              ),
+            ),
 
-                    _Greeting(text: _greeting(now), accent: scheme.secondary),
-                    const SizedBox(height: 6),
-                    Text(
-                      loaded
-                          ? _summaryLine(todayTasks, habits.length)
-                          : 'Getting your day ready…',
+            _Greeting(text: _greeting(now), accent: scheme.secondary),
+            const SizedBox(height: 6),
+            Text(
+              loaded
+                  ? _summaryLine(todayTasks, habits.length)
+                  : 'Getting your day ready…',
+              style: TextStyle(
+                fontFamily: AppFonts.sans,
+                fontSize: 14,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+
+            // Until the data is in, placeholders stand where it will
+            // go — never zeros that look real, and no layout jump.
+            if (!loaded) ...[
+              const SizedBox(height: 20),
+              const _HomeSkeleton(),
+            ] else ...[
+              const SizedBox(height: 20),
+              _buildNowCard(ref.watch(todayWorkoutProvider), todayAgenda, now),
+
+              const SizedBox(height: 20),
+              _DashboardStatRail(
+                monthSpendMinor: monthSpendMinor,
+                currencyCode: currencyCode,
+                tasks: todayTasks,
+                activeGoals: activeGoals,
+              ),
+
+              if (todayTasks.tasks.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                SectionHeader(
+                  title: "Today's to-dos",
+                  trailing: Tappable(
+                    onTap: () => context.go(RoutePaths.tasksHabits),
+                    semanticLabel: 'See all tasks',
+                    child: Text(
+                      'See all',
                       style: TextStyle(
                         fontFamily: AppFonts.sans,
-                        fontSize: 14,
-                        color: scheme.onSurfaceVariant,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: colors.accentInk,
                       ),
                     ),
-
-                    // Until the data is in, placeholders stand where it will
-                    // go — never zeros that look real, and no layout jump.
-                    if (!loaded) ...[
-                      const SizedBox(height: 20),
-                      const _HomeSkeleton(),
-                    ] else ...[
-                      const SizedBox(height: 20),
-                      _buildNowCard(
-                        ref.watch(todayWorkoutProvider),
-                        todayAgenda,
-                        now,
-                      ),
-
-                      const SizedBox(height: 20),
-                      _DashboardStatRail(
-                        monthSpendMinor: monthSpendMinor,
-                        currencyCode: currencyCode,
-                        tasks: todayTasks,
-                        activeGoals: activeGoals,
-                      ),
-
-                      if (todayTasks.tasks.isNotEmpty) ...[
-                        const SizedBox(height: 24),
-                        SectionHeader(
-                          title: "Today's to-dos",
-                          trailing: Tappable(
-                            onTap: () => context.go(RoutePaths.tasksHabits),
-                            semanticLabel: 'See all tasks',
-                            child: Text(
-                              'See all',
-                              style: TextStyle(
-                                fontFamily: AppFonts.sans,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: colors.accentInk,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 11),
-                        _TodayTaskList(
-                          tasks: todayTasks.tasks.take(4).toList(),
-                        ),
-                      ],
-
-                      if (habits.isNotEmpty) ...[
-                        const SizedBox(height: 22),
-                        SectionHeader(
-                          title: 'Habits to keep',
-                          trailing: Tappable(
-                            onTap: () => context.go(RoutePaths.plannerHabits),
-                            semanticLabel: 'See all habits',
-                            child: Text(
-                              'See all',
-                              style: TextStyle(
-                                fontFamily: AppFonts.sans,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: colors.accentInk,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 11),
-                        const _HabitGrid(),
-                      ],
-
-                      if (upcoming.isNotEmpty) ...[
-                        const SizedBox(height: 22),
-                        SectionHeader(
-                          title: 'Coming up',
-                          trailing: Tappable(
-                            onTap: () => context.go(RoutePaths.calendar),
-                            semanticLabel: 'Open calendar',
-                            child: Text(
-                              'Calendar',
-                              style: TextStyle(
-                                fontFamily: AppFonts.sans,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: colors.accentInk,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 11),
-                        _UpcomingList(items: upcoming, now: now),
-                      ],
-
-                      if (insights.isNotEmpty) ...[
-                        const SizedBox(height: 22),
-                        const SectionHeader(title: 'Worth knowing'),
-                        const SizedBox(height: 11),
-                        InsightCard(
-                          insight: insights.first,
-                          onDismiss: () => ref
-                              .read(aiAnalyserControllerProvider)
-                              .dismiss(insights.first.id),
-                        ),
-                      ],
-
-                      // The comp has no empty state — it's drawn with a full day of data —
-                      // but a first-run dashboard needs to say something, and the hero's
-                      // "Nothing scheduled" only speaks for the schedule.
-                      if (todayTasks.tasks.isEmpty &&
-                          habits.isEmpty &&
-                          upcoming.isEmpty &&
-                          insights.isEmpty) ...[
-                        const SizedBox(height: 22),
-                        Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('✨', style: TextStyle(fontSize: 32)),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Your dashboard fills in as you go',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontFamily: AppFonts.sans,
-                                  fontSize: 14,
-                                  color: colors.text3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ],
-                )
-                .animate()
-                .fadeIn(duration: AppMotion.screenEnter)
-                .slideY(
-                  begin: 0.02,
-                  end: 0.0,
-                  duration: AppMotion.screenEnter,
-                  curve: AppMotion.standard,
+                  ),
                 ),
+                const SizedBox(height: 11),
+                _TodayTaskList(tasks: todayTasks.tasks.take(4).toList()),
+              ],
+
+              if (habits.isNotEmpty) ...[
+                const SizedBox(height: 22),
+                SectionHeader(
+                  title: 'Habits to keep',
+                  trailing: Tappable(
+                    onTap: () => context.go(RoutePaths.plannerHabits),
+                    semanticLabel: 'See all habits',
+                    child: Text(
+                      'See all',
+                      style: TextStyle(
+                        fontFamily: AppFonts.sans,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: colors.accentInk,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 11),
+                const _HabitGrid(),
+              ],
+
+              if (upcoming.isNotEmpty) ...[
+                const SizedBox(height: 22),
+                SectionHeader(
+                  title: 'Coming up',
+                  trailing: Tappable(
+                    onTap: () => context.go(RoutePaths.calendar),
+                    semanticLabel: 'Open calendar',
+                    child: Text(
+                      'Calendar',
+                      style: TextStyle(
+                        fontFamily: AppFonts.sans,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: colors.accentInk,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 11),
+                _UpcomingList(items: upcoming, now: now),
+              ],
+
+              if (insights.isNotEmpty) ...[
+                const SizedBox(height: 22),
+                const SectionHeader(title: 'Worth knowing'),
+                const SizedBox(height: 11),
+                InsightCard(
+                  insight: insights.first,
+                  onDismiss: () => ref
+                      .read(aiAnalyserControllerProvider)
+                      .dismiss(insights.first.id),
+                ),
+              ],
+
+              // The comp has no empty state — it's drawn with a full day of data —
+              // but a first-run dashboard needs to say something, and the hero's
+              // "Nothing scheduled" only speaks for the schedule.
+              if (todayTasks.tasks.isEmpty &&
+                  habits.isEmpty &&
+                  upcoming.isEmpty &&
+                  insights.isEmpty) ...[
+                const SizedBox(height: 22),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('✨', style: TextStyle(fontSize: 32)),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Your dashboard fills in as you go',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: AppFonts.sans,
+                          fontSize: 14,
+                          color: colors.text3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ],
+        ).screenEnter(context),
       ),
     );
   }

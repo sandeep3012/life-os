@@ -21,6 +21,7 @@ import '../widgets/folder_tile.dart';
 import '../widgets/pinned_document_card.dart';
 import '../widgets/quick_add_document_details_sheet.dart';
 import '../../../../core/widgets/compact_editor_sheet.dart';
+import '../../../../app/motion.dart';
 
 class DocumentsScreen extends ConsumerStatefulWidget {
   const DocumentsScreen({super.key});
@@ -62,11 +63,13 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     // is hidden from the user.
     final filtered = allDocs.where((d) {
       if (!showingFilteredView) {
-        if (d.isPinned) return false;       // shown in Quick Access
+        if (d.isPinned) return false; // shown in Quick Access
         if (d.folderId != null) return false; // shown in its folder
       }
-      final matchesQuery = query.isEmpty || d.title.toLowerCase().contains(query);
-      final matchesType = _selectedTypeFilter == null || d.documentType == _selectedTypeFilter;
+      final matchesQuery =
+          query.isEmpty || d.title.toLowerCase().contains(query);
+      final matchesType =
+          _selectedTypeFilter == null || d.documentType == _selectedTypeFilter;
       return matchesQuery && matchesType;
     }).toList();
 
@@ -170,7 +173,10 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
               icon: const Icon(LucideIcons.folderPlus, size: 14),
               label: const Text('New'),
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 visualDensity: VisualDensity.compact,
               ),
             ),
@@ -228,7 +234,10 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                       _searchController.clear();
                     }),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       visualDensity: VisualDensity.compact,
                     ),
                     child: const Text('Clear'),
@@ -246,8 +255,8 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                     allDocs.isEmpty
                         ? 'No documents yet — tap + Add to import one.'
                         : showingFilteredView
-                            ? 'No documents match.'
-                            : 'All documents are organised into folders.',
+                        ? 'No documents match.'
+                        : 'All documents are organised into folders.',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -291,7 +300,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
   Future<void> _createFolder() async {
     final result = await _showCreateFolderSheet(context);
     if (result == null || !mounted) return;
-    await ref.read(documentsControllerProvider).createFolder(
+    await ref
+        .read(documentsControllerProvider)
+        .createFolder(
           result.name,
           iconName: result.iconName,
           colorHex: result.colorHex,
@@ -308,7 +319,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
   Future<void> _editFolder(Folder folder) async {
     final result = await _showCreateFolderSheet(context, initial: folder);
     if (result == null || !mounted) return;
-    await ref.read(documentsControllerProvider).updateFolder(
+    await ref
+        .read(documentsControllerProvider)
+        .updateFolder(
           folder.id,
           name: result.name,
           iconName: result.iconName,
@@ -332,7 +345,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
       initial: document,
     );
     if (details == null) return;
-    await ref.read(documentsControllerProvider).updateDocument(
+    await ref
+        .read(documentsControllerProvider)
+        .updateDocument(
           id: document.id,
           title: details.title,
           folderId: details.folderId,
@@ -382,7 +397,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
           name = picked.name;
         }
       case _ImportSource.camera:
-        final picked = await ImagePicker().pickImage(source: ImageSource.camera);
+        final picked = await ImagePicker().pickImage(
+          source: ImageSource.camera,
+        );
         if (picked != null) {
           file = File(picked.path);
           name = p.basename(picked.path);
@@ -398,7 +415,9 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     );
     if (details == null) return;
 
-    await ref.read(documentsControllerProvider).importDocument(
+    await ref
+        .read(documentsControllerProvider)
+        .importDocument(
           source: file,
           originalName: name,
           title: details.title,
@@ -431,18 +450,18 @@ class _CreateFolderResult {
 
 // Palette of folder accent colours.
 const _folderColors = [
-  ('Ocean',    '#4B7BA6'),
+  ('Ocean', '#4B7BA6'),
   ('Terracotta', '#C2703D'),
-  ('Sage',     '#3E7C5A'),
+  ('Sage', '#3E7C5A'),
   ('Lavender', '#7C6BC4'),
-  ('Teal',     '#3FA6A0'),
-  ('Rose',     '#B85C6E'),
-  ('Amber',    '#C49A3D'),
-  ('Forest',   '#2D6B4F'),
-  ('Slate',    '#5A6B7C'),
-  ('Plum',     '#7A3D8C'),
-  ('Coral',    '#D4624A'),
-  ('Steel',    '#4A6B8C'),
+  ('Teal', '#3FA6A0'),
+  ('Rose', '#B85C6E'),
+  ('Amber', '#C49A3D'),
+  ('Forest', '#2D6B4F'),
+  ('Slate', '#5A6B7C'),
+  ('Plum', '#7A3D8C'),
+  ('Coral', '#D4624A'),
+  ('Steel', '#4A6B8C'),
 ];
 
 Future<_CreateFolderResult?> _showCreateFolderSheet(
@@ -516,13 +535,18 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
                 GestureDetector(
                   onTap: () => setState(() => _selectedIcon = fi.name),
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 130),
+                    duration: AppMotion.of(
+                      context,
+                      const Duration(milliseconds: 130),
+                    ),
                     width: 60,
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
                       color: _selectedIcon == fi.name
                           ? colors.primary.withValues(alpha: 0.12)
-                          : colors.surfaceContainerHighest.withValues(alpha: 0.5),
+                          : colors.surfaceContainerHighest.withValues(
+                              alpha: 0.5,
+                            ),
                       borderRadius: BorderRadius.circular(12),
                       border: _selectedIcon == fi.name
                           ? Border.all(
@@ -577,24 +601,24 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
                   child: Tooltip(
                     message: label,
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 130),
+                      duration: AppMotion.of(
+                        context,
+                        const Duration(milliseconds: 130),
+                      ),
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
                         color: Color(int.parse(hex.replaceFirst('#', '0xFF'))),
                         shape: BoxShape.circle,
                         border: _selectedColorHex == hex
-                            ? Border.all(
-                                color: colors.onSurface,
-                                width: 2.5,
-                              )
+                            ? Border.all(color: colors.onSurface, width: 2.5)
                             : Border.all(color: Colors.transparent, width: 2.5),
                         boxShadow: _selectedColorHex == hex
                             ? [
                                 BoxShadow(
-                                  color: Color(int.parse(
-                                    hex.replaceFirst('#', '0xFF'),
-                                  )).withValues(alpha: 0.4),
+                                  color: Color(
+                                    int.parse(hex.replaceFirst('#', '0xFF')),
+                                  ).withValues(alpha: 0.4),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
@@ -602,7 +626,11 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
                             : null,
                       ),
                       child: _selectedColorHex == hex
-                          ? const Icon(Icons.check, size: 18, color: Colors.white)
+                          ? const Icon(
+                              Icons.check,
+                              size: 18,
+                              color: Colors.white,
+                            )
                           : null,
                     ),
                   ),
@@ -616,13 +644,15 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
               onPressed: _controller.text.trim().isEmpty
                   ? null
                   : () => Navigator.of(context).pop(
-                        _CreateFolderResult(
-                          name: _controller.text.trim(),
-                          iconName: _selectedIcon,
-                          colorHex: _selectedColorHex,
-                        ),
+                      _CreateFolderResult(
+                        name: _controller.text.trim(),
+                        iconName: _selectedIcon,
+                        colorHex: _selectedColorHex,
                       ),
-              child: Text(widget.initial != null ? 'Save changes' : 'Create folder'),
+                    ),
+              child: Text(
+                widget.initial != null ? 'Save changes' : 'Create folder',
+              ),
             ),
           ),
         ],
@@ -634,11 +664,7 @@ class _CreateFolderSheetState extends State<_CreateFolderSheet> {
 // ── Private helpers ────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    this.action,
-    this.padding,
-  });
+  const _SectionHeader({required this.title, this.action, this.padding});
 
   final String title;
   final Widget? action;
@@ -660,4 +686,3 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
-

@@ -16,6 +16,7 @@ import '../../../../core/widgets/save_feedback.dart';
 import '../../application/tasks_providers.dart';
 import '../../domain/task_priority.dart';
 import '../widgets/quick_add_task_sheet.dart';
+import '../../../../app/motion.dart';
 
 class TaskDetailScreen extends ConsumerStatefulWidget {
   const TaskDetailScreen({super.key, required this.taskId});
@@ -37,7 +38,21 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
     _arrowController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
+    );
+  }
+
+  /// The arrow's bob loops forever, so reduced motion holds it still and
+  /// fully visible rather than shortening it.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.of(context).disableAnimations) {
+      _arrowController
+        ..stop()
+        ..value = 1;
+    } else if (!_arrowController.isAnimating) {
+      _arrowController.repeat(reverse: true);
+    }
   }
 
   @override
@@ -168,8 +183,11 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
                       ),
                       const SizedBox(height: 12),
                       AnimatedSize(
-                        duration: const Duration(milliseconds: 260),
-                        curve: Curves.easeInOut,
+                        duration: AppMotion.of(
+                          context,
+                          const Duration(milliseconds: 260),
+                        ),
+                        curve: AppMotion.curveOf(context, Curves.easeInOut),
                         child: _detailsExpanded
                             ? Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,7 +265,10 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
                             ),
                             icon: AnimatedRotation(
                               turns: _detailsExpanded ? 0.5 : 0,
-                              duration: const Duration(milliseconds: 220),
+                              duration: AppMotion.of(
+                                context,
+                                const Duration(milliseconds: 220),
+                              ),
                               child: const Icon(LucideIcons.chevronDown),
                             ),
                           ),

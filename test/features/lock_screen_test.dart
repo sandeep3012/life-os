@@ -145,25 +145,49 @@ void main() {
       await disposeCleanly(tester);
     });
 
-    testWidgets('if the phone prompt is dismissed, the PIN is still there', (
-      tester,
-    ) async {
+    testWidgets(
+      'with phone lock on, the phone lock leads and the PIN is one tap away',
+      (tester) async {
+        final lock = _FakeLock(pin: '1234')..next = DeviceAuthResult.cancelled;
+        await pump(tester, lock, phoneLockOn: true);
+
+        // Dismissing the phone's prompt leaves its screen, not a keypad.
+        expect(locked(), isTrue);
+        expect(find.text('LifeOS is locked'), findsOneWidget);
+        expect(find.text('Enter PIN'), findsNothing);
+
+        await tester.tap(find.text('Use PIN instead'));
+        await tester.pumpAndSettle();
+        expect(find.text('Enter PIN'), findsOneWidget);
+        expect(find.text('Unlock with phone lock'), findsOneWidget);
+
+        await typePin(tester, '1234');
+        expect(locked(), isFalse);
+        await disposeCleanly(tester);
+      },
+    );
+
+    testWidgets('the Unlock button asks the phone again', (tester) async {
       final lock = _FakeLock(pin: '1234')..next = DeviceAuthResult.cancelled;
       await pump(tester, lock, phoneLockOn: true);
+      expect(lock.authCalls, 1);
 
-      expect(locked(), isTrue);
-      expect(find.text('Enter PIN'), findsOneWidget);
-      expect(find.text('Unlock with phone lock'), findsOneWidget);
+      lock.next = DeviceAuthResult.success;
+      await tester.tap(find.text('Unlock'));
+      await tester.pumpAndSettle();
 
-      await typePin(tester, '1234');
+      expect(lock.authCalls, 2);
       expect(locked(), isFalse);
       await disposeCleanly(tester);
     });
 
-    testWidgets('the phone-lock button asks again', (tester) async {
+    testWidgets('from the keypad, the phone-lock button asks again', (
+      tester,
+    ) async {
       final lock = _FakeLock(pin: '1234')..next = DeviceAuthResult.cancelled;
       await pump(tester, lock, phoneLockOn: true);
-      expect(lock.authCalls, 1);
+      await tester.tap(find.text('Use PIN instead'));
+      await tester.pumpAndSettle();
 
       lock.next = DeviceAuthResult.success;
       await tester.tap(find.text('Unlock with phone lock'));

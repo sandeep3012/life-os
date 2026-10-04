@@ -359,7 +359,7 @@ class BackupService {
       await _insertAll(
         _db.appSettings,
         tables['appSettings'],
-        AppSetting.fromJson,
+        (json) => AppSetting.fromJson({..._settingsAddedSinceV28, ...json}),
       );
       await _insertAll(_db.insights, tables['insights'], Insight.fromJson);
 
@@ -401,6 +401,14 @@ class BackupService {
       await dest.writeAsBytes(file.content as List<int>);
     }
   }
+
+  /// Settings columns newer than some backups. `fromJson` throws on a missing
+  /// non-null column, so without these a backup made before they existed
+  /// would fail to restore at all. Each value is the column's own default.
+  static const _settingsAddedSinceV28 = <String, dynamic>{
+    'reduceMotion': false,
+    'transitionEffectsEnabled': true,
+  };
 
   Future<void> _insertAll<T extends Table, D>(
     TableInfo<T, D> table,

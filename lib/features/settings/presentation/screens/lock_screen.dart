@@ -6,6 +6,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../core/services/app_lock_service.dart';
 import '../../application/app_lock_providers.dart';
 import '../../application/settings_providers.dart';
+import '../../../../app/transitions/screen_reveal.dart';
 
 /// What the lock screen is asking for.
 enum _Mode {
@@ -40,6 +41,11 @@ class _LockScreenState extends ConsumerState<LockScreen> {
   String? _error;
   bool _busy = false;
 
+  final _unlockButtonKey = GlobalKey(debugLabel: 'unlock button');
+
+  /// "Use PIN instead" was tapped on the phone-lock screen.
+  bool _usePin = false;
+
   /// Set while choosing a new PIN: the first entry, kept until it is confirmed.
   bool _creatingPin = false;
   String? _firstPin;
@@ -73,7 +79,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     setState(() => _busy = false);
     switch (result) {
       case DeviceAuthResult.success:
-        ref.read(isLockedProvider.notifier).unlock();
+        _unlock();
       case DeviceAuthResult.cancelled:
         break; // They backed out; the button and the keypad are still here.
       case DeviceAuthResult.unavailable:
@@ -97,7 +103,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     final ok = await ref.read(appLockServiceProvider).verifyPin(_entered);
     if (!mounted) return;
     if (ok) {
-      ref.read(isLockedProvider.notifier).unlock();
+      _unlock();
     } else if (_entered.length >= 6) {
       setState(() {
         _error = 'Incorrect PIN';
@@ -139,7 +145,18 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     await ref.read(settingsControllerProvider).setBiometricEnabled(false);
     ref.invalidate(hasPinProvider);
     if (!mounted) return;
-    ref.read(isLockedProvider.notifier).unlock();
+    _unlock();
+  }
+
+  /// Opens the app in a circle from the unlock button — or from the middle of
+  /// the screen when the PIN pad was the way in.
+  void _unlock() {
+    final button = _unlockButtonKey.currentContext;
+    ScreenReveal.run(
+      style: revealStyleOf(context, ref, RevealStyle.circle),
+      origin: button == null ? null : globalCenterOf(button),
+      change: () => ref.read(isLockedProvider.notifier).unlock(),
+    );
   }
 
   @override
@@ -153,12 +170,16 @@ class _LockScreenState extends ConsumerState<LockScreen> {
       return const Scaffold(body: SizedBox.shrink());
     }
 
+    // With the phone lock switched on it leads, as in other apps; the PIN is
+    // the fallback a tap away rather than the screen you land on.
+    final phoneLockFirst =
+        deviceAvailable && (!hasPin || settings.biometricEnabled);
     final mode = _creatingPin
         ? _Mode.createPin
+        : phoneLockFirst && !_usePin
+        ? _Mode.device
         : hasPin
         ? _Mode.pin
-        : deviceAvailable
-        ? _Mode.device
         : _Mode.noLock;
     final deviceButton =
         mode == _Mode.pin && settings.biometricEnabled && deviceAvailable;
@@ -169,9 +190,16 @@ class _LockScreenState extends ConsumerState<LockScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
           child: switch (mode) {
             _Mode.device => _DeviceView(
+              buttonKey: _unlockButtonKey,
               busy: _busy,
               error: _error,
               onUnlock: _tryDevice,
+              onUsePin: hasPin
+                  ? () => setState(() {
+                      _usePin = true;
+                      _error = null;
+                    })
+                  : null,
             ),
             _Mode.noLock => _NoLockView(
               onSetPin: () => setState(() => _creatingPin = true),
@@ -191,6 +219,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                     )
                   : deviceButton
                   ? TextButton.icon(
+                      key: _unlockButtonKey,
                       onPressed: _busy ? null : _tryDevice,
                       icon: const Icon(LucideIcons.scanFace),
                       label: const Text('Unlock with phone lock'),
@@ -207,14 +236,20 @@ class _LockScreenState extends ConsumerState<LockScreen> {
 /// No app PIN: the phone's own lock is the way in.
 class _DeviceView extends StatelessWidget {
   const _DeviceView({
+    required this.buttonKey,
     required this.busy,
     required this.error,
     required this.onUnlock,
+    this.onUsePin,
   });
 
+  final Key buttonKey;
   final bool busy;
   final String? error;
   final VoidCallback onUnlock;
+
+  /// Offered when there's an app PIN to fall back on.
+  final VoidCallback? onUsePin;
 
   @override
   Widget build(BuildContext context) {
@@ -251,11 +286,19 @@ class _DeviceView extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
+            key: buttonKey,
             onPressed: busy ? null : onUnlock,
             icon: const Icon(LucideIcons.scanFace),
             label: const Text('Unlock'),
           ),
         ),
+        if (onUsePin != null) ...[
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: busy ? null : onUsePin,
+            child: const Text('Use PIN instead'),
+          ),
+        ],
       ],
     );
   }

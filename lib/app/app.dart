@@ -16,6 +16,7 @@ import 'launch_timeline.dart';
 import 'router/app_router.dart';
 import 'splash_gate.dart';
 import 'theme/app_theme.dart';
+import 'transitions/screen_reveal.dart';
 
 class LifeOSApp extends ConsumerStatefulWidget {
   const LifeOSApp({super.key});
@@ -120,6 +121,9 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
         setState(() => _dataReady = true);
       } else {
         SplashGate.release();
+        // A colour theme change restarts into here; its page turn is waiting
+        // for this screen to be ready before it uncovers it.
+        ScreenReveal.contentReady();
         _startBackgroundChores();
       }
     });
@@ -131,22 +135,29 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     super.dispose();
   }
 
-  /// Re-locks the moment the app leaves the foreground — otherwise "app
-  /// lock" wouldn't actually protect anything once the app has been opened
-  /// once in a session.
+  /// Re-locks when the app comes back after a while in the background — see
+  /// [RelockPolicy]. Without this "app lock" would protect nothing once the
+  /// app had been opened once; locking the instant it leaves the foreground
+  /// instead asked for the PIN after every quick app switch.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.read(scheduleCoordinatorProvider).requestRefresh();
     }
     if (!ref.read(settingsProvider).appLockEnabled) return;
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
-      // The system's Face ID / fingerprint dialog takes focus from the app, and
-      // reports as inactive or paused. Locking then would re-lock the app the
-      // moment it was unlocked.
-      if (ref.read(appLockServiceProvider).isAuthenticating) return;
-      ref.read(isLockedProvider.notifier).lock();
+    final policy = ref.read(relockPolicyProvider);
+    switch (state) {
+      case AppLifecycleState.hidden || AppLifecycleState.paused:
+        // The phone's own Face ID / fingerprint / passcode screen also sends
+        // the app here; that's the unlock happening, not the user leaving.
+        if (ref.read(appLockServiceProvider).isAuthenticating) return;
+        policy.left();
+      case AppLifecycleState.resumed:
+        if (policy.returned()) ref.read(isLockedProvider.notifier).lock();
+      case AppLifecycleState.inactive || AppLifecycleState.detached:
+        // Inactive is the notification shade, Control Centre, the app
+        // switcher, an incoming call banner — the app hasn't been left.
+        break;
     }
   }
 
@@ -236,10 +247,27 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
       theme: AppTheme.light(settings.colorTheme),
       darkTheme: AppTheme.dark(settings.colorTheme),
       themeMode: themeMode,
+      // Under a reveal the new theme must be final the moment it's uncovered;
+      // blending it in would show the circle sweeping half-changed colours.
+      themeAnimationDuration: ScreenReveal.isActive
+          ? Duration.zero
+          : kThemeAnimationDuration,
       routerConfig: _router,
       builder: (context, child) {
-        if (showLockScreen) return const LockScreen();
-        return child ?? const SizedBox.shrink();
+        // "Animations: Reduced" works by telling every widget below what the
+        // phone's own reduce-motion setting would — so AppMotion.of, and
+        // anything else that reads it, follows without per-screen wiring.
+        // Always wrapped, even when off, so toggling it doesn't reparent (and
+        // reset) the whole app.
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            disableAnimations: media.disableAnimations || settings.reduceMotion,
+          ),
+          child: showLockScreen
+              ? const LockScreen()
+              : child ?? const SizedBox.shrink(),
+        );
       },
     );
   }

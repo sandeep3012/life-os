@@ -15774,6 +15774,36 @@ class $AppSettingsTable extends AppSettings
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _reduceMotionMeta = const VerificationMeta(
+    'reduceMotion',
+  );
+  @override
+  late final GeneratedColumn<bool> reduceMotion = GeneratedColumn<bool>(
+    'reduce_motion',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("reduce_motion" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _transitionEffectsEnabledMeta =
+      const VerificationMeta('transitionEffectsEnabled');
+  @override
+  late final GeneratedColumn<bool> transitionEffectsEnabled =
+      GeneratedColumn<bool>(
+        'transition_effects_enabled',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("transition_effects_enabled" IN (0, 1))',
+        ),
+        defaultValue: const Constant(true),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     hapticsEnabled,
@@ -15790,6 +15820,8 @@ class $AppSettingsTable extends AppSettings
     appLockEnabled,
     biometricEnabled,
     balancesVisible,
+    reduceMotion,
+    transitionEffectsEnabled,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -15917,6 +15949,24 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('reduce_motion')) {
+      context.handle(
+        _reduceMotionMeta,
+        reduceMotion.isAcceptableOrUnknown(
+          data['reduce_motion']!,
+          _reduceMotionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('transition_effects_enabled')) {
+      context.handle(
+        _transitionEffectsEnabledMeta,
+        transitionEffectsEnabled.isAcceptableOrUnknown(
+          data['transition_effects_enabled']!,
+          _transitionEffectsEnabledMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -15982,6 +16032,14 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.bool,
         data['${effectivePrefix}balances_visible'],
       )!,
+      reduceMotion: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}reduce_motion'],
+      )!,
+      transitionEffectsEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}transition_effects_enabled'],
+      )!,
     );
   }
 
@@ -16020,6 +16078,16 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   /// Whether Finance home shows its balances. Off masks the running total and
   /// every account card, for reading the app in public.
   final bool balancesVisible;
+
+  /// The in-app "Animations: Reduced" choice. Applies the phone's own
+  /// reduce-motion behaviour to LifeOS alone; the phone's setting, when on,
+  /// still wins regardless of this.
+  final bool reduceMotion;
+
+  /// The large screen transitions — circle reveals, the page turn and the
+  /// tab content slide. Off swaps them for a short fade while every other
+  /// animation keeps playing.
+  final bool transitionEffectsEnabled;
   const AppSetting({
     required this.hapticsEnabled,
     required this.saveAnimationsEnabled,
@@ -16035,6 +16103,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.appLockEnabled,
     required this.biometricEnabled,
     required this.balancesVisible,
+    required this.reduceMotion,
+    required this.transitionEffectsEnabled,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -16055,6 +16125,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['app_lock_enabled'] = Variable<bool>(appLockEnabled);
     map['biometric_enabled'] = Variable<bool>(biometricEnabled);
     map['balances_visible'] = Variable<bool>(balancesVisible);
+    map['reduce_motion'] = Variable<bool>(reduceMotion);
+    map['transition_effects_enabled'] = Variable<bool>(
+      transitionEffectsEnabled,
+    );
     return map;
   }
 
@@ -16074,6 +16148,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       appLockEnabled: Value(appLockEnabled),
       biometricEnabled: Value(biometricEnabled),
       balancesVisible: Value(balancesVisible),
+      reduceMotion: Value(reduceMotion),
+      transitionEffectsEnabled: Value(transitionEffectsEnabled),
     );
   }
 
@@ -16103,6 +16179,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       appLockEnabled: serializer.fromJson<bool>(json['appLockEnabled']),
       biometricEnabled: serializer.fromJson<bool>(json['biometricEnabled']),
       balancesVisible: serializer.fromJson<bool>(json['balancesVisible']),
+      reduceMotion: serializer.fromJson<bool>(json['reduceMotion']),
+      transitionEffectsEnabled: serializer.fromJson<bool>(
+        json['transitionEffectsEnabled'],
+      ),
     );
   }
   @override
@@ -16127,6 +16207,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'appLockEnabled': serializer.toJson<bool>(appLockEnabled),
       'biometricEnabled': serializer.toJson<bool>(biometricEnabled),
       'balancesVisible': serializer.toJson<bool>(balancesVisible),
+      'reduceMotion': serializer.toJson<bool>(reduceMotion),
+      'transitionEffectsEnabled': serializer.toJson<bool>(
+        transitionEffectsEnabled,
+      ),
     };
   }
 
@@ -16145,6 +16229,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     bool? appLockEnabled,
     bool? biometricEnabled,
     bool? balancesVisible,
+    bool? reduceMotion,
+    bool? transitionEffectsEnabled,
   }) => AppSetting(
     hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
     saveAnimationsEnabled: saveAnimationsEnabled ?? this.saveAnimationsEnabled,
@@ -16162,6 +16248,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     appLockEnabled: appLockEnabled ?? this.appLockEnabled,
     biometricEnabled: biometricEnabled ?? this.biometricEnabled,
     balancesVisible: balancesVisible ?? this.balancesVisible,
+    reduceMotion: reduceMotion ?? this.reduceMotion,
+    transitionEffectsEnabled:
+        transitionEffectsEnabled ?? this.transitionEffectsEnabled,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -16203,6 +16292,12 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       balancesVisible: data.balancesVisible.present
           ? data.balancesVisible.value
           : this.balancesVisible,
+      reduceMotion: data.reduceMotion.present
+          ? data.reduceMotion.value
+          : this.reduceMotion,
+      transitionEffectsEnabled: data.transitionEffectsEnabled.present
+          ? data.transitionEffectsEnabled.value
+          : this.transitionEffectsEnabled,
     );
   }
 
@@ -16222,7 +16317,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('currencyCode: $currencyCode, ')
           ..write('appLockEnabled: $appLockEnabled, ')
           ..write('biometricEnabled: $biometricEnabled, ')
-          ..write('balancesVisible: $balancesVisible')
+          ..write('balancesVisible: $balancesVisible, ')
+          ..write('reduceMotion: $reduceMotion, ')
+          ..write('transitionEffectsEnabled: $transitionEffectsEnabled')
           ..write(')'))
         .toString();
   }
@@ -16243,6 +16340,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     appLockEnabled,
     biometricEnabled,
     balancesVisible,
+    reduceMotion,
+    transitionEffectsEnabled,
   );
   @override
   bool operator ==(Object other) =>
@@ -16261,7 +16360,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.currencyCode == this.currencyCode &&
           other.appLockEnabled == this.appLockEnabled &&
           other.biometricEnabled == this.biometricEnabled &&
-          other.balancesVisible == this.balancesVisible);
+          other.balancesVisible == this.balancesVisible &&
+          other.reduceMotion == this.reduceMotion &&
+          other.transitionEffectsEnabled == this.transitionEffectsEnabled);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -16279,6 +16380,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<bool> appLockEnabled;
   final Value<bool> biometricEnabled;
   final Value<bool> balancesVisible;
+  final Value<bool> reduceMotion;
+  final Value<bool> transitionEffectsEnabled;
   const AppSettingsCompanion({
     this.hapticsEnabled = const Value.absent(),
     this.saveAnimationsEnabled = const Value.absent(),
@@ -16294,6 +16397,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.appLockEnabled = const Value.absent(),
     this.biometricEnabled = const Value.absent(),
     this.balancesVisible = const Value.absent(),
+    this.reduceMotion = const Value.absent(),
+    this.transitionEffectsEnabled = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.hapticsEnabled = const Value.absent(),
@@ -16310,6 +16415,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.appLockEnabled = const Value.absent(),
     this.biometricEnabled = const Value.absent(),
     this.balancesVisible = const Value.absent(),
+    this.reduceMotion = const Value.absent(),
+    this.transitionEffectsEnabled = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<bool>? hapticsEnabled,
@@ -16326,6 +16433,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<bool>? appLockEnabled,
     Expression<bool>? biometricEnabled,
     Expression<bool>? balancesVisible,
+    Expression<bool>? reduceMotion,
+    Expression<bool>? transitionEffectsEnabled,
   }) {
     return RawValuesInsertable({
       if (hapticsEnabled != null) 'haptics_enabled': hapticsEnabled,
@@ -16345,6 +16454,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (appLockEnabled != null) 'app_lock_enabled': appLockEnabled,
       if (biometricEnabled != null) 'biometric_enabled': biometricEnabled,
       if (balancesVisible != null) 'balances_visible': balancesVisible,
+      if (reduceMotion != null) 'reduce_motion': reduceMotion,
+      if (transitionEffectsEnabled != null)
+        'transition_effects_enabled': transitionEffectsEnabled,
     });
   }
 
@@ -16363,6 +16475,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<bool>? appLockEnabled,
     Value<bool>? biometricEnabled,
     Value<bool>? balancesVisible,
+    Value<bool>? reduceMotion,
+    Value<bool>? transitionEffectsEnabled,
   }) {
     return AppSettingsCompanion(
       hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
@@ -16382,6 +16496,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       appLockEnabled: appLockEnabled ?? this.appLockEnabled,
       biometricEnabled: biometricEnabled ?? this.biometricEnabled,
       balancesVisible: balancesVisible ?? this.balancesVisible,
+      reduceMotion: reduceMotion ?? this.reduceMotion,
+      transitionEffectsEnabled:
+          transitionEffectsEnabled ?? this.transitionEffectsEnabled,
     );
   }
 
@@ -16436,6 +16553,14 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (balancesVisible.present) {
       map['balances_visible'] = Variable<bool>(balancesVisible.value);
     }
+    if (reduceMotion.present) {
+      map['reduce_motion'] = Variable<bool>(reduceMotion.value);
+    }
+    if (transitionEffectsEnabled.present) {
+      map['transition_effects_enabled'] = Variable<bool>(
+        transitionEffectsEnabled.value,
+      );
+    }
     return map;
   }
 
@@ -16455,7 +16580,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('currencyCode: $currencyCode, ')
           ..write('appLockEnabled: $appLockEnabled, ')
           ..write('biometricEnabled: $biometricEnabled, ')
-          ..write('balancesVisible: $balancesVisible')
+          ..write('balancesVisible: $balancesVisible, ')
+          ..write('reduceMotion: $reduceMotion, ')
+          ..write('transitionEffectsEnabled: $transitionEffectsEnabled')
           ..write(')'))
         .toString();
   }
@@ -29028,6 +29155,8 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<bool> appLockEnabled,
       Value<bool> biometricEnabled,
       Value<bool> balancesVisible,
+      Value<bool> reduceMotion,
+      Value<bool> transitionEffectsEnabled,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -29045,6 +29174,8 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<bool> appLockEnabled,
       Value<bool> biometricEnabled,
       Value<bool> balancesVisible,
+      Value<bool> reduceMotion,
+      Value<bool> transitionEffectsEnabled,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -29123,6 +29254,16 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<bool> get balancesVisible => $composableBuilder(
     column: $table.balancesVisible,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get reduceMotion => $composableBuilder(
+    column: $table.reduceMotion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get transitionEffectsEnabled => $composableBuilder(
+    column: $table.transitionEffectsEnabled,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -29205,6 +29346,16 @@ class $$AppSettingsTableOrderingComposer
     column: $table.balancesVisible,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get reduceMotion => $composableBuilder(
+    column: $table.reduceMotion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get transitionEffectsEnabled => $composableBuilder(
+    column: $table.transitionEffectsEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -29281,6 +29432,16 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.balancesVisible,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get reduceMotion => $composableBuilder(
+    column: $table.reduceMotion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get transitionEffectsEnabled => $composableBuilder(
+    column: $table.transitionEffectsEnabled,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -29328,6 +29489,8 @@ class $$AppSettingsTableTableManager
                 Value<bool> appLockEnabled = const Value.absent(),
                 Value<bool> biometricEnabled = const Value.absent(),
                 Value<bool> balancesVisible = const Value.absent(),
+                Value<bool> reduceMotion = const Value.absent(),
+                Value<bool> transitionEffectsEnabled = const Value.absent(),
               }) => AppSettingsCompanion(
                 hapticsEnabled: hapticsEnabled,
                 saveAnimationsEnabled: saveAnimationsEnabled,
@@ -29343,6 +29506,8 @@ class $$AppSettingsTableTableManager
                 appLockEnabled: appLockEnabled,
                 biometricEnabled: biometricEnabled,
                 balancesVisible: balancesVisible,
+                reduceMotion: reduceMotion,
+                transitionEffectsEnabled: transitionEffectsEnabled,
               ),
           createCompanionCallback:
               ({
@@ -29360,6 +29525,8 @@ class $$AppSettingsTableTableManager
                 Value<bool> appLockEnabled = const Value.absent(),
                 Value<bool> biometricEnabled = const Value.absent(),
                 Value<bool> balancesVisible = const Value.absent(),
+                Value<bool> reduceMotion = const Value.absent(),
+                Value<bool> transitionEffectsEnabled = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 hapticsEnabled: hapticsEnabled,
                 saveAnimationsEnabled: saveAnimationsEnabled,
@@ -29375,6 +29542,8 @@ class $$AppSettingsTableTableManager
                 appLockEnabled: appLockEnabled,
                 biometricEnabled: biometricEnabled,
                 balancesVisible: balancesVisible,
+                reduceMotion: reduceMotion,
+                transitionEffectsEnabled: transitionEffectsEnabled,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

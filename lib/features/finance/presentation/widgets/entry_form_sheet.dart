@@ -310,12 +310,11 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 children: [
                   _AmountDisplay(
-                    label: _isExpense
-                        ? 'Amount spent *'
-                        : 'Amount received *',
+                    label: _isExpense ? 'Amount spent *' : 'Amount received *',
                     symbol: widget.currencySymbol,
                     controller: _amountController,
-                    errorText: _amountController.text.isNotEmpty && !_validAmount
+                    errorText:
+                        _amountController.text.isNotEmpty && !_validAmount
                         ? 'Enter a positive amount'
                         : null,
                   ),
@@ -331,8 +330,9 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
                         _Chip(
                           label: relevant[i].name,
                           iconValue: relevant[i].icon,
-                          dotColor: colors.spendCategoryPalette[
-                              i % colors.spendCategoryPalette.length],
+                          dotColor:
+                              colors.spendCategoryPalette[i %
+                                  colors.spendCategoryPalette.length],
                           selected: relevant[i].id == _categoryId,
                           onTap: () =>
                               setState(() => _categoryId = relevant[i].id),
@@ -542,11 +542,7 @@ class _AmountDisplay extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Container(
-                        width: 2,
-                        height: 38,
-                        color: scheme.secondary,
-                      ),
+                      Container(width: 2, height: 38, color: scheme.secondary),
                     ],
                   ),
                 ),
@@ -828,10 +824,10 @@ Future<EntryFormResult?> showEntryFormSheet(
     useSafeArea: true,
     // Comp: 420ms in on a curve that overshoots slightly, 190ms out.
     sheetAnimationStyle: AnimationStyle(
-      duration: AppMotion.sheetOpen,
-      curve: AppMotion.sheetIn,
-      reverseDuration: AppMotion.sheetClose,
-      reverseCurve: AppMotion.sheetOut,
+      duration: AppMotion.of(context, AppMotion.sheetOpen),
+      curve: AppMotion.curveOf(context, AppMotion.sheetIn),
+      reverseDuration: AppMotion.of(context, AppMotion.sheetClose),
+      reverseCurve: AppMotion.curveOf(context, AppMotion.sheetOut),
     ),
     builder: (context) => EntryFormSheet(
       kind: kind,

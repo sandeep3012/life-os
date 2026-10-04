@@ -150,6 +150,62 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1));
   });
 
+  testWidgets(
+    'Animations: Reduced persists and hides the transition effects switch',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Transition effects'), 200);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining(
+          RegExp('motion & feedback', caseSensitive: false),
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+
+      await tester.ensureVisible(find.text('Reduced'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reduced'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(settingsProvider).reduceMotion, isTrue);
+      expect((await db.select(db.appSettings).getSingle()).reduceMotion, true);
+      // Reduced already turns the effects into fades; the switch would be
+      // a control that does nothing.
+      expect(find.text('Transition effects'), findsNothing);
+
+      await tester.tap(find.text('Full'));
+      await tester.pumpAndSettle();
+      expect(container.read(settingsProvider).reduceMotion, isFalse);
+      expect(find.text('Transition effects'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 1));
+    },
+  );
+
+  testWidgets('the transition effects switch persists', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    expect(container.read(settingsProvider).transitionEffectsEnabled, isTrue);
+
+    await tester.scrollUntilVisible(find.text('Transition effects'), 200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Transition effects'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(settingsProvider).transitionEffectsEnabled, isFalse);
+    final row = await db.select(db.appSettings).getSingle();
+    expect(row.transitionEffectsEnabled, isFalse);
+    // Untouched settings survive the partial upsert.
+    expect(row.reduceMotion, isFalse);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
   testWidgets('transaction recorder layout persists', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
@@ -170,7 +226,7 @@ void main() {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
-      await tester.drag(find.byType(ListView).first, const Offset(0, -420));
+      await tester.scrollUntilVisible(find.text('Habit reminders'), 200);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Habit reminders'));
       await tester.pumpAndSettle();

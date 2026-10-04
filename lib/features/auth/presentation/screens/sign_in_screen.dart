@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -41,18 +40,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   Future<void> _submit() async {
     setState(() => _busy = true);
-    final outcome = await ref.read(syncAuthControllerProvider).signIn(
-      email: _email.text.trim(),
-      password: _password.text,
-    );
+    final outcome = await ref
+        .read(syncAuthControllerProvider)
+        .signIn(email: _email.text.trim(), password: _password.text);
     if (!mounted) return;
     setState(() => _busy = false);
     _report(outcome);
   }
 
   Future<void> _social(String provider) async {
-    final outcome =
-        await ref.read(syncAuthControllerProvider).signInWithProvider(provider);
+    final outcome = await ref
+        .read(syncAuthControllerProvider)
+        .signInWithProvider(provider);
     if (!mounted) return;
     _report(outcome);
   }
@@ -176,12 +175,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ],
             ),
           ),
-        ).animate().fadeIn(duration: AppMotion.screenEnter).slideY(
-              begin: 0.02,
-              end: 0.0,
-              duration: AppMotion.screenEnter,
-              curve: AppMotion.standard,
-            ),
+        ).screenEnter(context),
       ),
     );
   }

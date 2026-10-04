@@ -7,6 +7,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../domain/task_priority.dart';
 import '../../../../app/theme/app_fonts.dart';
+import '../../../../app/motion.dart';
 
 class TaskTile extends StatelessWidget {
   const TaskTile({
@@ -141,7 +142,7 @@ class _TaskCheckbox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
+      duration: AppMotion.of(context, const Duration(milliseconds: 150)),
       width: 22,
       height: 22,
       margin: const EdgeInsets.only(top: 2),

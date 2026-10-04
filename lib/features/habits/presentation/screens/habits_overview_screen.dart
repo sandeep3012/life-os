@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_paths.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -51,163 +50,154 @@ class HabitsOverviewScreen extends ConsumerWidget {
       drawer: const AppSidebar(),
       body: SafeArea(
         bottom: false,
-        child:
-            ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 14),
-                      child: Builder(
-                        builder: (context) => AppTopBar(
-                          centerText: 'Habits',
-                          centerIsTitle: true,
-                          showTrailing: false,
-                          onMenu: () => Scaffold.of(context).openDrawer(),
-                        ),
-                      ),
-                    ),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 14),
+              child: Builder(
+                builder: (context) => AppTopBar(
+                  centerText: 'Habits',
+                  centerIsTitle: true,
+                  showTrailing: false,
+                  onMenu: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
+            ),
 
-                    Overline(
-                      'Consistency · this week',
-                      color: colors.text3,
-                      letterSpacing: 0.3,
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+            Overline(
+              'Consistency · this week',
+              color: colors.text3,
+              letterSpacing: 0.3,
+            ),
+            const SizedBox(height: 2),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${(consistency.ratio * 100).round()}%',
+                  style: TextStyle(
+                    fontFamily: AppFonts.serif,
+                    fontSize: 42,
+                    height: 1,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.5,
+                    color: scheme.onSurface,
+                    fontFeatures: AppFonts.tabular,
+                  ),
+                ),
+                if (consistency.deltaPoints != null) ...[
+                  const SizedBox(width: 10),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
                       children: [
-                        Text(
-                          '${(consistency.ratio * 100).round()}%',
-                          style: TextStyle(
-                            fontFamily: AppFonts.serif,
-                            fontSize: 42,
-                            height: 1,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: -0.5,
-                            color: scheme.onSurface,
-                            fontFeatures: AppFonts.tabular,
-                          ),
+                        Icon(
+                          consistency.deltaPoints! >= 0
+                              ? LucideIcons.arrowUp
+                              : LucideIcons.arrowDown,
+                          size: 14,
+                          color: consistency.deltaPoints! >= 0
+                              ? colors.accentInk
+                              : colors.warm,
                         ),
-                        if (consistency.deltaPoints != null) ...[
-                          const SizedBox(width: 10),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  consistency.deltaPoints! >= 0
-                                      ? LucideIcons.arrowUp
-                                      : LucideIcons.arrowDown,
-                                  size: 14,
-                                  color: consistency.deltaPoints! >= 0
-                                      ? colors.accentInk
-                                      : colors.warm,
-                                ),
-                                Text(
-                                  '${consistency.deltaPoints!.abs().round()} pts',
-                                  style: TextStyle(
-                                    fontFamily: AppFonts.sans,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                    color: consistency.deltaPoints! >= 0
-                                        ? colors.accentInk
-                                        : colors.warm,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      habits.isEmpty
-                          ? '🌱 No habits yet — build your first one below.'
-                          : '${consistency.completedThisWeek} of '
-                                '${consistency.targetThisWeek} check-ins logged this week',
-                      style: TextStyle(
-                        fontFamily: AppFonts.sans,
-                        fontSize: 13.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-                    _WeekStrip(
-                      counts: consistency.dayCounts,
-                      targets: consistency.dayTargets,
-                    ),
-
-                    if (habits.isNotEmpty) ...[
-                      const SizedBox(height: 22),
-                      SectionHeader(
-                        title: 'Today',
-                        trailing: Text(
-                          '$doneToday of ${habits.where((h) => h.isScheduledToday).length} done',
+                        Text(
+                          '${consistency.deltaPoints!.abs().round()} pts',
                           style: TextStyle(
                             fontFamily: AppFonts.sans,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurfaceVariant,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: consistency.deltaPoints! >= 0
+                                ? colors.accentInk
+                                : colors.warm,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 11),
-                      for (final progress in habits)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _HabitCard(
-                            key: ValueKey(progress.habit.id),
-                            progress: progress,
-                          ),
-                        ),
-                    ],
-
-                    const SizedBox(height: 2),
-                    DashedActionButton(
-                      label: 'Build a new habit',
-                      onTap: () async {
-                        final categories =
-                            ref.read(habitCategoriesProvider).value ?? const [];
-                        final result = await showQuickAddHabitSheet(
-                          context,
-                          categories: categories,
-                        );
-                        if (result == null) return;
-                        await ref
-                            .read(habitsControllerProvider)
-                            .addHabit(
-                              result.name,
-                              targetAmount: result.targetAmount,
-                              targetUnit: result.targetUnit,
-                              description: result.description,
-                              schedule: result.schedule,
-                              categoryId: result.categoryId,
-                              reminderEnabled: result.reminderEnabled,
-                              reminderHour: result.reminderHour,
-                              reminderMinute: result.reminderMinute,
-                              reminderMode: result.reminderMode,
-                            );
-                        if (!context.mounted) return;
-                        await showSaveFeedback(
-                          context,
-                          ref,
-                          title: 'Habit saved',
-                          message: '“${result.name}” is ready to track.',
-                        );
-                      },
+                      ],
                     ),
-                  ],
-                )
-                .animate()
-                .fadeIn(duration: AppMotion.screenEnter)
-                .slideY(
-                  begin: 0.02,
-                  end: 0.0,
-                  duration: AppMotion.screenEnter,
-                  curve: AppMotion.standard,
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 3),
+            Text(
+              habits.isEmpty
+                  ? '🌱 No habits yet — build your first one below.'
+                  : '${consistency.completedThisWeek} of '
+                        '${consistency.targetThisWeek} check-ins logged this week',
+              style: TextStyle(
+                fontFamily: AppFonts.sans,
+                fontSize: 13.5,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+            _WeekStrip(
+              counts: consistency.dayCounts,
+              targets: consistency.dayTargets,
+            ),
+
+            if (habits.isNotEmpty) ...[
+              const SizedBox(height: 22),
+              SectionHeader(
+                title: 'Today',
+                trailing: Text(
+                  '$doneToday of ${habits.where((h) => h.isScheduledToday).length} done',
+                  style: TextStyle(
+                    fontFamily: AppFonts.sans,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
+              ),
+              const SizedBox(height: 11),
+              for (final progress in habits)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _HabitCard(
+                    key: ValueKey(progress.habit.id),
+                    progress: progress,
+                  ),
+                ),
+            ],
+
+            const SizedBox(height: 2),
+            DashedActionButton(
+              label: 'Build a new habit',
+              onTap: () async {
+                final categories =
+                    ref.read(habitCategoriesProvider).value ?? const [];
+                final result = await showQuickAddHabitSheet(
+                  context,
+                  categories: categories,
+                );
+                if (result == null) return;
+                await ref
+                    .read(habitsControllerProvider)
+                    .addHabit(
+                      result.name,
+                      targetAmount: result.targetAmount,
+                      targetUnit: result.targetUnit,
+                      description: result.description,
+                      schedule: result.schedule,
+                      categoryId: result.categoryId,
+                      reminderEnabled: result.reminderEnabled,
+                      reminderHour: result.reminderHour,
+                      reminderMinute: result.reminderMinute,
+                      reminderMode: result.reminderMode,
+                    );
+                if (!context.mounted) return;
+                await showSaveFeedback(
+                  context,
+                  ref,
+                  title: 'Habit saved',
+                  message: '“${result.name}” is ready to track.',
+                );
+              },
+            ),
+          ],
+        ).screenEnter(context),
       ),
     );
   }

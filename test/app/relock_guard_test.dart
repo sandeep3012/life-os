@@ -47,10 +47,12 @@ class _FakeLock extends AppLockService {
 void main() {
   late AppDatabase db;
   late _FakeLock lock;
+  late DateTime now;
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     lock = _FakeLock();
+    now = DateTime(2026, 10, 4, 9);
   });
 
   tearDown(() => db.close());
@@ -72,6 +74,7 @@ void main() {
             _FakeNotificationService(),
           ),
           appLockServiceProvider.overrideWithValue(lock),
+          relockPolicyProvider.overrideWithValue(RelockPolicy(now: () => now)),
         ],
         child: const LifeOSApp(),
       ),
@@ -93,33 +96,129 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1));
   }
 
-  for (final state in [AppLifecycleState.inactive, AppLifecycleState.paused]) {
-    testWidgets('leaving the app (${state.name}) locks it', (tester) async {
-      final container = await pumpUnlockedApp(tester);
-      expect(container.read(isLockedProvider), isFalse);
-
+  /// Home button / app switch: the states the platform walks through.
+  Future<void> leave(WidgetTester tester) async {
+    for (final state in [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+    ]) {
       tester.binding.handleAppLifecycleStateChanged(state);
-      await tester.pump();
-
-      expect(container.read(isLockedProvider), isTrue);
-      await disposeCleanly(tester);
-    });
-
-    testWidgets('but not while the phone\'s own prompt is up (${state.name})', (
-      tester,
-    ) async {
-      lock.authenticating = true;
-      final container = await pumpUnlockedApp(tester);
-
-      tester.binding.handleAppLifecycleStateChanged(state);
-      await tester.pump();
-
-      expect(
-        container.read(isLockedProvider),
-        isFalse,
-        reason: 'the prompt re-locked the app it was unlocking',
-      );
-      await disposeCleanly(tester);
-    });
+    }
+    await tester.pump();
   }
+
+  Future<void> comeBack(WidgetTester tester) async {
+    for (final state in [
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
+    await tester.pump();
+  }
+
+  testWidgets('a quick trip to the background does not lock it', (
+    tester,
+  ) async {
+    final container = await pumpUnlockedApp(tester);
+
+    await leave(tester);
+    now = now.add(const Duration(seconds: 40));
+    await comeBack(tester);
+
+    expect(container.read(isLockedProvider), isFalse);
+    await disposeCleanly(tester);
+  });
+
+  testWidgets('a minute or more in the background locks it on return', (
+    tester,
+  ) async {
+    final container = await pumpUnlockedApp(tester);
+
+    await leave(tester);
+    // Not while it's away — only when it comes back.
+    expect(container.read(isLockedProvider), isFalse);
+    now = now.add(RelockPolicy.defaultGrace);
+    await comeBack(tester);
+
+    expect(container.read(isLockedProvider), isTrue);
+    await disposeCleanly(tester);
+  });
+
+  testWidgets(
+    'the notification shade or app switcher never locks it, however long',
+    (tester) async {
+      final container = await pumpUnlockedApp(tester);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      now = now.add(const Duration(minutes: 10));
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+
+      expect(container.read(isLockedProvider), isFalse);
+      await disposeCleanly(tester);
+    },
+  );
+
+  testWidgets("the phone's own unlock prompt doesn't count as leaving", (
+    tester,
+  ) async {
+    lock.authenticating = true;
+    final container = await pumpUnlockedApp(tester);
+
+    await leave(tester);
+    now = now.add(const Duration(minutes: 2));
+    await comeBack(tester);
+
+    expect(
+      container.read(isLockedProvider),
+      isFalse,
+      reason: 'the prompt re-locked the app it was unlocking',
+    );
+    await disposeCleanly(tester);
+  });
+
+  group('RelockPolicy', () {
+    test('only the first exit starts the clock', () {
+      var t = DateTime(2026);
+      final policy = RelockPolicy(now: () => t);
+      policy.left();
+      t = t.add(const Duration(seconds: 50));
+      policy.left(); // paused after hidden
+      t = t.add(const Duration(seconds: 10));
+      expect(policy.returned(), isTrue);
+    });
+
+    test('returning without having left never locks', () {
+      final policy = RelockPolicy();
+      expect(policy.returned(), isFalse);
+    });
+
+    test('each return resets the clock', () {
+      var t = DateTime(2026);
+      final policy = RelockPolicy(now: () => t);
+      policy.left();
+      t = t.add(const Duration(minutes: 5));
+      expect(policy.returned(), isTrue);
+      t = t.add(const Duration(minutes: 5));
+      expect(policy.returned(), isFalse);
+    });
+  });
+
+  group('colour theme restart', () {
+    test('an unlocked session stays unlocked through it, once', () {
+      IsLocked.keepUnlockedThroughRestart();
+      final rebuilt = ProviderContainer();
+      addTearDown(rebuilt.dispose);
+      expect(rebuilt.read(isLockedProvider), isFalse);
+
+      // Consumed: a later start (a real launch) is locked again.
+      final later = ProviderContainer();
+      addTearDown(later.dispose);
+      expect(later.read(isLockedProvider), isTrue);
+    });
+  });
 }
