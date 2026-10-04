@@ -183,17 +183,20 @@ class _Tile extends StatelessWidget {
     );
 
     // Comp: `stagger` — opacity 0→1 with translateY 14→0, 340ms, 40ms apart.
+    // Reduced motion keeps only the fade, all tiles at once.
+    final reduced = MediaQuery.of(context).disableAnimations;
+    final duration = AppMotion.of(context, AppMotion.menuTile);
     return tile
         .animate()
         .fadeIn(
-          duration: AppMotion.menuTile,
-          delay: AppMotion.menuTileStagger * index,
+          duration: duration,
+          delay: reduced ? Duration.zero : AppMotion.menuTileStagger * index,
         )
         .slideY(
-          begin: 0.18,
+          begin: reduced ? 0 : 0.18,
           end: 0.0,
-          duration: AppMotion.menuTile,
-          curve: AppMotion.emphasized,
+          duration: duration,
+          curve: AppMotion.curveOf(context, AppMotion.emphasized),
         );
   }
 }

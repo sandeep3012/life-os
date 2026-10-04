@@ -1,6 +1,6 @@
 package com.sandeep.lifeos
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import android.content.Context
@@ -10,7 +10,10 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.media.AudioAttributes
 
-class MainActivity : FlutterActivity() {
+// FlutterFragmentActivity, not FlutterActivity: local_auth shows the system
+// biometric / device-credential dialog through a FragmentActivity, and fails
+// without one.
+class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/haptics")

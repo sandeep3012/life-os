@@ -21,6 +21,7 @@ import '../widgets/quick_add_task_sheet.dart';
 import '../widgets/planner_tasks_pane.dart';
 import '../../application/planner_view_providers.dart';
 import 'planner_categories_screen.dart';
+import '../../../../core/widgets/tab_slide.dart';
 
 enum _Section { tasks, habits }
 
@@ -99,15 +100,18 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: _section == _Section.tasks
-                  ? PlannerTasksPane(
-                      onAdd: _addTask,
-                      onAddVisibilityChanged: _onInlineAddVisibility,
-                    )
-                  : _HabitsPane(
-                      onAdd: _addHabit,
-                      onAddVisibilityChanged: _onInlineAddVisibility,
-                    ),
+              child: TabSlide(
+                index: _section.index,
+                child: _section == _Section.tasks
+                    ? PlannerTasksPane(
+                        onAdd: _addTask,
+                        onAddVisibilityChanged: _onInlineAddVisibility,
+                      )
+                    : _HabitsPane(
+                        onAdd: _addHabit,
+                        onAddVisibilityChanged: _onInlineAddVisibility,
+                      ),
+              ),
             ),
           ],
         ),

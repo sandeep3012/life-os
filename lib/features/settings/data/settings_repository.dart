@@ -58,6 +58,12 @@ class SettingsRepository {
   Future<void> setBalancesVisible(bool visible) =>
       _upsert(AppSettingsCompanion(balancesVisible: Value(visible)));
 
+  Future<void> setReduceMotion(bool reduce) =>
+      _upsert(AppSettingsCompanion(reduceMotion: Value(reduce)));
+
+  Future<void> setTransitionEffectsEnabled(bool enabled) =>
+      _upsert(AppSettingsCompanion(transitionEffectsEnabled: Value(enabled)));
+
   Future<void> setTaskReminders(bool enabled) =>
       _upsert(AppSettingsCompanion(taskReminders: Value(enabled)));
 

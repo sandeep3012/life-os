@@ -43,6 +43,17 @@ class AppSettings extends Table {
   BoolColumn get balancesVisible =>
       boolean().withDefault(const Constant(true))();
 
+  /// The in-app "Animations: Reduced" choice. Applies the phone's own
+  /// reduce-motion behaviour to LifeOS alone; the phone's setting, when on,
+  /// still wins regardless of this.
+  BoolColumn get reduceMotion => boolean().withDefault(const Constant(false))();
+
+  /// The large screen transitions — circle reveals, the page turn and the
+  /// tab content slide. Off swaps them for a short fade while every other
+  /// animation keeps playing.
+  BoolColumn get transitionEffectsEnabled =>
+      boolean().withDefault(const Constant(true))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

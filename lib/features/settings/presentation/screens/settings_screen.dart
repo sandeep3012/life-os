@@ -9,8 +9,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_color_theme.dart';
 import '../../../../app/app_restart.dart';
+import '../../../../app/transitions/screen_reveal.dart';
 import '../../../../app/theme/app_theme.dart';
 import '../../../../core/services/demo_data_service.dart';
+import '../../../../core/services/app_lock_service.dart';
 import '../../../../core/services/backup_service.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/utils/currency_utils.dart';
@@ -25,6 +27,7 @@ import '../../../finance/presentation/screens/category_management_screen.dart';
 import '../../application/app_lock_providers.dart';
 import '../../application/settings_providers.dart';
 import '../widgets/pin_setup_sheet.dart';
+import '../widgets/unlock_method_sheet.dart';
 import '../widgets/reminder_status_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -90,6 +93,8 @@ class SettingsScreen extends ConsumerWidget {
                   ThemeMode.dark: LucideIcons.moon,
                 },
                 onChanged: controller.setThemeMode,
+                onChangedAt: (mode, origin) =>
+                    _changeThemeMode(context, ref, mode, origin),
               ),
             ),
           ),
@@ -139,10 +144,12 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
-          const _SectionTitle('Touch & feedback'),
+          const _SectionTitle('Motion & feedback'),
           Card(
             child: Column(
               children: [
+                const _MotionSettings(),
+                const Divider(height: 1),
                 _SettingSwitch(
                   icon: LucideIcons.vibrate,
                   title: 'Haptic feedback',
@@ -360,10 +367,124 @@ Future<void> _previewAndApplyTheme(
       child: _ThemePreviewDialog(theme: colorTheme),
     ),
   );
-  if (approved != true) return;
+  if (approved != true || !context.mounted) return;
 
-  await ref.read(settingsControllerProvider).setColorTheme(colorTheme);
-  if (context.mounted) AppRestartBoundary.restart(context);
+  await ScreenReveal.run(
+    style: revealStyleOf(context, ref, RevealStyle.pageTurn),
+    // Let the dialog finish closing, or the page that turns away has it on.
+    settleFirst: _dialogExit,
+    change: () async {
+      // Whoever is changing the theme is already in; the restart must not put
+      // the lock screen back up.
+      final unlocked = !ref.read(isLockedProvider);
+      await ref.read(settingsControllerProvider).setColorTheme(colorTheme);
+      if (!context.mounted) return;
+      if (AppRestartBoundary.restart(context) && unlocked) {
+        IsLocked.keepUnlockedThroughRestart();
+      }
+    },
+    // The restart rebuilds everything, so wait for the app to say its first
+    // screen is ready rather than for the setting to read back.
+    awaitContentReady: true,
+  );
+}
+
+/// Material's dialog exit transition, plus a frame.
+const _dialogExit = Duration(milliseconds: 170);
+
+/// Light/dark via the Appearance rail: the new mode spreads in a circle from
+/// the option that was tapped. A choice that doesn't change what's on screen
+/// — System while the phone is already in that mode — just applies.
+void _changeThemeMode(
+  BuildContext context,
+  WidgetRef ref,
+  ThemeMode mode,
+  Offset? origin,
+) {
+  final controller = ref.read(settingsControllerProvider);
+  final phone = MediaQuery.platformBrightnessOf(context);
+  Brightness shown(ThemeMode m) => switch (m) {
+    ThemeMode.light => Brightness.light,
+    ThemeMode.dark => Brightness.dark,
+    ThemeMode.system => phone,
+  };
+  if (shown(mode) == shown(ref.read(settingsProvider).themeMode)) {
+    controller.setThemeMode(mode);
+    return;
+  }
+  ScreenReveal.run(
+    style: revealStyleOf(context, ref, RevealStyle.circle),
+    origin: origin,
+    change: () => controller.setThemeMode(mode),
+    isApplied: () => ref.read(settingsProvider).themeMode == mode,
+  );
+}
+
+/// "Animations: Full | Reduced", and — while full — whether the large screen
+/// transitions play.
+class _MotionSettings extends ConsumerWidget {
+  const _MotionSettings();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final settings = ref.watch(settingsProvider);
+    final controller = ref.read(settingsControllerProvider);
+    // The phone's own setting, not the app-adjusted one in MediaQuery.
+    final phoneReduces = WidgetsBinding
+        .instance
+        .platformDispatcher
+        .accessibilityFeatures
+        .disableAnimations;
+    final reduced = phoneReduces || settings.reduceMotion;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Animations', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 4),
+              Text(
+                phoneReduces
+                    ? "Your phone's Reduce motion is on, so animations stay "
+                          'reduced.'
+                    : 'Reduced turns every animation into a short fade.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              AppTabRail<bool>(
+                value: reduced,
+                labels: const {false: 'Full', true: 'Reduced'},
+                icons: const {
+                  false: LucideIcons.sparkles,
+                  true: LucideIcons.minus,
+                },
+                onChanged: (reduce) {
+                  if (phoneReduces) return;
+                  controller.setReduceMotion(reduce);
+                },
+              ),
+            ],
+          ),
+        ),
+        if (!reduced) ...[
+          const Divider(height: 1),
+          _SettingSwitch(
+            icon: LucideIcons.wandSparkles,
+            title: 'Transition effects',
+            subtitle: 'Circle reveals, page turn and sliding tabs',
+            value: settings.transitionEffectsEnabled,
+            onChanged: controller.setTransitionEffectsEnabled,
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class _ThemePreviewDialog extends StatelessWidget {
@@ -791,43 +912,121 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
     return ref.read(appLockServiceProvider).verifyPin(controller.text.trim());
   }
 
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Asks the OS to confirm it's the phone's owner, for changes that would
+  /// weaken or switch the lock. Backing out is silent; anything else says why.
+  Future<bool> _confirmWithPhoneLock(String reason) async {
+    final result = await ref
+        .read(appLockServiceProvider)
+        .authenticateWithDevice(reason: reason);
+    if (result == DeviceAuthResult.success) return true;
+    if (result == DeviceAuthResult.lockedOut) {
+      _snack('Too many attempts. Try again in a moment.');
+    } else if (result != DeviceAuthResult.cancelled) {
+      _snack("Couldn't confirm with your phone lock.");
+    }
+    return false;
+  }
+
+  /// Confirms it's the owner with whatever protects the app right now: the PIN
+  /// when there is one, otherwise the phone's lock.
+  Future<bool> _confirmIdentity({required String reason}) async {
+    if (await ref.read(appLockServiceProvider).hasPin()) {
+      if (!mounted) return false;
+      final ok = await _confirmPin(context);
+      if (!ok) _snack('Incorrect PIN');
+      return ok;
+    }
+    return _confirmWithPhoneLock(reason);
+  }
+
   Future<void> _onAppLockChanged(bool enabled) async {
     final controller = ref.read(settingsControllerProvider);
+    final service = ref.read(appLockServiceProvider);
     if (enabled) {
-      final result = await showPinSetupSheet(
-        context,
-        mode: PinSetupMode.create,
-      );
-      if (result != true) return;
+      // With a phone lock to use, ask which way; without one the app PIN is the
+      // only option, so there's nothing to choose.
+      var usePhoneLock = false;
+      if (await service.canUseDeviceAuth()) {
+        if (!mounted) return;
+        final choice = await showUnlockMethodSheet(context);
+        if (choice == null) return;
+        usePhoneLock = choice == UnlockMethod.phoneLock;
+      }
+      if (usePhoneLock) {
+        // Prove it works before relying on it — otherwise a broken setup would
+        // lock the user out of their own data.
+        if (!await _confirmWithPhoneLock('Confirm to turn on app lock')) return;
+        await controller.setBiometricEnabled(true);
+      } else {
+        if (!mounted) return;
+        final result = await showPinSetupSheet(
+          context,
+          mode: PinSetupMode.create,
+        );
+        if (result != true) return;
+        ref.invalidate(hasPinProvider);
+      }
       await controller.setAppLockEnabled(true);
-      // Setting a PIN mid-session shouldn't immediately lock the user out
-      // of the screen they're already on.
+      // Turning it on mid-session shouldn't immediately lock the user out of the
+      // screen they're already on.
       ref.read(isLockedProvider.notifier).unlock();
     } else {
-      final ok = await _confirmPin(context);
-      if (!ok) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Incorrect PIN')));
-        }
+      if (!await _confirmIdentity(reason: 'Confirm to turn off app lock')) {
         return;
       }
-      await ref.read(appLockServiceProvider).clearPin();
+      await service.clearPin();
       await controller.setAppLockEnabled(false);
+      await controller.setBiometricEnabled(false);
+      ref.invalidate(hasPinProvider);
+    }
+  }
+
+  Future<void> _onPhoneLockChanged(bool enabled) async {
+    final controller = ref.read(settingsControllerProvider);
+    if (enabled) {
+      if (!await _confirmWithPhoneLock('Confirm to use your phone lock')) {
+        return;
+      }
+      await controller.setBiometricEnabled(true);
+    } else {
+      // Switching it off must leave a way in.
+      if (!await ref.read(appLockServiceProvider).hasPin()) {
+        _snack('Set an app PIN first, or turn off app lock.');
+        return;
+      }
       await controller.setBiometricEnabled(false);
     }
   }
 
-  Future<void> _onChangePin() async {
-    await showPinSetupSheet(context, mode: PinSetupMode.change);
+  Future<void> _onPinTapped({required bool hasPin}) async {
+    final result = await showPinSetupSheet(
+      context,
+      mode: hasPin ? PinSetupMode.change : PinSetupMode.create,
+    );
+    if (result == true) ref.invalidate(hasPinProvider);
+  }
+
+  Future<void> _onRemovePin() async {
+    if (!await _confirmPin(context)) {
+      _snack('Incorrect PIN');
+      return;
+    }
+    await ref.read(appLockServiceProvider).clearPin();
+    ref.invalidate(hasPinProvider);
   }
 
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
-    final canUseBiometrics = ref.watch(canUseBiometricsProvider).value ?? false;
-    final controller = ref.read(settingsControllerProvider);
+    final deviceAvailable = ref.watch(canUseDeviceAuthProvider).value ?? false;
+    final hasPin = ref.watch(hasPinProvider).value ?? false;
 
     return Card(
       child: Column(
@@ -835,29 +1034,39 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
           _SettingSwitch(
             icon: LucideIcons.lockKeyhole,
             title: 'App lock',
-            subtitle: 'Require a PIN or biometrics to open the app',
+            subtitle: 'Require your phone lock or an app PIN to open the app',
             value: settings.appLockEnabled,
             onChanged: _onAppLockChanged,
           ),
           if (settings.appLockEnabled) ...[
             const Divider(height: 1),
-            _SettingRow(
-              icon: LucideIcons.keyRound,
-              title: 'Change PIN',
-              onTap: _onChangePin,
-            ),
-            const Divider(height: 1),
             _SettingSwitch(
               icon: LucideIcons.scanFace,
-              title: 'Use biometrics',
-              subtitle: canUseBiometrics
-                  ? 'Unlock with Face ID or fingerprint'
-                  : 'Not available on this device',
-              value: settings.biometricEnabled && canUseBiometrics,
-              onChanged: canUseBiometrics
-                  ? controller.setBiometricEnabled
-                  : null,
+              title: 'Use phone lock',
+              subtitle: deviceAvailable
+                  ? "Face ID, fingerprint or your phone's passcode"
+                  : 'Set a screen lock on your phone first',
+              value: settings.biometricEnabled && deviceAvailable,
+              onChanged: deviceAvailable ? _onPhoneLockChanged : null,
             ),
+            const Divider(height: 1),
+            _SettingRow(
+              icon: LucideIcons.keyRound,
+              title: hasPin ? 'Change PIN' : 'Set app PIN',
+              subtitle: hasPin
+                  ? null
+                  : "A backup way in if your phone lock isn't available",
+              onTap: () => _onPinTapped(hasPin: hasPin),
+            ),
+            // With the phone lock on, the PIN is optional — it can go.
+            if (hasPin && settings.biometricEnabled && deviceAvailable) ...[
+              const Divider(height: 1),
+              _SettingRow(
+                icon: LucideIcons.trash2,
+                title: 'Remove app PIN',
+                onTap: _onRemovePin,
+              ),
+            ],
           ],
         ],
       ),

@@ -357,6 +357,7 @@ class _LaunchItem extends StatefulWidget {
 class _LaunchItemState extends State<_LaunchItem>
     with SingleTickerProviderStateMixin {
   late final AnimationController _act;
+  Timer? _start;
 
   @override
   void initState() {
@@ -374,13 +375,19 @@ class _LaunchItemState extends State<_LaunchItem>
     // Reduced motion shows each item's finished state, not the motion.
     if (MediaQuery.of(context).disableAnimations) {
       _act.value = 1;
-    } else {
-      _act.forward();
+      return;
     }
+    // The action plays once the card has settled. Started with the card's
+    // own entrance, a third of it ran while the card was still faint and
+    // sliding, so the count or fill seemed to start part-way and lurch.
+    _start ??= Timer(LaunchSplash.enter, () {
+      if (mounted) _act.forward();
+    });
   }
 
   @override
   void dispose() {
+    _start?.cancel();
     _act.dispose();
     super.dispose();
   }
@@ -405,6 +412,15 @@ class _LaunchItemState extends State<_LaunchItem>
     );
   }
 
+  static const _spentMinor = 1245000;
+  static const _amountStyle = TextStyle(
+    fontFamily: AppFonts.serif,
+    fontSize: 36,
+    fontWeight: FontWeight.w600,
+    color: Colors.white,
+    fontFeatures: AppFonts.tabular,
+  );
+
   Widget _amount() {
     final value = _phase(0.05, 0.85);
     return Column(
@@ -412,22 +428,36 @@ class _LaunchItemState extends State<_LaunchItem>
       children: [
         const _Label('Spent this month'),
         const SizedBox(height: 8),
-        AnimatedBuilder(
-          animation: value,
-          builder: (context, _) => Text(
-            formatMinor(
-              (1245000 * value.value).round(),
-              currencyCode: widget.currencyCode,
-              showDecimals: false,
+        // Sized by the final amount, with the count right-aligned in it: as
+        // the figure gains digits and separators it grows leftwards from a
+        // fixed last digit, instead of the whole centred number re-centring —
+        // and jumping sideways — every time it gets a character longer.
+        Stack(
+          alignment: Alignment.centerRight,
+          children: [
+            Opacity(
+              opacity: 0,
+              child: Text(
+                formatMinor(
+                  _spentMinor,
+                  currencyCode: widget.currencyCode,
+                  showDecimals: false,
+                ),
+                style: _amountStyle,
+              ),
             ),
-            style: const TextStyle(
-              fontFamily: AppFonts.serif,
-              fontSize: 36,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              fontFeatures: AppFonts.tabular,
+            AnimatedBuilder(
+              animation: value,
+              builder: (context, _) => Text(
+                formatMinor(
+                  (_spentMinor * value.value).round(),
+                  currencyCode: widget.currencyCode,
+                  showDecimals: false,
+                ),
+                style: _amountStyle,
+              ),
             ),
-          ),
+          ],
         ),
         const SizedBox(height: 6),
         const _Sub('Every expense, tracked'),

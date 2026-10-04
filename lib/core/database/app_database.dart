@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -288,6 +288,12 @@ class AppDatabase extends _$AppDatabase {
         // offer. Existing rows default to 'notification', which is what they
         // effectively were.
         await m.addColumn(medications, medications.reminderMode);
+      }
+      if (from < 29) {
+        // v28 -> v29: in-app motion controls. Defaults keep full motion with
+        // the transition effects on, which is what existing installs had.
+        await m.addColumn(appSettings, appSettings.reduceMotion);
+        await m.addColumn(appSettings, appSettings.transitionEffectsEnabled);
       }
     },
   );

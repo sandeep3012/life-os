@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -22,6 +21,7 @@ import '../widgets/add_exercise_sheet.dart';
 import '../widgets/log_set_sheet.dart';
 import '../widgets/medication_editor_sheet.dart';
 import '../widgets/workout_plan_sheet.dart';
+import '../../../../core/widgets/tab_slide.dart';
 
 /// The comp's Health screen: a Medication / Gym tab rail, then either the
 /// dose-tracking view (gradient "doses today" hero, time-grouped medication
@@ -64,49 +64,42 @@ class _HealthScreenState extends ConsumerState<HealthScreen> {
       drawer: const AppSidebar(),
       body: SafeArea(
         bottom: false,
-        child:
-            ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 14),
-                      child: Builder(
-                        builder: (context) => AppTopBar(
-                          centerText: 'Health',
-                          centerIsTitle: true,
-                          showTrailing: false,
-                          onMenu: () => Scaffold.of(context).openDrawer(),
-                        ),
-                      ),
-                    ),
-                    AppTabRail<_HealthTab>(
-                      value: _tab,
-                      labels: const {
-                        _HealthTab.medication: 'Medication',
-                        _HealthTab.gym: 'Gym',
-                      },
-                      icons: const {
-                        _HealthTab.medication: LucideIcons.pill,
-                        _HealthTab.gym: LucideIcons.dumbbell,
-                      },
-                      onChanged: (tab) => setState(() => _tab = tab),
-                    ),
-                    if (_tab == _HealthTab.medication)
-                      _MedicationView(
-                        onAddVisibilityChanged: _onInlineAddVisibility,
-                      )
-                    else
-                      _GymView(onAddVisibilityChanged: _onInlineAddVisibility),
-                  ],
-                )
-                .animate()
-                .fadeIn(duration: AppMotion.screenEnter)
-                .slideY(
-                  begin: 0.02,
-                  end: 0.0,
-                  duration: AppMotion.screenEnter,
-                  curve: AppMotion.standard,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 14),
+              child: Builder(
+                builder: (context) => AppTopBar(
+                  centerText: 'Health',
+                  centerIsTitle: true,
+                  showTrailing: false,
+                  onMenu: () => Scaffold.of(context).openDrawer(),
                 ),
+              ),
+            ),
+            AppTabRail<_HealthTab>(
+              value: _tab,
+              labels: const {
+                _HealthTab.medication: 'Medication',
+                _HealthTab.gym: 'Gym',
+              },
+              icons: const {
+                _HealthTab.medication: LucideIcons.pill,
+                _HealthTab.gym: LucideIcons.dumbbell,
+              },
+              onChanged: (tab) => setState(() => _tab = tab),
+            ),
+            TabSlide(
+              index: _tab.index,
+              child: _tab == _HealthTab.medication
+                  ? _MedicationView(
+                      onAddVisibilityChanged: _onInlineAddVisibility,
+                    )
+                  : _GymView(onAddVisibilityChanged: _onInlineAddVisibility),
+            ),
+          ],
+        ).screenEnter(context),
       ),
       floatingActionButton: _inlineAddVisible
           ? null

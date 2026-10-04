@@ -5,6 +5,7 @@ import '../../../../core/utils/currency_utils.dart';
 import '../../domain/category_spend.dart';
 import '../../../../app/theme/app_fonts.dart';
 import '../../../../core/utils/category_color.dart';
+import '../../../../app/motion.dart';
 
 /// The chart's box, and the hole inside its ring. The ring is 16 thick (20 for
 /// a selected slice), so the box must be at least `_holeRadius + 20` across the
@@ -98,7 +99,10 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
                 ),
               ),
               AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
+                duration: AppMotion.of(
+                  context,
+                  const Duration(milliseconds: 180),
+                ),
                 child: selected != null
                     ? SizedBox(
                         key: ValueKey(_selectedIndex),

@@ -9,9 +9,12 @@ class AppRestartBoundary extends StatefulWidget {
 
   final Widget child;
 
-  static void restart(BuildContext context) {
+  /// Returns whether a restart was scheduled — false when there's no
+  /// boundary above [context], as in widget tests that pump a screen alone.
+  static bool restart(BuildContext context) {
     final state = context.findAncestorStateOfType<_AppRestartBoundaryState>();
     state?.restart();
+    return state != null;
   }
 
   @override

@@ -16,6 +16,7 @@ import '../../application/goals_providers.dart';
 import '../widgets/goal_card.dart';
 import '../widgets/quick_add_goal_sheet.dart';
 import 'goal_detail_screen.dart';
+import '../../../../core/widgets/tab_slide.dart';
 
 class GoalsScreen extends ConsumerStatefulWidget {
   const GoalsScreen({super.key});
@@ -128,50 +129,60 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                   onAutoOnly: (v) => setState(() => _autoOnly = v),
                 ),
                 Expanded(
-                  child: goals.isEmpty
-                      ? ListView(
-                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(32, 32, 32, 8),
-                              child: Text(
-                                'No goals match these filters.',
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
+                  // Only the status rail slides; the type and auto filters
+                  // narrow the same list in place.
+                  child: TabSlide(
+                    index: _status.index,
+                    child: goals.isEmpty
+                        ? ListView(
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  32,
+                                  32,
+                                  32,
+                                  8,
+                                ),
+                                child: Text(
+                                  'No goals match these filters.',
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
                               ),
-                            ),
-                            if (_filtered)
-                              Center(
-                                child: TextButton(
-                                  onPressed: _clearFilters,
-                                  child: const Text('Clear filters'),
+                              if (_filtered)
+                                Center(
+                                  child: TextButton(
+                                    onPressed: _clearFilters,
+                                    child: const Text('Clear filters'),
+                                  ),
                                 ),
-                              ),
-                            addButton,
-                          ],
-                        )
-                      : CollectionView(
-                          layout: layout,
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                          itemCount: goals.length,
-                          footer: addButton,
-                          itemBuilder: (context, index) {
-                            final data = goals[index];
-                            return GoalCard(
-                              grid: layout == CollectionLayout.grid,
-                              data: data,
-                              currencyCode: currencyCode,
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      GoalDetailScreen(goalId: data.goal.id),
+                              addButton,
+                            ],
+                          )
+                        : CollectionView(
+                            layout: layout,
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                            itemCount: goals.length,
+                            footer: addButton,
+                            itemBuilder: (context, index) {
+                              final data = goals[index];
+                              return GoalCard(
+                                grid: layout == CollectionLayout.grid,
+                                data: data,
+                                currencyCode: currencyCode,
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        GoalDetailScreen(goalId: data.goal.id),
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                              );
+                            },
+                          ),
+                  ),
                 ),
               ],
             ),

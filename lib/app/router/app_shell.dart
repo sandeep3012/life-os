@@ -456,7 +456,8 @@ class AppFloatingNavBar extends StatelessWidget {
                   _NavHighlight(
                     index: selectedIndex,
                     centre: centreOf(selectedIndex),
-                    top: _NavButton.iconCentreY(constraints.maxHeight) -
+                    top:
+                        _NavButton.iconCentreY(constraints.maxHeight) -
                         _NavHighlight.height / 2,
                     color: colors.accentSoft,
                   ),
@@ -651,8 +652,8 @@ class _AddButton extends StatelessWidget {
           ),
           child: AnimatedRotation(
             turns: rotated ? AppMotion.fabRotationTurns : 0,
-            duration: AppMotion.fabRotate,
-            curve: AppMotion.emphasized,
+            duration: AppMotion.of(context, AppMotion.fabRotate),
+            curve: AppMotion.curveOf(context, AppMotion.emphasized),
             child: Icon(LucideIcons.plus, size: 26, color: scheme.onPrimary),
           ),
         ),
@@ -704,21 +705,33 @@ class _NavButtonState extends State<_NavButton>
 
   static final _scale = TweenSequence<double>([
     TweenSequenceItem(
-      tween: Tween(begin: 0.8, end: 1.16).chain(CurveTween(curve: Curves.easeOut)),
+      tween: Tween(
+        begin: 0.8,
+        end: 1.16,
+      ).chain(CurveTween(curve: Curves.easeOut)),
       weight: 55,
     ),
     TweenSequenceItem(
-      tween: Tween(begin: 1.16, end: 1.0).chain(CurveTween(curve: Curves.easeOut)),
+      tween: Tween(
+        begin: 1.16,
+        end: 1.0,
+      ).chain(CurveTween(curve: Curves.easeOut)),
       weight: 45,
     ),
   ]);
   static final _lift = TweenSequence<double>([
     TweenSequenceItem(
-      tween: Tween(begin: 3.0, end: -3.0).chain(CurveTween(curve: Curves.easeOut)),
+      tween: Tween(
+        begin: 3.0,
+        end: -3.0,
+      ).chain(CurveTween(curve: Curves.easeOut)),
       weight: 55,
     ),
     TweenSequenceItem(
-      tween: Tween(begin: -3.0, end: 0.0).chain(CurveTween(curve: Curves.easeOut)),
+      tween: Tween(
+        begin: -3.0,
+        end: 0.0,
+      ).chain(CurveTween(curve: Curves.easeOut)),
       weight: 45,
     ),
   ]);

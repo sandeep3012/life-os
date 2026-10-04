@@ -429,6 +429,30 @@ void main() {
   );
 
   test(
+    'a backup from before the motion settings existed still restores',
+    () async {
+      await db
+          .into(db.appSettings)
+          .insert(const AppSettingsCompanion(currencyCode: Value('EUR')));
+      final old = manifest(await backup.exportBackup());
+      final row =
+          ((old['tables'] as Map)['appSettings'] as List).single
+              as Map<String, dynamic>;
+      // What a settings row looked like before schema v29.
+      row
+        ..remove('reduceMotion')
+        ..remove('transitionEffectsEnabled');
+
+      await backup.importBackup(pack(old));
+
+      final restored = await db.select(db.appSettings).getSingle();
+      expect(restored.currencyCode, 'EUR');
+      expect(restored.reduceMotion, isFalse);
+      expect(restored.transitionEffectsEnabled, isTrue);
+    },
+  );
+
+  test(
     'malformed rows roll back replacement and unsafe paths are rejected',
     () async {
       await db.into(db.notes).insert(NotesCompanion.insert(title: 'Keep me'));

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -18,6 +17,7 @@ import '../../../../core/widgets/surface_card.dart';
 import '../../../../core/widgets/tappable.dart';
 import '../../application/learn_providers.dart';
 import '../widgets/note_editor_sheet.dart';
+import '../../../../core/widgets/tab_slide.dart';
 
 /// The comp's Learn screen: a gradient review-queue hero, a horizontal run of
 /// notebook cards with progress bars, a Recent / Starred / Due tab rail, then the
@@ -69,161 +69,159 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
       drawer: const AppSidebar(),
       body: SafeArea(
         bottom: false,
-        child:
-            ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 14),
-                      child: Builder(
-                        builder: (context) => AppTopBar(
-                          centerText: 'Learn',
-                          centerIsTitle: true,
-                          // Adding is the inline row's job, with the FAB
-                          // standing in once it scrolls away — a third entry
-                          // point in the header was one too many.
-                          showTrailing: false,
-                          onMenu: () => Scaffold.of(context).openDrawer(),
-                        ),
-                      ),
-                    ),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 14),
+              child: Builder(
+                builder: (context) => AppTopBar(
+                  centerText: 'Learn',
+                  centerIsTitle: true,
+                  // Adding is the inline row's job, with the FAB
+                  // standing in once it scrolls away — a third entry
+                  // point in the header was one too many.
+                  showTrailing: false,
+                  onMenu: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
+            ),
 
-                    _ReviewQueueHero(
-                      dueCount: due.length,
-                      totalCount: notes.length,
-                      onStart: due.isEmpty
-                          ? null
-                          : () =>
-                                context.go(RoutePaths.learnNote(due.first.id)),
-                    ),
+            _ReviewQueueHero(
+              dueCount: due.length,
+              totalCount: notes.length,
+              onStart: due.isEmpty
+                  ? null
+                  : () => context.go(RoutePaths.learnNote(due.first.id)),
+            ),
 
-                    const SizedBox(height: 20),
-                    SectionHeader(
-                      title: 'Notebooks',
-                      // While a notebook is picked, the count gives way to the
-                      // way back out of the filter.
-                      trailing: bookId != null
-                          ? Tappable(
-                              haptic: TapHaptic.light,
-                              semanticLabel: 'Show all notebooks',
-                              enforceMinTouchTarget: true,
-                              onTap: () => setState(() => _bookId = null),
-                              child: Text(
-                                'Show all',
-                                style: TextStyle(
-                                  fontFamily: AppFonts.sans,
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: colors.accentInk,
-                                ),
-                              ),
-                            )
-                          : Text(
-                              '${notes.length} ${notes.length == 1 ? 'note' : 'notes'}',
-                              style: TextStyle(
-                                fontFamily: AppFonts.sans,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                    ),
-                    const SizedBox(height: 11),
-                    if (books.isEmpty)
-                      Text(
-                        'No notebooks yet — your first note creates one.',
+            const SizedBox(height: 20),
+            SectionHeader(
+              title: 'Notebooks',
+              // While a notebook is picked, the count gives way to the
+              // way back out of the filter.
+              trailing: bookId != null
+                  ? Tappable(
+                      haptic: TapHaptic.light,
+                      semanticLabel: 'Show all notebooks',
+                      enforceMinTouchTarget: true,
+                      onTap: () => setState(() => _bookId = null),
+                      child: Text(
+                        'Show all',
                         style: TextStyle(
                           fontFamily: AppFonts.sans,
-                          fontSize: 13.5,
-                          color: colors.text3,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: colors.accentInk,
                         ),
-                      )
-                    else
-                      SizedBox(
-                        height: 132,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: books.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 9),
-                          itemBuilder: (context, i) => _NotebookCard(
-                            progress: books[i],
-                            selected: books[i].book.id == bookId,
-                            // Tapping the picked notebook again clears it.
-                            onTap: () => setState(
-                              () => _bookId = books[i].book.id == bookId
-                                  ? null
-                                  : books[i].book.id,
-                            ),
+                      ),
+                    )
+                  : Text(
+                      '${notes.length} ${notes.length == 1 ? 'note' : 'notes'}',
+                      style: TextStyle(
+                        fontFamily: AppFonts.sans,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 11),
+            if (books.isEmpty)
+              Text(
+                'No notebooks yet — your first note creates one.',
+                style: TextStyle(
+                  fontFamily: AppFonts.sans,
+                  fontSize: 13.5,
+                  color: colors.text3,
+                ),
+              )
+            else
+              SizedBox(
+                height: 132,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: books.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 9),
+                  itemBuilder: (context, i) => _NotebookCard(
+                    progress: books[i],
+                    selected: books[i].book.id == bookId,
+                    // Tapping the picked notebook again clears it.
+                    onTap: () => setState(
+                      () => _bookId = books[i].book.id == bookId
+                          ? null
+                          : books[i].book.id,
+                    ),
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 20),
+            AppTabRail<_LearnTab>(
+              value: _tab,
+              labels: const {
+                _LearnTab.recent: 'Recent',
+                _LearnTab.starred: 'Starred',
+                _LearnTab.due: 'Due',
+              },
+              icons: const {
+                _LearnTab.recent: LucideIcons.clock3,
+                _LearnTab.starred: LucideIcons.star,
+                _LearnTab.due: LucideIcons.calendarClock,
+              },
+              height: 36,
+              fontSize: 12.5,
+              onChanged: (t) => setState(() => _tab = t),
+            ),
+
+            const SizedBox(height: 12),
+            TabSlide(
+              index: _tab.index,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (visible.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: Text(
+                          bookId != null
+                              ? 'No matching notes in this notebook.'
+                              : switch (_tab) {
+                                  _LearnTab.recent => 'Nothing written yet.',
+                                  _LearnTab.starred => 'No starred notes.',
+                                  _LearnTab.due =>
+                                    'Nothing due — you are all caught up.',
+                                },
+                          style: TextStyle(
+                            fontFamily: AppFonts.sans,
+                            fontSize: 14,
+                            color: colors.text3,
                           ),
                         ),
                       ),
-
-                    const SizedBox(height: 20),
-                    AppTabRail<_LearnTab>(
-                      value: _tab,
-                      labels: const {
-                        _LearnTab.recent: 'Recent',
-                        _LearnTab.starred: 'Starred',
-                        _LearnTab.due: 'Due',
-                      },
-                      icons: const {
-                        _LearnTab.recent: LucideIcons.clock3,
-                        _LearnTab.starred: LucideIcons.star,
-                        _LearnTab.due: LucideIcons.calendarClock,
-                      },
-                      height: 36,
-                      fontSize: 12.5,
-                      onChanged: (t) => setState(() => _tab = t),
-                    ),
-
-                    const SizedBox(height: 12),
-                    if (visible.isEmpty)
+                    )
+                  else
+                    for (final note in visible)
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Center(
-                          child: Text(
-                            bookId != null
-                                ? 'No matching notes in this notebook.'
-                                : switch (_tab) {
-                                    _LearnTab.recent => 'Nothing written yet.',
-                                    _LearnTab.starred => 'No starred notes.',
-                                    _LearnTab.due =>
-                                      'Nothing due — you are all caught up.',
-                                  },
-                            style: TextStyle(
-                              fontFamily: AppFonts.sans,
-                              fontSize: 14,
-                              color: colors.text3,
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      for (final note in visible)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _NoteCard(note: note),
-                        ),
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _NoteCard(note: note),
+                      ),
+                ],
+              ),
+            ),
 
-                    const SizedBox(height: 2),
-                    // The list already insets 20pt horizontally, so the row
-                    // supplies no padding of its own.
-                    InlineAddButton(
-                      label: 'Write a new note',
-                      onTap: () => showNoteEditorSheet(context, ref),
-                      onVisibilityChanged: _onInlineAddVisibility,
-                      padding: EdgeInsets.zero,
-                    ),
-                  ],
-                )
-                .animate()
-                .fadeIn(duration: AppMotion.screenEnter)
-                .slideY(
-                  begin: 0.02,
-                  end: 0.0,
-                  duration: AppMotion.screenEnter,
-                  curve: AppMotion.standard,
-                ),
+            const SizedBox(height: 2),
+            // The list already insets 20pt horizontally, so the row
+            // supplies no padding of its own.
+            InlineAddButton(
+              label: 'Write a new note',
+              onTap: () => showNoteEditorSheet(context, ref),
+              onVisibilityChanged: _onInlineAddVisibility,
+              padding: EdgeInsets.zero,
+            ),
+          ],
+        ).screenEnter(context),
       ),
       floatingActionButton: _inlineAddVisible
           ? null

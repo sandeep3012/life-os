@@ -187,4 +187,49 @@ void main() {
 
     await disposeCleanly(tester);
   });
+
+  testWidgets('the count grows from a fixed last digit, never sideways', (
+    tester,
+  ) async {
+    await usePhone(tester);
+    await tester.pumpWidget(host());
+    await advance(tester, intro);
+    // The card has entered; the count is about to run.
+    await advance(tester, const Duration(milliseconds: 350));
+
+    // The visible figure is the second of the two stacked Texts (the first
+    // is the invisible one that reserves the final width).
+    Finder amount() => find
+        .descendant(of: find.byType(Stack).last, matching: find.byType(Text))
+        .last;
+    final rights = <double>{};
+    String? first;
+    String? last;
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+      final text = tester.widget<Text>(amount()).data!;
+      first ??= text;
+      last = text;
+      rights.add(tester.getTopRight(amount()).dx.roundToDouble());
+    }
+    expect(first, isNot(last), reason: 'the amount was counting');
+    expect(first!.length, lessThan(last!.length), reason: 'it gained digits');
+    expect(rights, hasLength(1), reason: 'its last digit stayed put');
+    await disposeCleanly(tester);
+  });
+
+  testWidgets("a card's action waits until the card has entered", (
+    tester,
+  ) async {
+    await usePhone(tester);
+    await tester.pumpWidget(host());
+    await advance(tester, intro);
+    // Mid-entrance: still at zero.
+    await advance(tester, const Duration(milliseconds: 200));
+    expect(find.textContaining('₹0'), findsWidgets);
+
+    await advance(tester, const Duration(milliseconds: 600));
+    expect(find.textContaining('₹0'), findsNothing, reason: 'now counting');
+    await disposeCleanly(tester);
+  });
 }

@@ -33,6 +33,8 @@ class ResolvedSettings {
     required this.appLockEnabled,
     required this.biometricEnabled,
     this.balancesVisible = true,
+    this.reduceMotion = false,
+    this.transitionEffectsEnabled = true,
   });
 
   final ThemeMode themeMode;
@@ -48,6 +50,12 @@ class ResolvedSettings {
   final bool appLockEnabled;
   final bool biometricEnabled;
   final bool balancesVisible;
+
+  /// The in-app "Animations: Reduced" choice — see [AppSettings.reduceMotion].
+  final bool reduceMotion;
+
+  /// Circle reveals, page turn and tab slide; off falls back to a fade.
+  final bool transitionEffectsEnabled;
 
   static const defaults = ResolvedSettings(
     themeMode: ThemeMode.system,
@@ -103,6 +111,8 @@ final settingsProvider = Provider<ResolvedSettings>((ref) {
     appLockEnabled: row.appLockEnabled,
     biometricEnabled: row.biometricEnabled,
     balancesVisible: row.balancesVisible,
+    reduceMotion: row.reduceMotion,
+    transitionEffectsEnabled: row.transitionEffectsEnabled,
   );
 });
 
@@ -134,6 +144,11 @@ class SettingsController {
 
   Future<void> setBalancesVisible(bool visible) =>
       _repo.setBalancesVisible(visible);
+
+  Future<void> setReduceMotion(bool reduce) => _repo.setReduceMotion(reduce);
+
+  Future<void> setTransitionEffectsEnabled(bool enabled) =>
+      _repo.setTransitionEffectsEnabled(enabled);
 
   Future<void> setTaskReminders(bool enabled) =>
       _repo.setTaskReminders(enabled);

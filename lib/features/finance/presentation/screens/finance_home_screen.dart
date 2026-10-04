@@ -30,6 +30,8 @@ import '../widgets/transfer_money_dialog.dart';
 import 'account_detail_screen.dart';
 import 'archived_accounts_screen.dart';
 import '../../../../app/theme/app_fonts.dart';
+import '../../../../app/transitions/screen_reveal.dart';
+import '../../../../core/widgets/tab_slide.dart';
 
 enum _FinanceSection { transactions, budgets }
 
@@ -444,20 +446,38 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                           ),
                         // Masks the running total and every account card, for
                         // reading the app somewhere public.
-                        IconButton(
-                          tooltip: balancesVisible
-                              ? 'Hide balances'
-                              : 'Show balances',
-                          isSelected: !balancesVisible,
-                          icon: Icon(
-                            balancesVisible
-                                ? LucideIcons.eye
-                                : LucideIcons.eyeOff,
-                            size: 20,
+                        Builder(
+                          builder: (eyeContext) => IconButton(
+                            tooltip: balancesVisible
+                                ? 'Hide balances'
+                                : 'Show balances',
+                            isSelected: !balancesVisible,
+                            icon: Icon(
+                              balancesVisible
+                                  ? LucideIcons.eye
+                                  : LucideIcons.eyeOff,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              final visible = !balancesVisible;
+                              ScreenReveal.run(
+                                style: revealStyleOf(
+                                  eyeContext,
+                                  ref,
+                                  RevealStyle.circle,
+                                ),
+                                origin: globalCenterOf(eyeContext),
+                                change: () => ref
+                                    .read(settingsControllerProvider)
+                                    .setBalancesVisible(visible),
+                                isApplied: () =>
+                                    ref
+                                        .read(settingsProvider)
+                                        .balancesVisible ==
+                                    visible,
+                              );
+                            },
                           ),
-                          onPressed: () => ref
-                              .read(settingsControllerProvider)
-                              .setBalancesVisible(!balancesVisible),
                         ),
                       ],
                     ),
@@ -568,13 +588,16 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                     hasScrollBody: false,
                     child: _EmptyAccountsState(),
                   )
-                else if (_section == _FinanceSection.transactions)
-                  _TransactionsSliver(
-                    categoryById: categoryById,
-                    currencyCode: currencyCode,
-                  )
                 else
-                  _BudgetsSliver(),
+                  SliverTabSlide(
+                    index: _section.index,
+                    sliver: _section == _FinanceSection.transactions
+                        ? _TransactionsSliver(
+                            categoryById: categoryById,
+                            currencyCode: currencyCode,
+                          )
+                        : _BudgetsSliver(),
+                  ),
               ],
             );
           },

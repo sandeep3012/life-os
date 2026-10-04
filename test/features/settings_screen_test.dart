@@ -14,7 +14,7 @@ import 'package:life_manager/features/settings/presentation/screens/settings_scr
 
 class _FakeAppLockService extends AppLockService {
   String? _pin;
-  bool biometricsAvailable = false;
+  bool deviceAuthAvailable = false;
 
   @override
   Future<void> setPin(String pin) async => _pin = pin;
@@ -29,7 +29,18 @@ class _FakeAppLockService extends AppLockService {
   Future<void> clearPin() async => _pin = null;
 
   @override
-  Future<bool> canUseBiometrics() async => biometricsAvailable;
+  Future<bool> canUseDeviceAuth() async => deviceAuthAvailable;
+
+  DeviceAuthResult nextAuth = DeviceAuthResult.success;
+  final authReasons = <String>[];
+
+  @override
+  Future<DeviceAuthResult> authenticateWithDevice({
+    String reason = 'Unlock LifeOS',
+  }) async {
+    authReasons.add(reason);
+    return nextAuth;
+  }
 }
 
 class _FakeNotificationService extends NotificationService {
@@ -139,6 +150,62 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1));
   });
 
+  testWidgets(
+    'Animations: Reduced persists and hides the transition effects switch',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Transition effects'), 200);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining(
+          RegExp('motion & feedback', caseSensitive: false),
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+
+      await tester.ensureVisible(find.text('Reduced'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reduced'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(settingsProvider).reduceMotion, isTrue);
+      expect((await db.select(db.appSettings).getSingle()).reduceMotion, true);
+      // Reduced already turns the effects into fades; the switch would be
+      // a control that does nothing.
+      expect(find.text('Transition effects'), findsNothing);
+
+      await tester.tap(find.text('Full'));
+      await tester.pumpAndSettle();
+      expect(container.read(settingsProvider).reduceMotion, isFalse);
+      expect(find.text('Transition effects'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 1));
+    },
+  );
+
+  testWidgets('the transition effects switch persists', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    expect(container.read(settingsProvider).transitionEffectsEnabled, isTrue);
+
+    await tester.scrollUntilVisible(find.text('Transition effects'), 200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Transition effects'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(settingsProvider).transitionEffectsEnabled, isFalse);
+    final row = await db.select(db.appSettings).getSingle();
+    expect(row.transitionEffectsEnabled, isFalse);
+    // Untouched settings survive the partial upsert.
+    expect(row.reduceMotion, isFalse);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
   testWidgets('transaction recorder layout persists', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
@@ -159,7 +226,7 @@ void main() {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
 
-      await tester.drag(find.byType(ListView).first, const Offset(0, -420));
+      await tester.scrollUntilVisible(find.text('Habit reminders'), 200);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Habit reminders'));
       await tester.pumpAndSettle();
@@ -268,5 +335,270 @@ void main() {
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  group('app lock with the phone lock', () {
+    Future<void> open(WidgetTester tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('App lock'), 200);
+      await tester.ensureVisible(find.text('App lock'));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> disposeCleanly(WidgetTester tester) async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 1));
+    }
+
+    Future<void> tapAppLock(WidgetTester tester) async {
+      await tester.tap(find.text('App lock'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('with a phone lock available, turning it on asks which way', (
+      tester,
+    ) async {
+      appLock.deviceAuthAvailable = true;
+      await open(tester);
+
+      await tapAppLock(tester);
+
+      expect(find.text('Unlock with'), findsOneWidget);
+      expect(find.text('Phone lock'), findsOneWidget);
+      expect(find.text('Recommended'), findsOneWidget);
+      expect(find.text('App PIN'), findsOneWidget);
+      await disposeCleanly(tester);
+    });
+
+    testWidgets(
+      'choosing Phone lock confirms with the phone and needs no PIN',
+      (tester) async {
+        appLock.deviceAuthAvailable = true;
+        await open(tester);
+
+        await tapAppLock(tester);
+        await tester.tap(find.text('Phone lock'));
+        await tester.pumpAndSettle();
+
+        expect(appLock.authReasons, ['Confirm to turn on app lock']);
+        final settings = container.read(settingsProvider);
+        expect(settings.appLockEnabled, isTrue);
+        expect(settings.biometricEnabled, isTrue);
+        expect(
+          await appLock.hasPin(),
+          isFalse,
+          reason: 'no extra PIN to remember',
+        );
+        await disposeCleanly(tester);
+      },
+    );
+
+    testWidgets('if the phone does not confirm, the lock stays off', (
+      tester,
+    ) async {
+      appLock
+        ..deviceAuthAvailable = true
+        ..nextAuth = DeviceAuthResult.cancelled;
+      await open(tester);
+
+      await tapAppLock(tester);
+      await tester.tap(find.text('Phone lock'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(settingsProvider).appLockEnabled, isFalse);
+      expect(container.read(settingsProvider).biometricEnabled, isFalse);
+      await disposeCleanly(tester);
+    });
+
+    testWidgets(
+      'choosing App PIN goes to PIN setup, and leaves phone lock off',
+      (tester) async {
+        appLock.deviceAuthAvailable = true;
+        await open(tester);
+
+        await tapAppLock(tester);
+        await tester.tap(find.text('App PIN'));
+        await tester.pumpAndSettle();
+        expect(find.text('Set a new PIN'), findsOneWidget);
+
+        await tester.enterText(find.byType(TextField), '2468');
+        await tester.pump();
+        await tester.tap(find.text('Continue'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), '2468');
+        await tester.pump();
+        await tester.tap(find.text('Continue'));
+        await tester.pumpAndSettle();
+
+        final settings = container.read(settingsProvider);
+        expect(settings.appLockEnabled, isTrue);
+        expect(settings.biometricEnabled, isFalse);
+        expect(await appLock.hasPin(), isTrue);
+        await disposeCleanly(tester);
+      },
+    );
+
+    testWidgets('closing the chooser turns nothing on', (tester) async {
+      appLock.deviceAuthAvailable = true;
+      await open(tester);
+
+      await tapAppLock(tester);
+      await tester.tap(find.byTooltip('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(settingsProvider).appLockEnabled, isFalse);
+      expect(appLock.authReasons, isEmpty);
+      await disposeCleanly(tester);
+    });
+
+    testWidgets(
+      'turning off a phone-lock-only app lock confirms with the phone',
+      (tester) async {
+        appLock.deviceAuthAvailable = true;
+        final controller = container.read(settingsControllerProvider);
+        await controller.setAppLockEnabled(true);
+        await controller.setBiometricEnabled(true);
+        await open(tester);
+
+        // The phone doesn't confirm: still on.
+        appLock.nextAuth = DeviceAuthResult.cancelled;
+        await tapAppLock(tester);
+        expect(container.read(settingsProvider).appLockEnabled, isTrue);
+
+        // It does: off, and phone lock reset with it.
+        appLock.nextAuth = DeviceAuthResult.success;
+        await tapAppLock(tester);
+        expect(appLock.authReasons.last, 'Confirm to turn off app lock');
+        expect(container.read(settingsProvider).appLockEnabled, isFalse);
+        expect(container.read(settingsProvider).biometricEnabled, isFalse);
+        await disposeCleanly(tester);
+      },
+    );
+
+    testWidgets('phone lock cannot be switched off while there is no PIN', (
+      tester,
+    ) async {
+      appLock.deviceAuthAvailable = true;
+      final controller = container.read(settingsControllerProvider);
+      await controller.setAppLockEnabled(true);
+      await controller.setBiometricEnabled(true);
+      await open(tester);
+
+      await tester.tap(find.text('Use phone lock'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Set an app PIN first, or turn off app lock.'),
+        findsOneWidget,
+      );
+      expect(container.read(settingsProvider).biometricEnabled, isTrue);
+      await disposeCleanly(tester);
+    });
+
+    testWidgets(
+      'phone lock can be switched off when a PIN is there to fall back on',
+      (tester) async {
+        appLock.deviceAuthAvailable = true;
+        await appLock.setPin('1234');
+        final controller = container.read(settingsControllerProvider);
+        await controller.setAppLockEnabled(true);
+        await controller.setBiometricEnabled(true);
+        await open(tester);
+
+        await tester.tap(find.text('Use phone lock'));
+        await tester.pumpAndSettle();
+
+        expect(container.read(settingsProvider).biometricEnabled, isFalse);
+        await disposeCleanly(tester);
+      },
+    );
+
+    testWidgets('switching phone lock on needs the phone to confirm', (
+      tester,
+    ) async {
+      appLock.deviceAuthAvailable = true;
+      await appLock.setPin('1234');
+      await container.read(settingsControllerProvider).setAppLockEnabled(true);
+      await open(tester);
+
+      appLock.nextAuth = DeviceAuthResult.cancelled;
+      await tester.tap(find.text('Use phone lock'));
+      await tester.pumpAndSettle();
+      expect(container.read(settingsProvider).biometricEnabled, isFalse);
+
+      appLock.nextAuth = DeviceAuthResult.success;
+      await tester.tap(find.text('Use phone lock'));
+      await tester.pumpAndSettle();
+      expect(container.read(settingsProvider).biometricEnabled, isTrue);
+      await disposeCleanly(tester);
+    });
+
+    testWidgets('without a phone lock, the switch says so and is off', (
+      tester,
+    ) async {
+      appLock.deviceAuthAvailable = false;
+      await appLock.setPin('1234');
+      await container.read(settingsControllerProvider).setAppLockEnabled(true);
+      await open(tester);
+
+      expect(
+        find.text('Set a screen lock on your phone first'),
+        findsOneWidget,
+      );
+      await disposeCleanly(tester);
+    });
+
+    testWidgets(
+      'the PIN row reads Set app PIN with none, Change PIN with one',
+      (tester) async {
+        appLock.deviceAuthAvailable = true;
+        final controller = container.read(settingsControllerProvider);
+        await controller.setAppLockEnabled(true);
+        await controller.setBiometricEnabled(true);
+        await open(tester);
+
+        expect(find.text('Set app PIN'), findsOneWidget);
+        expect(find.text('Change PIN'), findsNothing);
+        expect(find.text('Remove app PIN'), findsNothing);
+        await disposeCleanly(tester);
+      },
+    );
+
+    testWidgets('with a PIN and phone lock on, the PIN can be removed', (
+      tester,
+    ) async {
+      appLock.deviceAuthAvailable = true;
+      await appLock.setPin('1234');
+      final controller = container.read(settingsControllerProvider);
+      await controller.setAppLockEnabled(true);
+      await controller.setBiometricEnabled(true);
+      await open(tester);
+
+      expect(find.text('Change PIN'), findsOneWidget);
+      await tester.tap(find.text('Remove app PIN'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '1234');
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+
+      expect(await appLock.hasPin(), isFalse);
+      expect(container.read(settingsProvider).appLockEnabled, isTrue);
+      await disposeCleanly(tester);
+    });
+
+    testWidgets('a PIN-only lock cannot have its PIN removed', (tester) async {
+      appLock.deviceAuthAvailable = true;
+      await appLock.setPin('1234');
+      await container.read(settingsControllerProvider).setAppLockEnabled(true);
+      await open(tester);
+
+      expect(
+        find.text('Remove app PIN'),
+        findsNothing,
+        reason: 'would leave no way in',
+      );
+      await disposeCleanly(tester);
+    });
   });
 }
