@@ -55,20 +55,32 @@ String formatMinorMasked(
     ? formatMinor(minor, currencyCode: currencyCode, showDecimals: showDecimals, showSign: showSign)
     : maskedAmount(currencyCode);
 
+/// One formatter per currency and precision, built on first use. Building a
+/// [NumberFormat] loads its locale's symbols, and this runs once per amount
+/// on screen — every frame, for an animated count.
+final _formats = <(String, bool), NumberFormat>{};
+
+NumberFormat _currencyFormat(String currencyCode, bool showDecimals) =>
+    _formats.putIfAbsent((currencyCode, showDecimals), () {
+      final option = _optionFor(currencyCode);
+      return NumberFormat.currency(
+        locale: option.locale,
+        symbol: option.symbol,
+        decimalDigits: showDecimals ? 2 : 0,
+      );
+    });
+
 String formatMinor(
   int minor, {
   required String currencyCode,
   bool showDecimals = true,
   bool showSign = false,
 }) {
-  final option = _optionFor(currencyCode);
   final major = minor / 100;
-  final format = NumberFormat.currency(
-    locale: option.locale,
-    symbol: option.symbol,
-    decimalDigits: showDecimals ? 2 : 0,
-  );
-  final formatted = format.format(major.abs());
+  final formatted = _currencyFormat(
+    currencyCode,
+    showDecimals,
+  ).format(major.abs());
   if (!showSign) return minor < 0 ? '-$formatted' : formatted;
   return minor < 0 ? '-$formatted' : '+$formatted';
 }
