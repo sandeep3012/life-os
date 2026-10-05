@@ -671,7 +671,7 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                 Navigator.of(context).pop();
                 Future.microtask(() {
                   if (!hostContext.mounted) return;
-                  showTransferMoneyDialog(hostContext, ref);
+                  showTransferMoneyDialog(hostContext);
                 });
               },
             ),

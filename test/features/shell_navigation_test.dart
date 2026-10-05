@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -216,4 +217,88 @@ void main() {
       await disposeCleanly(tester);
     });
   }
+
+  testWidgets('the sidebar opens the transfer dialog and the transfer lands', (
+    tester,
+  ) async {
+    // The confirmation card, rather than the default save ripple, so the
+    // acknowledgement can be asserted.
+    await db
+        .into(db.appSettings)
+        .insert(
+          const AppSettingsCompanion(
+            id: Value(0),
+            saveAnimationsEnabled: Value(false),
+            saveConfirmationsEnabled: Value(true),
+          ),
+        );
+    final from = await db
+        .into(db.accounts)
+        .insertReturning(
+          AccountsCompanion.insert(
+            name: 'Wallet',
+            type: 'cash',
+            balanceMinor: const Value(50000),
+          ),
+        );
+    final to = await db
+        .into(db.accounts)
+        .insertReturning(
+          AccountsCompanion.insert(
+            name: 'Savings',
+            type: 'savings',
+            balanceMinor: const Value(10000),
+          ),
+        );
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(LucideIcons.menu));
+    await tester.pumpAndSettle();
+    final item = find.descendant(
+      of: find.byType(AppSidebar),
+      matching: find.text('Transfer money'),
+    );
+    await tester.scrollUntilVisible(
+      item,
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(AppSidebar),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.tap(item);
+    await tester.pumpAndSettle();
+
+    // The drawer has closed — and taken the sidebar with it — before the
+    // dialog opens; that used to break the dialog's provider reads.
+    expect(find.byType(AppSidebar), findsNothing);
+    expect(find.widgetWithText(AlertDialog, 'Transfer money'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).last, '150');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Transfer'));
+    await tester.pumpAndSettle();
+
+    // The dialog closing is acknowledged, not silent.
+    expect(find.text('Transfer complete'), findsOneWidget);
+    expect(
+      find.text('₹150.00 moved from Wallet to Savings.'),
+      findsOneWidget,
+    );
+    // Let the card dismiss itself before the test ends.
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+
+    Future<int> balance(String id) async => (await (db.select(
+      db.accounts,
+    )..where((a) => a.id.equals(id))).getSingle()).balanceMinor;
+    // ₹150 leaves Wallet and arrives in Savings.
+    expect(await balance(from.id), 50000 - 15000);
+    expect(await balance(to.id), 10000 + 15000);
+
+    await disposeCleanly(tester);
+  });
 }
