@@ -30,6 +30,8 @@ import '../../application/home_providers.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../widgets/now_hero_card.dart';
 import '../widgets/habit_ring_tile.dart';
+import '../../../onboarding/application/onboarding_gate.dart';
+import '../../../onboarding/presentation/home_tour.dart';
 
 /// The dashboard, laid out as the design comp specifies: app bar, serif greeting,
 /// the "now" hero, today's to-dos, a two-column habit grid, then "Coming up".
@@ -54,6 +56,8 @@ class HomeScreen extends ConsumerWidget {
     final activeGoals = ref.watch(activeGoalCountProvider);
     final currencyCode = ref.watch(settingsProvider).currencyCode;
     final loaded = ref.watch(homeDataLoadedProvider);
+    ref.watch(settingsProvider.select((s) => s.toursSeen));
+    if (loaded) HomeTour.maybeStart(context, ref);
 
     final now = DateTime.now();
     // Habits have their own grid and tasks have their own list, so the hero
@@ -84,6 +88,7 @@ class HomeScreen extends ConsumerWidget {
               child: Builder(
                 builder: (context) => AppTopBar(
                   centerText: DateFormat('EEE · d MMM yyyy').format(now),
+                  menuKey: TourTargets.menuButton,
                   onMenu: () => Scaffold.of(context).openDrawer(),
                   onAvatar: () => context.go(RoutePaths.settings),
                 ),
@@ -110,10 +115,18 @@ class HomeScreen extends ConsumerWidget {
               const _HomeSkeleton(),
             ] else ...[
               const SizedBox(height: 20),
-              _buildNowCard(ref.watch(todayWorkoutProvider), todayAgenda, now),
+              KeyedSubtree(
+                key: TourTargets.homeHero,
+                child: _buildNowCard(
+                  ref.watch(todayWorkoutProvider),
+                  todayAgenda,
+                  now,
+                ),
+              ),
 
               const SizedBox(height: 20),
               _DashboardStatRail(
+                key: TourTargets.homeStats,
                 monthSpendMinor: monthSpendMinor,
                 currencyCode: currencyCode,
                 tasks: todayTasks,
@@ -434,6 +447,7 @@ class _Greeting extends StatelessWidget {
 /// number: it is quicker to scan than mixing finance, tasks and goals together.
 class _DashboardStatRail extends StatelessWidget {
   const _DashboardStatRail({
+    super.key,
     required this.monthSpendMinor,
     required this.currencyCode,
     required this.tasks,

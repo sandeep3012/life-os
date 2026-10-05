@@ -15804,6 +15804,32 @@ class $AppSettingsTable extends AppSettings
         ),
         defaultValue: const Constant(true),
       );
+  static const VerificationMeta _onboardingCompletedMeta =
+      const VerificationMeta('onboardingCompleted');
+  @override
+  late final GeneratedColumn<bool> onboardingCompleted = GeneratedColumn<bool>(
+    'onboarding_completed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("onboarding_completed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _toursSeenMeta = const VerificationMeta(
+    'toursSeen',
+  );
+  @override
+  late final GeneratedColumn<String> toursSeen = GeneratedColumn<String>(
+    'tours_seen',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     hapticsEnabled,
@@ -15822,6 +15848,8 @@ class $AppSettingsTable extends AppSettings
     balancesVisible,
     reduceMotion,
     transitionEffectsEnabled,
+    onboardingCompleted,
+    toursSeen,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -15967,6 +15995,21 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('onboarding_completed')) {
+      context.handle(
+        _onboardingCompletedMeta,
+        onboardingCompleted.isAcceptableOrUnknown(
+          data['onboarding_completed']!,
+          _onboardingCompletedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('tours_seen')) {
+      context.handle(
+        _toursSeenMeta,
+        toursSeen.isAcceptableOrUnknown(data['tours_seen']!, _toursSeenMeta),
+      );
+    }
     return context;
   }
 
@@ -16040,6 +16083,14 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.bool,
         data['${effectivePrefix}transition_effects_enabled'],
       )!,
+      onboardingCompleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}onboarding_completed'],
+      )!,
+      toursSeen: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tours_seen'],
+      )!,
     );
   }
 
@@ -16088,6 +16139,13 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   /// tab content slide. Off swaps them for a short fade while every other
   /// animation keeps playing.
   final bool transitionEffectsEnabled;
+
+  /// The first-launch welcome screens have been finished or skipped.
+  final bool onboardingCompleted;
+
+  /// Comma-separated ids of the screen tours already shown (e.g. `home`).
+  /// Settings → "Replay the tour" clears it.
+  final String toursSeen;
   const AppSetting({
     required this.hapticsEnabled,
     required this.saveAnimationsEnabled,
@@ -16105,6 +16163,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.balancesVisible,
     required this.reduceMotion,
     required this.transitionEffectsEnabled,
+    required this.onboardingCompleted,
+    required this.toursSeen,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -16129,6 +16189,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['transition_effects_enabled'] = Variable<bool>(
       transitionEffectsEnabled,
     );
+    map['onboarding_completed'] = Variable<bool>(onboardingCompleted);
+    map['tours_seen'] = Variable<String>(toursSeen);
     return map;
   }
 
@@ -16150,6 +16212,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       balancesVisible: Value(balancesVisible),
       reduceMotion: Value(reduceMotion),
       transitionEffectsEnabled: Value(transitionEffectsEnabled),
+      onboardingCompleted: Value(onboardingCompleted),
+      toursSeen: Value(toursSeen),
     );
   }
 
@@ -16183,6 +16247,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       transitionEffectsEnabled: serializer.fromJson<bool>(
         json['transitionEffectsEnabled'],
       ),
+      onboardingCompleted: serializer.fromJson<bool>(
+        json['onboardingCompleted'],
+      ),
+      toursSeen: serializer.fromJson<String>(json['toursSeen']),
     );
   }
   @override
@@ -16211,6 +16279,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'transitionEffectsEnabled': serializer.toJson<bool>(
         transitionEffectsEnabled,
       ),
+      'onboardingCompleted': serializer.toJson<bool>(onboardingCompleted),
+      'toursSeen': serializer.toJson<String>(toursSeen),
     };
   }
 
@@ -16231,6 +16301,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     bool? balancesVisible,
     bool? reduceMotion,
     bool? transitionEffectsEnabled,
+    bool? onboardingCompleted,
+    String? toursSeen,
   }) => AppSetting(
     hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
     saveAnimationsEnabled: saveAnimationsEnabled ?? this.saveAnimationsEnabled,
@@ -16251,6 +16323,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     reduceMotion: reduceMotion ?? this.reduceMotion,
     transitionEffectsEnabled:
         transitionEffectsEnabled ?? this.transitionEffectsEnabled,
+    onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+    toursSeen: toursSeen ?? this.toursSeen,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -16298,6 +16372,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       transitionEffectsEnabled: data.transitionEffectsEnabled.present
           ? data.transitionEffectsEnabled.value
           : this.transitionEffectsEnabled,
+      onboardingCompleted: data.onboardingCompleted.present
+          ? data.onboardingCompleted.value
+          : this.onboardingCompleted,
+      toursSeen: data.toursSeen.present ? data.toursSeen.value : this.toursSeen,
     );
   }
 
@@ -16319,7 +16397,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('biometricEnabled: $biometricEnabled, ')
           ..write('balancesVisible: $balancesVisible, ')
           ..write('reduceMotion: $reduceMotion, ')
-          ..write('transitionEffectsEnabled: $transitionEffectsEnabled')
+          ..write('transitionEffectsEnabled: $transitionEffectsEnabled, ')
+          ..write('onboardingCompleted: $onboardingCompleted, ')
+          ..write('toursSeen: $toursSeen')
           ..write(')'))
         .toString();
   }
@@ -16342,6 +16422,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     balancesVisible,
     reduceMotion,
     transitionEffectsEnabled,
+    onboardingCompleted,
+    toursSeen,
   );
   @override
   bool operator ==(Object other) =>
@@ -16362,7 +16444,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.biometricEnabled == this.biometricEnabled &&
           other.balancesVisible == this.balancesVisible &&
           other.reduceMotion == this.reduceMotion &&
-          other.transitionEffectsEnabled == this.transitionEffectsEnabled);
+          other.transitionEffectsEnabled == this.transitionEffectsEnabled &&
+          other.onboardingCompleted == this.onboardingCompleted &&
+          other.toursSeen == this.toursSeen);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -16382,6 +16466,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<bool> balancesVisible;
   final Value<bool> reduceMotion;
   final Value<bool> transitionEffectsEnabled;
+  final Value<bool> onboardingCompleted;
+  final Value<String> toursSeen;
   const AppSettingsCompanion({
     this.hapticsEnabled = const Value.absent(),
     this.saveAnimationsEnabled = const Value.absent(),
@@ -16399,6 +16485,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.balancesVisible = const Value.absent(),
     this.reduceMotion = const Value.absent(),
     this.transitionEffectsEnabled = const Value.absent(),
+    this.onboardingCompleted = const Value.absent(),
+    this.toursSeen = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.hapticsEnabled = const Value.absent(),
@@ -16417,6 +16505,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.balancesVisible = const Value.absent(),
     this.reduceMotion = const Value.absent(),
     this.transitionEffectsEnabled = const Value.absent(),
+    this.onboardingCompleted = const Value.absent(),
+    this.toursSeen = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<bool>? hapticsEnabled,
@@ -16435,6 +16525,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<bool>? balancesVisible,
     Expression<bool>? reduceMotion,
     Expression<bool>? transitionEffectsEnabled,
+    Expression<bool>? onboardingCompleted,
+    Expression<String>? toursSeen,
   }) {
     return RawValuesInsertable({
       if (hapticsEnabled != null) 'haptics_enabled': hapticsEnabled,
@@ -16457,6 +16549,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (reduceMotion != null) 'reduce_motion': reduceMotion,
       if (transitionEffectsEnabled != null)
         'transition_effects_enabled': transitionEffectsEnabled,
+      if (onboardingCompleted != null)
+        'onboarding_completed': onboardingCompleted,
+      if (toursSeen != null) 'tours_seen': toursSeen,
     });
   }
 
@@ -16477,6 +16572,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<bool>? balancesVisible,
     Value<bool>? reduceMotion,
     Value<bool>? transitionEffectsEnabled,
+    Value<bool>? onboardingCompleted,
+    Value<String>? toursSeen,
   }) {
     return AppSettingsCompanion(
       hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
@@ -16499,6 +16596,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       reduceMotion: reduceMotion ?? this.reduceMotion,
       transitionEffectsEnabled:
           transitionEffectsEnabled ?? this.transitionEffectsEnabled,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+      toursSeen: toursSeen ?? this.toursSeen,
     );
   }
 
@@ -16561,6 +16660,12 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
         transitionEffectsEnabled.value,
       );
     }
+    if (onboardingCompleted.present) {
+      map['onboarding_completed'] = Variable<bool>(onboardingCompleted.value);
+    }
+    if (toursSeen.present) {
+      map['tours_seen'] = Variable<String>(toursSeen.value);
+    }
     return map;
   }
 
@@ -16582,7 +16687,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('biometricEnabled: $biometricEnabled, ')
           ..write('balancesVisible: $balancesVisible, ')
           ..write('reduceMotion: $reduceMotion, ')
-          ..write('transitionEffectsEnabled: $transitionEffectsEnabled')
+          ..write('transitionEffectsEnabled: $transitionEffectsEnabled, ')
+          ..write('onboardingCompleted: $onboardingCompleted, ')
+          ..write('toursSeen: $toursSeen')
           ..write(')'))
         .toString();
   }
@@ -29157,6 +29264,8 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<bool> balancesVisible,
       Value<bool> reduceMotion,
       Value<bool> transitionEffectsEnabled,
+      Value<bool> onboardingCompleted,
+      Value<String> toursSeen,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -29176,6 +29285,8 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<bool> balancesVisible,
       Value<bool> reduceMotion,
       Value<bool> transitionEffectsEnabled,
+      Value<bool> onboardingCompleted,
+      Value<String> toursSeen,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -29264,6 +29375,16 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<bool> get transitionEffectsEnabled => $composableBuilder(
     column: $table.transitionEffectsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get onboardingCompleted => $composableBuilder(
+    column: $table.onboardingCompleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get toursSeen => $composableBuilder(
+    column: $table.toursSeen,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -29356,6 +29477,16 @@ class $$AppSettingsTableOrderingComposer
     column: $table.transitionEffectsEnabled,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get onboardingCompleted => $composableBuilder(
+    column: $table.onboardingCompleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get toursSeen => $composableBuilder(
+    column: $table.toursSeen,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -29442,6 +29573,14 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.transitionEffectsEnabled,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get onboardingCompleted => $composableBuilder(
+    column: $table.onboardingCompleted,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get toursSeen =>
+      $composableBuilder(column: $table.toursSeen, builder: (column) => column);
 }
 
 class $$AppSettingsTableTableManager
@@ -29491,6 +29630,8 @@ class $$AppSettingsTableTableManager
                 Value<bool> balancesVisible = const Value.absent(),
                 Value<bool> reduceMotion = const Value.absent(),
                 Value<bool> transitionEffectsEnabled = const Value.absent(),
+                Value<bool> onboardingCompleted = const Value.absent(),
+                Value<String> toursSeen = const Value.absent(),
               }) => AppSettingsCompanion(
                 hapticsEnabled: hapticsEnabled,
                 saveAnimationsEnabled: saveAnimationsEnabled,
@@ -29508,6 +29649,8 @@ class $$AppSettingsTableTableManager
                 balancesVisible: balancesVisible,
                 reduceMotion: reduceMotion,
                 transitionEffectsEnabled: transitionEffectsEnabled,
+                onboardingCompleted: onboardingCompleted,
+                toursSeen: toursSeen,
               ),
           createCompanionCallback:
               ({
@@ -29527,6 +29670,8 @@ class $$AppSettingsTableTableManager
                 Value<bool> balancesVisible = const Value.absent(),
                 Value<bool> reduceMotion = const Value.absent(),
                 Value<bool> transitionEffectsEnabled = const Value.absent(),
+                Value<bool> onboardingCompleted = const Value.absent(),
+                Value<String> toursSeen = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 hapticsEnabled: hapticsEnabled,
                 saveAnimationsEnabled: saveAnimationsEnabled,
@@ -29544,6 +29689,8 @@ class $$AppSettingsTableTableManager
                 balancesVisible: balancesVisible,
                 reduceMotion: reduceMotion,
                 transitionEffectsEnabled: transitionEffectsEnabled,
+                onboardingCompleted: onboardingCompleted,
+                toursSeen: toursSeen,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

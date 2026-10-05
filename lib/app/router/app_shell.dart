@@ -24,6 +24,7 @@ import '../motion.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import 'navigator_keys.dart';
+import '../../features/onboarding/application/onboarding_gate.dart';
 
 /// Bottom-nav shell. Four destinations either side of a centre add button, which
 /// is the layout the design handoff specifies — the comp's old "More" tab is
@@ -644,6 +645,7 @@ class _AddButton extends StatelessWidget {
         haptic: TapHaptic.medium,
         semanticLabel: 'Add',
         child: Container(
+          key: TourTargets.addButton,
           width: 50,
           height: 50,
           decoration: BoxDecoration(

@@ -18,6 +18,7 @@ class AppTopBar extends StatelessWidget {
     super.key,
     required this.centerText,
     this.onMenu,
+    this.menuKey,
     this.onAvatar,
     this.initials,
     this.trailingIcon,
@@ -29,6 +30,9 @@ class AppTopBar extends StatelessWidget {
 
   final String centerText;
   final VoidCallback? onMenu;
+
+  /// Lets a screen tour point at the menu button.
+  final Key? menuKey;
   final VoidCallback? onAvatar;
   final String? initials;
 
@@ -49,10 +53,13 @@ class AppTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _IconButton(
-          icon: LucideIcons.menu,
-          onTap: onMenu,
-          semanticLabel: 'Menu',
+        KeyedSubtree(
+          key: menuKey,
+          child: _IconButton(
+            icon: LucideIcons.menu,
+            onTap: onMenu,
+            semanticLabel: 'Menu',
+          ),
         ),
         Expanded(
           child: Center(

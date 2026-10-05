@@ -16,6 +16,7 @@ class _FakeNotifications extends NotificationService {
   Future<void> scheduleBillReminder({
     required String billId,
     required String title,
+    String body = '',
     required DateTime reminderTime,
     ReminderMode mode = ReminderMode.notification,
   }) async {}

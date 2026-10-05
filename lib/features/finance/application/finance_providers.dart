@@ -12,6 +12,8 @@ import '../../settings/application/settings_providers.dart';
 import '../data/finance_repository.dart';
 import '../domain/budget_progress.dart';
 import '../domain/net_worth_point.dart';
+import '../../../core/reminders/reminder_text.dart';
+import '../../../core/utils/currency_utils.dart';
 
 final financeRepositoryProvider = Provider<FinanceRepository>((ref) {
   return FinanceRepository(ref.watch(appDatabaseProvider), ref.watch(fileStorageServiceProvider));
@@ -239,7 +241,12 @@ final budgetsWithProgressProvider = Provider<List<BudgetProgress>>((ref) {
 });
 
 class FinanceController {
-  FinanceController(this._repo, this._notifications, this._remindersEnabled);
+  FinanceController(
+    this._repo,
+    this._notifications,
+    this._remindersEnabled, [
+    String Function()? currencyCode,
+  ]) : _currencyCode = currencyCode ?? (() => 'INR');
 
   final FinanceRepository _repo;
   final NotificationService _notifications;
@@ -250,6 +257,9 @@ class FinanceController {
   /// reminder is conceptually a due-date nudge like a task's) takes effect
   /// for the next bill without rebuilding this controller.
   final bool Function() _remindersEnabled;
+
+  /// For amounts in reminder text; read at call time like the above.
+  final String Function() _currencyCode;
 
   Future<void> addAccount({required String name, required String type, int balanceMinor = 0}) {
     return _repo.createAccount(name: name, type: type, balanceMinor: balanceMinor);
@@ -554,7 +564,16 @@ class FinanceController {
     final reminderTime = bill.dueDate.subtract(Duration(days: bill.reminderDaysBefore));
     await _notifications.scheduleBillReminder(
       billId: bill.id,
-      title: '${bill.name} due',
+      title: bill.name,
+      body: ReminderText.bill(
+        amount: formatMinor(
+          bill.amountMinor,
+          currencyCode: _currencyCode(),
+          showDecimals: false,
+        ),
+        dueDate: bill.dueDate,
+        firesAt: reminderTime,
+      ),
       reminderTime: reminderTime,
       mode: mode,
     );
@@ -566,5 +585,6 @@ final financeControllerProvider = Provider<FinanceController>((ref) {
     ref.watch(financeRepositoryProvider),
     ref.watch(notificationServiceProvider),
     () => ref.read(settingsProvider).taskReminders,
+    () => ref.read(settingsProvider).currencyCode,
   );
 });
