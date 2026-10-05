@@ -19,6 +19,7 @@ class _FakeNotificationService extends NotificationService {
   Future<void> scheduleGoalReminder({
     required String goalId,
     required String title,
+    String body = '',
     required DateTime reminderTime,
     ReminderMode mode = ReminderMode.notification,
   }) async {}

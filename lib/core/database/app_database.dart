@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 29;
+  int get schemaVersion => 30;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -294,6 +294,16 @@ class AppDatabase extends _$AppDatabase {
         // the transition effects on, which is what existing installs had.
         await m.addColumn(appSettings, appSettings.reduceMotion);
         await m.addColumn(appSettings, appSettings.transitionEffectsEnabled);
+      }
+      if (from < 30) {
+        // v29 -> v30: onboarding. Anyone upgrading already knows the app, so
+        // an existing settings row is marked as having seen the welcome
+        // screens and the Home tour; only fresh installs get them.
+        await m.addColumn(appSettings, appSettings.onboardingCompleted);
+        await m.addColumn(appSettings, appSettings.toursSeen);
+        await customStatement(
+          "UPDATE app_settings SET onboarding_completed = 1, tours_seen = 'home'",
+        );
       }
     },
   );

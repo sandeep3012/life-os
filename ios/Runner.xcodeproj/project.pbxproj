@@ -17,6 +17,9 @@
 		83AA0ABEDB13E2F27E74DBCF /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C2D824A063E5D835C44FC6E7 /* Pods_Runner.framework */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
+		5E0D1A012F00000100A1B2C1 /* reminder.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5E0D1A022F00000100A1B2C1 /* reminder.wav */; };
+		5E0D1A032F00000100A1B2C1 /* notify.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5E0D1A042F00000100A1B2C1 /* notify.wav */; };
+		5E0D1A052F00000100A1B2C1 /* alarm_gentle.wav in Resources */ = {isa = PBXBuildFile; fileRef = 5E0D1A062F00000100A1B2C1 /* alarm_gentle.wav */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
@@ -64,6 +67,9 @@
 		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		97C146FB1CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5E0D1A022F00000100A1B2C1 /* reminder.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = reminder.wav; sourceTree = "<group>"; };
+		5E0D1A042F00000100A1B2C1 /* notify.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = notify.wav; sourceTree = "<group>"; };
+		5E0D1A062F00000100A1B2C1 /* alarm_gentle.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = alarm_gentle.wav; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9A3CA5D716362C25F7D2E5C8 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -138,6 +144,9 @@
 			children = (
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
+				5E0D1A022F00000100A1B2C1 /* reminder.wav */,
+				5E0D1A042F00000100A1B2C1 /* notify.wav */,
+				5E0D1A062F00000100A1B2C1 /* alarm_gentle.wav */,
 				97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */,
 				97C147021CF9000F007C117D /* Info.plist */,
 				1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */,
@@ -276,6 +285,9 @@
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
+				5E0D1A012F00000100A1B2C1 /* reminder.wav in Resources */,
+				5E0D1A032F00000100A1B2C1 /* notify.wav in Resources */,
+				5E0D1A052F00000100A1B2C1 /* alarm_gentle.wav in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -10,6 +10,7 @@ import '../../features/tasks/data/tasks_repository.dart';
 import '../../features/calendar/data/calendar_repository.dart';
 import '../../features/habits/domain/habit_schedule.dart';
 import 'notification_service.dart';
+import '../reminders/reminder_text.dart';
 
 /// Reconciles a bounded rolling queue after writes, on resume and at midnight.
 /// Occurrences are generated independently of whether previous ones are done.
@@ -94,6 +95,7 @@ class ScheduleCoordinator {
             ScheduledReminder(
               key: 'task:${t.id}',
               title: t.title,
+              body: ReminderText.task(priority: t.priority),
               time: t.dueDate!,
               kind: 'task',
               mode: ReminderMode.fromStorage(t.reminderMode),
@@ -110,6 +112,10 @@ class ScheduleCoordinator {
             ScheduledReminder(
               key: 'event:${e.id}',
               title: e.title,
+              body: ReminderText.event(
+                start: e.startTime,
+                minutesBefore: e.reminderMinutesBefore,
+              ),
               time: time,
               kind: 'event',
               mode: ReminderMode.fromStorage(e.reminderMode),
@@ -152,6 +158,10 @@ class ScheduleCoordinator {
               key:
                   'habit:${h.id}:${RepeatSchedule.day(date).toIso8601String()}',
               title: h.name,
+              body: ReminderText.habit(
+                targetAmount: h.targetAmount,
+                targetUnit: h.targetUnit,
+              ),
               time: time,
               kind: 'habit',
               mode: ReminderMode.fromStorage(h.reminderMode),
@@ -198,6 +208,11 @@ class ScheduleCoordinator {
               ScheduledReminder(
                 key: 'medication:${m.id}:$day:$hour:$minute',
                 title: m.name,
+                body: ReminderText.medication(
+                  hour: hour,
+                  minute: minute,
+                  dosageNote: m.dosageNote,
+                ),
                 time: time,
                 kind: 'medication',
                 mode: ReminderMode.fromStorage(m.reminderMode),

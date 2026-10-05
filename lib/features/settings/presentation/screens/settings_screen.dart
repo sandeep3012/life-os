@@ -29,6 +29,8 @@ import '../../application/settings_providers.dart';
 import '../widgets/pin_setup_sheet.dart';
 import '../widgets/unlock_method_sheet.dart';
 import '../widgets/reminder_status_card.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../app/router/route_paths.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -311,12 +313,25 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const _SampleDataRow(),
           if (kDebugMode) ...[
             const _SectionTitle('Developer tools'),
             const _DemoDataCard(),
           ],
 
           const _SectionTitle('More'),
+          Card(
+            child: ListTile(
+              leading: const _IconWell(LucideIcons.sparkles),
+              title: const Text('Replay the tour'),
+              subtitle: const Text('See the tips on Home again'),
+              onTap: () async {
+                await controller.resetTours();
+                if (context.mounted) context.go(RoutePaths.home);
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
           Card(
             child: ListTile(
               leading: const _IconWell(LucideIcons.cloudOff),
@@ -1307,6 +1322,77 @@ class _SettingSwitch extends StatelessWidget {
       ),
       value: value,
       onChanged: onChanged,
+    );
+  }
+}
+
+/// "Remove sample data", once there is some — the welcome screens offer to
+/// fill the app with it, so taking it out can't be a debug-only tool.
+class _SampleDataRow extends ConsumerStatefulWidget {
+  const _SampleDataRow();
+
+  @override
+  ConsumerState<_SampleDataRow> createState() => _SampleDataRowState();
+}
+
+class _SampleDataRowState extends ConsumerState<_SampleDataRow> {
+  bool _has = false;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(demoDataServiceProvider).hasDemoData.then((has) {
+      if (mounted) setState(() => _has = has);
+    });
+  }
+
+  Future<void> _remove() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove sample data?'),
+        content: const Text(
+          'Takes out the example entries added when you tried LifeOS. '
+          'Anything you added yourself stays.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(demoDataServiceProvider).remove();
+      if (mounted) setState(() => _has = false);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_has) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Card(
+        child: ListTile(
+          leading: const _IconWell(LucideIcons.eraser),
+          title: const Text('Remove sample data'),
+          subtitle: Text(
+            _busy ? 'Removing…' : 'Clear the example entries',
+          ),
+          onTap: _busy ? null : _remove,
+        ),
+      ),
     );
   }
 }

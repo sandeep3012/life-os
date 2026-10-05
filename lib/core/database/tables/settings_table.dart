@@ -54,6 +54,14 @@ class AppSettings extends Table {
   BoolColumn get transitionEffectsEnabled =>
       boolean().withDefault(const Constant(true))();
 
+  /// The first-launch welcome screens have been finished or skipped.
+  BoolColumn get onboardingCompleted =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Comma-separated ids of the screen tours already shown (e.g. `home`).
+  /// Settings → "Replay the tour" clears it.
+  TextColumn get toursSeen => text().withDefault(const Constant(''))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

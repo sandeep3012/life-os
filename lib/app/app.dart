@@ -17,6 +17,8 @@ import 'router/app_router.dart';
 import 'splash_gate.dart';
 import 'theme/app_theme.dart';
 import 'transitions/screen_reveal.dart';
+import '../features/onboarding/application/onboarding_gate.dart';
+import '../features/onboarding/presentation/onboarding_screen.dart';
 
 class LifeOSApp extends ConsumerStatefulWidget {
   const LifeOSApp({super.key});
@@ -81,6 +83,12 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     finance.ensureDefaultAccountTypes();
     finance.generateDueRecurringTransactions();
     ref.read(scheduleCoordinatorProvider).start();
+    // A new user is asked for reminder permissions during onboarding, where
+    // the reason is on screen; everyone past it is asked here as before (a
+    // no-op once they've answered).
+    if (ref.read(settingsProvider).onboardingCompleted) {
+      ref.read(notificationServiceProvider).requestReminderPermissions();
+    }
     LaunchTimeline.mark('background chores started');
     ref
         .read(aiAnalyserControllerProvider)
@@ -240,6 +248,8 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
 
     final isLocked = ref.watch(isLockedProvider);
     final showLockScreen = settings.appLockEnabled && isLocked;
+    final showOnboarding =
+        OnboardingGate.offered && !settings.onboardingCompleted;
 
     return MaterialApp.router(
       title: 'LifeOS',
@@ -266,6 +276,8 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
           ),
           child: showLockScreen
               ? const LockScreen()
+              : showOnboarding
+              ? const OnboardingScreen()
               : child ?? const SizedBox.shrink(),
         );
       },

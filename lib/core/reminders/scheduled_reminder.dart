@@ -4,12 +4,16 @@ class ScheduledReminder {
   const ScheduledReminder({
     required this.key,
     required this.title,
+    this.body = '',
     required this.time,
     required this.kind,
     required this.mode,
   });
   final String key;
   final String title;
+
+  /// The notification's second line — see `ReminderText`.
+  final String body;
   final DateTime time;
   final String kind;
   final ReminderMode mode;

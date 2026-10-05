@@ -55,43 +55,67 @@ class NotificationService {
     );
   }
 
+  /// Asks for everything reminders need. Safe to call repeatedly: the
+  /// system only shows a prompt for what hasn't been decided yet.
   Future<void> requestReminderPermissions() async {
-    final android = _plugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >();
-    await android?.requestNotificationsPermission();
-    await android?.requestExactAlarmsPermission();
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin
-        >()
-        ?.requestPermissions(alert: true, badge: true, sound: true);
+    await init();
+    try {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      await android?.requestNotificationsPermission();
+      // Android 12+ requires this separately from the notification
+      // permission above — without it, `exactAllowWhileIdle`/`alarmClock`
+      // silently downgrade to inexact scheduling and reminders can be
+      // batched with other nearby alarms instead of firing at their
+      // requested time.
+      await android?.requestExactAlarmsPermission();
+      // Android 14+ requires this to actually show a full-screen alarm UI
+      // over the lock screen; without it, an alarm-mode reminder just
+      // degrades to a heads-up notification.
+      await android?.requestFullScreenIntentPermission();
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >()
+          ?.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+            critical: true,
+          );
+    } catch (_) {
+      // No platform channel (tests) or the request failed — reminders just
+      // won't fire until permission is granted from the system settings.
+    }
   }
 
   static const _taskChannel = AndroidNotificationDetails(
-    'task_reminders',
+    'task_reminders_v2',
     'Task reminders',
     channelDescription: 'Reminders for tasks with a due time',
     importance: Importance.defaultImportance,
+    sound: RawResourceAndroidNotificationSound('reminder'),
   );
 
   static const _habitChannel = AndroidNotificationDetails(
-    'habit_reminders',
+    'habit_reminders_v2',
     'Habit reminders',
     channelDescription: 'Daily nudge for habits not yet logged today',
     importance: Importance.defaultImportance,
+    sound: RawResourceAndroidNotificationSound('reminder'),
   );
 
   static final _taskAlarmChannel = AndroidNotificationDetails(
-    'task_alarms',
+    'task_alarms_v2',
     'Task alarms',
     channelDescription: 'Alarm-style reminders for tasks with a due time',
     importance: Importance.max,
     priority: Priority.high,
     category: AndroidNotificationCategory.alarm,
     audioAttributesUsage: AudioAttributesUsage.alarm,
-    sound: UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+    sound: _alarmSound,
     fullScreenIntent: true,
     // Insistent flag (4): repeats the sound/vibration until the user
     // interacts with the notification, instead of playing once.
@@ -99,79 +123,112 @@ class NotificationService {
   );
 
   static final _habitAlarmChannel = AndroidNotificationDetails(
-    'habit_alarms',
+    'habit_alarms_v2',
     'Habit alarms',
     channelDescription: 'Alarm-style reminders for habits',
     importance: Importance.max,
     priority: Priority.high,
     category: AndroidNotificationCategory.alarm,
     audioAttributesUsage: AudioAttributesUsage.alarm,
-    sound: UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+    sound: _alarmSound,
     fullScreenIntent: true,
     additionalFlags: _insistentFlag,
   );
 
   static const _billChannel = AndroidNotificationDetails(
-    'bill_reminders',
+    'bill_reminders_v2',
     'Bill reminders',
     channelDescription: 'Reminders for upcoming bill due dates',
     importance: Importance.defaultImportance,
+    sound: RawResourceAndroidNotificationSound('reminder'),
   );
 
   static final _billAlarmChannel = AndroidNotificationDetails(
-    'bill_alarms',
+    'bill_alarms_v2',
     'Bill alarms',
     channelDescription: 'Alarm-style reminders for upcoming bill due dates',
     importance: Importance.max,
     priority: Priority.high,
     category: AndroidNotificationCategory.alarm,
     audioAttributesUsage: AudioAttributesUsage.alarm,
-    sound: UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+    sound: _alarmSound,
     fullScreenIntent: true,
     additionalFlags: _insistentFlag,
   );
 
   static const _eventChannel = AndroidNotificationDetails(
-    'event_reminders',
+    'event_reminders_v2',
     'Event reminders',
     channelDescription: 'Reminders for upcoming calendar events',
     importance: Importance.defaultImportance,
+    sound: RawResourceAndroidNotificationSound('notify'),
   );
 
   static final _eventAlarmChannel = AndroidNotificationDetails(
-    'event_alarms',
+    'event_alarms_v2',
     'Event alarms',
     channelDescription: 'Alarm-style reminders for upcoming calendar events',
     importance: Importance.max,
     priority: Priority.high,
     category: AndroidNotificationCategory.alarm,
     audioAttributesUsage: AudioAttributesUsage.alarm,
-    sound: UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+    sound: _alarmSound,
     fullScreenIntent: true,
     additionalFlags: _insistentFlag,
   );
 
   static const _goalChannel = AndroidNotificationDetails(
-    'goal_reminders',
+    'goal_reminders_v2',
     'Goal reminders',
     channelDescription: 'Reminders for upcoming goal deadlines',
     importance: Importance.defaultImportance,
+    sound: RawResourceAndroidNotificationSound('notify'),
   );
 
   static final _goalAlarmChannel = AndroidNotificationDetails(
-    'goal_alarms',
+    'goal_alarms_v2',
     'Goal alarms',
     channelDescription: 'Alarm-style reminders for upcoming goal deadlines',
     importance: Importance.max,
     priority: Priority.high,
     category: AndroidNotificationCategory.alarm,
     audioAttributesUsage: AudioAttributesUsage.alarm,
-    sound: UriAndroidNotificationSound('content://settings/system/alarm_alert'),
+    sound: _alarmSound,
     fullScreenIntent: true,
     additionalFlags: _insistentFlag,
   );
 
   static final _insistentFlag = Int32List.fromList(<int>[4]);
+
+  // LifeOS's own sounds (assets in android/app/src/main/res/raw as OGG and in
+  // the iOS Runner bundle as WAV). Reminders for things to act on — tasks,
+  // bills, habits, doses — use "reminder"; events and goal deadlines, which
+  // are informational, use the softer "notify"; every alarm uses "alarm_gentle",
+  // which Android's insistent flag loops until it's dealt with. iOS plays an
+  // app's sound once, so there an alarm sounds for its 9.6 seconds.
+  static const _alarmSound = RawResourceAndroidNotificationSound(
+    'alarm_gentle',
+  );
+  static const _iosReminder = DarwinNotificationDetails(sound: 'reminder.wav');
+  static const _iosNotify = DarwinNotificationDetails(sound: 'notify.wav');
+
+  /// Android fixes a channel's sound when the channel is first created, so
+  /// giving the channels new sounds meant giving them new ids (`_v2`). These
+  /// are the ids they replaced, removed at start-up so phones updated from an
+  /// older build don't keep a duplicate set in the system's notification
+  /// settings.
+  static const _retiredChannelIds = [
+    'task_reminders',
+    'habit_reminders',
+    'bill_reminders',
+    'event_reminders',
+    'goal_reminders',
+    'task_alarms',
+    'habit_alarms',
+    'bill_alarms',
+    'event_alarms',
+    'goal_alarms',
+  ];
 
   static const _dailyHabitReminderId = 0;
 
@@ -211,27 +268,13 @@ class NotificationService {
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-      await android?.requestNotificationsPermission();
-      // Android 12+ requires this separately from the notification
-      // permission above — without it, `exactAllowWhileIdle`/`alarmClock`
-      // silently downgrade to inexact scheduling and reminders can be
-      // batched with other nearby alarms instead of firing at their
-      // requested time.
-      await android?.requestExactAlarmsPermission();
-      // Android 14+ requires this to actually show a full-screen alarm UI
-      // over the lock screen; without it, an alarm-mode reminder just
-      // degrades to a heads-up notification.
-      await android?.requestFullScreenIntentPermission();
-      await _plugin
-          .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin
-          >()
-          ?.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-            critical: true,
-          );
+      for (final id in _retiredChannelIds) {
+        await android?.deleteNotificationChannel(channelId: id);
+      }
+      // Permissions are asked separately, by [requestReminderPermissions]:
+      // a new user is asked on onboarding's "Turn on reminders" page, where
+      // the reason is on screen, rather than by a bare system dialog the
+      // moment the app first opens.
 
       _initialized = true;
     } catch (_) {
@@ -240,7 +283,7 @@ class NotificationService {
   }
 
   static const _iosAlarmDetails = DarwinNotificationDetails(
-    sound: 'default',
+    sound: 'alarm_gentle.wav',
     interruptionLevel: InterruptionLevel.timeSensitive,
   );
 
@@ -270,7 +313,7 @@ class NotificationService {
       scheduledDate: tz.TZDateTime.from(dueDate, tz.local),
       notificationDetails: NotificationDetails(
         android: isAlarm ? _taskAlarmChannel : _taskChannel,
-        iOS: isAlarm ? _iosAlarmDetails : const DarwinNotificationDetails(),
+        iOS: isAlarm ? _iosAlarmDetails : _iosReminder,
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
@@ -287,6 +330,7 @@ class NotificationService {
   Future<void> scheduleBillReminder({
     required String billId,
     required String title,
+    String body = 'Bill due',
     required DateTime reminderTime,
     ReminderMode mode = ReminderMode.notification,
   }) async {
@@ -295,11 +339,11 @@ class NotificationService {
     await _plugin.zonedSchedule(
       id: _billReminderId(billId),
       title: title,
-      body: 'Bill due',
+      body: body,
       scheduledDate: tz.TZDateTime.from(reminderTime, tz.local),
       notificationDetails: NotificationDetails(
         android: isAlarm ? _billAlarmChannel : _billChannel,
-        iOS: isAlarm ? _iosAlarmDetails : const DarwinNotificationDetails(),
+        iOS: isAlarm ? _iosAlarmDetails : _iosReminder,
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
@@ -319,6 +363,7 @@ class NotificationService {
   Future<void> scheduleGoalReminder({
     required String goalId,
     required String title,
+    String body = 'Goal deadline',
     required DateTime reminderTime,
     ReminderMode mode = ReminderMode.notification,
   }) async {
@@ -327,11 +372,11 @@ class NotificationService {
     await _plugin.zonedSchedule(
       id: _goalReminderId(goalId),
       title: title,
-      body: 'Goal deadline',
+      body: body,
       scheduledDate: tz.TZDateTime.from(reminderTime, tz.local),
       notificationDetails: NotificationDetails(
         android: isAlarm ? _goalAlarmChannel : _goalChannel,
-        iOS: isAlarm ? _iosAlarmDetails : const DarwinNotificationDetails(),
+        iOS: isAlarm ? _iosAlarmDetails : _iosNotify,
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
@@ -363,7 +408,7 @@ class NotificationService {
       scheduledDate: tz.TZDateTime.from(reminderTime, tz.local),
       notificationDetails: NotificationDetails(
         android: isAlarm ? _eventAlarmChannel : _eventChannel,
-        iOS: isAlarm ? _iosAlarmDetails : const DarwinNotificationDetails(),
+        iOS: isAlarm ? _iosAlarmDetails : _iosNotify,
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
     );
@@ -399,7 +444,7 @@ class NotificationService {
       scheduledDate: next,
       notificationDetails: NotificationDetails(
         android: _habitChannel,
-        iOS: const DarwinNotificationDetails(),
+        iOS: _iosReminder,
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
@@ -442,7 +487,7 @@ class NotificationService {
       scheduledDate: next,
       notificationDetails: NotificationDetails(
         android: isAlarm ? _habitAlarmChannel : _habitChannel,
-        iOS: isAlarm ? _iosAlarmDetails : const DarwinNotificationDetails(),
+        iOS: isAlarm ? _iosAlarmDetails : _iosReminder,
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
@@ -479,7 +524,12 @@ class NotificationService {
       final payload = r == null
           ? null
           : 'lifeos.schedule:${r.key}:${r.time.toIso8601String()}:${r.mode.name}';
-      if (r == null || old.payload != payload || old.title != r.title) {
+      // Wording counts as a change too, so improved text reaches reminders
+      // that were already queued.
+      if (r == null ||
+          old.payload != payload ||
+          old.title != r.title ||
+          old.body != r.body) {
         await _plugin.cancel(id: old.id);
       }
     }
@@ -487,7 +537,11 @@ class NotificationService {
       final payload =
           'lifeos.schedule:${r.key}:${r.time.toIso8601String()}:${r.mode.name}';
       if (ours.any(
-        (p) => p.id == r.id && p.payload == payload && p.title == r.title,
+        (p) =>
+            p.id == r.id &&
+            p.payload == payload &&
+            p.title == r.title &&
+            p.body == r.body,
       )) {
         continue;
       }
@@ -503,16 +557,16 @@ class NotificationService {
       await _plugin.zonedSchedule(
         id: r.id,
         title: r.title,
-        body: switch (r.kind) {
-          'habit' => 'Time to check in',
-          'medication' => 'Time for your dose',
-          _ => 'Scheduled reminder',
-        },
+        body: r.body,
         payload: payload,
         scheduledDate: tz.TZDateTime.from(r.time, tz.local),
         notificationDetails: NotificationDetails(
           android: android,
-          iOS: alarm ? _iosAlarmDetails : const DarwinNotificationDetails(),
+          iOS: alarm
+              ? _iosAlarmDetails
+              : r.kind == 'event'
+              ? _iosNotify
+              : _iosReminder,
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );

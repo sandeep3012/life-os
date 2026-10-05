@@ -11,6 +11,7 @@ import '../../tasks/application/tasks_providers.dart';
 import '../data/goals_repository.dart';
 import '../domain/goal_progress.dart';
 import '../domain/automatic_goal_progress.dart';
+import '../../../core/reminders/reminder_text.dart';
 
 final goalsRepositoryProvider = Provider<GoalsRepository>((ref) {
   return GoalsRepository(ref.watch(appDatabaseProvider));
@@ -231,7 +232,8 @@ class GoalsController {
     );
     await _notifications.scheduleGoalReminder(
       goalId: goalId,
-      title: '$title due',
+      title: title,
+      body: ReminderText.goal(deadline: targetDate, firesAt: reminderTime),
       reminderTime: reminderTime,
       mode: mode,
     );

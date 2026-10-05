@@ -408,6 +408,10 @@ class BackupService {
   static const _settingsAddedSinceV28 = <String, dynamic>{
     'reduceMotion': false,
     'transitionEffectsEnabled': true,
+    // A backup from before onboarding existed belongs to someone who has
+    // been using the app; don't walk them through it again.
+    'onboardingCompleted': true,
+    'toursSeen': 'home',
   };
 
   Future<void> _insertAll<T extends Table, D>(

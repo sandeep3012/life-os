@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notification sounds are looked up by name at runtime
+     (RawResourceAndroidNotificationSound), which resource shrinking can't
+     see, so release builds would otherwise drop them as unused. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/reminder,@raw/notify,@raw/alarm_gentle" />

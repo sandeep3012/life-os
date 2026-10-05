@@ -64,6 +64,12 @@ class SettingsRepository {
   Future<void> setTransitionEffectsEnabled(bool enabled) =>
       _upsert(AppSettingsCompanion(transitionEffectsEnabled: Value(enabled)));
 
+  Future<void> setOnboardingCompleted(bool done) =>
+      _upsert(AppSettingsCompanion(onboardingCompleted: Value(done)));
+
+  Future<void> setToursSeen(String csv) =>
+      _upsert(AppSettingsCompanion(toursSeen: Value(csv)));
+
   Future<void> setTaskReminders(bool enabled) =>
       _upsert(AppSettingsCompanion(taskReminders: Value(enabled)));
 

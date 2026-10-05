@@ -12,9 +12,40 @@ Future<void> showSaveFeedback(
   WidgetRef ref, {
   required String title,
   required String message,
+}) => _deliver(
+  context,
+  ref.read(hapticsProvider),
+  ref.read(settingsProvider),
+  title: title,
+  message: message,
+);
+
+/// [showSaveFeedback] for a flow that holds no `WidgetRef` — one opened from
+/// a widget that may be gone by the time the save finishes, like the
+/// sidebar's transfer dialog. Reads through [context]'s provider container.
+Future<void> showSaveFeedbackIn(
+  BuildContext context, {
+  required String title,
+  required String message,
 }) {
-  ref.read(hapticsProvider).save();
-  final settings = ref.read(settingsProvider);
+  final container = ProviderScope.containerOf(context, listen: false);
+  return _deliver(
+    context,
+    container.read(hapticsProvider),
+    container.read(settingsProvider),
+    title: title,
+    message: message,
+  );
+}
+
+Future<void> _deliver(
+  BuildContext context,
+  LifeHaptics haptics,
+  ResolvedSettings settings, {
+  required String title,
+  required String message,
+}) {
+  haptics.save();
   if (settings.saveConfirmationsEnabled) {
     return showSuccessOverlay(context, title: title, message: message);
   }

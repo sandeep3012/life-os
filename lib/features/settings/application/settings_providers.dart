@@ -35,6 +35,8 @@ class ResolvedSettings {
     this.balancesVisible = true,
     this.reduceMotion = false,
     this.transitionEffectsEnabled = true,
+    this.onboardingCompleted = false,
+    this.toursSeen = const {},
   });
 
   final ThemeMode themeMode;
@@ -56,6 +58,12 @@ class ResolvedSettings {
 
   /// Circle reveals, page turn and tab slide; off falls back to a fade.
   final bool transitionEffectsEnabled;
+
+  /// The first-launch welcome screens are done.
+  final bool onboardingCompleted;
+
+  /// Screen tours already shown, by id.
+  final Set<String> toursSeen;
 
   static const defaults = ResolvedSettings(
     themeMode: ThemeMode.system,
@@ -113,6 +121,11 @@ final settingsProvider = Provider<ResolvedSettings>((ref) {
     balancesVisible: row.balancesVisible,
     reduceMotion: row.reduceMotion,
     transitionEffectsEnabled: row.transitionEffectsEnabled,
+    onboardingCompleted: row.onboardingCompleted,
+    toursSeen: {
+      for (final id in row.toursSeen.split(','))
+        if (id.trim().isNotEmpty) id.trim(),
+    },
   );
 });
 
@@ -149,6 +162,16 @@ class SettingsController {
 
   Future<void> setTransitionEffectsEnabled(bool enabled) =>
       _repo.setTransitionEffectsEnabled(enabled);
+
+  Future<void> setOnboardingCompleted(bool done) =>
+      _repo.setOnboardingCompleted(done);
+
+  /// Records [tourId] as shown, on top of whatever was already seen.
+  Future<void> markTourSeen(Set<String> seen, String tourId) =>
+      _repo.setToursSeen({...seen, tourId}.join(','));
+
+  /// Settings → "Replay the tour": every tour shows again on its screen.
+  Future<void> resetTours() => _repo.setToursSeen('');
 
   Future<void> setTaskReminders(bool enabled) =>
       _repo.setTaskReminders(enabled);

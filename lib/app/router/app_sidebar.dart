@@ -144,7 +144,7 @@ class AppSidebar extends ConsumerWidget {
                           Navigator.of(context).pop();
                           Future.microtask(() {
                             if (!hostContext.mounted) return;
-                            showTransferMoneyDialog(hostContext, ref);
+                            showTransferMoneyDialog(hostContext);
                           });
                         },
                       ),

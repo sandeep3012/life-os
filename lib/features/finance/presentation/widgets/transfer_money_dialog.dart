@@ -1,16 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/currency_utils.dart';
+import '../../../../core/widgets/save_feedback.dart';
+import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 import 'account_option_row.dart';
 
 /// Opens the one transfer flow used by both Finance home and the sidebar.
-Future<void> showTransferMoneyDialog(
+///
+/// Takes no `WidgetRef`: the sidebar opens this after its drawer has closed,
+/// by which point the sidebar — and any ref it could pass — is disposed, and
+/// reading through it throws. The app's provider container, found from
+/// [context], outlives both callers.
+Future<void> showTransferMoneyDialog(BuildContext context) async {
+  final container = ProviderScope.containerOf(context, listen: false);
+  // From the sidebar, no screen may have loaded the accounts yet; with nothing
+  // listening they'd read as empty ("add at least two accounts"). Hold
+  // subscriptions for the whole flow and wait for the first values.
+  final accountsSub = container.listen(accountsProvider, (_, _) {});
+  final typesSub = container.listen(accountTypesProvider, (_, _) {});
+  try {
+    await container.read(accountsProvider.future);
+    await container.read(accountTypesProvider.future);
+    if (!context.mounted) return;
+    await _transfer(context, container);
+  } finally {
+    accountsSub.close();
+    typesSub.close();
+  }
+}
+
+Future<void> _transfer(
   BuildContext context,
-  WidgetRef ref,
+  ProviderContainer container,
 ) async {
-  final accounts = ref.read(transactableAccountsProvider);
-  final accountTypes = ref.read(accountTypesProvider).value ?? const [];
+  final accounts = container.read(transactableAccountsProvider);
+  final accountTypes = container.read(accountTypesProvider).value ?? const [];
   if (accounts.length < 2) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -95,7 +121,7 @@ Future<void> showTransferMoneyDialog(
   );
   if (confirmed != true || amount <= 0) return;
 
-  await ref
+  await container
       .read(financeControllerProvider)
       .transfer(
         fromAccountId: fromId,
@@ -103,4 +129,15 @@ Future<void> showTransferMoneyDialog(
         amountMinor: amount,
         date: DateTime.now(),
       );
+  if (!context.mounted) return;
+  String nameOf(String id) => accounts.firstWhere((a) => a.id == id).name;
+  final money = formatMinor(
+    amount,
+    currencyCode: container.read(settingsProvider).currencyCode,
+  );
+  await showSaveFeedbackIn(
+    context,
+    title: 'Transfer complete',
+    message: '$money moved from ${nameOf(fromId)} to ${nameOf(toId)}.',
+  );
 }
