@@ -152,7 +152,7 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 11),
-                _TodayTaskList(tasks: todayTasks.tasks.take(4).toList()),
+                _TodayTaskList(tasks: todayTasks.tasks),
               ],
 
               if (habits.isNotEmpty) ...[
@@ -608,25 +608,81 @@ class _DashboardStatCard extends StatelessWidget {
   }
 }
 
-class _TodayTaskList extends ConsumerWidget {
+/// Today's to-dos, three at a time: the rest fold away behind "Show N more"
+/// so a busy day doesn't push everything else on Home off screen.
+class _TodayTaskList extends StatefulWidget {
   const _TodayTaskList({required this.tasks});
+
+  /// How many show before the list folds.
+  static const folded = 3;
 
   final List<Task> tasks;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<_TodayTaskList> createState() => _TodayTaskListState();
+}
+
+class _TodayTaskListState extends State<_TodayTaskList> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tasks = widget.tasks;
+    final hidden = tasks.length - _TodayTaskList.folded;
+    final visible = _expanded || hidden <= 0
+        ? tasks
+        : tasks.take(_TodayTaskList.folded).toList();
     return SurfaceCard(
       padding: EdgeInsets.zero,
       radius: 22,
-      child: Column(
-        children: [
-          for (var index = 0; index < tasks.length; index++) ...[
-            _TodayTaskRow(task: tasks[index]),
-            if (index < tasks.length - 1)
-              Divider(height: 1, indent: 66, color: scheme.outline),
+      child: AnimatedSize(
+        duration: AppMotion.of(context, AppMotion.recurringReveal),
+        curve: AppMotion.curveOf(context, AppMotion.standard),
+        alignment: Alignment.topCenter,
+        child: Column(
+          children: [
+            for (var index = 0; index < visible.length; index++) ...[
+              _TodayTaskRow(task: visible[index]),
+              if (index < visible.length - 1 || hidden > 0)
+                Divider(height: 1, indent: 66, color: scheme.outline),
+            ],
+            if (hidden > 0)
+              Tappable(
+                onTap: () => setState(() => _expanded = !_expanded),
+                semanticLabel: _expanded
+                    ? 'Show fewer tasks'
+                    : 'Show $hidden more ${hidden == 1 ? 'task' : 'tasks'}',
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _expanded ? 'Show less' : 'Show $hidden more',
+                        style: TextStyle(
+                          fontFamily: AppFonts.sans,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      AnimatedRotation(
+                        turns: _expanded ? 0.5 : 0,
+                        duration: AppMotion.of(context, AppMotion.navColor),
+                        child: Icon(
+                          LucideIcons.chevronDown,
+                          size: 16,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
-        ],
+        ),
       ),
     );
   }
