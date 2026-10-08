@@ -16,6 +16,7 @@ import '../../domain/calendar_item.dart';
 import '../widgets/calendar_agenda_view.dart';
 import '../widgets/calendar_item_tile.dart';
 import '../widgets/quick_add_event_sheet.dart';
+import '../../../../app/motion.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -26,6 +27,42 @@ class CalendarScreen extends ConsumerStatefulWidget {
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   DateTime _focusedMonth = DateTime.now();
+
+  /// The month grid folds to the selected day's week while the day's list is
+  /// scrolled, so a busy day gets the screen instead of a half-height window
+  /// under a fixed month. Pulling the list down from its top unfolds it; so
+  /// does tapping the month name, for days too short to scroll.
+  CalendarFormat _format = CalendarFormat.month;
+
+  void _setFormat(CalendarFormat format) {
+    if (_format == format) return;
+    setState(() {
+      _format = format;
+      // Fold to the week the user is looking at, not the month's first week.
+      if (format == CalendarFormat.week) {
+        _focusedMonth = ref.read(selectedCalendarDayProvider);
+      }
+    });
+  }
+
+  /// Folds when the user scrolls the list up, unfolds when they pull down
+  /// past its top. Only user drags count, so a fling settling doesn't toggle
+  /// the calendar on its own.
+  bool _onListScroll(ScrollNotification n) {
+    if (n.depth != 0) return false;
+    if (n is ScrollUpdateNotification && n.dragDetails != null) {
+      if (n.scrollDelta! > 0 && n.metrics.pixels > 12) {
+        _setFormat(CalendarFormat.week);
+      } else if (n.metrics.pixels < -24) {
+        _setFormat(CalendarFormat.month); // iOS: bounced past the top
+      }
+    } else if (n is OverscrollNotification &&
+        n.dragDetails != null &&
+        n.overscroll < 0) {
+      _setFormat(CalendarFormat.month); // Android: pulled at the top
+    }
+    return false;
+  }
 
   Future<void> _showViewOptions() => showModalBottomSheet<void>(
     context: context,
@@ -125,6 +162,27 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           radius: 22,
                           child: TableCalendar<CalendarItemType>(
                             focusedDay: _focusedMonth,
+                            calendarFormat: _format,
+                            availableCalendarFormats: const {
+                              CalendarFormat.month: 'Month',
+                              CalendarFormat.week: 'Week',
+                            },
+                            // A vertical swipe on the grid folds or unfolds it
+                            // too, the package's own gesture.
+                            onFormatChanged: _setFormat,
+                            onHeaderTapped: (_) => _setFormat(
+                              _format == CalendarFormat.month
+                                  ? CalendarFormat.week
+                                  : CalendarFormat.month,
+                            ),
+                            formatAnimationDuration: AppMotion.of(
+                              context,
+                              AppMotion.drawer,
+                            ),
+                            formatAnimationCurve: AppMotion.curveOf(
+                              context,
+                              AppMotion.emphasized,
+                            ),
                             firstDay: _focusedMonth.isBefore(DateTime(2020))
                                 ? dateOnly(_focusedMonth)
                                 : DateTime(2020),
@@ -226,28 +284,50 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                       ),
                       Expanded(
-                        child: dayItems.isEmpty
-                            ? Center(
-                                child: Text(
-                                  'Nothing scheduled for this day.',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: _onListScroll,
+                          // Always scrollable, so a short or empty day can
+                          // still be pulled down to unfold the month.
+                          child: dayItems.isEmpty
+                              ? ListView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    48,
+                                    20,
+                                    100,
                                   ),
+                                  children: [
+                                    Center(
+                                      child: Text(
+                                        'Nothing scheduled for this day.',
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ListView.separated(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    4,
+                                    20,
+                                    100,
+                                  ),
+                                  itemCount: dayItems.length,
+                                  separatorBuilder: (_, _) =>
+                                      const Divider(height: 1),
+                                  itemBuilder: (context, index) =>
+                                      _buildItemTile(context, dayItems[index]),
                                 ),
-                              )
-                            : ListView.separated(
-                                padding: const EdgeInsets.fromLTRB(
-                                  20,
-                                  4,
-                                  20,
-                                  100,
-                                ),
-                                itemCount: dayItems.length,
-                                separatorBuilder: (_, _) =>
-                                    const Divider(height: 1),
-                                itemBuilder: (context, index) =>
-                                    _buildItemTile(context, dayItems[index]),
-                              ),
+                        ),
                       ),
                     ],
                   ),
