@@ -54,8 +54,17 @@ class DocumentsController {
 
   final DocumentsRepository _repo;
 
-  Future<void> createFolder(String name, {String? iconName, String? colorHex}) =>
-      _repo.createFolder(name, iconName: iconName, colorHex: colorHex);
+  Future<void> createFolder(
+    String name, {
+    String? iconName,
+    String? colorHex,
+    String? parentFolderId,
+  }) => _repo.createFolder(
+    name,
+    iconName: iconName,
+    colorHex: colorHex,
+    parentFolderId: parentFolderId,
+  );
 
   Future<void> updateFolder(
     String id, {
