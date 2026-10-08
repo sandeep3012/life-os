@@ -20,7 +20,6 @@ import '../../application/finance_providers.dart';
 import '../../domain/budget_progress.dart';
 import '../widgets/account_card.dart';
 import '../widgets/entry_form_sheet.dart';
-import '../widgets/quick_add_account_sheet.dart';
 import '../widgets/quick_add_budget_sheet.dart';
 import '../widgets/quick_add_transaction_sheet.dart';
 import '../widgets/transaction_recorder_sheet.dart';
@@ -28,10 +27,10 @@ import '../widgets/transaction_save_confirmation.dart';
 import '../widgets/transaction_tile.dart';
 import '../widgets/transfer_money_dialog.dart';
 import 'account_detail_screen.dart';
-import 'archived_accounts_screen.dart';
 import '../../../../app/theme/app_fonts.dart';
 import '../../../../app/transitions/screen_reveal.dart';
 import '../../../../core/widgets/tab_slide.dart';
+import '../widgets/add_account_flow.dart';
 
 enum _FinanceSection { transactions, budgets }
 
@@ -434,15 +433,13 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                             ],
                           ),
                         ),
-                        if (archivedCount > 0)
+                        // Every account, grouped by type — archived ones
+                        // included, folded at the bottom.
+                        if (activeAccounts.isNotEmpty || archivedCount > 0)
                           TextButton.icon(
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const ArchivedAccountsScreen(),
-                              ),
-                            ),
-                            icon: const Icon(LucideIcons.archive, size: 18),
-                            label: Text('Archived ($archivedCount)'),
+                            onPressed: () => context.push(RoutePaths.accounts),
+                            icon: const Icon(LucideIcons.layoutList, size: 18),
+                            label: const Text('All accounts'),
                           ),
                         // Masks the running total and every account card, for
                         // reading the app somewhere public.
@@ -689,24 +686,8 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
     );
   }
 
-  Future<void> _addAccount(BuildContext context, WidgetRef ref) async {
-    final accountTypes = ref.read(accountTypesProvider).value ?? const [];
-    final result = await showQuickAddAccountSheet(
-      context,
-      accountTypes: accountTypes,
-      currencySymbol: currencySymbolFor(
-        ref.read(settingsProvider).currencyCode,
-      ),
-    );
-    if (result == null) return;
-    await ref
-        .read(financeControllerProvider)
-        .addAccount(
-          name: result.name,
-          type: result.type,
-          balanceMinor: result.startingBalanceMinor,
-        );
-  }
+  Future<void> _addAccount(BuildContext context, WidgetRef ref) =>
+      addAccountFlow(context, ref);
 
   Future<void> _handleFab(BuildContext context, WidgetRef ref) async {
     final accounts = ref.read(activeAccountsProvider);

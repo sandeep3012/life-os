@@ -119,6 +119,12 @@ class AppSidebar extends ConsumerWidget {
                         current: current,
                       ),
                       _Item(
+                        icon: LucideIcons.landmark,
+                        label: 'Accounts',
+                        path: RoutePaths.accounts,
+                        current: current,
+                      ),
+                      _Item(
                         icon: LucideIcons.receipt,
                         label: 'Bills',
                         path: RoutePaths.bills,

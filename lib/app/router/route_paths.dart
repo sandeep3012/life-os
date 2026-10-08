@@ -10,6 +10,7 @@ class RoutePaths {
   static const recurringTransactions = '/finance/recurring';
   static const bills = '/finance/bills';
   static const netWorth = '/finance/net-worth';
+  static const accounts = '/finance/accounts';
   static const reports = '/finance/reports';
   static const tasksHabits = '/tasks-habits';
   static const plannerHabits = '/tasks-habits?tab=habits';

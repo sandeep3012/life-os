@@ -30,6 +30,7 @@ import '../../features/settings/presentation/screens/settings_screen.dart';
 import 'app_shell.dart';
 import 'route_paths.dart';
 import 'navigator_keys.dart';
+import '../../features/finance/presentation/screens/accounts_screen.dart';
 
 /// Root go_router config: a StatefulShellRoute with 5 bottom-nav branches,
 /// each branch preserving its own navigation stack.
@@ -76,6 +77,10 @@ GoRouter createAppRouter() => GoRouter(
                 GoRoute(
                   path: 'net-worth',
                   builder: (context, state) => const NetWorthScreen(),
+                ),
+                GoRoute(
+                  path: 'accounts',
+                  builder: (context, state) => const AccountsScreen(),
                 ),
                 GoRoute(
                   path: 'reports',
