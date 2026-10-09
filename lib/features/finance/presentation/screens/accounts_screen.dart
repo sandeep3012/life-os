@@ -15,6 +15,7 @@ import '../../data/finance_repository.dart';
 import '../widgets/account_card.dart';
 import '../widgets/add_account_flow.dart';
 import 'account_detail_screen.dart';
+import 'account_order_screen.dart';
 
 /// Every account in one place: net worth on top, accounts grouped by type
 /// with a total per group, and archived accounts folded away at the bottom.
@@ -86,6 +87,14 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                 .read(settingsControllerProvider)
                 .setBalancesVisible(!visible),
           ),
+          if (active.length > 1)
+            IconButton(
+              tooltip: 'Order & default',
+              icon: const Icon(LucideIcons.arrowUpDown),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AccountOrderScreen()),
+              ),
+            ),
           IconButton(
             tooltip: 'Add account',
             icon: const Icon(LucideIcons.plus),
@@ -373,6 +382,9 @@ class _AccountList extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
+                subtitle: accounts[i].isDefault && !dimmed
+                    ? const Text('Default')
+                    : null,
                 trailing: Text(
                   money(accounts[i].balanceMinor),
                   style: TextStyle(

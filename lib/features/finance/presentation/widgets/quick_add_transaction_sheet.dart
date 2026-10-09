@@ -108,7 +108,8 @@ class _QuickAddTransactionSheetState
         : (widget.initial!.amountMinor.abs() / 100).toStringAsFixed(2),
   );
   late String _accountId =
-      widget.initial?.accountId ?? widget.accounts.first.id;
+      widget.initial?.accountId ??
+      startingAccountId(widget.accounts, ref.read(preferredAccountIdProvider));
   late List<Category> _categories = List.of(widget.categories);
   late String? _categoryId = widget.initial?.categoryId;
   late final bool _isExpense = widget.initial == null
@@ -137,10 +138,14 @@ class _QuickAddTransactionSheetState
   @override
   void initState() {
     super.initState();
-    final initialCategory = _categories.where(
-      (category) => category.kind == (_isExpense ? 'expense' : 'income'),
+    // Editing keeps the entry's own category; a new one starts on the last
+    // used for this kind.
+    _categoryId ??= startingCategoryId(
+      _categories.where(
+        (category) => category.kind == (_isExpense ? 'expense' : 'income'),
+      ),
+      ref.read(lastUsedCategoryIdProvider(_isExpense)),
     );
-    _categoryId ??= initialCategory.isEmpty ? null : initialCategory.first.id;
     _paymentMode ??= paymentModes.first.id;
     _merchantController.addListener(() => setState(() {}));
     _amountController.addListener(() => setState(() {}));

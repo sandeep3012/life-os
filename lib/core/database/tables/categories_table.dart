@@ -13,6 +13,10 @@ class Categories extends Table {
   /// expense | income | habit | goal | note | document
   TextColumn get kind => text().withDefault(const Constant('expense'))();
 
+  /// Where the category sits in lists and pickers — set by dragging in
+  /// Settings → Categories; lower comes first.
+  IntColumn get position => integer().withDefault(const Constant(0))();
+
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
 

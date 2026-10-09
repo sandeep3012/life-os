@@ -61,19 +61,47 @@ Future<CategoryEditorResult?> showCategoryEditorSheet(
   );
 }
 
-class CategoryManagementScreen extends ConsumerWidget {
+/// Every category, in the order the pickers offer them. Drag the handle to
+/// move one; a new transaction starts on the category last used for its kind,
+/// else the first one here.
+class CategoryManagementScreen extends ConsumerStatefulWidget {
   const CategoryManagementScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ref.watch(categoriesProvider).value ?? const [];
+  ConsumerState<CategoryManagementScreen> createState() =>
+      _CategoryManagementScreenState();
+}
+
+class _CategoryManagementScreenState
+    extends ConsumerState<CategoryManagementScreen> {
+  /// The order just dropped, shown until the database's stream catches up —
+  /// without it the row would jump back for a frame before settling.
+  List<Category>? _dropped;
+
+  void _onReorder(List<Category> categories, int oldIndex, int newIndex) {
+    final next = List.of(categories);
+    final moved = next.removeAt(oldIndex);
+    next.insert(newIndex, moved);
+    setState(() => _dropped = next);
+    ref
+        .read(financeControllerProvider)
+        .reorderCategories([for (final c in next) c.id]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(categoriesProvider, (_, _) {
+      if (_dropped != null) setState(() => _dropped = null);
+    });
+    final categories =
+        _dropped ?? ref.watch(categoriesProvider).value ?? const <Category>[];
 
     return InlineAddHost(
       builder: (context, inlineAddVisible, onInlineAddVisibility) => Scaffold(
         appBar: AppBar(title: const Text('Categories')),
         body: categories.isEmpty
             ? const Center(child: Text('No categories yet.'))
-            : ListView.separated(
+            : ReorderableListView.builder(
                 // The extended FAB floats over the list, so without room below
                 // the last row its trash button sits underneath it and can't be
                 // tapped. 20 (page margin) + 56 (FAB) + 16 (FAB margin) + 8, plus the
@@ -84,36 +112,73 @@ class CategoryManagementScreen extends ConsumerWidget {
                   20,
                   100 + MediaQuery.viewPaddingOf(context).bottom,
                 ),
-                itemCount: categories.length + 1,
-                separatorBuilder: (_, index) => index == categories.length - 1
-                    ? const SizedBox.shrink()
-                    : const Divider(height: 1),
+                // Handles only: a long press anywhere would fight the row's tap
+                // to edit.
+                buildDefaultDragHandles: false,
+                itemCount: categories.length,
+                onReorderItem: (oldIndex, newIndex) =>
+                    _onReorder(categories, oldIndex, newIndex),
+                header: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Drag to reorder. New entries start on the category you '
+                    'used last, otherwise the first one here.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                footer: InlineAddButton(
+                  label: 'Add category',
+                  onTap: () => _openEditor(context, ref),
+                  onVisibilityChanged: onInlineAddVisibility,
+                  padding: const EdgeInsets.only(top: 16),
+                ),
                 itemBuilder: (context, index) {
-                  if (index == categories.length) {
-                    return InlineAddButton(
-                      label: 'Add category',
-                      onTap: () => _openEditor(context, ref),
-                      onVisibilityChanged: onInlineAddVisibility,
-                      padding: const EdgeInsets.only(top: 16),
-                    );
-                  }
                   final c = categories[index];
                   final color =
                       categoryColor(c.colorHex) ??
                       Theme.of(context).colorScheme.onSurfaceVariant;
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: CircleAvatar(
-                      backgroundColor: color.withValues(alpha: 0.16),
-                      foregroundColor: color,
-                      child: IconOrEmoji(value: c.icon),
-                    ),
-                    title: Text(c.name),
-                    subtitle: Text(c.kind),
-                    onTap: () => _openEditor(context, ref, existing: c),
-                    trailing: IconButton(
-                      icon: const Icon(LucideIcons.trash2),
-                      onPressed: () => _delete(context, ref, c),
+                  return Material(
+                    key: ValueKey(c.id),
+                    color: Theme.of(context).colorScheme.surface,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            backgroundColor: color.withValues(alpha: 0.16),
+                            foregroundColor: color,
+                            child: IconOrEmoji(value: c.icon),
+                          ),
+                          title: Text(c.name),
+                          subtitle: Text(c.kind),
+                          onTap: () => _openEditor(context, ref, existing: c),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(LucideIcons.trash2),
+                                onPressed: () => _delete(context, ref, c),
+                              ),
+                              ReorderableDragStartListener(
+                                index: index,
+                                child: Tooltip(
+                                  message: 'Drag to reorder ${c.name}',
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: Icon(LucideIcons.gripVertical),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (index < categories.length - 1)
+                          const Divider(height: 1),
+                      ],
                     ),
                   );
                 },

@@ -59,6 +59,18 @@ class $CategoriesTable extends Categories
     requiredDuringInsert: false,
     defaultValue: const Constant('expense'),
   );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -78,6 +90,7 @@ class $CategoriesTable extends Categories
     icon,
     colorHex,
     kind,
+    position,
     createdAt,
   ];
   @override
@@ -123,6 +136,12 @@ class $CategoriesTable extends Categories
         kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
       );
     }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -158,6 +177,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.string,
         data['${effectivePrefix}kind'],
       )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -179,6 +202,10 @@ class Category extends DataClass implements Insertable<Category> {
 
   /// expense | income | habit | goal | note | document
   final String kind;
+
+  /// Where the category sits in lists and pickers — set by dragging in
+  /// Settings → Categories; lower comes first.
+  final int position;
   final DateTime createdAt;
   const Category({
     required this.id,
@@ -186,6 +213,7 @@ class Category extends DataClass implements Insertable<Category> {
     required this.icon,
     required this.colorHex,
     required this.kind,
+    required this.position,
     required this.createdAt,
   });
   @override
@@ -196,6 +224,7 @@ class Category extends DataClass implements Insertable<Category> {
     map['icon'] = Variable<String>(icon);
     map['color_hex'] = Variable<String>(colorHex);
     map['kind'] = Variable<String>(kind);
+    map['position'] = Variable<int>(position);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -207,6 +236,7 @@ class Category extends DataClass implements Insertable<Category> {
       icon: Value(icon),
       colorHex: Value(colorHex),
       kind: Value(kind),
+      position: Value(position),
       createdAt: Value(createdAt),
     );
   }
@@ -222,6 +252,7 @@ class Category extends DataClass implements Insertable<Category> {
       icon: serializer.fromJson<String>(json['icon']),
       colorHex: serializer.fromJson<String>(json['colorHex']),
       kind: serializer.fromJson<String>(json['kind']),
+      position: serializer.fromJson<int>(json['position']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -234,6 +265,7 @@ class Category extends DataClass implements Insertable<Category> {
       'icon': serializer.toJson<String>(icon),
       'colorHex': serializer.toJson<String>(colorHex),
       'kind': serializer.toJson<String>(kind),
+      'position': serializer.toJson<int>(position),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -244,6 +276,7 @@ class Category extends DataClass implements Insertable<Category> {
     String? icon,
     String? colorHex,
     String? kind,
+    int? position,
     DateTime? createdAt,
   }) => Category(
     id: id ?? this.id,
@@ -251,6 +284,7 @@ class Category extends DataClass implements Insertable<Category> {
     icon: icon ?? this.icon,
     colorHex: colorHex ?? this.colorHex,
     kind: kind ?? this.kind,
+    position: position ?? this.position,
     createdAt: createdAt ?? this.createdAt,
   );
   Category copyWithCompanion(CategoriesCompanion data) {
@@ -260,6 +294,7 @@ class Category extends DataClass implements Insertable<Category> {
       icon: data.icon.present ? data.icon.value : this.icon,
       colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       kind: data.kind.present ? data.kind.value : this.kind,
+      position: data.position.present ? data.position.value : this.position,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -272,13 +307,15 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('icon: $icon, ')
           ..write('colorHex: $colorHex, ')
           ..write('kind: $kind, ')
+          ..write('position: $position, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, icon, colorHex, kind, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, icon, colorHex, kind, position, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -288,6 +325,7 @@ class Category extends DataClass implements Insertable<Category> {
           other.icon == this.icon &&
           other.colorHex == this.colorHex &&
           other.kind == this.kind &&
+          other.position == this.position &&
           other.createdAt == this.createdAt);
 }
 
@@ -297,6 +335,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<String> icon;
   final Value<String> colorHex;
   final Value<String> kind;
+  final Value<int> position;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const CategoriesCompanion({
@@ -305,6 +344,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.icon = const Value.absent(),
     this.colorHex = const Value.absent(),
     this.kind = const Value.absent(),
+    this.position = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -314,6 +354,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.icon = const Value.absent(),
     required String colorHex,
     this.kind = const Value.absent(),
+    this.position = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : name = Value(name),
@@ -324,6 +365,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<String>? icon,
     Expression<String>? colorHex,
     Expression<String>? kind,
+    Expression<int>? position,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -333,6 +375,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (icon != null) 'icon': icon,
       if (colorHex != null) 'color_hex': colorHex,
       if (kind != null) 'kind': kind,
+      if (position != null) 'position': position,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -344,6 +387,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<String>? icon,
     Value<String>? colorHex,
     Value<String>? kind,
+    Value<int>? position,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -353,6 +397,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       icon: icon ?? this.icon,
       colorHex: colorHex ?? this.colorHex,
       kind: kind ?? this.kind,
+      position: position ?? this.position,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -376,6 +421,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (kind.present) {
       map['kind'] = Variable<String>(kind.value);
     }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -393,6 +441,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('icon: $icon, ')
           ..write('colorHex: $colorHex, ')
           ..write('kind: $kind, ')
+          ..write('position: $position, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1292,6 +1341,33 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isDefaultMeta = const VerificationMeta(
+    'isDefault',
+  );
+  @override
+  late final GeneratedColumn<bool> isDefault = GeneratedColumn<bool>(
+    'is_default',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_default" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1324,6 +1400,8 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     balanceMinor,
     currencyCode,
     isActive,
+    position,
+    isDefault,
     createdAt,
     updatedAt,
   ];
@@ -1382,6 +1460,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
       );
     }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    }
+    if (data.containsKey('is_default')) {
+      context.handle(
+        _isDefaultMeta,
+        isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1427,6 +1517,14 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_active'],
       )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      isDefault: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_default'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1459,6 +1557,14 @@ class Account extends DataClass implements Insertable<Account> {
   /// the fallback for accounts that can't be hard-deleted because they're
   /// still referenced elsewhere.
   final bool isActive;
+
+  /// Where the account sits in lists and pickers — set by dragging in
+  /// Accounts → Reorder; lower comes first.
+  final int position;
+
+  /// The account a new entry starts on. At most one; none means "the one
+  /// last used".
+  final bool isDefault;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Account({
@@ -1468,6 +1574,8 @@ class Account extends DataClass implements Insertable<Account> {
     required this.balanceMinor,
     required this.currencyCode,
     required this.isActive,
+    required this.position,
+    required this.isDefault,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -1480,6 +1588,8 @@ class Account extends DataClass implements Insertable<Account> {
     map['balance_minor'] = Variable<int>(balanceMinor);
     map['currency_code'] = Variable<String>(currencyCode);
     map['is_active'] = Variable<bool>(isActive);
+    map['position'] = Variable<int>(position);
+    map['is_default'] = Variable<bool>(isDefault);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -1493,6 +1603,8 @@ class Account extends DataClass implements Insertable<Account> {
       balanceMinor: Value(balanceMinor),
       currencyCode: Value(currencyCode),
       isActive: Value(isActive),
+      position: Value(position),
+      isDefault: Value(isDefault),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -1510,6 +1622,8 @@ class Account extends DataClass implements Insertable<Account> {
       balanceMinor: serializer.fromJson<int>(json['balanceMinor']),
       currencyCode: serializer.fromJson<String>(json['currencyCode']),
       isActive: serializer.fromJson<bool>(json['isActive']),
+      position: serializer.fromJson<int>(json['position']),
+      isDefault: serializer.fromJson<bool>(json['isDefault']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -1524,6 +1638,8 @@ class Account extends DataClass implements Insertable<Account> {
       'balanceMinor': serializer.toJson<int>(balanceMinor),
       'currencyCode': serializer.toJson<String>(currencyCode),
       'isActive': serializer.toJson<bool>(isActive),
+      'position': serializer.toJson<int>(position),
+      'isDefault': serializer.toJson<bool>(isDefault),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -1536,6 +1652,8 @@ class Account extends DataClass implements Insertable<Account> {
     int? balanceMinor,
     String? currencyCode,
     bool? isActive,
+    int? position,
+    bool? isDefault,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Account(
@@ -1545,6 +1663,8 @@ class Account extends DataClass implements Insertable<Account> {
     balanceMinor: balanceMinor ?? this.balanceMinor,
     currencyCode: currencyCode ?? this.currencyCode,
     isActive: isActive ?? this.isActive,
+    position: position ?? this.position,
+    isDefault: isDefault ?? this.isDefault,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -1560,6 +1680,8 @@ class Account extends DataClass implements Insertable<Account> {
           ? data.currencyCode.value
           : this.currencyCode,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      position: data.position.present ? data.position.value : this.position,
+      isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -1574,6 +1696,8 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('balanceMinor: $balanceMinor, ')
           ..write('currencyCode: $currencyCode, ')
           ..write('isActive: $isActive, ')
+          ..write('position: $position, ')
+          ..write('isDefault: $isDefault, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1588,6 +1712,8 @@ class Account extends DataClass implements Insertable<Account> {
     balanceMinor,
     currencyCode,
     isActive,
+    position,
+    isDefault,
     createdAt,
     updatedAt,
   );
@@ -1601,6 +1727,8 @@ class Account extends DataClass implements Insertable<Account> {
           other.balanceMinor == this.balanceMinor &&
           other.currencyCode == this.currencyCode &&
           other.isActive == this.isActive &&
+          other.position == this.position &&
+          other.isDefault == this.isDefault &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -1612,6 +1740,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<int> balanceMinor;
   final Value<String> currencyCode;
   final Value<bool> isActive;
+  final Value<int> position;
+  final Value<bool> isDefault;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -1622,6 +1752,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.balanceMinor = const Value.absent(),
     this.currencyCode = const Value.absent(),
     this.isActive = const Value.absent(),
+    this.position = const Value.absent(),
+    this.isDefault = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1633,6 +1765,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.balanceMinor = const Value.absent(),
     this.currencyCode = const Value.absent(),
     this.isActive = const Value.absent(),
+    this.position = const Value.absent(),
+    this.isDefault = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1645,6 +1779,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<int>? balanceMinor,
     Expression<String>? currencyCode,
     Expression<bool>? isActive,
+    Expression<int>? position,
+    Expression<bool>? isDefault,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -1656,6 +1792,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (balanceMinor != null) 'balance_minor': balanceMinor,
       if (currencyCode != null) 'currency_code': currencyCode,
       if (isActive != null) 'is_active': isActive,
+      if (position != null) 'position': position,
+      if (isDefault != null) 'is_default': isDefault,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1669,6 +1807,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<int>? balanceMinor,
     Value<String>? currencyCode,
     Value<bool>? isActive,
+    Value<int>? position,
+    Value<bool>? isDefault,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -1680,6 +1820,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       balanceMinor: balanceMinor ?? this.balanceMinor,
       currencyCode: currencyCode ?? this.currencyCode,
       isActive: isActive ?? this.isActive,
+      position: position ?? this.position,
+      isDefault: isDefault ?? this.isDefault,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -1707,6 +1849,12 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
     }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (isDefault.present) {
+      map['is_default'] = Variable<bool>(isDefault.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1728,6 +1876,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('balanceMinor: $balanceMinor, ')
           ..write('currencyCode: $currencyCode, ')
           ..write('isActive: $isActive, ')
+          ..write('position: $position, ')
+          ..write('isDefault: $isDefault, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -16883,6 +17033,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       Value<String> icon,
       required String colorHex,
       Value<String> kind,
+      Value<int> position,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -16893,6 +17044,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<String> icon,
       Value<String> colorHex,
       Value<String> kind,
+      Value<int> position,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -17052,6 +17204,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<String> get kind => $composableBuilder(
     column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17246,6 +17403,11 @@ class $$CategoriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -17275,6 +17437,9 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<String> get kind =>
       $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -17471,6 +17636,7 @@ class $$CategoriesTableTableManager
                 Value<String> icon = const Value.absent(),
                 Value<String> colorHex = const Value.absent(),
                 Value<String> kind = const Value.absent(),
+                Value<int> position = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoriesCompanion(
@@ -17479,6 +17645,7 @@ class $$CategoriesTableTableManager
                 icon: icon,
                 colorHex: colorHex,
                 kind: kind,
+                position: position,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -17489,6 +17656,7 @@ class $$CategoriesTableTableManager
                 Value<String> icon = const Value.absent(),
                 required String colorHex,
                 Value<String> kind = const Value.absent(),
+                Value<int> position = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CategoriesCompanion.insert(
@@ -17497,6 +17665,7 @@ class $$CategoriesTableTableManager
                 icon: icon,
                 colorHex: colorHex,
                 kind: kind,
+                position: position,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -18406,6 +18575,8 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<int> balanceMinor,
       Value<String> currencyCode,
       Value<bool> isActive,
+      Value<int> position,
+      Value<bool> isDefault,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -18418,6 +18589,8 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<int> balanceMinor,
       Value<String> currencyCode,
       Value<bool> isActive,
+      Value<int> position,
+      Value<bool> isDefault,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -18526,6 +18699,16 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<bool> get isActive => $composableBuilder(
     column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDefault => $composableBuilder(
+    column: $table.isDefault,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18655,6 +18838,16 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDefault => $composableBuilder(
+    column: $table.isDefault,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -18696,6 +18889,12 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDefault =>
+      $composableBuilder(column: $table.isDefault, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -18818,6 +19017,8 @@ class $$AccountsTableTableManager
                 Value<int> balanceMinor = const Value.absent(),
                 Value<String> currencyCode = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<bool> isDefault = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -18828,6 +19029,8 @@ class $$AccountsTableTableManager
                 balanceMinor: balanceMinor,
                 currencyCode: currencyCode,
                 isActive: isActive,
+                position: position,
+                isDefault: isDefault,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -18840,6 +19043,8 @@ class $$AccountsTableTableManager
                 Value<int> balanceMinor = const Value.absent(),
                 Value<String> currencyCode = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<bool> isDefault = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -18850,6 +19055,8 @@ class $$AccountsTableTableManager
                 balanceMinor: balanceMinor,
                 currencyCode: currencyCode,
                 isActive: isActive,
+                position: position,
+                isDefault: isDefault,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

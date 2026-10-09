@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 32;
+  int get schemaVersion => 33;
 
   /// Adds [column] unless [table] already has it (creating [table] if it's
   /// missing entirely), so every upgrade step can
@@ -342,6 +342,20 @@ class AppDatabase extends _$AppDatabase {
           appSettings,
           appSettings.soundEffectsEnabled,
         );
+      }
+      if (from < 33) {
+        // v32 -> v33: a chosen order for accounts and categories, and a
+        // default account. Positions start as today's order — creation
+        // order — so nothing moves on the first launch after the update.
+        await _addColumnIfMissing(m, accounts, accounts.position);
+        await _addColumnIfMissing(m, accounts, accounts.isDefault);
+        await _addColumnIfMissing(m, categories, categories.position);
+        for (final table in ['accounts', 'categories']) {
+          await customStatement(
+            'UPDATE $table SET position = '
+            '(SELECT COUNT(*) FROM $table older WHERE older.rowid < $table.rowid)',
+          );
+        }
       }
     },
   );

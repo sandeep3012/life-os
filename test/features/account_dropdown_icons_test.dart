@@ -49,6 +49,8 @@ void main() {
       balanceMinor: 0,
       currencyCode: 'INR',
       isActive: true,
+      position: 0,
+      isDefault: false,
       createdAt: epoch,
       updatedAt: epoch,
     );

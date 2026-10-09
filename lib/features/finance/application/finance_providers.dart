@@ -46,6 +46,56 @@ final transactableAccountsProvider = Provider<List<Account>>((ref) {
       .toList();
 });
 
+/// The account a new entry starts on: the one marked default, else the one
+/// used most recently, else the first in the user's order. Derived from the
+/// transactions each time rather than stored, so it can't go stale.
+final preferredAccountIdProvider = Provider<String?>((ref) {
+  final accounts = ref.watch(transactableAccountsProvider);
+  if (accounts.isEmpty) return null;
+  final ids = {for (final a in accounts) a.id};
+  for (final a in accounts) {
+    if (a.isDefault) return a.id;
+  }
+  final recent = _mostRecentFirst(ref.watch(transactionsProvider).value);
+  for (final t in recent) {
+    if (t.paymentMode != 'transfer' && ids.contains(t.accountId)) {
+      return t.accountId;
+    }
+  }
+  return accounts.first.id;
+});
+
+/// The category of the last expense (or, with false, income) recorded — what
+/// the next one most likely is. Null before any; the sheet then starts on
+/// the first category in the user's order.
+final lastUsedCategoryIdProvider = Provider.family<String?, bool>((
+  ref,
+  expense,
+) {
+  final recent = _mostRecentFirst(ref.watch(transactionsProvider).value);
+  for (final t in recent) {
+    if (t.paymentMode == 'transfer' || t.categoryId == null) continue;
+    if ((t.amountMinor < 0) == expense) return t.categoryId;
+  }
+  return null;
+});
+
+/// [preferred] if it's one of [accounts] (it may be archived, or not offered
+/// here), else the first of them.
+String startingAccountId(List<Account> accounts, String? preferred) =>
+    accounts.any((a) => a.id == preferred) ? preferred! : accounts.first.id;
+
+/// [lastUsed] if it's among [offered], else the first of them, else none.
+String? startingCategoryId(Iterable<Category> offered, String? lastUsed) {
+  if (offered.any((c) => c.id == lastUsed)) return lastUsed;
+  return offered.isEmpty ? null : offered.first.id;
+}
+
+/// By when they were recorded, not their date: an entry back-dated to last
+/// week was still the last one made.
+List<Transaction> _mostRecentFirst(List<Transaction>? transactions) =>
+    [...?transactions]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
 final accountTypesProvider = StreamProvider<List<AccountType>>((ref) {
   return ref.watch(financeRepositoryProvider).watchAccountTypes();
 });
@@ -283,6 +333,14 @@ class FinanceController {
   Future<void> deleteAccount(String accountId) => _repo.deleteAccount(accountId);
 
   Future<void> deactivateAccount(String accountId) => _repo.setAccountActive(accountId, false);
+
+  Future<void> reorderAccounts(List<String> ids) => _repo.reorderAccounts(ids);
+
+  Future<void> reorderCategories(List<String> ids) =>
+      _repo.reorderCategories(ids);
+
+  /// Null clears it: new entries then start on the last account used.
+  Future<void> setDefaultAccount(String? id) => _repo.setDefaultAccount(id);
 
   Future<void> reactivateAccount(String accountId) => _repo.setAccountActive(accountId, true);
 

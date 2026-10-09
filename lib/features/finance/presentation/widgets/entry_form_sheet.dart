@@ -87,13 +87,20 @@ class _EntryFormSheetState extends ConsumerState<EntryFormSheet> {
   @override
   void initState() {
     super.initState();
-    _accountId = widget.accounts.first.id;
+    // The default account (else the last used), and the category used last
+    // for this kind of entry — see preferredAccountIdProvider.
+    _accountId = startingAccountId(
+      widget.accounts,
+      ref.read(preferredAccountIdProvider),
+    );
     _categories = List.of(widget.categories);
     _isExpense = widget.kind == EntryKind.expense;
-    final initialCategory = _categories.where(
-      (category) => category.kind == (_isExpense ? 'expense' : 'income'),
+    _categoryId = startingCategoryId(
+      _categories.where(
+        (category) => category.kind == (_isExpense ? 'expense' : 'income'),
+      ),
+      ref.read(lastUsedCategoryIdProvider(_isExpense)),
     );
-    _categoryId = initialCategory.isEmpty ? null : initialCategory.first.id;
     _paymentMode = paymentModes.first.id;
     _amountController.addListener(() => setState(() {}));
   }

@@ -38,6 +38,14 @@ class Accounts extends Table {
   /// still referenced elsewhere.
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 
+  /// Where the account sits in lists and pickers — set by dragging in
+  /// Accounts → Reorder; lower comes first.
+  IntColumn get position => integer().withDefault(const Constant(0))();
+
+  /// The account a new entry starts on. At most one; none means "the one
+  /// last used".
+  BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
+
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();
   DateTimeColumn get updatedAt =>

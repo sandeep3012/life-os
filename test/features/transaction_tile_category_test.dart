@@ -29,6 +29,7 @@ void main() {
         icon: icon,
         colorHex: colorHex,
         kind: 'expense',
+        position: 0,
         createdAt: when,
       );
 

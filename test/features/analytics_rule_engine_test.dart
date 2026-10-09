@@ -13,6 +13,7 @@ Category _category(String name) => Category(
   icon: 'label',
   colorHex: '#000000',
   kind: 'expense',
+  position: 0,
   createdAt: DateTime(2026),
 );
 
@@ -22,6 +23,7 @@ Category _habitCategory(String id, String name) => Category(
   icon: 'label',
   colorHex: '#000000',
   kind: 'habit',
+  position: 0,
   createdAt: DateTime(2026),
 );
 

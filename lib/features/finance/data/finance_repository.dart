@@ -77,10 +77,17 @@ class FinanceRepository {
 
   /// Excludes non-finance kinds (e.g. `habit`) that share this table —
   /// see `Categories.kind`'s doc comment for the full list of kinds.
+  /// In the user's order (Settings → Categories); ties — rows from before
+  /// ordering existed, or a restored older backup — fall back to creation
+  /// order.
   Stream<List<Category>> watchCategories() {
-    return (_db.select(
-      _db.categories,
-    )..where((c) => c.kind.isIn(const ['expense', 'income']))).watch();
+    return (_db.select(_db.categories)
+          ..where((c) => c.kind.isIn(const ['expense', 'income']))
+          ..orderBy([
+            (c) => OrderingTerm.asc(c.position),
+            (c) => OrderingTerm.asc(c.createdAt),
+          ]))
+        .watch();
   }
 
   Stream<List<AccountType>> watchAccountTypes() => _db.select(_db.accountTypes).watch();
@@ -95,15 +102,66 @@ class FinanceRepository {
     required String colorHex,
     String kind = 'expense',
   }) {
-    return _db.into(_db.categories).insertReturning(
-      CategoriesCompanion.insert(
-        name: name,
-        icon: Value(icon),
-        colorHex: colorHex,
-        kind: Value(kind),
-      ),
-    );
+    return _db.transaction(() async {
+      return _db.into(_db.categories).insertReturning(
+        CategoriesCompanion.insert(
+          name: name,
+          icon: Value(icon),
+          colorHex: colorHex,
+          kind: Value(kind),
+          // New ones go to the end of the user's order.
+          position: Value(await _nextPosition(_db.categories)),
+        ),
+      );
+    });
   }
+
+  /// One past the highest position in [table] — where a new row goes.
+  Future<int> _nextPosition(TableInfo<Table, dynamic> table) async {
+    final row = await _db
+        .customSelect(
+          'SELECT COALESCE(MAX(position), -1) + 1 AS next '
+          'FROM ${table.actualTableName}',
+        )
+        .getSingle();
+    return row.read<int>('next');
+  }
+
+  /// Saves the order the user dragged [ids] into: each gets its index.
+  Future<void> reorderCategories(List<String> ids) => _reorder(
+    ids,
+    (id, position) =>
+        (_db.update(_db.categories)..where((c) => c.id.equals(id)))
+            .write(CategoriesCompanion(position: Value(position))),
+  );
+
+  Future<void> reorderAccounts(List<String> ids) => _reorder(
+    ids,
+    (id, position) =>
+        (_db.update(_db.accounts)..where((a) => a.id.equals(id)))
+            .write(AccountsCompanion(position: Value(position))),
+  );
+
+  Future<void> _reorder(
+    List<String> ids,
+    Future<int> Function(String id, int position) write,
+  ) => _db.transaction(() async {
+    for (var i = 0; i < ids.length; i++) {
+      await write(ids[i], i);
+    }
+  });
+
+  /// Makes [id] the default account — or, with null, clears the default so
+  /// new entries start on the last account used.
+  Future<void> setDefaultAccount(String? id) => _db.transaction(() async {
+    await _db
+        .update(_db.accounts)
+        .write(const AccountsCompanion(isDefault: Value(false)));
+    if (id != null) {
+      await (_db.update(_db.accounts)..where((a) => a.id.equals(id)))
+          .write(const AccountsCompanion(isDefault: Value(true)));
+    }
+  });
 
   Future<Category> updateCategory({
     required String id,
@@ -210,7 +268,13 @@ class FinanceRepository {
     return (_db.delete(_db.accountTypes)..where((t) => t.id.equals(id))).go();
   }
 
-  Stream<List<Account>> watchAccounts() => _db.select(_db.accounts).watch();
+  /// In the user's order (Accounts → Reorder), then creation order.
+  Stream<List<Account>> watchAccounts() => (_db.select(_db.accounts)
+        ..orderBy([
+          (a) => OrderingTerm.asc(a.position),
+          (a) => OrderingTerm.asc(a.createdAt),
+        ]))
+      .watch();
 
   Stream<List<Transaction>> watchTransactions() {
     return (_db.select(
@@ -225,13 +289,16 @@ class FinanceRepository {
     required String type,
     int balanceMinor = 0,
   }) {
-    return _db.into(_db.accounts).insert(
-      AccountsCompanion.insert(
-        name: name,
-        type: type,
-        balanceMinor: Value(balanceMinor),
-      ),
-    );
+    return _db.transaction(() async {
+      await _db.into(_db.accounts).insert(
+        AccountsCompanion.insert(
+          name: name,
+          type: type,
+          balanceMinor: Value(balanceMinor),
+          position: Value(await _nextPosition(_db.accounts)),
+        ),
+      );
+    });
   }
 
   Future<void> updateAccount({required String id, required String name, required String type, required int balanceMinor}) {

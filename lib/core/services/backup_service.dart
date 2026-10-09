@@ -344,14 +344,25 @@ class BackupService {
         tables['learnNotes'],
         LearnNote.fromJson,
       );
-      await _insertAll(_db.categories, tables['categories'], Category.fromJson);
+      await _insertAll(
+        _db.categories,
+        tables['categories'],
+        (json) => Category.fromJson({'position': 0, ...json}),
+      );
       await _insertAll(_db.tags, tables['tags'], Tag.fromJson);
       await _insertAll(
         _db.accountTypes,
         tables['accountTypes'],
         AccountType.fromJson,
       );
-      await _insertAll(_db.accounts, tables['accounts'], Account.fromJson);
+      // Backups from before v33 have no order or default: they come back
+      // in creation order (position ties sort by it) with no default.
+      await _insertAll(
+        _db.accounts,
+        tables['accounts'],
+        (json) =>
+            Account.fromJson({'position': 0, 'isDefault': false, ...json}),
+      );
       await _insertAll(_db.folders, tables['folders'], Folder.fromJson);
       await _insertAll(_db.habits, tables['habits'], Habit.fromJson);
       await _insertAll(_db.goals, tables['goals'], Goal.fromJson);
