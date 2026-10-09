@@ -559,6 +559,17 @@ class FinanceController {
     await _repo.deleteBill(id);
   }
 
+  /// Re-schedules every active bill set to ring as an alarm — after the
+  /// alarm tone changes, so they move to the new tone's channel.
+  Future<void> rescheduleBillAlarms() async {
+    final bills = await _repo.watchBills().first;
+    for (final bill in bills) {
+      final mode = ReminderMode.fromStorage(bill.reminderMode);
+      if (!bill.active || mode != ReminderMode.alarm) continue;
+      await _scheduleBillReminder(bill, mode);
+    }
+  }
+
   Future<void> _scheduleBillReminder(Bill bill, ReminderMode mode) async {
     if (!bill.reminderEnabled || !_remindersEnabled()) return;
     final reminderTime = bill.dueDate.subtract(Duration(days: bill.reminderDaysBefore));

@@ -4,6 +4,9 @@ import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -16,6 +19,28 @@ import android.media.AudioAttributes
 class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Settings → Notification sounds: Android's own per-channel sound
+        // settings for this app, where each reminder type's tone can be set.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/system")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "openNotificationSettings") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                try {
+                    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    } else {
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            .setData(Uri.fromParts("package", packageName, null))
+                    }
+                    startActivity(intent)
+                    result.success(true)
+                } catch (error: Exception) {
+                    result.error("open_failed", error.message, null)
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/haptics")
             .setMethodCallHandler { call, result ->
                 if (call.method != "save") {

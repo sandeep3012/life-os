@@ -218,6 +218,24 @@ class GoalsController {
 
   Future<void> deleteMilestone(String id) => _repo.deleteMilestone(id);
 
+  /// Re-schedules every active goal reminder set as an alarm — after the
+  /// alarm tone changes, so they move to the new tone's channel.
+  Future<void> rescheduleGoalAlarms() async {
+    final goals = await _repo.watchGoals().first;
+    for (final goal in goals) {
+      final mode = ReminderMode.fromStorage(goal.reminderMode);
+      if (goal.status != 'active' || mode != ReminderMode.alarm) continue;
+      await _scheduleGoalReminder(
+        goalId: goal.id,
+        title: goal.title,
+        targetDate: goal.targetDate,
+        reminderEnabled: goal.reminderEnabled,
+        reminderDaysBefore: goal.reminderDaysBefore,
+        mode: mode,
+      );
+    }
+  }
+
   Future<void> _scheduleGoalReminder({
     required String goalId,
     required String title,

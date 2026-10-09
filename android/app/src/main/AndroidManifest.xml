@@ -45,6 +45,19 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- LifeOS · Today home-screen widget (TodayWidgetProvider). -->
+        <receiver
+            android:name=".TodayWidgetProvider"
+            android:exported="false"
+            android:label="LifeOS · Today">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_widget_info" />
+        </receiver>
+
         <!-- Required by flutter_local_notifications to deliver a scheduled
              notification when its AlarmManager alarm fires, and to
              re-schedule pending notifications after a reboot. -->

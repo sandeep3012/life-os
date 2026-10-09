@@ -62,7 +62,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 30;
+  int get schemaVersion => 32;
 
   /// Adds [column] unless [table] already has it (creating [table] if it's
   /// missing entirely), so every upgrade step can
@@ -328,6 +328,19 @@ class AppDatabase extends _$AppDatabase {
         await _addColumnIfMissing(m, appSettings, appSettings.toursSeen);
         await customStatement(
           "UPDATE app_settings SET onboarding_completed = 1, tours_seen = 'home'",
+        );
+      }
+      if (from < 31) {
+        // v30 -> v31: a choice of alarm tone; existing installs keep the
+        // gentle one they've been hearing.
+        await _addColumnIfMissing(m, appSettings, appSettings.alarmTone);
+      }
+      if (from < 32) {
+        // v31 -> v32: the in-app Sounds switch.
+        await _addColumnIfMissing(
+          m,
+          appSettings,
+          appSettings.soundEffectsEnabled,
         );
       }
     },

@@ -14,6 +14,7 @@ import '../widgets/goal_card.dart';
 import '../widgets/goal_ring.dart';
 import '../widgets/quick_add_goal_sheet.dart';
 import '../../../../app/theme/app_fonts.dart';
+import '../../../../core/services/sound_effects.dart';
 
 class GoalDetailScreen extends ConsumerStatefulWidget {
   const GoalDetailScreen({super.key, required this.goalId});
@@ -140,6 +141,9 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
                         target != null &&
                         target > 0 &&
                         newValue >= target) {
+                      ref
+                          .read(soundEffectsProvider)
+                          .play(SoundEffect.goalReached);
                       showCelebration(
                         context,
                         ref,

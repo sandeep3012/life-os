@@ -9,6 +9,7 @@ import '../../../core/scheduling/repeat_schedule.dart';
 import '../data/tasks_repository.dart';
 import '../domain/task_priority.dart';
 import '../domain/task_date_window.dart';
+import '../../../core/services/sound_effects.dart';
 
 final tasksRepositoryProvider = Provider<TasksRepository>((ref) {
   return TasksRepository(ref.watch(appDatabaseProvider));
@@ -61,11 +62,13 @@ class TasksController {
   TasksController(
     this._repo,
     this._notifications,
-    bool Function() remindersEnabled,
-  );
+    bool Function() remindersEnabled, {
+    SoundEffects? sounds,
+  }) : _sounds = sounds;
 
   final TasksRepository _repo;
   final NotificationService _notifications;
+  final SoundEffects? _sounds;
 
   Future<void> addTask({
     required String title,
@@ -92,6 +95,9 @@ class TasksController {
 
   Future<void> toggleDone(Task task) async {
     final done = task.status != 'done';
+    // Played as the box is ticked, not after the write: the sound is the
+    // acknowledgement of the tap.
+    if (done) _sounds?.play(SoundEffect.taskDone);
     await _repo.setTaskDone(task.id, done);
     if (done) {
       await _notifications.cancelTaskReminder(task.id);
@@ -132,5 +138,6 @@ final tasksControllerProvider = Provider<TasksController>((ref) {
     ref.watch(tasksRepositoryProvider),
     ref.watch(notificationServiceProvider),
     () => ref.read(settingsProvider).taskReminders,
+    sounds: ref.watch(soundEffectsProvider),
   );
 });

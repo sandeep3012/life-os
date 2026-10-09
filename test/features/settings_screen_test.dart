@@ -6,6 +6,7 @@ import 'package:life_manager/app/theme/app_color_theme.dart';
 import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
+import 'package:life_manager/core/reminders/alarm_tone.dart';
 import 'package:life_manager/core/services/app_lock_service.dart';
 import 'package:life_manager/core/services/notification_service.dart';
 import 'package:life_manager/features/settings/application/app_lock_providers.dart';
@@ -201,6 +202,40 @@ void main() {
     expect(row.transitionEffectsEnabled, isFalse);
     // Untouched settings survive the partial upsert.
     expect(row.reduceMotion, isFalse);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('choosing an alarm tone saves it', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    expect(container.read(settingsProvider).alarmTone, AlarmTone.gentle);
+
+    await tester.scrollUntilVisible(find.text('Alarm tone'), 200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Alarm tone'));
+    await tester.pumpAndSettle();
+
+    // Every tone is listed with a preview button.
+    final sheet = find.byType(BottomSheet);
+    for (final tone in AlarmTone.values) {
+      expect(
+        find.descendant(of: sheet, matching: find.text(tone.label)),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Play ${tone.label}'), findsOneWidget);
+    }
+    await tester.tap(
+      find.descendant(of: sheet, matching: find.text('Marimba call')),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Use this tone'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(settingsProvider).alarmTone, AlarmTone.marimba);
+    expect((await db.select(db.appSettings).getSingle()).alarmTone, 'marimba');
+    expect(find.text('Marimba call'), findsOneWidget); // the row's subtitle
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));

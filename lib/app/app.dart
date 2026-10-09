@@ -19,6 +19,9 @@ import 'theme/app_theme.dart';
 import 'transitions/screen_reveal.dart';
 import '../features/onboarding/application/onboarding_gate.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
+import '../features/home_widget/application/home_widget_sync.dart';
+import '../core/reminders/alarm_tone_sync.dart';
+import '../core/services/budget_alert_sound.dart';
 
 class LifeOSApp extends ConsumerStatefulWidget {
   const LifeOSApp({super.key});
@@ -82,7 +85,12 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     finance.ensureDefaultCategories();
     finance.ensureDefaultAccountTypes();
     finance.generateDueRecurringTransactions();
+    // Before the coordinator queues anything, so alarms use the saved tone.
+    ref.read(alarmToneSyncProvider).start();
     ref.read(scheduleCoordinatorProvider).start();
+    // The Android home-screen widget follows the app's data from here on.
+    ref.read(homeWidgetSyncProvider).start();
+    ref.read(budgetAlertSoundProvider).start();
     // A new user is asked for reminder permissions during onboarding, where
     // the reason is on screen; everyone past it is asked here as before (a
     // no-op once they've answered).
@@ -151,6 +159,9 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.read(scheduleCoordinatorProvider).requestRefresh();
+      // Coming back on a new day: the widget's "today" moved even though no
+      // task or habit did.
+      if (_choresStarted) ref.read(homeWidgetSyncProvider).refreshNow();
     }
     if (!ref.read(settingsProvider).appLockEnabled) return;
     final policy = ref.read(relockPolicyProvider);

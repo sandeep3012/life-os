@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/services/sound_effects.dart';
 import '../../../core/widgets/save_feedback.dart';
 
 /// Streak lengths worth a beat of celebration — a week, a month, "it's a
@@ -22,6 +23,7 @@ Future<void> celebrateStreakIfMilestone(
   required int newStreakDays,
 }) {
   if (!_streakMilestones.contains(newStreakDays)) return Future.value();
+  ref.read(soundEffectsProvider).play(SoundEffect.habitStreak);
   return showCelebration(
     context,
     ref,

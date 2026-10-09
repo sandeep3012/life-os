@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_color_theme.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/reminders/alarm_tone.dart';
 import '../../../core/database/app_database_provider.dart';
 import '../data/settings_repository.dart';
 
@@ -37,6 +38,8 @@ class ResolvedSettings {
     this.transitionEffectsEnabled = true,
     this.onboardingCompleted = false,
     this.toursSeen = const {},
+    this.alarmTone = AlarmTone.gentle,
+    this.soundEffectsEnabled = true,
   });
 
   final ThemeMode themeMode;
@@ -64,6 +67,12 @@ class ResolvedSettings {
 
   /// Screen tours already shown, by id.
   final Set<String> toursSeen;
+
+  /// What alarm-mode reminders ring with.
+  final AlarmTone alarmTone;
+
+  /// In-app sounds for finishing things.
+  final bool soundEffectsEnabled;
 
   static const defaults = ResolvedSettings(
     themeMode: ThemeMode.system,
@@ -126,6 +135,8 @@ final settingsProvider = Provider<ResolvedSettings>((ref) {
       for (final id in row.toursSeen.split(','))
         if (id.trim().isNotEmpty) id.trim(),
     },
+    alarmTone: AlarmTone.fromStorage(row.alarmTone),
+    soundEffectsEnabled: row.soundEffectsEnabled,
   );
 });
 
@@ -172,6 +183,11 @@ class SettingsController {
 
   /// Settings → "Replay the tour": every tour shows again on its screen.
   Future<void> resetTours() => _repo.setToursSeen('');
+
+  Future<void> setAlarmTone(AlarmTone tone) => _repo.setAlarmTone(tone.name);
+
+  Future<void> setSoundEffectsEnabled(bool enabled) =>
+      _repo.setSoundEffectsEnabled(enabled);
 
   Future<void> setTaskReminders(bool enabled) =>
       _repo.setTaskReminders(enabled);

@@ -53,6 +53,18 @@ class ScheduleCoordinator {
     requestRefresh();
   }
 
+  /// Re-queues every reminder now and completes once a pass that started
+  /// after this call has finished — for a change, like the alarm tone, that
+  /// the caller must see applied before it tidies up after it.
+  Future<void> refreshNow() async {
+    if (_disposed) return;
+    _debounce?.cancel();
+    while (_running) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+    await _refresh();
+  }
+
   void requestRefresh() {
     if (_disposed) return;
     _debounce?.cancel();

@@ -412,6 +412,8 @@ class BackupService {
     // been using the app; don't walk them through it again.
     'onboardingCompleted': true,
     'toursSeen': 'home',
+    'alarmTone': 'gentle',
+    'soundEffectsEnabled': true,
   };
 
   Future<void> _insertAll<T extends Table, D>(

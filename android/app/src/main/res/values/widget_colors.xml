@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Today home-screen widget, in the app's Forest palette. -->
+<resources>
+    <color name="widget_surface">#FFFFFFFF</color>
+    <color name="widget_well">#FFF2EEE6</color>
+    <color name="widget_ink">#FF1F1E1A</color>
+    <color name="widget_muted">#FF5F5B53</color>
+    <color name="widget_accent">#FF0B7C56</color>
+</resources>
