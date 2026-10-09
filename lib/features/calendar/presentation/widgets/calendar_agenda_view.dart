@@ -213,7 +213,10 @@ class _CalendarAgendaViewState extends State<CalendarAgendaView> {
               selectedDayPredicate: (day) =>
                   dateOnly(day) == widget.selectedDay,
               onDaySelected: (selected, _) => _goToDay(selected),
-              onPageChanged: (focused) => setState(() => _focusedDay = focused),
+              // The calendar reports days in UTC; kept as a local date like
+              // every other day here, or "same day" checks quietly fail.
+              onPageChanged: (focused) =>
+                  setState(() => _focusedDay = dateOnly(focused)),
               headerStyle: const HeaderStyle(
                 formatButtonVisible: false,
                 titleCentered: true,
@@ -358,14 +361,17 @@ class _CalendarAgendaViewState extends State<CalendarAgendaView> {
               ),
               if (!_todayVisible)
                 Positioned(
-                  left: 0,
-                  right: 0,
+                  // At the start edge, not centred: on a phone the extended
+                  // "New event" button reaches past the middle of the screen
+                  // and covered a centred chip, swallowing taps on it.
+                  left: 20,
                   // Match the Scaffold's end-float FAB bottom margin. Remove
                   // the chip's invisible tap-target padding so visible edges align.
                   bottom:
                       kFloatingActionButtonMargin +
                       MediaQuery.viewPaddingOf(context).bottom,
-                  child: Center(
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
                     child: ActionChip(
                       key: const ValueKey('agenda-today-action'),
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

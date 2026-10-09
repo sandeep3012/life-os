@@ -399,8 +399,16 @@ doesn't exist, not by preference:
   never touched. Recovery: delete those (all gitignored) and re-run
   `flutter pub get` normally.
 
-**The suite is green: 126 passing, `flutter analyze` clean.** It was not before
-the redesign — five tests failed on `main`, all because assertions had drifted
+**The suite is green: 599 passing, `flutter analyze` clean, and CI
+(`.github/workflows/ci.yml`) keeps it that way** — on every PR and push to
+`main` it checks the generated Drift code is current, analyzes, and runs the
+suite. Keep it at zero failures: a known-failing test hides the next real one.
+
+Migrations add columns through `_addColumnIfMissing`, never a bare
+`m.addColumn`: it skips a column that already exists and creates a table
+that's missing, so an upgrade that was interrupted partway can be re-run.
+
+Earlier, five tests failed on `main`, all because assertions had drifted
 from the widgets they described (an icon-only `FloatingActionButton`'s label
 lives in its `tooltip`, not in a `Text`; a habit log row renders
 `"Done · <note>"` as one string, so `find.text(note)` can never match). When a
@@ -416,8 +424,6 @@ test against, without touching your working tree.
 
 - Release signing (`android/key.properties` / keystore) is deliberately not
   set up yet.
-- Data export/backup is unimplemented (mentioned as "Soon" in Settings UI).
-- No CI configured.
 
 ## Git workflow rules
 

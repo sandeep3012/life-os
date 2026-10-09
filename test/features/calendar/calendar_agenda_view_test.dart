@@ -204,7 +204,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(selected, DateTime(2026, 9, 19));
-      expect(find.text('No habits for this day.'), findsOneWidget);
+      // The 19th shows its empty state. Today's section — always present —
+      // may show one too, depending on when the test runs.
+      expect(find.text('No habits for this day.'), findsWidgets);
       expect(tester.takeException(), isNull);
     },
   );
@@ -235,7 +237,8 @@ void main() {
         find.byType(TableCalendar<CalendarItemType>),
       );
       expect(calendar.selectedDayPredicate!(selected), isTrue);
-      expect(calendar.focusedDay, selected);
+      // TableCalendar keeps its days in UTC, so compare calendar dates.
+      expect(isSameDay(calendar.focusedDay, selected), isTrue);
       scroll.controller!.jumpTo(-350);
       await tester.pumpAndSettle();
       expect(selected.isBefore(initialDay), isTrue);

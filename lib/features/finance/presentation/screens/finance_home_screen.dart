@@ -605,7 +605,12 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
         // with no accounts yet the button opens the *account* sheet, so an
         // inlined "New transaction" tooltip described the wrong action.
         tooltip: _fabLabel(ref),
-        onPressed: () => _section == _FinanceSection.transactions
+        // With no accounts the button adds one, whatever tab is showing —
+        // it used to open the Expense/Income chooser on Transactions, under
+        // a "New account" label, for an entry with no account to go in.
+        onPressed: () => ref.read(activeAccountsProvider).isEmpty
+            ? _addAccount(context, ref)
+            : _section == _FinanceSection.transactions
             ? _showTransactionActions(context, ref)
             : _handleFab(context, ref),
         child: const Icon(LucideIcons.plus),

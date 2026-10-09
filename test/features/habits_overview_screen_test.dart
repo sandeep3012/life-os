@@ -13,6 +13,7 @@ import 'package:life_manager/core/utils/date_utils.dart';
 import 'package:life_manager/core/widgets/success_overlay.dart';
 import 'package:life_manager/features/habits/data/habits_repository.dart';
 import 'package:life_manager/features/habits/presentation/screens/habits_overview_screen.dart';
+import 'package:life_manager/features/settings/application/settings_providers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class _FakeNotificationService extends NotificationService {
@@ -60,9 +61,17 @@ void main() {
           _FakeNotificationService(),
         ),
       ],
-      child: MaterialApp(
-        theme: AppTheme.light(),
-        home: const HabitsOverviewScreen(),
+      // The real app keeps settings loaded at its root (it themes from
+      // them); without a listener here, a tap's read of the save-feedback
+      // choice would see the defaults, and a milestone wouldn't celebrate.
+      child: Consumer(
+        builder: (context, ref, _) {
+          ref.watch(settingsProvider);
+          return MaterialApp(
+            theme: AppTheme.light(),
+            home: const HabitsOverviewScreen(),
+          );
+        },
       ),
     );
   }
