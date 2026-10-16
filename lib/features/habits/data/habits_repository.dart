@@ -203,7 +203,7 @@ class HabitsRepository {
   Stream<List<Category>> watchHabitCategories() {
     return (_db.select(
       _db.categories,
-    )..where((c) => c.kind.equals('habit'))).watch();
+    )..where((c) => c.kind.equals(plannerCategoryKind))).watch();
   }
 
   /// Returns the created row (rather than just succeeding) so a caller that
@@ -222,7 +222,7 @@ class HabitsRepository {
             name: name,
             icon: Value(icon),
             colorHex: colorHex,
-            kind: const Value('habit'),
+            kind: const Value(plannerCategoryKind),
           ),
         );
   }

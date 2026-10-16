@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/deleted_rows.dart';
 import '../../../core/services/file_storage_service.dart';
 
 class DocumentsRepository {
@@ -127,13 +128,36 @@ class DocumentsRepository {
     );
   }
 
-  Future<void> deleteDocument(Document document) async {
+  /// Removes the document from the app straight away, but leaves its file
+  /// on disk — so Undo can bring it back whole. [discardFile] removes the
+  /// file once Undo is no longer on offer.
+  Future<DeletedRows> deleteDocument(Document document) =>
+      _db.transaction(() async {
+        final removed = DeletedRows()
+          ..addAll(
+            _db.documents,
+            await (_db.select(
+              _db.documents,
+            )..where((d) => d.id.equals(document.id))).get(),
+          );
+        await (_db.delete(
+          _db.documents,
+        )..where((d) => d.id.equals(document.id))).go();
+        return removed;
+      });
+
+  /// Puts back what a delete removed.
+  Future<void> restore(DeletedRows removed) => removed.restore(_db);
+
+  /// Deletes [document]'s file — unless the document came back (Undo).
+  Future<void> discardFile(Document document) async {
+    final back = await (_db.select(
+      _db.documents,
+    )..where((d) => d.id.equals(document.id))).getSingleOrNull();
+    if (back != null) return;
     await _storage.deleteFile(
       document.filePath,
       thumbnailRelativePath: document.thumbnailPath,
     );
-    await (_db.delete(
-      _db.documents,
-    )..where((d) => d.id.equals(document.id))).go();
   }
 }

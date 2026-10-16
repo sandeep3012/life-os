@@ -48,10 +48,11 @@ void main() {
           theme: AppTheme.light(),
           home: StatefulBuilder(
             builder: (context, setState) => Scaffold(
-              floatingActionButton: FloatingActionButton.extended(
+              // The calendar's button has folded to a round + by the time
+              // the agenda is scrolled away from today and the chip shows.
+              floatingActionButton: FloatingActionButton(
                 onPressed: () {},
-                icon: const Icon(LucideIcons.plus),
-                label: const Text('New event'),
+                child: const Icon(LucideIcons.plus),
               ),
               body: CalendarAgendaView(
                 items: items,

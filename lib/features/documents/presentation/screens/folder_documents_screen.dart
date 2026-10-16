@@ -14,6 +14,7 @@ import '../../../../core/widgets/save_feedback.dart';
 import '../../application/documents_providers.dart';
 import '../../domain/folder_tree.dart';
 import '../widgets/document_tile.dart';
+import 'document_viewer_screen.dart';
 import '../widgets/folder_editor_sheet.dart';
 import '../widgets/folder_tile.dart';
 import '../widgets/quick_add_document_details_sheet.dart';
@@ -155,10 +156,14 @@ class FolderDocumentsScreen extends ConsumerWidget {
                         key: ValueKey(d.id),
                         grid: false,
                         document: d,
-                        onDelete: () => ref
-                            .read(documentsControllerProvider)
-                            .deleteDocument(d),
-                        onTap: () => _editDocument(context, ref, d),
+onDelete: () => deleteDocumentWithUndo(context, ref, d),
+                        onTap: () => openDocument(
+                          context,
+                          ref,
+                          d,
+                          onEdit: () => _editDocument(context, ref, d),
+                        ),
+                        onLongPress: () => _editDocument(context, ref, d),
                       ),
                     ),
                   InlineAddButton(

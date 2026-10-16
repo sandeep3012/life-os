@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:home_widget/home_widget.dart';
 
 import '../../habits/application/habits_providers.dart';
 import '../../home/application/home_providers.dart';
@@ -16,21 +16,19 @@ abstract class HomeWidgetBridge {
   Future<void> push(Map<String, Object> data);
 }
 
+/// Hands the snapshot to MainActivity's `com.sandeep.lifeos/widget` channel,
+/// which saves it and redraws `TodayWidgetProvider`. A channel of our own
+/// rather than the `home_widget` package: that plugin needs iOS 14, and the
+/// widget is Android-only.
 class _PlatformHomeWidgetBridge implements HomeWidgetBridge {
-  /// The Kotlin provider class, fully qualified. Not the package-relative
-  /// name: debug builds add `.dev` to the application id, and the plugin
-  /// would look for the class under that.
-  static const _androidClass = 'com.sandeep.lifeos.TodayWidgetProvider';
+  static const _channel = MethodChannel('com.sandeep.lifeos/widget');
 
   @override
   Future<void> push(Map<String, Object> data) async {
     // Android only for now; elsewhere there's no widget to feed.
     if (kIsWeb || !Platform.isAndroid) return;
     try {
-      for (final entry in data.entries) {
-        await HomeWidget.saveWidgetData<Object>(entry.key, entry.value);
-      }
-      await HomeWidget.updateWidget(qualifiedAndroidName: _androidClass);
+      await _channel.invokeMethod<void>('updateToday', data);
     } catch (_) {
       // A widget that can't update (plugin missing, no widget placed) must
       // never disturb the app.

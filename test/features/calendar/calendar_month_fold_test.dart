@@ -86,6 +86,23 @@ void main() {
     await disposeCleanly(tester);
   });
 
+  testWidgets('scrolling folds "New event" to a round + and back', (
+    tester,
+  ) async {
+    await pump(tester);
+    expect(find.text('New event'), findsOneWidget);
+
+    await tester.drag(dayList(), const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(find.text('New event'), findsNothing);
+    expect(find.byTooltip('New event'), findsOneWidget);
+
+    await tester.drag(dayList(), const Offset(0, 600));
+    await tester.pumpAndSettle();
+    expect(find.text('New event'), findsOneWidget);
+    await disposeCleanly(tester);
+  });
+
   testWidgets('pulling down from the top unfolds the month again', (
     tester,
   ) async {

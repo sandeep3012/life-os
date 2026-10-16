@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' show OrderingTerm, Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +9,7 @@ import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/features/finance/application/finance_providers.dart';
+import 'package:life_manager/core/widgets/reorder_card.dart';
 import 'package:life_manager/features/finance/presentation/screens/account_order_screen.dart';
 
 void main() {
@@ -80,88 +81,37 @@ void main() {
     expect((await repo.watchCategories().first).first.id, food.id);
   });
 
-  test('only one account is ever the default', () async {
-    final repo = container.read(financeRepositoryProvider);
-    await repo.createAccount(name: 'A', type: 'savings');
-    await repo.createAccount(name: 'B', type: 'cash');
-    final ids = await accountIds();
-
-    await controller().setDefaultAccount(ids['A']);
-    await controller().setDefaultAccount(ids['B']);
-    var accounts = await repo.watchAccounts().first;
-    expect({for (final a in accounts) a.name: a.isDefault}, {
-      'A': false,
-      'B': true,
-    });
-
-    await controller().setDefaultAccount(null);
-    accounts = await repo.watchAccounts().first;
-    expect(accounts.any((a) => a.isDefault), isFalse);
-  });
-
-  test('a new entry starts on the default, else the last used, else the first',
+  test('a new entry starts on the top account that can take a payment',
       () async {
     final repo = container.read(financeRepositoryProvider);
+    await repo.createAccount(name: 'Shares', type: 'investment');
     await repo.createAccount(name: 'A', type: 'savings');
     await repo.createAccount(name: 'B', type: 'cash');
     final ids = await accountIds();
 
+    // Shares is on top, but an investment can't pay for anything.
     expect(await settled(preferredAccountIdProvider), ids['A']);
 
+    // Using B doesn't change it — only the order does.
     await repo.createTransaction(
       accountId: ids['B']!,
       merchant: 'Tea',
       amountMinor: -2000,
       date: DateTime(2026, 9, 1),
     );
-    expect(await settled(preferredAccountIdProvider), ids['B']);
-
-    await controller().setDefaultAccount(ids['A']);
     expect(await settled(preferredAccountIdProvider), ids['A']);
+
+    await controller().reorderAccounts([ids['B']!, ids['Shares']!, ids['A']!]);
+    expect(await settled(preferredAccountIdProvider), ids['B']);
   });
 
-  test('the category starts on the last one used for that kind', () async {
-    final repo = container.read(financeRepositoryProvider);
-    await repo.createAccount(name: 'A', type: 'savings');
-    final account = (await accountIds())['A']!;
-    final food = await repo.createCategory(
-      name: 'Food',
-      icon: 'utensils',
-      colorHex: '#E0475A',
-    );
-    final salary = await repo.createCategory(
-      name: 'Pay',
-      icon: 'wallet',
-      colorHex: '#2E9E63',
-      kind: 'income',
-    );
-
-    expect(await settled(lastUsedCategoryIdProvider(true)), isNull);
-
-    await repo.createTransaction(
-      accountId: account,
-      categoryId: food.id,
-      merchant: 'Lunch',
-      amountMinor: -15000,
-      date: DateTime(2026, 9, 2),
-    );
-    await repo.createTransaction(
-      accountId: account,
-      categoryId: salary.id,
-      merchant: 'Salary',
-      amountMinor: 5000000,
-      date: DateTime(2026, 8, 1), // back-dated, but still the latest entry
-    );
-    expect(await settled(lastUsedCategoryIdProvider(true)), food.id);
-    expect(await settled(lastUsedCategoryIdProvider(false)), salary.id);
-  });
-
-  test('starting values fall back when the remembered one is not offered', () {
+  test('starting values fall back to the first offered', () {
     Account account(String id) => Account(
       id: id,
       name: id,
       type: 'cash',
       balanceMinor: 0,
+      openingBalanceMinor: 0,
       currencyCode: 'INR',
       isActive: true,
       position: 0,
@@ -173,7 +123,7 @@ void main() {
     expect(startingAccountId(accounts, 'y'), 'y');
     expect(startingAccountId(accounts, 'gone'), 'x');
     expect(startingAccountId(accounts, null), 'x');
-    expect(startingCategoryId(const [], 'gone'), isNull);
+    expect(startingCategoryId(const []), isNull);
   });
 
   test('upgrading to v33 numbers existing rows in their old order', () async {
@@ -215,7 +165,7 @@ void main() {
     }
   });
 
-  testWidgets('starring an account in Order & default makes it the default', (
+  testWidgets('dragging an account to the top makes it the default', (
     tester,
   ) async {
     await db
@@ -243,17 +193,37 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Default'), findsNothing);
+    expect(
+      find.textContaining('Hold any account and drag it'),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.byTooltip('Make Bank the default'));
+    String? defaultName() {
+      final card = find.ancestor(
+        of: find.text('Default'),
+        matching: find.byType(ReorderCard),
+      );
+      return tester.widget<ReorderCard>(card).title;
+    }
+
+    expect(defaultName(), 'Wallet');
+
+    // Drag Bank's grip above Wallet.
+    final grip = find.byTooltip('Drag to reorder Bank');
+    final gesture = await tester.startGesture(tester.getCenter(grip));
+    await tester.pump(const Duration(milliseconds: 50));
+    await gesture.moveBy(const Offset(0, -40));
+    await tester.pump();
+    await gesture.moveBy(const Offset(0, -80));
+    await tester.pump();
+    await gesture.up();
     await tester.pumpAndSettle();
-    expect(find.text('Default'), findsOneWidget);
-    expect(find.byTooltip('Remove Bank as default'), findsOneWidget);
-    final bank = await (db.select(
+
+    expect(defaultName(), 'Bank');
+    final ordered = await (db.select(
       db.accounts,
-    )..where((a) => a.name.equals('Bank'))).getSingle();
-    expect(bank.isDefault, isTrue);
-    expect(find.byTooltip('Drag to reorder Wallet'), findsOneWidget);
+    )..orderBy([(a) => OrderingTerm.asc(a.position)])).get();
+    expect(ordered.map((a) => a.name), ['Bank', 'Wallet']);
 
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));

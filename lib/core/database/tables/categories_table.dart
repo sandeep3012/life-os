@@ -1,6 +1,10 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
+/// The one category list tasks and habits share. Stored as `task` because
+/// that's what task categories were already called.
+const plannerCategoryKind = 'task';
+
 /// Shared taxonomy: finance categories, spend-analyzer categories, and
 /// note/document/habit/goal tags all draw from one table so the AI Analyser
 /// and Spend Analyzer can group across modules by a single `categoryId`.
@@ -10,7 +14,9 @@ class Categories extends Table {
   TextColumn get icon => text().withDefault(const Constant('label'))();
   TextColumn get colorHex => text()();
 
-  /// expense | income | habit | goal | note | document
+  /// expense | income | task ([plannerCategoryKind], shared by tasks and
+  /// habits). `habit` is the older, separate habit kind, folded into the
+  /// shared one by `AppDatabase.mergePlannerCategories`.
   TextColumn get kind => text().withDefault(const Constant('expense'))();
 
   /// Where the category sits in lists and pickers — set by dragging in

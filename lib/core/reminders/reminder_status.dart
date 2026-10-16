@@ -5,6 +5,8 @@ class QueuedReminder {
 
   static QueuedReminder? fromPayload(String? payload, String? title) {
     if (payload == null) return null;
+    // An alarm's payload carries its details on a second line.
+    payload = payload.split('\n').first;
     final match = RegExp(
       r'^lifeos\.schedule:.+:(\d{4}-\d{2}-\d{2}T[^ ]+):(notification|alarm)(?::\w+)?$',
     ).firstMatch(payload);

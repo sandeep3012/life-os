@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+export 'tables/categories_table.dart' show plannerCategoryKind;
+
 import 'tables/calendar_tables.dart';
 import 'tables/categories_table.dart';
 import 'tables/documents_tables.dart';
@@ -14,6 +16,7 @@ import 'tables/insights_table.dart';
 import 'tables/learn_tables.dart';
 import 'tables/notes_tables.dart';
 import 'tables/settings_table.dart';
+import 'tables/sync_tables.dart';
 import 'tables/tasks_tables.dart';
 
 part 'app_database.g.dart';
@@ -54,6 +57,9 @@ part 'app_database.g.dart';
     LearnBooks,
     LearnNotes,
     AppSettings,
+    SyncOutbox,
+    SyncState,
+    SyncHeld,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -61,8 +67,52 @@ class AppDatabase extends _$AppDatabase {
 
   AppDatabase.forTesting(super.executor);
 
+  /// Folds the older habit-only categories into the list tasks and habits
+  /// share: one with the same name as a task category merges into it (its
+  /// habits move across), the rest simply change kind. Safe to run any
+  /// time, and run at every launch — a restored backup or another phone on
+  /// an older version can still bring `habit` rows in.
+  Future<void> mergePlannerCategories() async {
+    final merged = await transaction(() async {
+      final habitRows = await customSelect(
+        "SELECT COUNT(*) AS n FROM categories WHERE kind = 'habit'",
+      ).getSingle();
+      if (habitRows.read<int>('n') == 0) return false;
+      const sameNamedTask =
+          "(SELECT t.id FROM categories t WHERE t.kind = '$plannerCategoryKind' "
+          'AND lower(t.name) = lower(h.name) ORDER BY t.id LIMIT 1)';
+      await customStatement(
+        'UPDATE habits SET category_id = '
+        '(SELECT $sameNamedTask FROM categories h WHERE h.id = habits.category_id) '
+        "WHERE category_id IN (SELECT h.id FROM categories h WHERE h.kind = 'habit' "
+        'AND $sameNamedTask IS NOT NULL)',
+      );
+      await customStatement(
+        "DELETE FROM categories WHERE kind = 'habit' AND EXISTS "
+        "(SELECT 1 FROM categories t WHERE t.kind = '$plannerCategoryKind' "
+        'AND lower(t.name) = lower(categories.name))',
+      );
+      await customStatement(
+        "UPDATE categories SET kind = '$plannerCategoryKind' WHERE kind = 'habit'",
+      );
+      return true;
+    });
+    // Raw SQL doesn't tell Drift's streams anything changed.
+    if (merged) markTablesUpdated({categories, habits});
+  }
+
   @override
-  int get schemaVersion => 33;
+  int get schemaVersion => 35;
+
+  /// For upgrade steps that read another table, on a database partly
+  /// behind its recorded version (see [_addColumnIfMissing]).
+  Future<bool> _tableExists(String name) async {
+    final rows = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: [Variable(name)],
+    ).get();
+    return rows.isNotEmpty;
+  }
 
   /// Adds [column] unless [table] already has it (creating [table] if it's
   /// missing entirely), so every upgrade step can
@@ -355,6 +405,30 @@ class AppDatabase extends _$AppDatabase {
             'UPDATE $table SET position = '
             '(SELECT COUNT(*) FROM $table older WHERE older.rowid < $table.rowid)',
           );
+        }
+      }
+      if (from < 34) {
+        // v33 -> v34: sync's bookkeeping tables, and an opening balance per
+        // account so a balance can be recomputed from its transactions.
+        // Set so that every balance shown today stays exactly the same.
+        await _addColumnIfMissing(m, syncOutbox, syncOutbox.op);
+        await _addColumnIfMissing(m, syncState, syncState.value);
+        await _addColumnIfMissing(m, syncHeld, syncHeld.record);
+        await _addColumnIfMissing(m, accounts, accounts.openingBalanceMinor);
+        if (await _tableExists('transactions')) {
+          await customStatement(
+            'UPDATE accounts SET opening_balance_minor = balance_minor - '
+            '(SELECT COALESCE(SUM(amount_minor), 0) FROM transactions '
+            'WHERE transactions.account_id = accounts.id)',
+          );
+        }
+      }
+      if (from < 35) {
+        // v34 -> v35: when a goal was completed, and one category list for
+        // tasks and habits.
+        await _addColumnIfMissing(m, goals, goals.completedAt);
+        if (await _tableExists('categories') && await _tableExists('habits')) {
+          await mergePlannerCategories();
         }
       }
     },

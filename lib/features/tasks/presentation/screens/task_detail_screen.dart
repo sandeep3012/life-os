@@ -322,12 +322,24 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
   }
 
   Future<void> _editTask(BuildContext context, WidgetRef ref, Task task) async {
-    final result = await showQuickAddTaskSheet(context, initial: task);
+    final seriesId = task.recurrenceId;
+    final head = seriesId == null
+        ? null
+        : (ref.read(allTasksProvider).value ?? const <Task>[])
+              .where((t) => t.id == seriesId)
+              .firstOrNull;
+    final result = await showQuickAddTaskSheet(
+      context,
+      initial: task,
+      seriesSchedule: RepeatSchedule.decode(head?.schedule),
+    );
     if (result == null || !context.mounted) return;
     await ref
         .read(tasksControllerProvider)
         .updateTask(
           task: task,
+          schedule: result.schedule,
+          following: result.editFollowing,
           title: result.title,
           description: result.description,
           categoryId: result.categoryId,
@@ -341,7 +353,9 @@ class _TaskDetailScreenState extends ConsumerState<TaskDetailScreen>
       context,
       ref,
       title: 'Task updated',
-      message: 'Changes to “${result.title}” were saved.',
+      message: result.editFollowing
+          ? 'Changes to “${result.title}” apply to it and every later one.'
+          : 'Changes to “${result.title}” were saved.',
     );
   }
 

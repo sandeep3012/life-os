@@ -5,6 +5,7 @@ import '../../../core/database/app_database_provider.dart';
 import '../../../core/reminders/reminder_mode.dart';
 import '../../../core/services/notification_service.dart';
 import '../../settings/application/settings_providers.dart';
+import '../../../core/database/deleted_rows.dart';
 import '../../../core/scheduling/repeat_schedule.dart';
 import '../data/tasks_repository.dart';
 import '../domain/task_priority.dart';
@@ -113,8 +114,24 @@ class TasksController {
     required TaskPriority priority,
     required bool reminderEnabled,
     required ReminderMode reminderMode,
+    RepeatSchedule? schedule,
+    bool following = false,
   }) async {
     await _notifications.cancelTaskReminder(task.id);
+    // A repeating task, edited for this and all later occurrences.
+    if (following && schedule != null && task.recurrenceId != null) {
+      await _repo.updateFollowingTasks(
+        selected: task,
+        title: title,
+        description: description,
+        categoryId: categoryId,
+        priority: priority.value,
+        reminderEnabled: reminderEnabled,
+        reminderMode: reminderMode.storageValue,
+        schedule: schedule,
+      );
+      return;
+    }
     await _repo.updateTask(
       id: task.id,
       title: title,
@@ -124,13 +141,24 @@ class TasksController {
       priority: priority.value,
       reminderEnabled: reminderEnabled,
       reminderMode: reminderMode.storageValue,
+      schedule: schedule,
     );
   }
 
-  Future<void> deleteTask(Task task) async {
+  /// [following] also deletes the open occurrences after a repeating one.
+  /// Their reminders go with them on the coordinator's next pass.
+  ///
+  /// Returns what went, for [restore].
+  Future<DeletedRows> deleteTask(Task task, {bool following = false}) async {
     await _notifications.cancelTaskReminder(task.id);
-    await _repo.deleteTask(task.id);
+    return following
+        ? _repo.deleteFollowingTasks(task)
+        : _repo.deleteTask(task.id);
   }
+
+  /// Undo for [deleteTask]. Reminders come back with the rows: the schedule
+  /// coordinator watches the tasks table.
+  Future<void> restore(DeletedRows removed) => _repo.restore(removed);
 }
 
 final tasksControllerProvider = Provider<TasksController>((ref) {

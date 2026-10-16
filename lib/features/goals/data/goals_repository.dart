@@ -85,6 +85,17 @@ class GoalsRepository {
         .write(GoalsCompanion(currentValue: Value(currentValue)));
   }
 
+  /// active | completed | abandoned. Completing stamps [Goals.completedAt];
+  /// anything else clears it.
+  Future<void> setStatus(String goalId, String status) {
+    return (_db.update(_db.goals)..where((g) => g.id.equals(goalId))).write(
+      GoalsCompanion(
+        status: Value(status),
+        completedAt: Value(status == 'completed' ? DateTime.now() : null),
+      ),
+    );
+  }
+
   Future<void> setAutomaticProgress(String goalId, bool enabled) {
     return (_db.update(_db.goals)..where((g) => g.id.equals(goalId))).write(
       GoalsCompanion(progressMode: Value(enabled ? 'automatic' : 'manual')),

@@ -12,6 +12,18 @@ abstract final class SystemSettings {
   static bool get canOpenNotificationSettings =>
       !kIsWeb && Platform.isAndroid;
 
+  /// After an alarm is snoozed or dismissed over the lock screen: sends the
+  /// app to the background so the phone shows its lock screen again. Does
+  /// nothing when the phone is unlocked, where the person stays in the app.
+  static Future<void> leaveIfLocked() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod<bool>('leaveIfLocked');
+    } catch (_) {
+      // Only tidies up after the alarm; never worth failing over.
+    }
+  }
+
   /// Android's notification settings for LifeOS — each reminder type's
   /// channel, with its sound. Returns whether it opened.
   static Future<bool> openNotificationSettings() async {

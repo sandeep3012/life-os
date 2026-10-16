@@ -138,13 +138,12 @@ class _QuickAddTransactionSheetState
   @override
   void initState() {
     super.initState();
-    // Editing keeps the entry's own category; a new one starts on the last
-    // used for this kind.
+    // Editing keeps the entry's own category; a new one starts on the top
+    // category for this kind.
     _categoryId ??= startingCategoryId(
       _categories.where(
         (category) => category.kind == (_isExpense ? 'expense' : 'income'),
       ),
-      ref.read(lastUsedCategoryIdProvider(_isExpense)),
     );
     _paymentMode ??= paymentModes.first.id;
     _merchantController.addListener(() => setState(() {}));

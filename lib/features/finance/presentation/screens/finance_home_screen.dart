@@ -1040,6 +1040,8 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
         SnackBar(
           content: Text('Deleted "${t.merchant}"'),
           duration: _undoWindow,
+          // Gone with the undo window, not left up until tapped.
+          persist: false,
           behavior: SnackBarBehavior.floating,
           action: SnackBarAction(
             label: 'Undo',
@@ -1146,6 +1148,7 @@ class _BudgetsSliverState extends ConsumerState<_BudgetsSliver> {
       SnackBar(
         content: Text('Deleted "${p.category.name}" budget'),
         duration: _undoWindow,
+        persist: false,
         behavior: SnackBarBehavior.floating,
         action: SnackBarAction(
           label: 'Undo',

@@ -1,3 +1,4 @@
+import '../../../../core/reminders/reminder_permission_prompt.dart';
 import '../../../../core/widgets/tab_rail.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
@@ -358,7 +359,15 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
             title: const Text('Remind me'),
             subtitle: const Text('Nudge before the event starts'),
             value: _reminderEnabled,
-            onChanged: (v) => setState(() => _reminderEnabled = v),
+            onChanged: (v) {
+                setState(() => _reminderEnabled = v);
+                if (v) {
+                  checkReminderPermissions(
+                    context,
+                    alarm: _reminderMode == ReminderMode.alarm,
+                  );
+                }
+              },
           ),
           if (_reminderEnabled) ...[
             DropdownButtonFormField<int>(
@@ -384,7 +393,12 @@ class _QuickAddEventSheetState extends State<_QuickAddEventSheet> {
                 ReminderMode.notification: LucideIcons.bell,
                 ReminderMode.alarm: LucideIcons.alarmClock,
               },
-              onChanged: (value) => setState(() => _reminderMode = value),
+              onChanged: (value) {
+                  setState(() => _reminderMode = value);
+                  if (value == ReminderMode.alarm) {
+                    checkReminderPermissions(context, alarm: true);
+                  }
+                },
             ),
           ],
           if (!validSchedule)

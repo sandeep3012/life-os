@@ -1,3 +1,4 @@
+import '../../../../core/reminders/reminder_permission_prompt.dart';
 import '../../../../core/widgets/tab_rail.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -27,7 +28,12 @@ class QuickAddTaskResult {
     this.schedule,
     this.reminderEnabled = false,
     this.reminderMode = ReminderMode.notification,
+    this.editFollowing = false,
   });
+
+  /// For a repeating task: apply this to it and every later occurrence,
+  /// not just this one.
+  final bool editFollowing;
 
   final String title;
   final String? description;
@@ -43,23 +49,34 @@ class QuickAddTaskResult {
   final ReminderMode reminderMode;
 }
 
+/// [seriesSchedule] is a repeating task's pattern (it lives on the series'
+/// first task), so editing any occurrence shows — and can change — it.
 Future<QuickAddTaskResult?> showQuickAddTaskSheet(
   BuildContext context, {
   Task? initial,
   DateTime? initialDueDate,
+  RepeatSchedule? seriesSchedule,
 }) {
   return showCompactEditorSheet<QuickAddTaskResult>(
     context: context,
-    builder: (context) =>
-        _QuickAddTaskSheet(initial: initial, initialDueDate: initialDueDate),
+    builder: (context) => _QuickAddTaskSheet(
+      initial: initial,
+      initialDueDate: initialDueDate,
+      seriesSchedule: seriesSchedule,
+    ),
   );
 }
 
 class _QuickAddTaskSheet extends ConsumerStatefulWidget {
-  const _QuickAddTaskSheet({this.initial, this.initialDueDate});
+  const _QuickAddTaskSheet({
+    this.initial,
+    this.initialDueDate,
+    this.seriesSchedule,
+  });
 
   final Task? initial;
   final DateTime? initialDueDate;
+  final RepeatSchedule? seriesSchedule;
 
   @override
   ConsumerState<_QuickAddTaskSheet> createState() => _QuickAddTaskSheetState();
@@ -73,7 +90,15 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
     text: widget.initial?.description ?? '',
   );
   late RepeatSchedule _schedule =
-      RepeatSchedule.decode(widget.initial?.schedule) ??
+      // An occurrence shows its series' pattern, starting from itself.
+      widget.seriesSchedule?.copyWith(
+        start: widget.initial?.dueDate ?? widget.seriesSchedule!.start,
+      ) ??
+      // A task's own stored schedule can be older than its due date (an edit
+      // moved the date): the due date is the truth for when it is.
+      RepeatSchedule.decode(widget.initial?.schedule)?.copyWith(
+        start: widget.initial?.dueDate,
+      ) ??
       RepeatSchedule(
         start:
             widget.initial?.dueDate ?? widget.initialDueDate ?? DateTime.now(),
@@ -107,8 +132,55 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
     super.dispose();
   }
 
+  Future<void> _save() async {
+    var following = false;
+    if (_isRecurring) {
+      final choice = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Edit repeating task'),
+          content: const Text(
+            'Apply these changes to this task only, or to it and every '
+            'later one? Earlier tasks stay as they are.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('This task only'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('This and future tasks'),
+            ),
+          ],
+        ),
+      );
+      if (choice == null || !mounted) return;
+      following = choice;
+    }
+    Navigator.of(context).pop(
+      QuickAddTaskResult(
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        categoryId: _categoryId,
+        schedule: _dueDate == null ? null : _schedule,
+        priority: _priority,
+        dueDate: _dueDate,
+        reminderEnabled: _reminderEnabled,
+        reminderMode: _reminderMode,
+        editFollowing: following,
+      ),
+    );
+  }
+
   Future<void> _addCategory() async {
-    final result = await showCategoryEditorSheet(context, fixedKind: 'task');
+    final result = await showCategoryEditorSheet(context, fixedKind: plannerCategoryKind);
     if (result == null || !mounted) return;
     final db = ref.read(appDatabaseProvider);
     final category = await db
@@ -118,7 +190,7 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
             name: result.name,
             icon: Value(result.icon),
             colorHex: result.colorHex,
-            kind: const Value('task'),
+            kind: const Value(plannerCategoryKind),
           ),
         );
     if (mounted) {
@@ -217,7 +289,9 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
           if (_dueDate != null)
             ScheduleFields(
               value: _schedule,
-              allowRepeatChanges: !_isRecurring,
+              // A repeating task's pattern can't be switched off from one
+              // occurrence; it changes with "This and future tasks".
+              allowRepeatChanges: !_isRecurring || widget.seriesSchedule != null,
               onChanged: (value) => setState(() {
                 _schedule = value;
                 _dueDate = value.start;
@@ -225,7 +299,8 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
             ),
           if (_isRecurring)
             const Text(
-              'Repeating task — this edit applies to this occurrence only.',
+              'Repeating task — when you save, choose this task only or this '
+              'and future ones. Repeat changes apply to future ones only.',
             ),
           if (_dueDate == null)
             const Text('Set a date and time to enable repeats and reminders.'),
@@ -240,7 +315,15 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
             value: _reminderEnabled,
             onChanged: _dueDate == null
                 ? null
-                : (v) => setState(() => _reminderEnabled = v),
+                : (v) {
+                setState(() => _reminderEnabled = v);
+                if (v) {
+                  checkReminderPermissions(
+                    context,
+                    alarm: _reminderMode == ReminderMode.alarm,
+                  );
+                }
+              },
           ),
           if (_dueDate != null && _reminderEnabled)
             Padding(
@@ -255,7 +338,12 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
                   ReminderMode.notification: LucideIcons.bell,
                   ReminderMode.alarm: LucideIcons.alarmClock,
                 },
-                onChanged: (value) => setState(() => _reminderMode = value),
+                onChanged: (value) {
+                  setState(() => _reminderMode = value);
+                  if (value == ReminderMode.alarm) {
+                    checkReminderPermissions(context, alarm: true);
+                  }
+                },
               ),
             ),
           if (_dueDate != null && !_schedule.hasOccurrence)
@@ -268,20 +356,7 @@ class _QuickAddTaskSheetState extends ConsumerState<_QuickAddTaskSheet> {
                   _titleController.text.trim().isEmpty ||
                       (_dueDate != null && !_schedule.hasOccurrence)
                   ? null
-                  : () => Navigator.of(context).pop(
-                      QuickAddTaskResult(
-                        title: _titleController.text.trim(),
-                        description: _descriptionController.text.trim().isEmpty
-                            ? null
-                            : _descriptionController.text.trim(),
-                        categoryId: _categoryId,
-                        schedule: _dueDate == null ? null : _schedule,
-                        priority: _priority,
-                        dueDate: _dueDate,
-                        reminderEnabled: _reminderEnabled,
-                        reminderMode: _reminderMode,
-                      ),
-                    ),
+                  : _save,
               child: Text(_isEditing ? 'Save changes' : 'Add task'),
             ),
           ),

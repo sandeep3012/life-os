@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/deleted_rows.dart';
 
 class NotesRepository {
   NotesRepository(this._db);
@@ -56,7 +57,17 @@ class NotesRepository {
     );
   }
 
-  Future<void> deleteNote(String id) {
-    return (_db.delete(_db.notes)..where((n) => n.id.equals(id))).go();
-  }
+  /// Returns the note as it was, for Undo.
+  Future<DeletedRows> deleteNote(String id) => _db.transaction(() async {
+    final removed = DeletedRows()
+      ..addAll(
+        _db.notes,
+        await (_db.select(_db.notes)..where((n) => n.id.equals(id))).get(),
+      );
+    await (_db.delete(_db.notes)..where((n) => n.id.equals(id))).go();
+    return removed;
+  });
+
+  /// Puts back what a delete removed.
+  Future<void> restore(DeletedRows removed) => removed.restore(_db);
 }

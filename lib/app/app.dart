@@ -22,6 +22,11 @@ import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/home_widget/application/home_widget_sync.dart';
 import '../core/reminders/alarm_tone_sync.dart';
 import '../core/services/budget_alert_sound.dart';
+import '../features/sync/application/sync_providers.dart';
+import '../features/sync/presentation/sync_screen.dart';
+import 'router/route_paths.dart';
+import '../core/reminders/ringing_alarm_controller.dart';
+import '../core/widgets/alarm_ringing_layer.dart';
 
 class LifeOSApp extends ConsumerStatefulWidget {
   const LifeOSApp({super.key});
@@ -59,6 +64,8 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     WidgetsBinding.instance.addObserver(this);
     // Touches no database, so it can't get in the way of the settings read.
     ref.read(notificationServiceProvider).init();
+    // An alarm that opened the app shows its ringing screen straight away.
+    ref.read(ringingAlarmProvider.notifier).start();
     if (_playLaunch) _launchPlayed = true;
   }
 
@@ -84,6 +91,9 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     final finance = ref.read(financeRepositoryProvider);
     finance.ensureDefaultCategories();
     finance.ensureDefaultAccountTypes();
+    // Habit-only categories from a backup or an older phone's sync join the
+    // list tasks and habits share.
+    ref.read(appDatabaseProvider).mergePlannerCategories();
     finance.generateDueRecurringTransactions();
     // Before the coordinator queues anything, so alarms use the saved tone.
     ref.read(alarmToneSyncProvider).start();
@@ -91,6 +101,9 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     // The Android home-screen widget follows the app's data from here on.
     ref.read(homeWidgetSyncProvider).start();
     ref.read(budgetAlertSoundProvider).start();
+    // Sync, if this build has it and someone's signed in. Never in the way
+    // of a screen: the app only ever reads its own database.
+    ref.read(syncControllerProvider.notifier).start();
     // A new user is asked for reminder permissions during onboarding, where
     // the reason is on screen; everyone past it is asked here as before (a
     // no-op once they've answered).
@@ -162,6 +175,7 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
       // Coming back on a new day: the widget's "today" moved even though no
       // task or habit did.
       if (_choresStarted) ref.read(homeWidgetSyncProvider).refreshNow();
+      if (_choresStarted) ref.read(syncControllerProvider.notifier).onResumed();
     }
     if (!ref.read(settingsProvider).appLockEnabled) return;
     final policy = ref.read(relockPolicyProvider);
@@ -199,8 +213,25 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     });
   }
 
+  /// A password-reset link opened the app: take the person to sync's screen
+  /// and ask for the new password there.
+  void _onChoosingNewPassword(bool? _, bool choosing) {
+    if (!choosing) return;
+    _router.go(RoutePaths.sync);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = _router.routerDelegate.navigatorKey.currentContext;
+      if (context != null && mounted) {
+        SyncScreen.chooseNewPassword(context, ref);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen(
+      syncControllerProvider.select((s) => s.choosingNewPassword),
+      _onChoosingNewPassword,
+    );
     // The colour theme is stored in the database, so it isn't known on the
     // first frames; painting the app then would flash the default theme. On a
     // cold start the launch animation covers that time (and Home's data
@@ -285,11 +316,18 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
           data: media.copyWith(
             disableAnimations: media.disableAnimations || settings.reduceMotion,
           ),
-          child: showLockScreen
-              ? const LockScreen()
-              : showOnboarding
-              ? const OnboardingScreen()
-              : child ?? const SizedBox.shrink(),
+          // The ringing alarm sits above everything, app lock included.
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              showLockScreen
+                  ? const LockScreen()
+                  : showOnboarding
+                  ? const OnboardingScreen()
+                  : child ?? const SizedBox.shrink(),
+              const AlarmRingingLayer(),
+            ],
+          ),
         );
       },
     );

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/services/file_storage_service.dart';
@@ -48,6 +49,13 @@ class FinanceRepository {
   final AppDatabase _db;
   final FileStorageService _storage;
 
+  /// The same id on every phone for the same built-in row, so two phones
+  /// that each seeded the defaults sync to one "Dining", not two.
+  static String defaultRowId(String name) =>
+      const Uuid().v5(_defaultsNamespace, name);
+
+  static const _defaultsNamespace = '6f1d2c4e-8a3b-4e5f-9d7c-1b2a3c4d5e6f';
+
   Future<void> ensureDefaultCategories() async {
     final existing = await _db.select(_db.categories).get();
     if (existing.isNotEmpty) return;
@@ -55,6 +63,7 @@ class FinanceRepository {
       batch.insertAll(_db.categories, [
         for (final (name, icon, color, kind) in _defaultCategories)
           CategoriesCompanion.insert(
+            id: Value(defaultRowId('category:$kind:$name')),
             name: name,
             icon: Value(icon),
             colorHex: color,
@@ -70,7 +79,11 @@ class FinanceRepository {
     await _db.batch((batch) {
       batch.insertAll(_db.accountTypes, [
         for (final (name, icon) in _defaultAccountTypes)
-          AccountTypesCompanion.insert(name: name, icon: Value(icon)),
+          AccountTypesCompanion.insert(
+            id: Value(defaultRowId('account-type:$name')),
+            name: name,
+            icon: Value(icon),
+          ),
       ]);
     });
   }
@@ -151,17 +164,6 @@ class FinanceRepository {
     }
   });
 
-  /// Makes [id] the default account — or, with null, clears the default so
-  /// new entries start on the last account used.
-  Future<void> setDefaultAccount(String? id) => _db.transaction(() async {
-    await _db
-        .update(_db.accounts)
-        .write(const AccountsCompanion(isDefault: Value(false)));
-    if (id != null) {
-      await (_db.update(_db.accounts)..where((a) => a.id.equals(id)))
-          .write(const AccountsCompanion(isDefault: Value(true)));
-    }
-  });
 
   Future<Category> updateCategory({
     required String id,
@@ -295,16 +297,33 @@ class FinanceRepository {
           name: name,
           type: type,
           balanceMinor: Value(balanceMinor),
+          openingBalanceMinor: Value(balanceMinor),
           position: Value(await _nextPosition(_db.accounts)),
         ),
       );
     });
   }
 
+  /// A balance typed in here is a correction, so it moves the opening
+  /// balance too: the transactions already recorded still add up to it.
   Future<void> updateAccount({required String id, required String name, required String type, required int balanceMinor}) {
-    return (_db.update(_db.accounts)..where((a) => a.id.equals(id))).write(
-      AccountsCompanion(name: Value(name), type: Value(type), balanceMinor: Value(balanceMinor), updatedAt: Value(DateTime.now())),
-    );
+    return _db.transaction(() async {
+      final sum = _db.transactions.amountMinor.sum();
+      final recorded = await (_db.selectOnly(_db.transactions)
+            ..addColumns([sum])
+            ..where(_db.transactions.accountId.equals(id)))
+          .map((row) => row.read(sum) ?? 0)
+          .getSingle();
+      await (_db.update(_db.accounts)..where((a) => a.id.equals(id))).write(
+        AccountsCompanion(
+          name: Value(name),
+          type: Value(type),
+          balanceMinor: Value(balanceMinor),
+          openingBalanceMinor: Value(balanceMinor - recorded),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
+    });
   }
 
   /// How many other rows reference this account — the gate for whether it

@@ -222,11 +222,8 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
                   const Divider(),
                   ListTile(
                     leading: const Icon(LucideIcons.tags),
-                    title: Text(
-                      habits
-                          ? 'Manage habit categories'
-                          : 'Manage task categories',
-                    ),
+                    // One list, shared by tasks and habits.
+                    title: const Text('Manage task & habit categories'),
                     onTap: () => Navigator.pop(sheetContext, true),
                   ),
                   if (habits)
@@ -248,8 +245,7 @@ class _TasksHabitsScreenState extends ConsumerState<TasksHabitsScreen> {
     if (manage != true || !mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            PlannerCategoriesScreen(kind: habits ? 'habit' : 'task'),
+        builder: (_) => const PlannerCategoriesScreen(),
       ),
     );
   }

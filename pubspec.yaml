@@ -70,8 +70,10 @@ dependencies:
   # the native launch screen up until the first screen has its data, so the
   # app never shows a splash-then-blank-then-content sequence on launch.
   flutter_native_splash: ^2.4.8
-  home_widget: ^0.10.0
   audioplayers: ^6.8.1
+  supabase_flutter: ^2.18.2
+  cryptography: ^2.9.0
+  open_filex: ^4.7.0
 
 dev_dependencies:
   flutter_test:

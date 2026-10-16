@@ -17,6 +17,7 @@ import '../../application/documents_providers.dart';
 import '../../domain/document_type.dart';
 import '../../domain/folder_tree.dart';
 import '../widgets/document_tile.dart';
+import 'document_viewer_screen.dart';
 import '../widgets/folder_editor_sheet.dart';
 import '../widgets/folder_tile.dart';
 import '../widgets/pinned_document_card.dart';
@@ -119,7 +120,13 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                     return PinnedDocumentCard(
                       key: ValueKey(d.id),
                       document: d,
-                      onTap: () => _editDocument(d),
+                      onTap: () => openDocument(
+                        context,
+                        ref,
+                        d,
+                        onEdit: () => _editDocument(d),
+                      ),
+                      onLongPress: () => _editDocument(d),
                       onUnpin: () => ref
                           .read(documentsControllerProvider)
                           .pinDocument(d.id, pinned: false),
@@ -279,10 +286,14 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                       key: ValueKey(d.id),
                       grid: false,
                       document: d,
-                      onDelete: () => ref
-                          .read(documentsControllerProvider)
-                          .deleteDocument(d),
-                      onTap: () => _editDocument(d),
+onDelete: () => deleteDocumentWithUndo(context, ref, d),
+                      onTap: () => openDocument(
+                        context,
+                        ref,
+                        d,
+                        onEdit: () => _editDocument(d),
+                      ),
+                      onLongPress: () => _editDocument(d),
                     ),
                   );
                 },

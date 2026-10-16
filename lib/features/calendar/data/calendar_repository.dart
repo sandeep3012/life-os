@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/deleted_rows.dart';
 import '../../../core/reminders/reminder_mode.dart';
 import '../../../core/scheduling/repeat_schedule.dart';
 
@@ -366,9 +367,19 @@ class CalendarRepository {
   /// id` head lookup in [extendRecurringEvents] no longer matches);
   /// already-generated future occurrences are unaffected and remain as
   /// ordinary events. Use [deleteEventSeries] to remove a whole series.
-  Future<void> deleteEvent(String id) {
-    return (_db.delete(_db.events)..where((e) => e.id.equals(id))).go();
-  }
+  /// Returns the event as it was, for Undo.
+  Future<DeletedRows> deleteEvent(String id) => _db.transaction(() async {
+    final removed = DeletedRows()
+      ..addAll(
+        _db.events,
+        await (_db.select(_db.events)..where((e) => e.id.equals(id))).get(),
+      );
+    await (_db.delete(_db.events)..where((e) => e.id.equals(id))).go();
+    return removed;
+  });
+
+  /// Puts back what a delete removed.
+  Future<void> restore(DeletedRows removed) => removed.restore(_db);
 
   /// Every event sharing [recurrenceId] — the head row plus every generated
   /// occurrence. Used to look up which ids need their reminders cancelled
@@ -381,11 +392,16 @@ class CalendarRepository {
 
   /// Deletes every event sharing [recurrenceId] — the head row and every
   /// generated occurrence — in one query.
-  Future<void> deleteEventSeries(String recurrenceId) {
-    return (_db.delete(
-      _db.events,
-    )..where((e) => e.recurrenceId.equals(recurrenceId))).go();
-  }
+  /// Returns the whole series as it was, for Undo.
+  Future<DeletedRows> deleteEventSeries(String recurrenceId) =>
+      _db.transaction(() async {
+        final removed = DeletedRows()
+          ..addAll(_db.events, await getEventsInSeries(recurrenceId));
+        await (_db.delete(
+          _db.events,
+        )..where((e) => e.recurrenceId.equals(recurrenceId))).go();
+        return removed;
+      });
 
   /// App-start top-up: for every still-active recurring series (a head row
   /// where `recurrenceId == id` and `frequency != 'none'`), generates any

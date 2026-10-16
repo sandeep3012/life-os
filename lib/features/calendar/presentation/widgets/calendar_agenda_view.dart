@@ -361,17 +361,18 @@ class _CalendarAgendaViewState extends State<CalendarAgendaView> {
               ),
               if (!_todayVisible)
                 Positioned(
-                  // At the start edge, not centred: on a phone the extended
-                  // "New event" button reaches past the middle of the screen
-                  // and covered a centred chip, swallowing taps on it.
-                  left: 20,
+                  // Centred. The chip only shows once the agenda has been
+                  // scrolled away from today, and by then the "New event"
+                  // button has folded to a round + at the end edge, clear of
+                  // the middle.
+                  left: 0,
+                  right: 0,
                   // Match the Scaffold's end-float FAB bottom margin. Remove
                   // the chip's invisible tap-target padding so visible edges align.
                   bottom:
                       kFloatingActionButtonMargin +
                       MediaQuery.viewPaddingOf(context).bottom,
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
+                  child: Center(
                     child: ActionChip(
                       key: const ValueKey('agenda-today-action'),
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

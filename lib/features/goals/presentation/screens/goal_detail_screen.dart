@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -81,7 +82,12 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          _GoalStatusSection(
+            goal: goal,
+            reached: data.progressReady && data.ratio >= 1,
+          ),
+          const SizedBox(height: 12),
           SwitchListTile(
             title: const Text('Automatic progress'),
             subtitle: Text(switch (goal.type) {
@@ -131,26 +137,30 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
                 const SizedBox(width: 16),
                 IconButton.filledTonal(
                   icon: const Icon(LucideIcons.plus),
-                  onPressed: () {
+                  onPressed: () async {
                     final newValue = goal.currentValue + step;
                     ref
                         .read(goalsControllerProvider)
                         .updateProgress(goal.id, newValue);
                     final target = goal.targetValue;
-                    if (data.ratio < 1 &&
+                    if (goal.status == 'active' &&
+                        data.ratio < 1 &&
                         target != null &&
                         target > 0 &&
                         newValue >= target) {
                       ref
                           .read(soundEffectsProvider)
                           .play(SoundEffect.goalReached);
-                      showCelebration(
+                      await showCelebration(
                         context,
                         ref,
                         title: 'Goal reached!',
-                        message: '"${goal.title}" is complete.',
+                        message: 'You hit the target for "${goal.title}".',
                         emoji: '🏆',
                       );
+                      if (context.mounted) {
+                        await _offerCompletion(context, ref, goal);
+                      }
                     }
                   },
                 ),
@@ -399,5 +409,141 @@ class _AddMilestoneRowState extends ConsumerState<_AddMilestoneRow> {
         ),
       ],
     );
+  }
+}
+
+/// Reaching the target doesn't finish a goal by itself — an automatic one
+/// can dip back below it — so this asks.
+Future<void> _offerCompletion(
+  BuildContext context,
+  WidgetRef ref,
+  Goal goal,
+) async {
+  final complete = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Mark this goal complete?'),
+      content: Text(
+        '"${goal.title}" has reached its target. Completing it moves it to '
+        'the Completed tab and stops its reminder.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Keep going'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Mark complete'),
+        ),
+      ],
+    ),
+  );
+  if (complete == true) {
+    await ref.read(goalsControllerProvider).setStatus(goal, 'completed');
+  }
+}
+
+/// Where the goal stands, and the way to change it: complete or abandon an
+/// active goal, reopen a finished one.
+class _GoalStatusSection extends ConsumerWidget {
+  const _GoalStatusSection({required this.goal, required this.reached});
+
+  final Goal goal;
+  final bool reached;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final controller = ref.read(goalsControllerProvider);
+
+    if (goal.status != 'active') {
+      final completed = goal.status == 'completed';
+      final at = goal.completedAt;
+      return Card(
+        margin: EdgeInsets.zero,
+        child: ListTile(
+          leading: Icon(
+            completed ? LucideIcons.circleCheck : LucideIcons.circleSlash,
+            color: completed ? scheme.primary : scheme.onSurfaceVariant,
+          ),
+          title: Text(completed ? 'Completed' : 'Abandoned'),
+          subtitle: completed && at != null
+              ? Text('On ${DateFormat('d MMM yyyy').format(at)}')
+              : null,
+          trailing: TextButton(
+            onPressed: () => controller.setStatus(goal, 'active'),
+            child: const Text('Reopen'),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (reached)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Target reached.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            reached
+                ? FilledButton.icon(
+                    onPressed: () => controller.setStatus(goal, 'completed'),
+                    icon: const Icon(LucideIcons.check, size: 18),
+                    label: const Text('Mark complete'),
+                  )
+                : OutlinedButton.icon(
+                    onPressed: () => controller.setStatus(goal, 'completed'),
+                    icon: const Icon(LucideIcons.check, size: 18),
+                    label: const Text('Mark complete'),
+                  ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () => _confirmAbandon(context, controller),
+              child: const Text('Abandon'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmAbandon(
+    BuildContext context,
+    GoalsController controller,
+  ) async {
+    final abandon = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Abandon this goal?'),
+        content: const Text(
+          'It moves to the Abandoned tab and its reminder stops. You can '
+          'reopen it any time.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Abandon'),
+          ),
+        ],
+      ),
+    );
+    if (abandon == true) await controller.setStatus(goal, 'abandoned');
   }
 }

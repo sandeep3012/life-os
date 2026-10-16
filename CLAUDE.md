@@ -284,12 +284,11 @@ doesn't exist, not by preference:
   module behind them.
 - The entry sheet omits the comp's **recurring block**: recurring entries are a
   separate table with their own sheet, which the menu's Recurring tile opens.
-- Login/Signup are built but **not wired to a backend**. Sync is a paid, opt-in
-  feature; free use stays fully local with no account, so nothing routes to them
-  on launch — they hang off the sidebar. `features/auth/application/sync_auth_providers.dart`
-  is the single seam: it returns `SyncAuthNotConfigured` and the screens surface
-  that verbatim. **Do not make it fake a success.** Wiring it needs
-  `supabase_flutter`, a project URL + anon key, and deep links on both platforms.
+- Login/Signup talk to **Supabase**, but only in a build given
+  `--dart-define=SUPABASE_PUBLISHABLE_KEY=…` (see `supabase/README.md`). Without
+  it `sync_auth_providers.dart` returns `SyncAuthNotConfigured` and the screens
+  say so verbatim — **do not make it fake a success.** Sync is opt-in; free use
+  stays fully local and nothing routes to sign-in on launch.
 - Social buttons carry **placeholder marks**. Google's multicolour "G" and the
   Apple logo must be their official assets per brand guidelines; a hand-drawn
   approximation would breach those.
@@ -420,7 +419,64 @@ dumps it.
 `git worktree add --detach <dir> HEAD` gives a clean checkout to run the same
 test against, without touching your working tree.
 
+## Sync (`features/sync/`, server in `supabase/`)
+
+Optional, end-to-end encrypted, last-edit-wins per row. The app never waits
+on the network: screens read and write Drift as always, and sync runs beside it.
+
+- **Triggers, not code paths, record changes.** `LocalSyncStore.installTriggers`
+  adds insert/update/delete triggers to every synced table (all but `insights`,
+  `app_settings` and the `sync_*` tables) writing to `sync_outbox`. They exist
+  only while sync is on, skip `demo-` rows, and stand aside while
+  `sync_state.applying_remote = '1'` so downloads don't echo back up. A new
+  table syncs automatically — exclude it in `_localOnly` if it shouldn't.
+- **Applying downloads uses raw SQL**, so it calls `markTablesUpdated` itself
+  (the stream trap above). It upserts with `ON CONFLICT DO UPDATE`, never
+  `INSERT OR REPLACE`, which deletes the row first.
+- **Balances are derived under sync.** `Accounts.openingBalanceMinor` (v34) plus
+  the account's transactions is the balance; it's recomputed after each
+  download. The accounts update trigger ignores `balance_minor`/`updated_at`,
+  so one phone's running total can't overwrite another's. Anything that sets a
+  balance outside `updateAccount` must keep the opening in step (restore does).
+- **Server record ids are UUIDv5 of `table:key`** — stable across phones and
+  revealing nothing. Built-in categories/account types get v5 ids too
+  (`FinanceRepository.defaultRowId`), and `mergeDuplicateDefaults` folds
+  pre-existing random-id duplicates into one.
+- **Keys:** a random data key in the keychain (`SecureSyncKeyStore`), wrapped on
+  the server by the recovery key (HKDF-SHA256 → XChaCha20-Poly1305, via the
+  `cryptography` package). Lose every phone and the recovery key, and the data
+  is unrecoverable by design.
+- Tests run two "phones" against an in-memory server (`test/features/sync/`);
+  `FakeSyncServer` mirrors the SQL functions' rules, so change both together.
+
+## Reminders, task series, shared categories
+
+- **Alarm-mode reminders ring with a screen.** An alarm's notification payload
+  carries a second line of JSON (`RingingAlarm.detailsLine`) — title, body,
+  kind — so Snooze works from a background isolate (`alarmActionInBackground`)
+  and the ringing screen (`AlarmRingingLayer`, mounted above app lock in
+  `app.dart`'s builder) has something to show. The first line is still what
+  `replaceScheduledReminders` compares; a snooze's payload starts
+  `lifeos.snooze:` so the reconciler never cancels it. After Snooze or Dismiss
+  over the lock screen, `SystemSettings.leaveIfLocked` sends the app back.
+  iOS can't take over the screen: there the buttons are on the notification.
+- **Repeating tasks edit "this" or "this and future".** A series is one row
+  per occurrence; the pattern lives on the head row. `updateFollowingTasks`
+  splits the series at the edited occurrence (caps the old head's `end`) and
+  makes it a new head — rewriting later rows in place when the days are the
+  same, rebuilding open ones when the pattern changed. Past and done rows are
+  never touched.
+- **Tasks and habits share one category list**, stored as kind `task`
+  (`plannerCategoryKind`). `AppDatabase.mergePlannerCategories` folds legacy
+  `habit` rows in (same name → merge, else re-kind); it runs in the v35
+  upgrade and at every launch, so restored backups and older phones' sync
+  data join too.
+
 ## Known gaps (not yet done)
+
+- Sync: document files, background sync while closed, and payments
+  (RevenueCat) aren't built. Uploads need an `entitlements` row, granted by
+  hand for now (`supabase/README.md`).
 
 - Release signing (`android/key.properties` / keystore) is deliberately not
   set up yet.

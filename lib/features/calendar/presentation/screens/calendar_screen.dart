@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -6,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/undo_snack_bar.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/surface_card.dart';
@@ -124,7 +126,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     return Scaffold(
       drawer: const AppSidebar(),
-      body: Column(
+      // Any scroll the person makes — the month list, the agenda — folds
+      // the button to its icon; scrolling back to the top unfolds it.
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _onScroll,
+        child: Column(
         children: [
           SafeArea(
             bottom: false,
@@ -334,7 +340,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           ),
         ],
       ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
+        isExtended: true,
+        extendedIconLabelSpacing: _fabExtended ? 8 : 0,
+        extendedPadding: EdgeInsets.symmetric(
+          horizontal: _fabExtended ? 20 : 16,
+        ),
+        tooltip: 'New event',
         onPressed: () async {
           final result = await showQuickAddEventSheet(
             context,
@@ -359,8 +372,62 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           _acknowledgeEventSave(updated: false);
         },
         icon: const Icon(LucideIcons.plus),
-        label: const Text('New event'),
+        // The label folds away rather than snapping, so the button shrinks
+        // to a round + without a jump.
+        label: AnimatedSize(
+          duration: AppMotion.of(context, const Duration(milliseconds: 200)),
+          curve: Curves.easeOutCubic,
+          child: _fabExtended
+              ? const Text('New event')
+              : const SizedBox.shrink(),
+        ),
       ),
+    );
+  }
+
+  /// "New event" with its label at first; just + once the person scrolls,
+  /// so the button stops covering the list (and the agenda's Today chip).
+  bool _fabExtended = true;
+
+  ScrollDirection _lastScroll = ScrollDirection.idle;
+
+  bool _onScroll(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    final atTop =
+        notification.metrics.pixels <= notification.metrics.minScrollExtent;
+    if (notification is UserScrollNotification) {
+      if (notification.direction != ScrollDirection.idle) {
+        _lastScroll = notification.direction;
+      }
+      // Moving down the list folds it; pulling back to the top unfolds it.
+      if (notification.direction == ScrollDirection.reverse && _fabExtended) {
+        setState(() => _fabExtended = false);
+      }
+    } else if (notification is ScrollEndNotification &&
+        atTop &&
+        _lastScroll == ScrollDirection.forward &&
+        !_fabExtended) {
+      setState(() => _fabExtended = true);
+    }
+    return false;
+  }
+
+  /// Deletes one event or its whole series, then offers Undo.
+  Future<void> _deleteWithUndo(
+    _DeleteChoice choice,
+    String eventId,
+    String? recurrenceId,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = ref.read(calendarControllerProvider);
+    final series = choice == _DeleteChoice.allInSeries && recurrenceId != null;
+    final removed = series
+        ? await controller.deleteEventSeries(recurrenceId)
+        : await controller.deleteEvent(eventId);
+    showUndoSnackBar(
+      messenger,
+      message: series ? 'Repeating event deleted' : 'Event deleted',
+      onUndo: () => controller.restore(removed),
     );
   }
 
@@ -393,18 +460,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           context,
           isPartOfSeries: recurrenceId != null,
         );
-        switch (choice) {
-          case _DeleteChoice.cancel:
-            return false;
-          case _DeleteChoice.thisEvent:
-            await ref.read(calendarControllerProvider).deleteEvent(eventId);
-            return true;
-          case _DeleteChoice.allInSeries:
-            await ref
-                .read(calendarControllerProvider)
-                .deleteEventSeries(recurrenceId!);
-            return true;
-        }
+        if (choice == _DeleteChoice.cancel) return false;
+        await _deleteWithUndo(choice, eventId, recurrenceId);
+        return true;
       },
       child: CalendarItemTile(
         item: item,
@@ -475,16 +533,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           context,
           isPartOfSeries: event.recurrenceId != null,
         );
-        switch (choice) {
-          case _DeleteChoice.cancel:
-            return;
-          case _DeleteChoice.thisEvent:
-            await ref.read(calendarControllerProvider).deleteEvent(eventId);
-          case _DeleteChoice.allInSeries:
-            await ref
-                .read(calendarControllerProvider)
-                .deleteEventSeries(event.recurrenceId!);
-        }
+        if (choice == _DeleteChoice.cancel) return;
+        await _deleteWithUndo(choice, eventId, event.recurrenceId);
       },
     );
     if (result == null) return;

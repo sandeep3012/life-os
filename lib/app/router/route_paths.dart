@@ -33,6 +33,7 @@ class RoutePaths {
 
   // Sync account. Outside the shell: these are full-screen and carry no bottom
   // nav, and nothing routes here on launch — free use needs no account.
+  static const sync = '/sync';
   static const syncSignIn = '/sync/sign-in';
   static const syncSignUp = '/sync/sign-up';
 }

@@ -7,25 +7,22 @@ import '../../../../core/database/app_database_provider.dart';
 import '../../../../core/widgets/inline_add_button.dart';
 import '../../../finance/application/finance_providers.dart';
 import '../../../finance/presentation/screens/category_management_screen.dart';
-import '../../../habits/application/habits_providers.dart';
 import '../../application/tasks_providers.dart';
 import '../../data/planner_categories_repository.dart';
 
+/// The one category list tasks and habits share — reached from either the
+/// Tasks or the Habits screen.
 class PlannerCategoriesScreen extends ConsumerWidget {
-  const PlannerCategoriesScreen({super.key, required this.kind})
-    : assert(kind == 'task' || kind == 'habit');
-  final String kind;
+  const PlannerCategoriesScreen({super.key});
+
+  static const kind = plannerCategoryKind;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categories = kind == 'task'
-        ? ref.watch(taskCategoriesProvider)
-        : ref.watch(habitCategoriesProvider);
+    final categories = ref.watch(taskCategoriesProvider);
     return InlineAddHost(
       builder: (context, inlineAddVisible, onInlineAddVisibility) => Scaffold(
-        appBar: AppBar(
-          title: Text(kind == 'task' ? 'Task categories' : 'Habit categories'),
-        ),
+        appBar: AppBar(title: const Text('Task & habit categories')),
         body: categories.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (_, _) =>
@@ -120,7 +117,8 @@ class PlannerCategoriesScreen extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: const Text('Delete category?'),
         content: Text(
-          'Delete “${category.name}”? Its ${kind == 'task' ? 'tasks' : 'habits'} will be kept without a category.',
+          'Delete “${category.name}”? Tasks and habits in it are kept, '
+          'without a category.',
         ),
         actions: [
           TextButton(
@@ -138,7 +136,7 @@ class PlannerCategoriesScreen extends ConsumerWidget {
     try {
       await PlannerCategoriesRepository(
         ref.read(appDatabaseProvider),
-      ).delete(category.id, kind);
+      ).delete(category.id);
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -117,7 +117,7 @@ void main() {
     ),
     _Screen(
       name: 'task categories',
-      build: () => const PlannerCategoriesScreen(kind: 'task'),
+      build: () => const PlannerCategoriesScreen(),
       seed: (db, repo, n) async {
         for (var i = 1; i <= n; i++) {
           await db

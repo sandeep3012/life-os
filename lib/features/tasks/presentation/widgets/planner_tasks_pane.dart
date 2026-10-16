@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../../core/widgets/undo_snack_bar.dart';
+import '../../../../core/database/app_database_provider.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -332,6 +334,8 @@ class _PlannerTasksPaneState extends ConsumerState<PlannerTasksPane> {
       );
     }
     final task = entry as Task;
+    // Set by the confirm step for a repeating task, read by onDelete.
+    var following = false;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 16),
       child: TaskTile(
@@ -344,7 +348,29 @@ class _PlannerTasksPaneState extends ConsumerState<PlannerTasksPane> {
             ?.name,
         onOpen: () => context.push(RoutePaths.taskDetail(task.id)),
         onToggle: () => ref.read(tasksControllerProvider).toggleDone(task),
-        onDelete: () => ref.read(tasksControllerProvider).deleteTask(task),
+        confirmDelete: task.recurrenceId == null
+            ? null
+            : () async {
+                final choice = await askRepeatingTaskDelete(context);
+                if (choice == null) return false;
+                following = choice;
+                return true;
+              },
+        onDelete: () async {
+          final messenger = ScaffoldMessenger.of(context);
+          final controller = ref.read(tasksControllerProvider);
+          final tasksTable = ref.read(appDatabaseProvider).tasks;
+          final removed = await controller.deleteTask(
+            task,
+            following: following,
+          );
+          final count = removed.countOf(tasksTable);
+          showUndoSnackBar(
+            messenger,
+            message: count > 1 ? '$count tasks deleted' : 'Task deleted',
+            onUndo: () => controller.restore(removed),
+          );
+        },
       ),
     );
   }
@@ -571,3 +597,31 @@ class _PlannerTasksPaneState extends ConsumerState<PlannerTasksPane> {
     );
   }
 }
+
+/// Which occurrences of a repeating task to delete: true for this and the
+/// later ones, false for this one, null to keep it.
+Future<bool?> askRepeatingTaskDelete(BuildContext context) =>
+    showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete repeating task'),
+        content: const Text(
+          'Delete this task only, or it and every later one? Earlier tasks '
+          'and ones already done stay.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('This task only'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('This and future tasks'),
+          ),
+        ],
+      ),
+    );

@@ -34,6 +34,7 @@ import '../widgets/reminder_status_card.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../ai_analyser/application/ai_analyser_providers.dart';
+import '../../../sync/application/sync_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -352,6 +353,9 @@ class SettingsScreen extends ConsumerWidget {
 
           const _SectionTitle('Security'),
           const _SecuritySection(),
+
+          const _SectionTitle('Sync'),
+          const _SyncRow(),
 
           const _SectionTitle('Data'),
           const _BackupCard(),
@@ -1272,6 +1276,35 @@ class _MiniSpinner extends StatelessWidget {
       width: 18,
       height: 18,
       child: CircularProgressIndicator(strokeWidth: 2),
+    );
+  }
+}
+
+/// Settings → Sync: where sync stands, one tap from its own screen.
+class _SyncRow extends ConsumerWidget {
+  const _SyncRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(syncControllerProvider);
+    final subtitle = switch (status.phase) {
+      SyncPhase.unavailable => 'Not available in this build',
+      SyncPhase.signedOut => 'Off — your data is on this device only',
+      SyncPhase.checking => 'Checking…',
+      SyncPhase.needsSetup => 'Signed in — finish setting up',
+      SyncPhase.needsRecoveryKey => 'Signed in — enter your recovery key',
+      SyncPhase.ready =>
+        status.error != null
+            ? 'Waiting to sync'
+            : 'On · ${status.email ?? 'signed in'}',
+    };
+    return Card(
+      child: _SettingRow(
+        icon: LucideIcons.cloud,
+        title: 'Sync & account',
+        subtitle: subtitle,
+        onTap: () => context.push(RoutePaths.sync),
+      ),
     );
   }
 }

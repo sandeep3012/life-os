@@ -267,7 +267,7 @@ class AppSidebar extends ConsumerWidget {
                       _Item(
                         icon: LucideIcons.cloud,
                         label: 'Sync & account',
-                        path: RoutePaths.syncSignIn,
+                        path: RoutePaths.sync,
                         current: current,
                       ),
                       _Item(

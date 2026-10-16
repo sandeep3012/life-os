@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../app/haptics.dart';
 import '../../../../core/utils/category_color.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../../../core/widgets/compact_editor_sheet.dart';
 import '../../../../core/widgets/inline_add_button.dart';
+import '../../../../core/widgets/reorder_card.dart';
+import '../../../../core/widgets/section_header.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
 
@@ -32,12 +35,21 @@ class CategoryEditorResult {
     required this.icon,
     required this.colorHex,
     required this.kind,
-  });
+  }) : delete = false;
+
+  /// The sheet's Delete button: remove the category being edited.
+  const CategoryEditorResult.delete()
+    : name = '',
+      icon = '',
+      colorHex = '',
+      kind = '',
+      delete = true;
 
   final String name;
   final String icon;
   final String colorHex;
   final String kind;
+  final bool delete;
 }
 
 /// Opens the add/edit category sheet directly — used by the category
@@ -49,21 +61,29 @@ class CategoryEditorResult {
 /// Expense/Income toggle — for callers outside finance (e.g. the habit
 /// category picker, which creates `kind: 'habit'` rows) where that toggle
 /// wouldn't make sense.
+///
+/// [allowDelete] adds a Delete button when editing, which returns
+/// [CategoryEditorResult.delete] — the management screen's only way to
+/// delete, so its rows stay uncluttered.
 Future<CategoryEditorResult?> showCategoryEditorSheet(
   BuildContext context, {
   Category? existing,
   String? fixedKind,
+  bool allowDelete = false,
 }) {
   return showCompactEditorSheet<CategoryEditorResult>(
     context: context,
-    builder: (context) =>
-        _CategoryEditorSheet(existing: existing, fixedKind: fixedKind),
+    builder: (context) => _CategoryEditorSheet(
+      existing: existing,
+      fixedKind: fixedKind,
+      allowDelete: allowDelete,
+    ),
   );
 }
 
-/// Every category, in the order the pickers offer them. Drag the handle to
-/// move one; a new transaction starts on the category last used for its kind,
-/// else the first one here.
+/// Every category, in the order the pickers offer them, expense and income
+/// apart. Hold and drag to move one; the top of each list is what a new
+/// entry of that kind starts on. Tap one to edit or delete it.
 class CategoryManagementScreen extends ConsumerStatefulWidget {
   const CategoryManagementScreen({super.key});
 
@@ -78,11 +98,25 @@ class _CategoryManagementScreenState
   /// without it the row would jump back for a frame before settling.
   List<Category>? _dropped;
 
-  void _onReorder(List<Category> categories, int oldIndex, int newIndex) {
-    final next = List.of(categories);
-    final moved = next.removeAt(oldIndex);
-    next.insert(newIndex, moved);
+  /// Moves one category within its own kind; the other kind keeps its order.
+  void _onReorder(
+    List<Category> all,
+    String kind,
+    int oldIndex,
+    int newIndex,
+  ) {
+    final ofKind = [
+      for (final c in all)
+        if (c.kind == kind) c,
+    ];
+    ofKind.insert(newIndex, ofKind.removeAt(oldIndex));
+    final next = [
+      ...ofKind,
+      for (final c in all)
+        if (c.kind != kind) c,
+    ];
     setState(() => _dropped = next);
+    ref.read(hapticsProvider).light();
     ref
         .read(financeControllerProvider)
         .reorderCategories([for (final c in next) c.id]);
@@ -96,92 +130,89 @@ class _CategoryManagementScreenState
     final categories =
         _dropped ?? ref.watch(categoriesProvider).value ?? const <Category>[];
 
+    Widget section(String title, String kind) {
+      final items = [
+        for (final c in categories)
+          if (c.kind == kind) c,
+      ];
+      return SliverMainAxisGroup(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(2, 18, 2, 10),
+              child: Overline(title),
+            ),
+          ),
+          SliverReorderableList(
+            itemCount: items.length,
+            proxyDecorator: ReorderCard.decorateDragged,
+            onReorderStart: (_) => ref.read(hapticsProvider).selection(),
+            onReorderItem: (oldIndex, newIndex) =>
+                _onReorder(categories, kind, oldIndex, newIndex),
+            itemBuilder: (context, index) {
+              final c = items[index];
+              final color =
+                  categoryColor(c.colorHex) ??
+                  Theme.of(context).colorScheme.onSurfaceVariant;
+              return ReorderCard(
+                key: ValueKey(c.id),
+                index: index,
+                title: c.name,
+                isDefault: index == 0,
+                onTap: () => _openEditor(context, ref, existing: c),
+                leading: CircleAvatar(
+                  backgroundColor: color.withValues(alpha: 0.16),
+                  foregroundColor: color,
+                  child: IconOrEmoji(value: c.icon),
+                ),
+              );
+            },
+          ),
+        ],
+      );
+    }
+
     return InlineAddHost(
       builder: (context, inlineAddVisible, onInlineAddVisibility) => Scaffold(
         appBar: AppBar(title: const Text('Categories')),
         body: categories.isEmpty
             ? const Center(child: Text('No categories yet.'))
-            : ReorderableListView.builder(
-                // The extended FAB floats over the list, so without room below
-                // the last row its trash button sits underneath it and can't be
-                // tapped. 20 (page margin) + 56 (FAB) + 16 (FAB margin) + 8, plus the
-                // bottom inset, which the FAB is lifted by but the list's body isn't.
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  20,
-                  20,
-                  100 + MediaQuery.viewPaddingOf(context).bottom,
-                ),
-                // Handles only: a long press anywhere would fight the row's tap
-                // to edit.
-                buildDefaultDragHandles: false,
-                itemCount: categories.length,
-                onReorderItem: (oldIndex, newIndex) =>
-                    _onReorder(categories, oldIndex, newIndex),
-                header: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'Drag to reorder. New entries start on the category you '
-                    'used last, otherwise the first one here.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+            : CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    // The extended FAB floats over the list, so the last row
+                    // needs room below it: 20 (page margin) + 56 (FAB) + 16
+                    // (FAB margin) + 8, plus the bottom inset, which the FAB
+                    // is lifted by but the list's body isn't.
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      8,
+                      20,
+                      100 + MediaQuery.viewPaddingOf(context).bottom,
                     ),
-                  ),
-                ),
-                footer: InlineAddButton(
-                  label: 'Add category',
-                  onTap: () => _openEditor(context, ref),
-                  onVisibilityChanged: onInlineAddVisibility,
-                  padding: const EdgeInsets.only(top: 16),
-                ),
-                itemBuilder: (context, index) {
-                  final c = categories[index];
-                  final color =
-                      categoryColor(c.colorHex) ??
-                      Theme.of(context).colorScheme.onSurfaceVariant;
-                  return Material(
-                    key: ValueKey(c.id),
-                    color: Theme.of(context).colorScheme.surface,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            backgroundColor: color.withValues(alpha: 0.16),
-                            foregroundColor: color,
-                            child: IconOrEmoji(value: c.icon),
-                          ),
-                          title: Text(c.name),
-                          subtitle: Text(c.kind),
-                          onTap: () => _openEditor(context, ref, existing: c),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(LucideIcons.trash2),
-                                onPressed: () => _delete(context, ref, c),
-                              ),
-                              ReorderableDragStartListener(
-                                index: index,
-                                child: Tooltip(
-                                  message: 'Drag to reorder ${c.name}',
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(12),
-                                    child: Icon(LucideIcons.gripVertical),
-                                  ),
-                                ),
-                              ),
-                            ],
+                    sliver: SliverMainAxisGroup(
+                      slivers: [
+                        const SliverToBoxAdapter(
+                          child: ReorderHint(
+                            'Hold any category and drag it. The top one is '
+                            'picked first when you add an entry. Tap one to '
+                            'edit or delete it.',
                           ),
                         ),
-                        if (index < categories.length - 1)
-                          const Divider(height: 1),
+                        section('Expense', 'expense'),
+                        section('Income', 'income'),
+                        SliverToBoxAdapter(
+                          child: InlineAddButton(
+                            label: 'Add category',
+                            onTap: () => _openEditor(context, ref),
+                            onVisibilityChanged: onInlineAddVisibility,
+                            padding: const EdgeInsets.only(top: 16),
+                          ),
+                        ),
                       ],
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
         // One add affordance at a time: the dashed row at the end of the list
         // while it is on screen, the FAB once it has scrolled away.
@@ -201,8 +232,16 @@ class _CategoryManagementScreenState
     WidgetRef ref, {
     Category? existing,
   }) async {
-    final result = await showCategoryEditorSheet(context, existing: existing);
-    if (result == null) return;
+    final result = await showCategoryEditorSheet(
+      context,
+      existing: existing,
+      allowDelete: true,
+    );
+    if (result == null || !context.mounted) return;
+    if (result.delete && existing != null) {
+      await _delete(context, ref, existing);
+      return;
+    }
 
     final controller = ref.read(financeControllerProvider);
     if (existing == null) {
@@ -288,10 +327,15 @@ class _CategoryManagementScreenState
 }
 
 class _CategoryEditorSheet extends StatefulWidget {
-  const _CategoryEditorSheet({this.existing, this.fixedKind});
+  const _CategoryEditorSheet({
+    this.existing,
+    this.fixedKind,
+    this.allowDelete = false,
+  });
 
   final Category? existing;
   final String? fixedKind;
+  final bool allowDelete;
 
   @override
   State<_CategoryEditorSheet> createState() => _CategoryEditorSheetState();
@@ -419,6 +463,22 @@ class _CategoryEditorSheetState extends State<_CategoryEditorSheet> {
               child: Text(_isEditing ? 'Save changes' : 'Add category'),
             ),
           ),
+          if (_isEditing && widget.allowDelete) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: () => Navigator.of(
+                  context,
+                ).pop(const CategoryEditorResult.delete()),
+                style: TextButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                ),
+                icon: const Icon(LucideIcons.trash2, size: 18),
+                label: const Text('Delete category'),
+              ),
+            ),
+          ],
         ],
       ),
     );

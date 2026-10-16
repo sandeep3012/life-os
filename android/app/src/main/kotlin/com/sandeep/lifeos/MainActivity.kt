@@ -3,6 +3,7 @@ package com.sandeep.lifeos
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -23,6 +24,15 @@ class MainActivity : FlutterFragmentActivity() {
         // settings for this app, where each reminder type's tone can be set.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/system")
             .setMethodCallHandler { call, result ->
+                // An alarm was dealt with on the lock screen: step back so the
+                // phone returns to its lock screen, like the clock app's alarm.
+                if (call.method == "leaveIfLocked") {
+                    val keyguard = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                    val locked = keyguard.isKeyguardLocked
+                    if (locked) moveTaskToBack(true)
+                    result.success(locked)
+                    return@setMethodCallHandler
+                }
                 if (call.method != "openNotificationSettings") {
                     result.notImplemented()
                     return@setMethodCallHandler
@@ -39,6 +49,31 @@ class MainActivity : FlutterFragmentActivity() {
                     result.success(true)
                 } catch (error: Exception) {
                     result.error("open_failed", error.message, null)
+                }
+            }
+        // The Today home-screen widget: the app hands over a ready-made
+        // snapshot (TodayWidgetSnapshot), saved here for TodayWidgetProvider.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/widget")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "updateToday") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                try {
+                    val data = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
+                    val editor = TodayWidgetProvider.prefs(this).edit()
+                    for ((key, value) in data) {
+                        when (value) {
+                            is String -> editor.putString(key as String, value)
+                            is Int -> editor.putInt(key as String, value)
+                            is Long -> editor.putInt(key as String, value.toInt())
+                        }
+                    }
+                    editor.apply()
+                    TodayWidgetProvider.refresh(this)
+                    result.success(null)
+                } catch (error: Exception) {
+                    result.error("widget_failed", error.message, null)
                 }
             }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/haptics")

@@ -1,0 +1,4 @@
+{
+  "SUPABASE_URL": "https://hxqvkhtulmmocfwpzeiv.supabase.co",
+  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_... (or the legacy anon key) - never the secret / service_role key"
+}

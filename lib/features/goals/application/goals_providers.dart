@@ -186,6 +186,24 @@ class GoalsController {
     return _repo.updateProgress(goalId, currentValue);
   }
 
+  /// Completing or abandoning a goal stops its deadline reminder; reopening
+  /// it brings the reminder back.
+  Future<void> setStatus(Goal goal, String status) async {
+    await _repo.setStatus(goal.id, status);
+    if (status == 'active') {
+      await _scheduleGoalReminder(
+        goalId: goal.id,
+        title: goal.title,
+        targetDate: goal.targetDate,
+        reminderEnabled: goal.reminderEnabled,
+        reminderDaysBefore: goal.reminderDaysBefore,
+        mode: ReminderMode.fromStorage(goal.reminderMode),
+      );
+    } else {
+      await _notifications.cancelGoalReminder(goal.id);
+    }
+  }
+
   Future<void> addLink({
     required String goalId,
     required String linkedType,

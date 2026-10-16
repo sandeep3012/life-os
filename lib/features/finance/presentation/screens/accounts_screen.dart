@@ -89,7 +89,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           ),
           if (active.length > 1)
             IconButton(
-              tooltip: 'Order & default',
+              tooltip: 'Account order',
               icon: const Icon(LucideIcons.arrowUpDown),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const AccountOrderScreen()),
@@ -142,6 +142,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                     accounts: groups[key]!,
                     types: types,
                     money: money,
+                    defaultId: ref.watch(preferredAccountIdProvider),
                   ),
                 ],
                 if (archived.isNotEmpty) ...[
@@ -334,10 +335,14 @@ class _AccountList extends StatelessWidget {
     required this.accounts,
     required this.types,
     required this.money,
+    this.defaultId,
     this.dimmed = false,
   });
 
   final List<Account> accounts;
+
+  /// The account new entries start on, labelled "Default".
+  final String? defaultId;
   final List<AccountType> types;
   final String Function(int minor) money;
 
@@ -382,7 +387,7 @@ class _AccountList extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                subtitle: accounts[i].isDefault && !dimmed
+                subtitle: accounts[i].id == defaultId && !dimmed
                     ? const Text('Default')
                     : null,
                 trailing: Text(
