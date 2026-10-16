@@ -193,4 +193,54 @@ void main() {
 
     await _disposeCleanly(tester);
   });
+
+  testWidgets("today's to-dos show three, the rest behind Show more", (
+    tester,
+  ) async {
+    final today = dateOnly(DateTime.now());
+    for (var i = 0; i < 5; i++) {
+      await db
+          .into(db.tasks)
+          .insert(
+            TasksCompanion.insert(
+              title: 'Task $i',
+              dueDate: Value(today.add(Duration(hours: 9 + i))),
+            ),
+          );
+    }
+
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    final more = find.text('Show 2 more');
+    await tester.scrollUntilVisible(
+      more,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    expect(find.text('Task 2'), findsOneWidget);
+    expect(find.text('Task 3', skipOffstage: false), findsNothing);
+
+    await tester.ensureVisible(more);
+    await tester.pumpAndSettle();
+    await tester.tap(more);
+    await tester.pumpAndSettle();
+    final less = find.text('Show less');
+    await tester.scrollUntilVisible(
+      less,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Task 3'), findsOneWidget);
+    expect(find.text('Task 4'), findsOneWidget);
+
+    await tester.ensureVisible(less);
+    await tester.pumpAndSettle();
+    await tester.tap(less);
+    await tester.pumpAndSettle();
+    expect(find.text('Task 4', skipOffstage: false), findsNothing);
+    expect(find.text('Show 2 more'), findsOneWidget);
+
+    await _disposeCleanly(tester);
+  });
 }

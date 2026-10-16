@@ -21,6 +21,7 @@ Future<void> celebrateStreakIfMilestone(
   required String habitName,
   required int newStreakDays,
 }) {
+  // The check-in itself already played the habit sound.
   if (!_streakMilestones.contains(newStreakDays)) return Future.value();
   return showCelebration(
     context,

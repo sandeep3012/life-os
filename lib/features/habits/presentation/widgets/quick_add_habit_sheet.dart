@@ -1,3 +1,4 @@
+import '../../../../core/reminders/reminder_permission_prompt.dart';
 import '../../../../core/widgets/tab_rail.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/material.dart';
@@ -139,7 +140,7 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
   }
 
   Future<void> _addCategory() async {
-    final result = await showCategoryEditorSheet(context, fixedKind: 'habit');
+    final result = await showCategoryEditorSheet(context, fixedKind: plannerCategoryKind);
     if (result == null) {
       if (mounted) setState(() => _categoryFieldEpoch++);
       return;
@@ -266,7 +267,15 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
             title: const Text('Remind me'),
             subtitle: const Text('Reminder on scheduled days'),
             value: _reminderEnabled,
-            onChanged: (v) => setState(() => _reminderEnabled = v),
+            onChanged: (v) {
+                setState(() => _reminderEnabled = v);
+                if (v) {
+                  checkReminderPermissions(
+                    context,
+                    alarm: _reminderMode == ReminderMode.alarm,
+                  );
+                }
+              },
           ),
           if (_reminderEnabled)
             TextButton.icon(
@@ -287,7 +296,12 @@ class _QuickAddHabitSheetState extends ConsumerState<_QuickAddHabitSheet> {
                   ReminderMode.notification: LucideIcons.bell,
                   ReminderMode.alarm: LucideIcons.alarmClock,
                 },
-                onChanged: (value) => setState(() => _reminderMode = value),
+                onChanged: (value) {
+                  setState(() => _reminderMode = value);
+                  if (value == ReminderMode.alarm) {
+                    checkReminderPermissions(context, alarm: true);
+                  }
+                },
               ),
             ),
           if (!_schedule.hasOccurrence)

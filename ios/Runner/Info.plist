@@ -74,5 +74,20 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- Sync sign-in: email confirmation, password reset and the
+		     Google/Apple pages come back to lifeos://auth-callback. -->
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLName</key>
+				<string>lifeos-auth</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>lifeos</string>
+				</array>
+			</dict>
+		</array>
 	</dict>
 </plist>

@@ -119,6 +119,12 @@ class AppSidebar extends ConsumerWidget {
                         current: current,
                       ),
                       _Item(
+                        icon: LucideIcons.landmark,
+                        label: 'Accounts',
+                        path: RoutePaths.accounts,
+                        current: current,
+                      ),
+                      _Item(
                         icon: LucideIcons.receipt,
                         label: 'Bills',
                         path: RoutePaths.bills,
@@ -261,7 +267,7 @@ class AppSidebar extends ConsumerWidget {
                       _Item(
                         icon: LucideIcons.cloud,
                         label: 'Sync & account',
-                        path: RoutePaths.syncSignIn,
+                        path: RoutePaths.sync,
                         current: current,
                       ),
                       _Item(

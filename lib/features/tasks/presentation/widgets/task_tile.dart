@@ -16,6 +16,7 @@ class TaskTile extends StatelessWidget {
     required this.onToggle,
     required this.onDelete,
     required this.onOpen,
+    this.confirmDelete,
     this.categoryLabel,
     this.compact = false,
   });
@@ -27,6 +28,10 @@ class TaskTile extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onOpen;
 
+  /// Asked before a swipe deletes; false puts the row back. A repeating
+  /// task uses it to ask which occurrences go.
+  final Future<bool> Function()? confirmDelete;
+
   @override
   Widget build(BuildContext context) {
     final done = task.status == 'done';
@@ -36,6 +41,7 @@ class TaskTile extends StatelessWidget {
     return Dismissible(
       key: ValueKey(task.id),
       direction: DismissDirection.endToStart,
+      confirmDismiss: confirmDelete == null ? null : (_) => confirmDelete!(),
       onDismissed: (_) => onDelete(),
       background: Container(
         alignment: Alignment.centerRight,

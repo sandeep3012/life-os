@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -6,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/widgets/undo_snack_bar.dart';
 import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import '../../../../core/widgets/surface_card.dart';
@@ -16,6 +18,7 @@ import '../../domain/calendar_item.dart';
 import '../widgets/calendar_agenda_view.dart';
 import '../widgets/calendar_item_tile.dart';
 import '../widgets/quick_add_event_sheet.dart';
+import '../../../../app/motion.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -26,6 +29,42 @@ class CalendarScreen extends ConsumerStatefulWidget {
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   DateTime _focusedMonth = DateTime.now();
+
+  /// The month grid folds to the selected day's week while the day's list is
+  /// scrolled, so a busy day gets the screen instead of a half-height window
+  /// under a fixed month. Pulling the list down from its top unfolds it; so
+  /// does tapping the month name, for days too short to scroll.
+  CalendarFormat _format = CalendarFormat.month;
+
+  void _setFormat(CalendarFormat format) {
+    if (_format == format) return;
+    setState(() {
+      _format = format;
+      // Fold to the week the user is looking at, not the month's first week.
+      if (format == CalendarFormat.week) {
+        _focusedMonth = ref.read(selectedCalendarDayProvider);
+      }
+    });
+  }
+
+  /// Folds when the user scrolls the list up, unfolds when they pull down
+  /// past its top. Only user drags count, so a fling settling doesn't toggle
+  /// the calendar on its own.
+  bool _onListScroll(ScrollNotification n) {
+    if (n.depth != 0) return false;
+    if (n is ScrollUpdateNotification && n.dragDetails != null) {
+      if (n.scrollDelta! > 0 && n.metrics.pixels > 12) {
+        _setFormat(CalendarFormat.week);
+      } else if (n.metrics.pixels < -24) {
+        _setFormat(CalendarFormat.month); // iOS: bounced past the top
+      }
+    } else if (n is OverscrollNotification &&
+        n.dragDetails != null &&
+        n.overscroll < 0) {
+      _setFormat(CalendarFormat.month); // Android: pulled at the top
+    }
+    return false;
+  }
 
   Future<void> _showViewOptions() => showModalBottomSheet<void>(
     context: context,
@@ -87,7 +126,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
     return Scaffold(
       drawer: const AppSidebar(),
-      body: Column(
+      // Any scroll the person makes — the month list, the agenda — folds
+      // the button to its icon; scrolling back to the top unfolds it.
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _onScroll,
+        child: Column(
         children: [
           SafeArea(
             bottom: false,
@@ -125,6 +168,27 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           radius: 22,
                           child: TableCalendar<CalendarItemType>(
                             focusedDay: _focusedMonth,
+                            calendarFormat: _format,
+                            availableCalendarFormats: const {
+                              CalendarFormat.month: 'Month',
+                              CalendarFormat.week: 'Week',
+                            },
+                            // A vertical swipe on the grid folds or unfolds it
+                            // too, the package's own gesture.
+                            onFormatChanged: _setFormat,
+                            onHeaderTapped: (_) => _setFormat(
+                              _format == CalendarFormat.month
+                                  ? CalendarFormat.week
+                                  : CalendarFormat.month,
+                            ),
+                            formatAnimationDuration: AppMotion.of(
+                              context,
+                              AppMotion.drawer,
+                            ),
+                            formatAnimationCurve: AppMotion.curveOf(
+                              context,
+                              AppMotion.emphasized,
+                            ),
                             firstDay: _focusedMonth.isBefore(DateTime(2020))
                                 ? dateOnly(_focusedMonth)
                                 : DateTime(2020),
@@ -226,35 +290,64 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         ),
                       ),
                       Expanded(
-                        child: dayItems.isEmpty
-                            ? Center(
-                                child: Text(
-                                  'Nothing scheduled for this day.',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: _onListScroll,
+                          // Always scrollable, so a short or empty day can
+                          // still be pulled down to unfold the month.
+                          child: dayItems.isEmpty
+                              ? ListView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    48,
+                                    20,
+                                    100,
                                   ),
+                                  children: [
+                                    Center(
+                                      child: Text(
+                                        'Nothing scheduled for this day.',
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              color: theme
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ListView.separated(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    20,
+                                    4,
+                                    20,
+                                    100,
+                                  ),
+                                  itemCount: dayItems.length,
+                                  separatorBuilder: (_, _) =>
+                                      const Divider(height: 1),
+                                  itemBuilder: (context, index) =>
+                                      _buildItemTile(context, dayItems[index]),
                                 ),
-                              )
-                            : ListView.separated(
-                                padding: const EdgeInsets.fromLTRB(
-                                  20,
-                                  4,
-                                  20,
-                                  100,
-                                ),
-                                itemCount: dayItems.length,
-                                separatorBuilder: (_, _) =>
-                                    const Divider(height: 1),
-                                itemBuilder: (context, index) =>
-                                    _buildItemTile(context, dayItems[index]),
-                              ),
+                        ),
                       ),
                     ],
                   ),
           ),
         ],
       ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
+        isExtended: true,
+        extendedIconLabelSpacing: _fabExtended ? 8 : 0,
+        extendedPadding: EdgeInsets.symmetric(
+          horizontal: _fabExtended ? 20 : 16,
+        ),
+        tooltip: 'New event',
         onPressed: () async {
           final result = await showQuickAddEventSheet(
             context,
@@ -279,8 +372,62 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           _acknowledgeEventSave(updated: false);
         },
         icon: const Icon(LucideIcons.plus),
-        label: const Text('New event'),
+        // The label folds away rather than snapping, so the button shrinks
+        // to a round + without a jump.
+        label: AnimatedSize(
+          duration: AppMotion.of(context, const Duration(milliseconds: 200)),
+          curve: Curves.easeOutCubic,
+          child: _fabExtended
+              ? const Text('New event')
+              : const SizedBox.shrink(),
+        ),
       ),
+    );
+  }
+
+  /// "New event" with its label at first; just + once the person scrolls,
+  /// so the button stops covering the list (and the agenda's Today chip).
+  bool _fabExtended = true;
+
+  ScrollDirection _lastScroll = ScrollDirection.idle;
+
+  bool _onScroll(ScrollNotification notification) {
+    if (notification.metrics.axis != Axis.vertical) return false;
+    final atTop =
+        notification.metrics.pixels <= notification.metrics.minScrollExtent;
+    if (notification is UserScrollNotification) {
+      if (notification.direction != ScrollDirection.idle) {
+        _lastScroll = notification.direction;
+      }
+      // Moving down the list folds it; pulling back to the top unfolds it.
+      if (notification.direction == ScrollDirection.reverse && _fabExtended) {
+        setState(() => _fabExtended = false);
+      }
+    } else if (notification is ScrollEndNotification &&
+        atTop &&
+        _lastScroll == ScrollDirection.forward &&
+        !_fabExtended) {
+      setState(() => _fabExtended = true);
+    }
+    return false;
+  }
+
+  /// Deletes one event or its whole series, then offers Undo.
+  Future<void> _deleteWithUndo(
+    _DeleteChoice choice,
+    String eventId,
+    String? recurrenceId,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = ref.read(calendarControllerProvider);
+    final series = choice == _DeleteChoice.allInSeries && recurrenceId != null;
+    final removed = series
+        ? await controller.deleteEventSeries(recurrenceId)
+        : await controller.deleteEvent(eventId);
+    showUndoSnackBar(
+      messenger,
+      message: series ? 'Repeating event deleted' : 'Event deleted',
+      onUndo: () => controller.restore(removed),
     );
   }
 
@@ -313,18 +460,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           context,
           isPartOfSeries: recurrenceId != null,
         );
-        switch (choice) {
-          case _DeleteChoice.cancel:
-            return false;
-          case _DeleteChoice.thisEvent:
-            await ref.read(calendarControllerProvider).deleteEvent(eventId);
-            return true;
-          case _DeleteChoice.allInSeries:
-            await ref
-                .read(calendarControllerProvider)
-                .deleteEventSeries(recurrenceId!);
-            return true;
-        }
+        if (choice == _DeleteChoice.cancel) return false;
+        await _deleteWithUndo(choice, eventId, recurrenceId);
+        return true;
       },
       child: CalendarItemTile(
         item: item,
@@ -395,16 +533,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           context,
           isPartOfSeries: event.recurrenceId != null,
         );
-        switch (choice) {
-          case _DeleteChoice.cancel:
-            return;
-          case _DeleteChoice.thisEvent:
-            await ref.read(calendarControllerProvider).deleteEvent(eventId);
-          case _DeleteChoice.allInSeries:
-            await ref
-                .read(calendarControllerProvider)
-                .deleteEventSeries(event.recurrenceId!);
-        }
+        if (choice == _DeleteChoice.cancel) return;
+        await _deleteWithUndo(choice, eventId, event.recurrenceId);
       },
     );
     if (result == null) return;

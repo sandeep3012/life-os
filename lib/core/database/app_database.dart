@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+export 'tables/categories_table.dart' show plannerCategoryKind;
+
 import 'tables/calendar_tables.dart';
 import 'tables/categories_table.dart';
 import 'tables/documents_tables.dart';
@@ -14,6 +16,7 @@ import 'tables/insights_table.dart';
 import 'tables/learn_tables.dart';
 import 'tables/notes_tables.dart';
 import 'tables/settings_table.dart';
+import 'tables/sync_tables.dart';
 import 'tables/tasks_tables.dart';
 
 part 'app_database.g.dart';
@@ -54,6 +57,9 @@ part 'app_database.g.dart';
     LearnBooks,
     LearnNotes,
     AppSettings,
+    SyncOutbox,
+    SyncState,
+    SyncHeld,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -61,8 +67,77 @@ class AppDatabase extends _$AppDatabase {
 
   AppDatabase.forTesting(super.executor);
 
+  /// Folds the older habit-only categories into the list tasks and habits
+  /// share: one with the same name as a task category merges into it (its
+  /// habits move across), the rest simply change kind. Safe to run any
+  /// time, and run at every launch — a restored backup or another phone on
+  /// an older version can still bring `habit` rows in.
+  Future<void> mergePlannerCategories() async {
+    final merged = await transaction(() async {
+      final habitRows = await customSelect(
+        "SELECT COUNT(*) AS n FROM categories WHERE kind = 'habit'",
+      ).getSingle();
+      if (habitRows.read<int>('n') == 0) return false;
+      const sameNamedTask =
+          "(SELECT t.id FROM categories t WHERE t.kind = '$plannerCategoryKind' "
+          'AND lower(t.name) = lower(h.name) ORDER BY t.id LIMIT 1)';
+      await customStatement(
+        'UPDATE habits SET category_id = '
+        '(SELECT $sameNamedTask FROM categories h WHERE h.id = habits.category_id) '
+        "WHERE category_id IN (SELECT h.id FROM categories h WHERE h.kind = 'habit' "
+        'AND $sameNamedTask IS NOT NULL)',
+      );
+      await customStatement(
+        "DELETE FROM categories WHERE kind = 'habit' AND EXISTS "
+        "(SELECT 1 FROM categories t WHERE t.kind = '$plannerCategoryKind' "
+        'AND lower(t.name) = lower(categories.name))',
+      );
+      await customStatement(
+        "UPDATE categories SET kind = '$plannerCategoryKind' WHERE kind = 'habit'",
+      );
+      return true;
+    });
+    // Raw SQL doesn't tell Drift's streams anything changed.
+    if (merged) markTablesUpdated({categories, habits});
+  }
+
   @override
-  int get schemaVersion => 30;
+  int get schemaVersion => 35;
+
+  /// For upgrade steps that read another table, on a database partly
+  /// behind its recorded version (see [_addColumnIfMissing]).
+  Future<bool> _tableExists(String name) async {
+    final rows = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: [Variable(name)],
+    ).get();
+    return rows.isNotEmpty;
+  }
+
+  /// Adds [column] unless [table] already has it (creating [table] if it's
+  /// missing entirely), so every upgrade step can
+  /// safely run against a database that's partly ahead of its recorded
+  /// version — an upgrade interrupted after some columns were added, or a
+  /// test fixture rewound from today's schema. A plain `addColumn` fails the
+  /// whole upgrade there with "duplicate column name".
+  Future<void> _addColumnIfMissing(
+    Migrator m,
+    TableInfo<Table, dynamic> table,
+    GeneratedColumn<Object> column,
+  ) async {
+    final existing = await customSelect(
+      'PRAGMA table_info("${table.actualTableName}")',
+    ).get();
+    // A table that isn't there at all is created whole, in today's shape,
+    // rather than failing the upgrade — later steps then find their columns
+    // already present.
+    if (existing.isEmpty) {
+      await m.createTable(table);
+      return;
+    }
+    if (existing.any((row) => row.read<String>('name') == column.name)) return;
+    await m.addColumn(table, column);
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -85,7 +160,7 @@ class AppDatabase extends _$AppDatabase {
         // v2 -> v3: accounts gained `isActive`, for deactivating accounts
         // that can't be safely hard-deleted (still referenced by
         // transactions/goal links) — purely additive, no data loss.
-        await m.addColumn(accounts, accounts.isActive);
+        await _addColumnIfMissing(m, accounts, accounts.isActive);
       }
       if (from < 4) {
         // v3 -> v4: budgets became version-per-month (`effectiveMonth`,
@@ -93,8 +168,8 @@ class AppDatabase extends _$AppDatabase {
         // limit no longer rewrites history. Existing rows are backfilled to
         // their `startDate`'s month so they keep applying from whenever they
         // were originally created.
-        await m.addColumn(budgets, budgets.effectiveMonth);
-        await m.addColumn(budgets, budgets.active);
+        await _addColumnIfMissing(m, budgets, budgets.effectiveMonth);
+        await _addColumnIfMissing(m, budgets, budgets.active);
         await m.database.customStatement(
           "UPDATE budgets SET effective_month = date(start_date, 'start of month')",
         );
@@ -107,24 +182,24 @@ class AppDatabase extends _$AppDatabase {
         // been — no data to backfill here since `Accounts.type` already
         // stores the matching name string and needs no rewrite.
         await m.createTable(accountTypes);
-        await m.addColumn(transactions, transactions.paymentMode);
+        await _addColumnIfMissing(m, transactions, transactions.paymentMode);
       }
       if (from < 6) {
         // v5 -> v6: per-item reminder toggles. Tasks default `true` (an
         // existing task with a due date already got a reminder, so this
         // preserves that behavior); habits default `false` (opt-in — there's
         // no due-date-like signal implying a reminder was wanted).
-        await m.addColumn(tasks, tasks.reminderEnabled);
-        await m.addColumn(habits, habits.reminderEnabled);
-        await m.addColumn(habits, habits.reminderHour);
-        await m.addColumn(habits, habits.reminderMinute);
+        await _addColumnIfMissing(m, tasks, tasks.reminderEnabled);
+        await _addColumnIfMissing(m, habits, habits.reminderEnabled);
+        await _addColumnIfMissing(m, habits, habits.reminderHour);
+        await _addColumnIfMissing(m, habits, habits.reminderMinute);
       }
       if (from < 7) {
         // v6 -> v7: reminders can be delivered as a plain notification or
         // an alarm-style one (loud, bypasses silent mode). Existing rows
         // default to 'notification', preserving current behavior.
-        await m.addColumn(tasks, tasks.reminderMode);
-        await m.addColumn(habits, habits.reminderMode);
+        await _addColumnIfMissing(m, tasks, tasks.reminderMode);
+        await _addColumnIfMissing(m, habits, habits.reminderMode);
       }
       if (from < 8) {
         // v7 -> v8: recurring transactions (subscriptions, rent, EMIs) that
@@ -140,27 +215,27 @@ class AppDatabase extends _$AppDatabase {
       if (from < 10) {
         // v9 -> v10: a transaction can carry a receipt photo, filed as a
         // Document like any other imported file.
-        await m.addColumn(transactions, transactions.receiptDocumentId);
+        await _addColumnIfMissing(m, transactions, transactions.receiptDocumentId);
       }
       if (from < 11) {
         // v10 -> v11: recurring events (simple daily/weekly/monthly/yearly,
         // upfront-generated occurrences) and per-event reminders, mirroring
         // Bills' reminder shape but offset in minutes-before-start since
         // events are time-of-day scheduled rather than date-only.
-        await m.addColumn(events, events.frequency);
-        await m.addColumn(events, events.recurrenceEndDate);
-        await m.addColumn(events, events.recurrenceId);
-        await m.addColumn(events, events.recurrenceNextGenerationDate);
-        await m.addColumn(events, events.reminderEnabled);
-        await m.addColumn(events, events.reminderMode);
-        await m.addColumn(events, events.reminderMinutesBefore);
+        await _addColumnIfMissing(m, events, events.frequency);
+        await _addColumnIfMissing(m, events, events.recurrenceEndDate);
+        await _addColumnIfMissing(m, events, events.recurrenceId);
+        await _addColumnIfMissing(m, events, events.recurrenceNextGenerationDate);
+        await _addColumnIfMissing(m, events, events.reminderEnabled);
+        await _addColumnIfMissing(m, events, events.reminderMode);
+        await _addColumnIfMissing(m, events, events.reminderMinutesBefore);
       }
       if (from < 12) {
         // v11 -> v12: habits glow-up — optional category (Categories,
         // kind='habit') and an optional note per log. Both nullable, no
         // backfill needed.
-        await m.addColumn(habits, habits.categoryId);
-        await m.addColumn(habitLogs, habitLogs.notes);
+        await _addColumnIfMissing(m, habits, habits.categoryId);
+        await _addColumnIfMissing(m, habitLogs, habitLogs.notes);
       }
       if (from < 13) {
         // v12 -> v13: goal deadline reminders (mirrors Bills' day-offset
@@ -168,18 +243,18 @@ class AppDatabase extends _$AppDatabase {
         // date) plus an ordered milestone checklist per goal — purely
         // additive, decoupled from currentValue/targetValue/ratio so the AI
         // Analyser's pacing insight is unaffected.
-        await m.addColumn(goals, goals.reminderEnabled);
-        await m.addColumn(goals, goals.reminderMode);
-        await m.addColumn(goals, goals.reminderDaysBefore);
+        await _addColumnIfMissing(m, goals, goals.reminderEnabled);
+        await _addColumnIfMissing(m, goals, goals.reminderMode);
+        await _addColumnIfMissing(m, goals, goals.reminderDaysBefore);
         await m.createTable(goalMilestones);
       }
       if (from < 14) {
         // v13 -> v14: app-wide currency setting (curated list, not full
         // ISO-4217) plus app-lock flags — the PIN itself lives in
         // flutter_secure_storage, never in this table.
-        await m.addColumn(appSettings, appSettings.currencyCode);
-        await m.addColumn(appSettings, appSettings.appLockEnabled);
-        await m.addColumn(appSettings, appSettings.biometricEnabled);
+        await _addColumnIfMissing(m, appSettings, appSettings.currencyCode);
+        await _addColumnIfMissing(m, appSettings, appSettings.appLockEnabled);
+        await _addColumnIfMissing(m, appSettings, appSettings.biometricEnabled);
       }
       if (from < 19) {
         // Versions 15/16 existed on two independent branches: Health/Learn
@@ -232,7 +307,7 @@ class AppDatabase extends _$AppDatabase {
           ).get()).map((row) => row.read<String>('name')).toSet();
           for (final column in entry.value) {
             if (!columns.contains(column.$name)) {
-              await m.addColumn(entry.key, column);
+              await _addColumnIfMissing(m, entry.key, column);
               if (entry.key == habitLogs &&
                   column == habitLogs.targetAmountSnapshot) {
                 needsSnapshots = true;
@@ -252,58 +327,109 @@ class AppDatabase extends _$AppDatabase {
       if (from < 20) {
         // v19 -> v20: selected curated brand palette. Existing installs keep
         // the original Forest appearance through the column default.
-        await m.addColumn(appSettings, appSettings.colorTheme);
+        await _addColumnIfMissing(m, appSettings, appSettings.colorTheme);
       }
       if (from < 21) {
-        await m.addColumn(appSettings, appSettings.transactionEntryLayout);
+        await _addColumnIfMissing(m, appSettings, appSettings.transactionEntryLayout);
       }
       if (from < 22) {
-        await m.addColumn(appSettings, appSettings.hapticsEnabled);
-        await m.addColumn(appSettings, appSettings.saveAnimationsEnabled);
+        await _addColumnIfMissing(m, appSettings, appSettings.hapticsEnabled);
+        await _addColumnIfMissing(m, appSettings, appSettings.saveAnimationsEnabled);
       }
       if (from < 23) {
-        await m.addColumn(appSettings, appSettings.saveConfirmationsEnabled);
+        await _addColumnIfMissing(m, appSettings, appSettings.saveConfirmationsEnabled);
       }
       if (from < 24) {
-        await m.addColumn(appSettings, appSettings.balancesVisible);
+        await _addColumnIfMissing(m, appSettings, appSettings.balancesVisible);
       }
       if (from < 25) {
         // v24 -> v25: documents gain a pin flag (Quick Access strip) and an
         // optional semantic type label (identity, financial, medical, etc.)
-        await m.addColumn(documents, documents.isPinned);
-        await m.addColumn(documents, documents.documentType);
+        await _addColumnIfMissing(m, documents, documents.isPinned);
+        await _addColumnIfMissing(m, documents, documents.documentType);
       }
       if (from < 26) {
         // v25 -> v26: folders gain an optional icon name so users can pick
         // a recognisable icon when creating a document folder.
-        await m.addColumn(folders, folders.iconName);
+        await _addColumnIfMissing(m, folders, folders.iconName);
       }
       if (from < 27) {
         // v26 -> v27: folders gain an optional hex colour accent.
-        await m.addColumn(folders, folders.colorHex);
+        await _addColumnIfMissing(m, folders, folders.colorHex);
       }
       if (from < 28) {
         // v27 -> v28: a medication's reminder can be an alarm rather than a
         // notification, the same choice tasks/habits/bills/goals/events all
         // offer. Existing rows default to 'notification', which is what they
         // effectively were.
-        await m.addColumn(medications, medications.reminderMode);
+        await _addColumnIfMissing(m, medications, medications.reminderMode);
       }
       if (from < 29) {
         // v28 -> v29: in-app motion controls. Defaults keep full motion with
         // the transition effects on, which is what existing installs had.
-        await m.addColumn(appSettings, appSettings.reduceMotion);
-        await m.addColumn(appSettings, appSettings.transitionEffectsEnabled);
+        await _addColumnIfMissing(m, appSettings, appSettings.reduceMotion);
+        await _addColumnIfMissing(m, appSettings, appSettings.transitionEffectsEnabled);
       }
       if (from < 30) {
         // v29 -> v30: onboarding. Anyone upgrading already knows the app, so
         // an existing settings row is marked as having seen the welcome
         // screens and the Home tour; only fresh installs get them.
-        await m.addColumn(appSettings, appSettings.onboardingCompleted);
-        await m.addColumn(appSettings, appSettings.toursSeen);
+        await _addColumnIfMissing(m, appSettings, appSettings.onboardingCompleted);
+        await _addColumnIfMissing(m, appSettings, appSettings.toursSeen);
         await customStatement(
           "UPDATE app_settings SET onboarding_completed = 1, tours_seen = 'home'",
         );
+      }
+      if (from < 31) {
+        // v30 -> v31: a choice of alarm tone; existing installs keep the
+        // gentle one they've been hearing.
+        await _addColumnIfMissing(m, appSettings, appSettings.alarmTone);
+      }
+      if (from < 32) {
+        // v31 -> v32: the in-app Sounds switch.
+        await _addColumnIfMissing(
+          m,
+          appSettings,
+          appSettings.soundEffectsEnabled,
+        );
+      }
+      if (from < 33) {
+        // v32 -> v33: a chosen order for accounts and categories, and a
+        // default account. Positions start as today's order — creation
+        // order — so nothing moves on the first launch after the update.
+        await _addColumnIfMissing(m, accounts, accounts.position);
+        await _addColumnIfMissing(m, accounts, accounts.isDefault);
+        await _addColumnIfMissing(m, categories, categories.position);
+        for (final table in ['accounts', 'categories']) {
+          await customStatement(
+            'UPDATE $table SET position = '
+            '(SELECT COUNT(*) FROM $table older WHERE older.rowid < $table.rowid)',
+          );
+        }
+      }
+      if (from < 34) {
+        // v33 -> v34: sync's bookkeeping tables, and an opening balance per
+        // account so a balance can be recomputed from its transactions.
+        // Set so that every balance shown today stays exactly the same.
+        await _addColumnIfMissing(m, syncOutbox, syncOutbox.op);
+        await _addColumnIfMissing(m, syncState, syncState.value);
+        await _addColumnIfMissing(m, syncHeld, syncHeld.record);
+        await _addColumnIfMissing(m, accounts, accounts.openingBalanceMinor);
+        if (await _tableExists('transactions')) {
+          await customStatement(
+            'UPDATE accounts SET opening_balance_minor = balance_minor - '
+            '(SELECT COALESCE(SUM(amount_minor), 0) FROM transactions '
+            'WHERE transactions.account_id = accounts.id)',
+          );
+        }
+      }
+      if (from < 35) {
+        // v34 -> v35: when a goal was completed, and one category list for
+        // tasks and habits.
+        await _addColumnIfMissing(m, goals, goals.completedAt);
+        if (await _tableExists('categories') && await _tableExists('habits')) {
+          await mergePlannerCategories();
+        }
       }
     },
   );

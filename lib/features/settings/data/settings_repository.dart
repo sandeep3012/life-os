@@ -70,6 +70,12 @@ class SettingsRepository {
   Future<void> setToursSeen(String csv) =>
       _upsert(AppSettingsCompanion(toursSeen: Value(csv)));
 
+  Future<void> setAlarmTone(String tone) =>
+      _upsert(AppSettingsCompanion(alarmTone: Value(tone)));
+
+  Future<void> setSoundEffectsEnabled(bool enabled) =>
+      _upsert(AppSettingsCompanion(soundEffectsEnabled: Value(enabled)));
+
   Future<void> setTaskReminders(bool enabled) =>
       _upsert(AppSettingsCompanion(taskReminders: Value(enabled)));
 

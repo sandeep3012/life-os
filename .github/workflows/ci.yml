@@ -1,0 +1,43 @@
+name: CI
+
+# Every pull request, and every push to main: the app must analyze clean,
+# its generated database code must be current, and the test suite must pass.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same branch makes an older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Keep in step with the version used for development.
+          flutter-version: 3.44.9
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generated code is up to date
+        # Drift's generated database code is committed. A schema change made
+        # without re-running build_runner shows up here as a diff.
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- '*.g.dart'
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test

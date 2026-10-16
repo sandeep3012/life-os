@@ -278,7 +278,15 @@ void main() {
       final zipBytes = await backup.exportBackup();
       expect(zipBytes, isNotEmpty);
       final before = manifest(zipBytes)['tables'] as Map;
-      expect(before.length, db.allTables.length);
+      // Every table but sync's own bookkeeping, which belongs to this
+      // phone's sign-in rather than to the data.
+      const syncTables = {'sync_outbox', 'sync_state', 'sync_held'};
+      expect(
+        before.length,
+        db.allTables
+            .where((t) => !syncTables.contains(t.actualTableName))
+            .length,
+      );
       expect(before.values.every((rows) => (rows as List).isNotEmpty), isTrue);
 
       // Wipe everything, then restore from the exported bytes.

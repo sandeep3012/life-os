@@ -30,6 +30,13 @@ class Accounts extends Table {
   /// Stored in minor currency units (e.g. paise) to avoid floating-point
   /// drift in balances — matches the Finance screen's ₹ totals exactly.
   IntColumn get balanceMinor => integer().withDefault(const Constant(0))();
+
+  /// The balance before any of the account's transactions. With sync on,
+  /// [balanceMinor] is recomputed from this plus the transactions after
+  /// every download, so two phones adding entries at once can't overwrite
+  /// each other's running total.
+  IntColumn get openingBalanceMinor =>
+      integer().withDefault(const Constant(0))();
   TextColumn get currencyCode => text().withDefault(const Constant('INR'))();
 
   /// Deactivated (not deleted) accounts drop out of balance totals and
@@ -37,6 +44,14 @@ class Accounts extends Table {
   /// the fallback for accounts that can't be hard-deleted because they're
   /// still referenced elsewhere.
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+
+  /// Where the account sits in lists and pickers — set by dragging in
+  /// Accounts → Reorder; lower comes first.
+  IntColumn get position => integer().withDefault(const Constant(0))();
+
+  /// Unused: the account a new entry starts on is now simply the top one
+  /// in [position]. Kept so v33 databases and backups still read.
+  BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
 
   DateTimeColumn get createdAt =>
       dateTime().clientDefault(() => DateTime.now())();

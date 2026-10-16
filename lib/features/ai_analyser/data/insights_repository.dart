@@ -8,6 +8,12 @@ class InsightsRepository {
 
   final AppDatabase _db;
 
+  /// Insights not dismissed, newest first.
+  Future<List<Insight>> activeInsights() => (_db.select(_db.insights)
+        ..where((i) => i.dismissed.equals(false))
+        ..orderBy([(i) => OrderingTerm.desc(i.generatedAt)]))
+      .get();
+
   Stream<List<Insight>> watchActiveInsights() {
     return (_db.select(_db.insights)
           ..where((i) => i.dismissed.equals(false))

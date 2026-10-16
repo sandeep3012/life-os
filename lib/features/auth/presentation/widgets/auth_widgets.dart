@@ -289,6 +289,8 @@ class AuthSocialRow extends StatelessWidget {
   const AuthSocialRow({super.key, this.onGoogle, this.onApple});
 
   final VoidCallback? onGoogle;
+
+  /// Null hides the Apple button — see `SupabaseConfig.appleSignIn`.
   final VoidCallback? onApple;
 
   @override
@@ -303,14 +305,16 @@ class AuthSocialRow extends StatelessWidget {
             onTap: onGoogle,
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _SocialButton(
-            label: 'Apple',
-            icon: LucideIcons.apple,
-            onTap: onApple,
+        if (onApple != null) ...[
+          const SizedBox(width: 12),
+          Expanded(
+            child: _SocialButton(
+              label: 'Apple',
+              icon: LucideIcons.apple,
+              onTap: onApple,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }

@@ -70,6 +70,10 @@ dependencies:
   # the native launch screen up until the first screen has its data, so the
   # app never shows a splash-then-blank-then-content sequence on launch.
   flutter_native_splash: ^2.4.8
+  audioplayers: ^6.8.1
+  supabase_flutter: ^2.18.2
+  cryptography: ^2.9.0
+  open_filex: ^4.7.0
 
 dev_dependencies:
   flutter_test:
@@ -158,6 +162,9 @@ flutter:
 
   assets:
     - assets/icon/
+    # Alarm tone previews for Settings → Alarm tone (the alarms themselves
+    # play from the platform copies in res/raw and the iOS bundle).
+    - assets/sounds/
 
 # Pre-rebrand launcher mark: the orange ring on the indigo ground. The adaptive
 # background is a flat colour rather than an asset, so assets/icon carries no

@@ -157,6 +157,6 @@ void main() {
     final habitCategories = await repo.watchHabitCategories().first;
     expect(habitCategories, hasLength(1));
     expect(habitCategories.single.name, 'Fitness');
-    expect(habitCategories.single.kind, 'habit');
+    expect(habitCategories.single.kind, plannerCategoryKind);
   });
 }

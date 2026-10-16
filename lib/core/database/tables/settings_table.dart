@@ -62,6 +62,14 @@ class AppSettings extends Table {
   /// Settings → "Replay the tour" clears it.
   TextColumn get toursSeen => text().withDefault(const Constant(''))();
 
+  /// `AlarmTone.name` — what alarm-mode reminders ring with.
+  TextColumn get alarmTone => text().withDefault(const Constant('gentle'))();
+
+  /// In-app sounds: a task ticked off, a streak kept, a goal reached, a
+  /// budget crossed. They follow the phone's silent switch either way.
+  BoolColumn get soundEffectsEnabled =>
+      boolean().withDefault(const Constant(true))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

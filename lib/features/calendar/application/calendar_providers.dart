@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/database/deleted_rows.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/scheduling/repeat_schedule.dart';
 import '../../../core/database/app_database_provider.dart';
@@ -186,10 +187,15 @@ class CalendarController {
     );
   }
 
-  Future<void> deleteEvent(String id) async {
+  /// Returns what went, for [restore].
+  Future<DeletedRows> deleteEvent(String id) async {
     await _notifications.cancelEventReminder(id);
-    await _repo.deleteEvent(id);
+    return _repo.deleteEvent(id);
   }
+
+  /// Undo for a delete. Reminders come back with the rows: the schedule
+  /// coordinator watches the events table.
+  Future<void> restore(DeletedRows removed) => _repo.restore(removed);
 
   Future<void> updateFollowingEvents({
     required String id,
@@ -216,12 +222,12 @@ class CalendarController {
   /// Cancels every event's reminder in the series before the bulk delete —
   /// a SQL delete doesn't touch the OS notification queue, so each id needs
   /// its own cancel call.
-  Future<void> deleteEventSeries(String recurrenceId) async {
+  Future<DeletedRows> deleteEventSeries(String recurrenceId) async {
     final events = await _repo.getEventsInSeries(recurrenceId);
     for (final e in events) {
       await _notifications.cancelEventReminder(e.id);
     }
-    await _repo.deleteEventSeries(recurrenceId);
+    return _repo.deleteEventSeries(recurrenceId);
   }
 
   Future<void> extendRecurringEvents() => _repo.extendRecurringEvents();

@@ -83,6 +83,9 @@ void main() {
 
     await repo.deleteDocument(document);
     expect(await repo.watchDocuments().first, isEmpty);
+    // Kept while Undo is on offer, then removed.
+    expect(await storedFile.exists(), isTrue);
+    await repo.discardFile(document);
     expect(await storedFile.exists(), isFalse);
   });
 

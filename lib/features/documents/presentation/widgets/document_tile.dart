@@ -20,12 +20,16 @@ class DocumentTile extends StatelessWidget {
     required this.document,
     required this.onDelete,
     this.onTap,
+    this.onLongPress,
     this.grid = false,
   });
 
   final Document document;
   final VoidCallback onDelete;
   final VoidCallback? onTap;
+
+  /// Edit the document's details; a tap opens the document itself.
+  final VoidCallback? onLongPress;
   final bool grid;
 
   @override
@@ -52,6 +56,7 @@ class DocumentTile extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: onTap,
+                onLongPress: onLongPress,
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Column(
@@ -96,6 +101,7 @@ class DocumentTile extends StatelessWidget {
             )
           : InkWell(
               onTap: onTap,
+                onLongPress: onLongPress,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(

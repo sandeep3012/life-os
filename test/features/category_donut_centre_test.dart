@@ -20,6 +20,7 @@ void main() {
     icon: 'label',
     colorHex: '#A67C00',
     kind: 'expense',
+    position: 0,
     createdAt: now,
   );
 

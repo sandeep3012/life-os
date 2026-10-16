@@ -1,3 +1,4 @@
+import '../../../../core/reminders/reminder_permission_prompt.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -253,7 +254,15 @@ class _MedicationEditorSheetState extends ConsumerState<MedicationEditorSheet> {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             value: _remind,
-            onChanged: (v) => setState(() => _remind = v),
+            onChanged: (v) {
+                setState(() => _remind = v);
+                if (v) {
+                  checkReminderPermissions(
+                    context,
+                    alarm: _reminderMode == ReminderMode.alarm,
+                  );
+                }
+              },
             title: Text(
               'Remind me',
               style: TextStyle(
@@ -286,7 +295,12 @@ class _MedicationEditorSheetState extends ConsumerState<MedicationEditorSheet> {
                   ReminderMode.notification: LucideIcons.bell,
                   ReminderMode.alarm: LucideIcons.alarmClock,
                 },
-                onChanged: (v) => setState(() => _reminderMode = v),
+                onChanged: (v) {
+                  setState(() => _reminderMode = v);
+                  if (v == ReminderMode.alarm) {
+                    checkReminderPermissions(context, alarm: true);
+                  }
+                },
               ),
             ),
           ],

@@ -3,4 +3,4 @@
      (RawResourceAndroidNotificationSound), which resource shrinking can't
      see, so release builds would otherwise drop them as unused. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@raw/reminder,@raw/notify,@raw/alarm_gentle" />
+    tools:keep="@raw/reminder,@raw/notify,@raw/alarm_gentle,@raw/alarm_important_knock,@raw/alarm_important_marimba,@raw/insight" />

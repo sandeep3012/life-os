@@ -3,7 +3,11 @@ package com.sandeep.lifeos
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import android.app.KeyguardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -16,6 +20,62 @@ import android.media.AudioAttributes
 class MainActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Settings → Notification sounds: Android's own per-channel sound
+        // settings for this app, where each reminder type's tone can be set.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/system")
+            .setMethodCallHandler { call, result ->
+                // An alarm was dealt with on the lock screen: step back so the
+                // phone returns to its lock screen, like the clock app's alarm.
+                if (call.method == "leaveIfLocked") {
+                    val keyguard = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+                    val locked = keyguard.isKeyguardLocked
+                    if (locked) moveTaskToBack(true)
+                    result.success(locked)
+                    return@setMethodCallHandler
+                }
+                if (call.method != "openNotificationSettings") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                try {
+                    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    } else {
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            .setData(Uri.fromParts("package", packageName, null))
+                    }
+                    startActivity(intent)
+                    result.success(true)
+                } catch (error: Exception) {
+                    result.error("open_failed", error.message, null)
+                }
+            }
+        // The Today home-screen widget: the app hands over a ready-made
+        // snapshot (TodayWidgetSnapshot), saved here for TodayWidgetProvider.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/widget")
+            .setMethodCallHandler { call, result ->
+                if (call.method != "updateToday") {
+                    result.notImplemented()
+                    return@setMethodCallHandler
+                }
+                try {
+                    val data = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
+                    val editor = TodayWidgetProvider.prefs(this).edit()
+                    for ((key, value) in data) {
+                        when (value) {
+                            is String -> editor.putString(key as String, value)
+                            is Int -> editor.putInt(key as String, value)
+                            is Long -> editor.putInt(key as String, value.toInt())
+                        }
+                    }
+                    editor.apply()
+                    TodayWidgetProvider.refresh(this)
+                    result.success(null)
+                } catch (error: Exception) {
+                    result.error("widget_failed", error.message, null)
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/haptics")
             .setMethodCallHandler { call, result ->
                 if (call.method != "save") {

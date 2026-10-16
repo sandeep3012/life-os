@@ -5,6 +5,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/widgets/compact_editor_sheet.dart';
 import '../../../tags/presentation/widgets/tag_chip_row.dart';
 import '../../domain/document_type.dart';
+import '../../domain/folder_tree.dart';
 
 class QuickAddDocumentDetails {
   const QuickAddDocumentDetails({
@@ -184,9 +185,11 @@ class _DetailsSheetState extends State<_DetailsSheet> {
                   selected: _folderId == null,
                   onSelected: (_) => setState(() => _folderId = null),
                 ),
-                for (final f in widget.folders)
+                for (final f in FolderTree.flattened(widget.folders))
                   ChoiceChip(
-                    label: Text(f.name),
+                    // The full path: two folders can share a name at
+                    // different depths ("Work / 2026", "Home / 2026").
+                    label: Text(FolderTree.pathOf(widget.folders, f.id)),
                     selected: _folderId == f.id,
                     onSelected: (_) => setState(() => _folderId = f.id),
                   ),

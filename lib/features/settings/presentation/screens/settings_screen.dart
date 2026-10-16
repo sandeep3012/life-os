@@ -15,6 +15,7 @@ import '../../../../core/services/demo_data_service.dart';
 import '../../../../core/services/app_lock_service.dart';
 import '../../../../core/services/backup_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/system_settings.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -26,11 +27,14 @@ import '../../../finance/presentation/screens/account_type_management_screen.dar
 import '../../../finance/presentation/screens/category_management_screen.dart';
 import '../../application/app_lock_providers.dart';
 import '../../application/settings_providers.dart';
+import '../widgets/alarm_tone_sheet.dart';
 import '../widgets/pin_setup_sheet.dart';
 import '../widgets/unlock_method_sheet.dart';
 import '../widgets/reminder_status_card.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_paths.dart';
+import '../../../ai_analyser/application/ai_analyser_providers.dart';
+import '../../../sync/application/sync_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -161,6 +165,16 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 _SettingSwitch(
+                  icon: LucideIcons.volume2,
+                  title: 'Sounds',
+                  subtitle:
+                      'Ticking off tasks, streaks, goals and budget alerts. '
+                      'Silent when your phone is.',
+                  value: settings.soundEffectsEnabled,
+                  onChanged: controller.setSoundEffectsEnabled,
+                ),
+                const Divider(height: 1),
+                _SettingSwitch(
                   icon: LucideIcons.sparkles,
                   title: 'Save feedback',
                   subtitle: 'Show a visual response after a successful save',
@@ -237,10 +251,48 @@ class SettingsScreen extends ConsumerWidget {
                 _SettingSwitch(
                   icon: LucideIcons.lightbulb,
                   title: 'AI insight alerts',
-                  subtitle: 'Notify when new insights appear',
+                  subtitle: 'A note at 9 AM when LifeOS finds something new',
                   value: settings.aiInsightAlerts,
-                  onChanged: controller.setAiInsightAlerts,
+                  onChanged: (enabled) async {
+                    await controller.setAiInsightAlerts(enabled);
+                    if (enabled) {
+                      await ref
+                          .read(notificationServiceProvider)
+                          .requestReminderPermissions();
+                    }
+                    await ref
+                        .read(aiAnalyserControllerProvider)
+                        .updateInsightAlert(enabled: enabled);
+                  },
                 ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const _IconWell(LucideIcons.alarmClock),
+                  title: const Text('Alarm tone'),
+                  subtitle: Text(settings.alarmTone.label),
+                  trailing: const Icon(LucideIcons.chevronRight),
+                  onTap: () async {
+                    final tone = await showAlarmToneSheet(
+                      context,
+                      current: settings.alarmTone,
+                    );
+                    if (tone != null && tone != settings.alarmTone) {
+                      await controller.setAlarmTone(tone);
+                    }
+                  },
+                ),
+                if (SystemSettings.canOpenNotificationSettings) ...[
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const _IconWell(LucideIcons.music),
+                    title: const Text('Notification sounds'),
+                    subtitle: const Text(
+                      "Set each reminder type's sound in Android settings",
+                    ),
+                    trailing: const Icon(LucideIcons.externalLink, size: 18),
+                    onTap: SystemSettings.openNotificationSettings,
+                  ),
+                ],
               ],
             ),
           ),
@@ -301,6 +353,9 @@ class SettingsScreen extends ConsumerWidget {
 
           const _SectionTitle('Security'),
           const _SecuritySection(),
+
+          const _SectionTitle('Sync'),
+          const _SyncRow(),
 
           const _SectionTitle('Data'),
           const _BackupCard(),
@@ -1221,6 +1276,35 @@ class _MiniSpinner extends StatelessWidget {
       width: 18,
       height: 18,
       child: CircularProgressIndicator(strokeWidth: 2),
+    );
+  }
+}
+
+/// Settings → Sync: where sync stands, one tap from its own screen.
+class _SyncRow extends ConsumerWidget {
+  const _SyncRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(syncControllerProvider);
+    final subtitle = switch (status.phase) {
+      SyncPhase.unavailable => 'Not available in this build',
+      SyncPhase.signedOut => 'Off — your data is on this device only',
+      SyncPhase.checking => 'Checking…',
+      SyncPhase.needsSetup => 'Signed in — finish setting up',
+      SyncPhase.needsRecoveryKey => 'Signed in — enter your recovery key',
+      SyncPhase.ready =>
+        status.error != null
+            ? 'Waiting to sync'
+            : 'On · ${status.email ?? 'signed in'}',
+    };
+    return Card(
+      child: _SettingRow(
+        icon: LucideIcons.cloud,
+        title: 'Sync & account',
+        subtitle: subtitle,
+        onTap: () => context.push(RoutePaths.sync),
+      ),
     );
   }
 }

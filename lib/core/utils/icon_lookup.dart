@@ -30,6 +30,8 @@ const Map<String, IconData> _iconsByName = {
   'build': LucideIcons.wrench,
   'wifi': LucideIcons.wifi,
   'account_balance_wallet': LucideIcons.wallet,
+  // Sample data's UPI account type was saved with this shorter name.
+  'wallet': LucideIcons.wallet,
   'savings': LucideIcons.piggyBank,
   'credit_card': LucideIcons.creditCard,
   'trending_up': LucideIcons.trendingUp,
@@ -377,8 +379,17 @@ IconData resolveIcon(String? name) =>
 
 /// Blank counts as "no icon", not as an emoji — a row imported from an older
 /// backup can carry an empty string, which would otherwise render as nothing.
+///
+/// An icon *name* this version doesn't know (snake_case ASCII) isn't an emoji
+/// either: drawing it as text put "wall et" in an icon well. It falls back to
+/// the default icon instead.
 bool isEmojiIcon(String? value) =>
-    value != null && value.isNotEmpty && !_iconsByName.containsKey(value);
+    value != null &&
+    value.isNotEmpty &&
+    !_iconsByName.containsKey(value) &&
+    !_iconName.hasMatch(value);
+
+final _iconName = RegExp(r'^[a-z0-9_]+$');
 
 /// An emoji, centred the way an [Icon] is.
 ///

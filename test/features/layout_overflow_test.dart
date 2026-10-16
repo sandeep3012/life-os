@@ -234,8 +234,10 @@ void main() {
     // track — the Material SegmentedButton was invisible against the page.
     expect(find.text('Tasks'), findsOneWidget);
     expect(find.text('Habits'), findsOneWidget);
-    expect(find.text('Today'), findsOneWidget);
-    expect(find.text('Upcoming'), findsOneWidget);
+    // The period rail (Day / Week / Month replaced Today / Upcoming).
+    expect(find.text('Day'), findsOneWidget);
+    expect(find.text('Week'), findsOneWidget);
+    expect(find.text('Month'), findsOneWidget);
 
     expect(find.byType(AppSidebar), findsNothing);
     await tester.tap(find.byIcon(LucideIcons.menu));

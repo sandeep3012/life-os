@@ -1,3 +1,4 @@
+import '../../../../core/reminders/reminder_permission_prompt.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -213,7 +214,15 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
                 title: const Text('Remind me'),
                 subtitle: const Text('Nudge before the deadline'),
                 value: _reminderEnabled,
-                onChanged: (v) => setState(() => _reminderEnabled = v),
+                onChanged: (v) {
+                setState(() => _reminderEnabled = v);
+                if (v) {
+                  checkReminderPermissions(
+                    context,
+                    alarm: _reminderMode == ReminderMode.alarm,
+                  );
+                }
+              },
               ),
               if (_reminderEnabled) ...[
                 DropdownButtonFormField<int>(
@@ -242,7 +251,12 @@ class _QuickAddGoalSheetState extends State<_QuickAddGoalSheet> {
                     ReminderMode.notification: LucideIcons.bell,
                     ReminderMode.alarm: LucideIcons.alarmClock,
                   },
-                  onChanged: (v) => setState(() => _reminderMode = v),
+                  onChanged: (v) {
+                  setState(() => _reminderMode = v);
+                  if (v == ReminderMode.alarm) {
+                    checkReminderPermissions(context, alarm: true);
+                  }
+                },
                 ),
               ],
             ],

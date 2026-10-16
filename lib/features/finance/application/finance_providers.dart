@@ -46,6 +46,22 @@ final transactableAccountsProvider = Provider<List<Account>>((ref) {
       .toList();
 });
 
+/// The account a new entry starts on: the first one in the user's order
+/// (Accounts → Order) that can take a payment — an investment can't.
+final preferredAccountIdProvider = Provider<String?>((ref) {
+  final accounts = ref.watch(transactableAccountsProvider);
+  return accounts.isEmpty ? null : accounts.first.id;
+});
+
+/// [preferred] if it's one of [accounts], else the first of them.
+String startingAccountId(List<Account> accounts, String? preferred) =>
+    accounts.any((a) => a.id == preferred) ? preferred! : accounts.first.id;
+
+/// The first of [offered] — the top of the user's order for that kind of
+/// entry (Settings → Categories) — or none.
+String? startingCategoryId(Iterable<Category> offered) =>
+    offered.isEmpty ? null : offered.first.id;
+
 final accountTypesProvider = StreamProvider<List<AccountType>>((ref) {
   return ref.watch(financeRepositoryProvider).watchAccountTypes();
 });
@@ -283,6 +299,11 @@ class FinanceController {
   Future<void> deleteAccount(String accountId) => _repo.deleteAccount(accountId);
 
   Future<void> deactivateAccount(String accountId) => _repo.setAccountActive(accountId, false);
+
+  Future<void> reorderAccounts(List<String> ids) => _repo.reorderAccounts(ids);
+
+  Future<void> reorderCategories(List<String> ids) =>
+      _repo.reorderCategories(ids);
 
   Future<void> reactivateAccount(String accountId) => _repo.setAccountActive(accountId, true);
 
@@ -557,6 +578,17 @@ class FinanceController {
   Future<void> deleteBill(String id) async {
     await _notifications.cancelBillReminder(id);
     await _repo.deleteBill(id);
+  }
+
+  /// Re-schedules every active bill set to ring as an alarm — after the
+  /// alarm tone changes, so they move to the new tone's channel.
+  Future<void> rescheduleBillAlarms() async {
+    final bills = await _repo.watchBills().first;
+    for (final bill in bills) {
+      final mode = ReminderMode.fromStorage(bill.reminderMode);
+      if (!bill.active || mode != ReminderMode.alarm) continue;
+      await _scheduleBillReminder(bill, mode);
+    }
   }
 
   Future<void> _scheduleBillReminder(Bill bill, ReminderMode mode) async {

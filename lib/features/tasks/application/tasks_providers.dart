@@ -5,10 +5,12 @@ import '../../../core/database/app_database_provider.dart';
 import '../../../core/reminders/reminder_mode.dart';
 import '../../../core/services/notification_service.dart';
 import '../../settings/application/settings_providers.dart';
+import '../../../core/database/deleted_rows.dart';
 import '../../../core/scheduling/repeat_schedule.dart';
 import '../data/tasks_repository.dart';
 import '../domain/task_priority.dart';
 import '../domain/task_date_window.dart';
+import '../../../core/services/sound_effects.dart';
 
 final tasksRepositoryProvider = Provider<TasksRepository>((ref) {
   return TasksRepository(ref.watch(appDatabaseProvider));
@@ -61,11 +63,13 @@ class TasksController {
   TasksController(
     this._repo,
     this._notifications,
-    bool Function() remindersEnabled,
-  );
+    bool Function() remindersEnabled, {
+    SoundEffects? sounds,
+  }) : _sounds = sounds;
 
   final TasksRepository _repo;
   final NotificationService _notifications;
+  final SoundEffects? _sounds;
 
   Future<void> addTask({
     required String title,
@@ -92,6 +96,9 @@ class TasksController {
 
   Future<void> toggleDone(Task task) async {
     final done = task.status != 'done';
+    // Played as the box is ticked, not after the write: the sound is the
+    // acknowledgement of the tap.
+    if (done) _sounds?.play(SoundEffect.taskDone);
     await _repo.setTaskDone(task.id, done);
     if (done) {
       await _notifications.cancelTaskReminder(task.id);
@@ -107,8 +114,24 @@ class TasksController {
     required TaskPriority priority,
     required bool reminderEnabled,
     required ReminderMode reminderMode,
+    RepeatSchedule? schedule,
+    bool following = false,
   }) async {
     await _notifications.cancelTaskReminder(task.id);
+    // A repeating task, edited for this and all later occurrences.
+    if (following && schedule != null && task.recurrenceId != null) {
+      await _repo.updateFollowingTasks(
+        selected: task,
+        title: title,
+        description: description,
+        categoryId: categoryId,
+        priority: priority.value,
+        reminderEnabled: reminderEnabled,
+        reminderMode: reminderMode.storageValue,
+        schedule: schedule,
+      );
+      return;
+    }
     await _repo.updateTask(
       id: task.id,
       title: title,
@@ -118,13 +141,24 @@ class TasksController {
       priority: priority.value,
       reminderEnabled: reminderEnabled,
       reminderMode: reminderMode.storageValue,
+      schedule: schedule,
     );
   }
 
-  Future<void> deleteTask(Task task) async {
+  /// [following] also deletes the open occurrences after a repeating one.
+  /// Their reminders go with them on the coordinator's next pass.
+  ///
+  /// Returns what went, for [restore].
+  Future<DeletedRows> deleteTask(Task task, {bool following = false}) async {
     await _notifications.cancelTaskReminder(task.id);
-    await _repo.deleteTask(task.id);
+    return following
+        ? _repo.deleteFollowingTasks(task)
+        : _repo.deleteTask(task.id);
   }
+
+  /// Undo for [deleteTask]. Reminders come back with the rows: the schedule
+  /// coordinator watches the tasks table.
+  Future<void> restore(DeletedRows removed) => _repo.restore(removed);
 }
 
 final tasksControllerProvider = Provider<TasksController>((ref) {
@@ -132,5 +166,6 @@ final tasksControllerProvider = Provider<TasksController>((ref) {
     ref.watch(tasksRepositoryProvider),
     ref.watch(notificationServiceProvider),
     () => ref.read(settingsProvider).taskReminders,
+    sounds: ref.watch(soundEffectsProvider),
   );
 });

@@ -344,14 +344,30 @@ class BackupService {
         tables['learnNotes'],
         LearnNote.fromJson,
       );
-      await _insertAll(_db.categories, tables['categories'], Category.fromJson);
+      await _insertAll(
+        _db.categories,
+        tables['categories'],
+        (json) => Category.fromJson({'position': 0, ...json}),
+      );
       await _insertAll(_db.tags, tables['tags'], Tag.fromJson);
       await _insertAll(
         _db.accountTypes,
         tables['accountTypes'],
         AccountType.fromJson,
       );
-      await _insertAll(_db.accounts, tables['accounts'], Account.fromJson);
+      // Backups from before v33 have no order or default: they come back
+      // in creation order (position ties sort by it) with no default.
+      await _insertAll(
+        _db.accounts,
+        tables['accounts'],
+        (json) =>
+            Account.fromJson({
+              'position': 0,
+              'isDefault': false,
+              'openingBalanceMinor': 0,
+              ...json,
+            }),
+      );
       await _insertAll(_db.folders, tables['folders'], Folder.fromJson);
       await _insertAll(_db.habits, tables['habits'], Habit.fromJson);
       await _insertAll(_db.goals, tables['goals'], Goal.fromJson);
@@ -391,6 +407,22 @@ class BackupService {
       await _insertAll(_db.events, tables['events'], Event.fromJson);
       await _insertAll(_db.notes, tables['notes'], Note.fromJson);
       await _insertAll(_db.documents, tables['documents'], Document.fromJson);
+
+      // Accounts from before opening balances existed: work them out from
+      // the balances and transactions the backup carries, so neither
+      // changes. Accounts that have one keep it exactly.
+      final withoutOpening = [
+        for (final row in (tables['accounts'] as List?) ?? const [])
+          if (row is Map && !row.containsKey('openingBalanceMinor')) row['id'],
+      ];
+      for (final id in withoutOpening) {
+        await _db.customStatement(
+          'UPDATE accounts SET opening_balance_minor = balance_minor - '
+          '(SELECT COALESCE(SUM(amount_minor), 0) FROM transactions '
+          'WHERE transactions.account_id = accounts.id) WHERE id = ?',
+          [id],
+        );
+      }
     });
 
     for (final file in archive.files) {
@@ -412,6 +444,8 @@ class BackupService {
     // been using the app; don't walk them through it again.
     'onboardingCompleted': true,
     'toursSeen': 'home',
+    'alarmTone': 'gentle',
+    'soundEffectsEnabled': true,
   };
 
   Future<void> _insertAll<T extends Table, D>(

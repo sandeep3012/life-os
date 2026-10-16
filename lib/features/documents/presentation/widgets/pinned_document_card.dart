@@ -15,10 +15,12 @@ class PinnedDocumentCard extends StatelessWidget {
     required this.document,
     required this.onTap,
     required this.onUnpin,
+    this.onLongPress,
   });
 
   final Document document;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
   final VoidCallback onUnpin;
 
   @override
@@ -35,6 +37,7 @@ class PinnedDocumentCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
+          onLongPress: onLongPress,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

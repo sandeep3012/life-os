@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart' hide isSameDay;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../../core/widgets/undo_snack_bar.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_utils.dart';
@@ -573,8 +574,16 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
     if (confirmed != true || !mounted) return;
 
     setState(() => _busy = true);
-    await ref.read(habitsControllerProvider).archiveHabit(habit);
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = ref.read(habitsControllerProvider);
+    await controller.archiveHabit(habit);
     if (mounted) Navigator.of(context).pop();
+    // Unarchiving also brings its reminder back.
+    showUndoSnackBar(
+      messenger,
+      message: '"${habit.name}" archived',
+      onUndo: () => controller.unarchiveHabit(habit),
+    );
   }
 
   Future<void> _unarchiveHabit(Habit habit) async {

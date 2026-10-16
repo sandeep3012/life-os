@@ -186,6 +186,24 @@ class GoalsController {
     return _repo.updateProgress(goalId, currentValue);
   }
 
+  /// Completing or abandoning a goal stops its deadline reminder; reopening
+  /// it brings the reminder back.
+  Future<void> setStatus(Goal goal, String status) async {
+    await _repo.setStatus(goal.id, status);
+    if (status == 'active') {
+      await _scheduleGoalReminder(
+        goalId: goal.id,
+        title: goal.title,
+        targetDate: goal.targetDate,
+        reminderEnabled: goal.reminderEnabled,
+        reminderDaysBefore: goal.reminderDaysBefore,
+        mode: ReminderMode.fromStorage(goal.reminderMode),
+      );
+    } else {
+      await _notifications.cancelGoalReminder(goal.id);
+    }
+  }
+
   Future<void> addLink({
     required String goalId,
     required String linkedType,
@@ -217,6 +235,24 @@ class GoalsController {
   }
 
   Future<void> deleteMilestone(String id) => _repo.deleteMilestone(id);
+
+  /// Re-schedules every active goal reminder set as an alarm — after the
+  /// alarm tone changes, so they move to the new tone's channel.
+  Future<void> rescheduleGoalAlarms() async {
+    final goals = await _repo.watchGoals().first;
+    for (final goal in goals) {
+      final mode = ReminderMode.fromStorage(goal.reminderMode);
+      if (goal.status != 'active' || mode != ReminderMode.alarm) continue;
+      await _scheduleGoalReminder(
+        goalId: goal.id,
+        title: goal.title,
+        targetDate: goal.targetDate,
+        reminderEnabled: goal.reminderEnabled,
+        reminderDaysBefore: goal.reminderDaysBefore,
+        mode: mode,
+      );
+    }
+  }
 
   Future<void> _scheduleGoalReminder({
     required String goalId,

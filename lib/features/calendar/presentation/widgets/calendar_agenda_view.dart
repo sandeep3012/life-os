@@ -213,7 +213,10 @@ class _CalendarAgendaViewState extends State<CalendarAgendaView> {
               selectedDayPredicate: (day) =>
                   dateOnly(day) == widget.selectedDay,
               onDaySelected: (selected, _) => _goToDay(selected),
-              onPageChanged: (focused) => setState(() => _focusedDay = focused),
+              // The calendar reports days in UTC; kept as a local date like
+              // every other day here, or "same day" checks quietly fail.
+              onPageChanged: (focused) =>
+                  setState(() => _focusedDay = dateOnly(focused)),
               headerStyle: const HeaderStyle(
                 formatButtonVisible: false,
                 titleCentered: true,
@@ -358,6 +361,10 @@ class _CalendarAgendaViewState extends State<CalendarAgendaView> {
               ),
               if (!_todayVisible)
                 Positioned(
+                  // Centred. The chip only shows once the agenda has been
+                  // scrolled away from today, and by then the "New event"
+                  // button has folded to a round + at the end edge, clear of
+                  // the middle.
                   left: 0,
                   right: 0,
                   // Match the Scaffold's end-float FAB bottom margin. Remove

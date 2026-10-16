@@ -5,10 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
+import 'package:life_manager/core/widgets/reorder_card.dart';
 import 'package:life_manager/core/services/file_storage_service.dart';
 import 'package:life_manager/features/finance/data/finance_repository.dart';
 import 'package:life_manager/features/finance/presentation/screens/category_management_screen.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// The delete dialog used to say "used by 1 transaction/budget" for any
 /// reference, including the invisible tombstone a deleted budget leaves behind.
@@ -40,6 +40,17 @@ void main() {
   }
 
 
+  /// Delete lives in the category's edit sheet: tap the category, then
+  /// the sheet's Delete button.
+  Future<void> openDelete(WidgetTester tester) async {
+    await tester.tap(find.byType(ReorderCard).first);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Delete category'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete category'));
+    await tester.pumpAndSettle();
+  }
+
   Future<void> disposeCleanly(WidgetTester tester) async {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
@@ -55,8 +66,7 @@ void main() {
     await repo.createBudget(categoryId: c.id, limitMinor: 250000);
     await pumpScreen(tester);
 
-    await tester.tap(find.byIcon(LucideIcons.trash2));
-    await tester.pumpAndSettle();
+    await openDelete(tester);
 
     expect(find.text('Delete this category?'), findsOneWidget);
     // Says what is actually attached: a budget, not a transaction.
@@ -85,8 +95,7 @@ void main() {
     await repo.createCategory(name: 'Shopping', icon: 'label', colorHex: '#E0475A');
     await pumpScreen(tester);
 
-    await tester.tap(find.byIcon(LucideIcons.trash2));
-    await tester.pumpAndSettle();
+    await openDelete(tester);
 
     expect(find.text('"Shopping" will be removed.'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
@@ -113,8 +122,7 @@ void main() {
     );
     await pumpScreen(tester);
 
-    await tester.tap(find.byIcon(LucideIcons.trash2));
-    await tester.pumpAndSettle();
+    await openDelete(tester);
 
     expect(find.text("Can't delete this category"), findsOneWidget);
     expect(find.textContaining('used by 1 transaction.'), findsOneWidget);

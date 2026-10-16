@@ -1,3 +1,4 @@
+import '../../../core/database/deleted_rows.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
@@ -36,7 +37,9 @@ class NotesController {
     return _repo.updateNote(id: id, title: title, body: body, folderId: folderId);
   }
 
-  Future<void> deleteNote(String id) => _repo.deleteNote(id);
+  Future<DeletedRows> deleteNote(String id) => _repo.deleteNote(id);
+
+  Future<void> restore(DeletedRows removed) => _repo.restore(removed);
 }
 
 final notesControllerProvider = Provider<NotesController>((ref) {

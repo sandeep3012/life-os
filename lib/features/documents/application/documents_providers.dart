@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/database/deleted_rows.dart';
+import '../../../core/widgets/undo_snack_bar.dart' show undoWindow;
 import '../../../core/database/app_database.dart';
 import '../../../core/database/app_database_provider.dart';
 import '../../../core/services/file_storage_service.dart';
@@ -54,8 +58,17 @@ class DocumentsController {
 
   final DocumentsRepository _repo;
 
-  Future<void> createFolder(String name, {String? iconName, String? colorHex}) =>
-      _repo.createFolder(name, iconName: iconName, colorHex: colorHex);
+  Future<void> createFolder(
+    String name, {
+    String? iconName,
+    String? colorHex,
+    String? parentFolderId,
+  }) => _repo.createFolder(
+    name,
+    iconName: iconName,
+    colorHex: colorHex,
+    parentFolderId: parentFolderId,
+  );
 
   Future<void> updateFolder(
     String id, {
@@ -104,7 +117,19 @@ class DocumentsController {
   Future<void> pinDocument(String id, {required bool pinned}) =>
       _repo.pinDocument(id, pinned: pinned);
 
-  Future<void> deleteDocument(Document document) => _repo.deleteDocument(document);
+  /// Deletes [document] now; its file goes once the Undo window has passed
+  /// and it wasn't brought back. Returns what went, for [restore].
+  Future<DeletedRows> deleteDocument(Document document) async {
+    final removed = await _repo.deleteDocument(document);
+    // A little past the snackbar, so an Undo tapped at the last moment
+    // still finds the file.
+    Timer(undoWindow + const Duration(seconds: 2), () {
+      _repo.discardFile(document);
+    });
+    return removed;
+  }
+
+  Future<void> restore(DeletedRows removed) => _repo.restore(removed);
 }
 
 final documentsControllerProvider = Provider<DocumentsController>((ref) {

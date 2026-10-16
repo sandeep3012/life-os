@@ -35,6 +35,7 @@ void main() {
       icon: 'shopping_cart',
       colorHex: '#2E9E63',
       kind: 'expense',
+      position: 0,
       createdAt: now,
     ),
     spentMinor: spent,

@@ -10,6 +10,8 @@ import '../../settings/application/settings_providers.dart';
 import '../domain/task_momentum.dart';
 import '../data/insights_repository.dart';
 import '../domain/analytics_rule_engine.dart';
+import '../../../core/services/notification_service.dart';
+import '../domain/insight_digest.dart';
 
 final insightsRepositoryProvider = Provider<InsightsRepository>((ref) {
   return InsightsRepository(ref.watch(appDatabaseProvider));
@@ -120,6 +122,32 @@ class AiAnalyserController {
     );
 
     await _ref.read(insightsRepositoryProvider).reconcile(drafts);
+    await updateInsightAlert(enabled: settings?.aiInsightAlerts ?? false);
+  }
+
+  /// Keeps the morning insight note (see [InsightDigest]) in step with what
+  /// the analyser found and with the "AI insight alerts" switch.
+  Future<void> updateInsightAlert({required bool enabled}) async {
+    final notifications = _ref.read(notificationServiceProvider);
+    try {
+      if (!enabled) {
+        await notifications.cancelInsightDigest();
+        return;
+      }
+      final active = await _ref.read(insightsRepositoryProvider).activeInsights();
+      final digest = InsightDigest.compose(active, now: DateTime.now());
+      if (digest == null) {
+        await notifications.cancelInsightDigest();
+      } else {
+        await notifications.scheduleInsightDigest(
+          title: digest.title,
+          body: digest.body,
+          at: digest.at,
+        );
+      }
+    } catch (_) {
+      // Like every notification, best-effort.
+    }
   }
 
   Future<void> dismiss(String id) =>

@@ -19,6 +19,9 @@ class Goals extends Table {
   /// active | completed | abandoned
   TextColumn get status => text().withDefault(const Constant('active'))();
 
+  /// When it was marked complete; null while active or abandoned.
+  DateTimeColumn get completedAt => dateTime().nullable()();
+
   /// Opt-in, like habits' per-item reminder — a goal doesn't imply urgency
   /// the way an unpaid bill does. Only meaningful when [targetDate] is set.
   BoolColumn get reminderEnabled =>

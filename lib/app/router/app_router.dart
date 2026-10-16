@@ -6,6 +6,7 @@ import '../../features/home/presentation/screens/more_screen.dart';
 import '../../features/finance/presentation/screens/finance_home_screen.dart';
 import '../../features/auth/presentation/screens/sign_in_screen.dart';
 import '../../features/auth/presentation/screens/sign_up_screen.dart';
+import '../../features/sync/presentation/sync_screen.dart';
 import '../../features/finance/presentation/screens/finance_overview_screen.dart';
 import '../../features/finance/presentation/screens/recurring_transactions_screen.dart';
 import '../../features/finance/presentation/screens/bills_screen.dart';
@@ -30,6 +31,7 @@ import '../../features/settings/presentation/screens/settings_screen.dart';
 import 'app_shell.dart';
 import 'route_paths.dart';
 import 'navigator_keys.dart';
+import '../../features/finance/presentation/screens/accounts_screen.dart';
 
 /// Root go_router config: a StatefulShellRoute with 5 bottom-nav branches,
 /// each branch preserving its own navigation stack.
@@ -76,6 +78,10 @@ GoRouter createAppRouter() => GoRouter(
                 GoRoute(
                   path: 'net-worth',
                   builder: (context, state) => const NetWorthScreen(),
+                ),
+                GoRoute(
+                  path: 'accounts',
+                  builder: (context, state) => const AccountsScreen(),
                 ),
                 GoRoute(
                   path: 'reports',
@@ -191,6 +197,10 @@ GoRouter createAppRouter() => GoRouter(
 
     // Sync account, deliberately outside the shell: the design draws these
     // full-screen with no bottom nav, and free use never reaches them.
+    GoRoute(
+      path: RoutePaths.sync,
+      builder: (context, state) => const SyncScreen(),
+    ),
     GoRoute(
       path: RoutePaths.syncSignIn,
       builder: (context, state) => const SignInScreen(),

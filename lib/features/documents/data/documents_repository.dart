@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/deleted_rows.dart';
 import '../../../core/services/file_storage_service.dart';
 
 class DocumentsRepository {
@@ -30,13 +31,20 @@ class DocumentsRepository {
         .watch();
   }
 
-  Future<void> createFolder(String name, {String? iconName, String? colorHex}) {
+  /// A top-level folder, or one inside [parentFolderId].
+  Future<void> createFolder(
+    String name, {
+    String? iconName,
+    String? colorHex,
+    String? parentFolderId,
+  }) {
     return _db.into(_db.folders).insert(
       FoldersCompanion.insert(
         name: name,
         scope: 'documents',
         iconName: Value(iconName),
         colorHex: Value(colorHex),
+        parentFolderId: Value(parentFolderId),
       ),
     );
   }
@@ -56,11 +64,22 @@ class DocumentsRepository {
     );
   }
 
-  Future<void> deleteFolder(String id) async {
-    // Un-assign documents from this folder, then delete the folder.
-    await (_db.update(_db.documents)..where((d) => d.folderId.equals(id)))
-        .write(const DocumentsCompanion(folderId: Value(null)));
-    await (_db.delete(_db.folders)..where((f) => f.id.equals(id))).go();
+  /// Deletes the folder only. Its documents and sub-folders move up to where
+  /// the folder was — its parent, or the top level — so deleting a folder
+  /// never deletes anything inside it.
+  Future<void> deleteFolder(String id) {
+    return _db.transaction(() async {
+      final folder = await (_db.select(
+        _db.folders,
+      )..where((f) => f.id.equals(id))).getSingleOrNull();
+      final parent = folder?.parentFolderId;
+      await (_db.update(_db.documents)..where((d) => d.folderId.equals(id)))
+          .write(DocumentsCompanion(folderId: Value(parent)));
+      await (_db.update(_db.folders)
+            ..where((f) => f.parentFolderId.equals(id)))
+          .write(FoldersCompanion(parentFolderId: Value(parent)));
+      await (_db.delete(_db.folders)..where((f) => f.id.equals(id))).go();
+    });
   }
 
   Future<void> importAndCreateDocument({
@@ -109,13 +128,36 @@ class DocumentsRepository {
     );
   }
 
-  Future<void> deleteDocument(Document document) async {
+  /// Removes the document from the app straight away, but leaves its file
+  /// on disk — so Undo can bring it back whole. [discardFile] removes the
+  /// file once Undo is no longer on offer.
+  Future<DeletedRows> deleteDocument(Document document) =>
+      _db.transaction(() async {
+        final removed = DeletedRows()
+          ..addAll(
+            _db.documents,
+            await (_db.select(
+              _db.documents,
+            )..where((d) => d.id.equals(document.id))).get(),
+          );
+        await (_db.delete(
+          _db.documents,
+        )..where((d) => d.id.equals(document.id))).go();
+        return removed;
+      });
+
+  /// Puts back what a delete removed.
+  Future<void> restore(DeletedRows removed) => removed.restore(_db);
+
+  /// Deletes [document]'s file — unless the document came back (Undo).
+  Future<void> discardFile(Document document) async {
+    final back = await (_db.select(
+      _db.documents,
+    )..where((d) => d.id.equals(document.id))).getSingleOrNull();
+    if (back != null) return;
     await _storage.deleteFile(
       document.filePath,
       thumbnailRelativePath: document.thumbnailPath,
     );
-    await (_db.delete(
-      _db.documents,
-    )..where((d) => d.id.equals(document.id))).go();
   }
 }

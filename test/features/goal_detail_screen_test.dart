@@ -50,6 +50,67 @@ void main() {
     );
   }
 
+  Future<Goal> stored() =>
+      (db.select(db.goals)..where((g) => g.id.equals(goalId))).getSingle();
+
+  testWidgets('a goal can be completed, then reopened', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Mark complete'));
+    await tester.pumpAndSettle();
+    var goal = await stored();
+    expect(goal.status, 'completed');
+    expect(goal.completedAt, isNotNull);
+    expect(find.text('Completed'), findsOneWidget);
+
+    await tester.tap(find.text('Reopen'));
+    await tester.pumpAndSettle();
+    goal = await stored();
+    expect(goal.status, 'active');
+    expect(goal.completedAt, isNull);
+    expect(find.text('Mark complete'), findsOneWidget);
+
+    await _disposeCleanly(tester);
+  });
+
+  testWidgets('abandoning asks first', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Abandon'));
+    await tester.pumpAndSettle();
+    expect(find.text('Abandon this goal?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Abandon'));
+    await tester.pumpAndSettle();
+
+    expect((await stored()).status, 'abandoned');
+    expect(find.text('Abandoned'), findsOneWidget);
+
+    await _disposeCleanly(tester);
+  });
+
+  testWidgets('reaching the target offers to complete the goal', (tester) async {
+    await GoalsRepository(db).updateProgress(goalId, 999);
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(LucideIcons.plus));
+    await tester.pumpAndSettle();
+    expect(find.text('Mark this goal complete?'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, 'Mark complete'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect((await stored()).status, 'completed');
+
+    await _disposeCleanly(tester);
+  });
+
   testWidgets('editing via the app-bar button persists changes', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();

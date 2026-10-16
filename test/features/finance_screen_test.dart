@@ -69,18 +69,24 @@ void main() {
       expect(find.text('Checking'), findsOneWidget);
       expect(find.textContaining('1,000.00'), findsWidgets);
 
+      // The + button asks Expense or Income, then opens the entry sheet:
+      // amount, then a category — there's no separate merchant field.
       await tester.tap(find.byTooltip('New transaction'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).first, 'Swiggy');
-      await tester.pump();
-      await tester.enterText(find.byType(TextField).at(1), '250');
-      await tester.pump();
-      await tester.ensureVisible(find.text('Add transaction'));
+      await tester.tap(find.text('Expense').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Add transaction'));
+      await tester.enterText(find.byType(TextField).first, '250');
+      await tester.pump();
+      await tester.tap(find.text('Dining'));
+      await tester.pump();
+      await tester.ensureVisible(find.text('Save expense'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save expense'));
+      await tester.pumpAndSettle();
+      // Let any save acknowledgement finish.
+      await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
 
-      expect(find.text('Swiggy'), findsOneWidget);
       // 1000 - 250 = 750, both the account card and header should reflect it.
       expect(find.textContaining('750.00'), findsWidgets);
 

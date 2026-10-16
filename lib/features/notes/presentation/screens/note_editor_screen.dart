@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/widgets/undo_snack_bar.dart';
 import '../../../../core/widgets/save_feedback.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -137,8 +138,18 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     if (confirmed != true || !mounted) return;
 
     _debounce?.cancel();
-    if (_noteId != null) await ref.read(notesControllerProvider).deleteNote(_noteId!);
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = ref.read(notesControllerProvider);
+    final removed = _noteId == null ? null : await controller.deleteNote(_noteId!);
     if (mounted) Navigator.of(context).pop();
+    // Shown on the screen the editor returns to.
+    if (removed != null && !removed.isEmpty) {
+      showUndoSnackBar(
+        messenger,
+        message: 'Note deleted',
+        onUndo: () => controller.restore(removed),
+      );
+    }
   }
 
   @override

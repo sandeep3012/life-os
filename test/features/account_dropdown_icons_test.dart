@@ -47,8 +47,11 @@ void main() {
       name: 'Everyday',
       type: 'Savings',
       balanceMinor: 0,
+      openingBalanceMinor: 0,
       currencyCode: 'INR',
       isActive: true,
+      position: 0,
+      isDefault: false,
       createdAt: epoch,
       updatedAt: epoch,
     );

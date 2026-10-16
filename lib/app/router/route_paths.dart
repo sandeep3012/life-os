@@ -10,6 +10,7 @@ class RoutePaths {
   static const recurringTransactions = '/finance/recurring';
   static const bills = '/finance/bills';
   static const netWorth = '/finance/net-worth';
+  static const accounts = '/finance/accounts';
   static const reports = '/finance/reports';
   static const tasksHabits = '/tasks-habits';
   static const plannerHabits = '/tasks-habits?tab=habits';
@@ -32,6 +33,7 @@ class RoutePaths {
 
   // Sync account. Outside the shell: these are full-screen and carry no bottom
   // nav, and nothing routes here on launch — free use needs no account.
+  static const sync = '/sync';
   static const syncSignIn = '/sync/sign-in';
   static const syncSignUp = '/sync/sign-up';
 }

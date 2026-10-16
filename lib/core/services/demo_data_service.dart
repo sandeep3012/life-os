@@ -582,11 +582,11 @@ class DemoDataService {
       'Entertainment': ('movie', '#A63FBE', 'expense'),
       'Subscriptions': ('autorenew', '#7C5CE7', 'expense'),
       'Income': ('payments', '#1E8F5E', 'income'),
-      // Habit-kind categories: the habits screen filters on kind == 'habit',
-      // so the expense set above never reaches its picker.
-      'Wellness': ('spa', '#3FA6A0', 'habit'),
-      'Fitness': ('fitness_center', '#C2703D', 'habit'),
-      'Learning': ('school', '#7C6BC4', 'habit'),
+      // Task and habit categories (one shared list), so the expense set
+      // above never reaches their pickers.
+      'Wellness': ('spa', '#3FA6A0', plannerCategoryKind),
+      'Fitness': ('fitness_center', '#C2703D', plannerCategoryKind),
+      'Learning': ('school', '#7C6BC4', plannerCategoryKind),
     };
     final existing = await _db.select(_db.categories).get();
     final result = <String, String>{};

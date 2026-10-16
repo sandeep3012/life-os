@@ -124,10 +124,13 @@ void main() {
       final storedFile = await storage.absoluteFile(doc.filePath);
       expect(await storedFile.exists(), isTrue);
 
-      // 2. Delete document -> verify physical file is unlinked
+      // 2. Delete document -> the file stays while Undo is on offer, then
+      // is unlinked once it isn't.
       await docsRepo.deleteDocument(doc);
       final docsAfterDelete = await docsRepo.watchDocuments().first;
       expect(docsAfterDelete, isEmpty);
+      expect(await storedFile.exists(), isTrue);
+      await docsRepo.discardFile(doc);
       expect(await storedFile.exists(), isFalse);
     });
 

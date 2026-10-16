@@ -48,7 +48,9 @@ void main() {
         expect(row.hapticsEnabled, isTrue);
         expect(row.saveAnimationsEnabled, isFalse);
         expect(row.saveConfirmationsEnabled, isTrue);
-        await repository.setSaveFeedbackEnabled(false);
+        // A repository holds the connection it was made with, and that one
+        // was closed above; use one on the reopened database.
+        await SettingsRepository(db).setSaveFeedbackEnabled(false);
         row = await db.select(db.appSettings).getSingle();
         expect(row.saveAnimationsEnabled, isFalse);
         expect(row.saveConfirmationsEnabled, isFalse);

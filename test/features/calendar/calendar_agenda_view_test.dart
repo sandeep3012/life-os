@@ -48,10 +48,11 @@ void main() {
           theme: AppTheme.light(),
           home: StatefulBuilder(
             builder: (context, setState) => Scaffold(
-              floatingActionButton: FloatingActionButton.extended(
+              // The calendar's button has folded to a round + by the time
+              // the agenda is scrolled away from today and the chip shows.
+              floatingActionButton: FloatingActionButton(
                 onPressed: () {},
-                icon: const Icon(LucideIcons.plus),
-                label: const Text('New event'),
+                child: const Icon(LucideIcons.plus),
               ),
               body: CalendarAgendaView(
                 items: items,
@@ -204,7 +205,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(selected, DateTime(2026, 9, 19));
-      expect(find.text('No habits for this day.'), findsOneWidget);
+      // The 19th shows its empty state. Today's section — always present —
+      // may show one too, depending on when the test runs.
+      expect(find.text('No habits for this day.'), findsWidgets);
       expect(tester.takeException(), isNull);
     },
   );
@@ -235,7 +238,8 @@ void main() {
         find.byType(TableCalendar<CalendarItemType>),
       );
       expect(calendar.selectedDayPredicate!(selected), isTrue);
-      expect(calendar.focusedDay, selected);
+      // TableCalendar keeps its days in UTC, so compare calendar dates.
+      expect(isSameDay(calendar.focusedDay, selected), isTrue);
       scroll.controller!.jumpTo(-350);
       await tester.pumpAndSettle();
       expect(selected.isBefore(initialDay), isTrue);

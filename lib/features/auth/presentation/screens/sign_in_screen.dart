@@ -8,6 +8,8 @@ import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_fonts.dart';
 import '../../../../core/widgets/tappable.dart';
+import '../../../sync/application/sync_providers.dart';
+import '../../../sync/data/supabase_config.dart';
 import '../../application/sync_auth_providers.dart';
 import '../widgets/auth_widgets.dart';
 
@@ -60,15 +62,40 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final message = switch (outcome) {
       SyncAuthNotConfigured() => SyncAuthNotConfigured.message,
       SyncAuthFailure(message: final m) => m,
+      SyncAuthContinueElsewhere(message: final m) => m,
       SyncAuthSuccess() => 'Signed in.',
     };
+    if (outcome is SyncAuthSuccess) {
+      context.go(RoutePaths.sync);
+      return;
+    }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _forgotPassword() async {
+    final outcome = await ref
+        .read(syncAuthControllerProvider)
+        .resetPassword(_email.text.trim());
+    if (!mounted) return;
+    _report(outcome);
+  }
+
+  /// Signed in — here, or by coming back from the Google/Apple page — so
+  /// carry on to sync's own screen.
+  void _leaveWhenSignedIn() {
+    ref.listen(syncControllerProvider.select((s) => s.phase), (_, phase) {
+      if (phase == SyncPhase.signedOut || phase == SyncPhase.unavailable) {
+        return;
+      }
+      if (mounted) context.go(RoutePaths.sync);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    _leaveWhenSignedIn();
     final scheme = Theme.of(context).colorScheme;
     final colors = context.appColors;
 
@@ -114,7 +141,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: Tappable(
-                    onTap: () => _report(const SyncAuthNotConfigured()),
+                    onTap: _forgotPassword,
                     semanticLabel: 'Forgot password',
                     child: Text(
                       'Forgot password?',
@@ -138,7 +165,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 const SizedBox(height: 22),
                 AuthSocialRow(
                   onGoogle: () => _social('google'),
-                  onApple: () => _social('apple'),
+                  onApple: SupabaseConfig.appleSignIn
+                    ? () => _social('apple')
+                    : null,
                 ),
                 const SizedBox(height: 30),
                 Center(

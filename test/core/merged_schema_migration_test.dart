@@ -123,7 +123,8 @@ void main() {
           expect(
             (await db.customSelect('PRAGMA user_version').getSingle())
                 .read<int>('user_version'),
-            19,
+            // Upgrades run all the way to the current schema, whatever it is.
+            db.schemaVersion,
           );
         } finally {
           await db.close();

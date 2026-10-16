@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
@@ -12,6 +13,7 @@ class FolderTile extends StatelessWidget {
     super.key,
     required this.folder,
     required this.count,
+    this.folderCount = 0,
     required this.onTap,
     this.onEdit,
     this.onDelete,
@@ -19,6 +21,9 @@ class FolderTile extends StatelessWidget {
 
   final Folder folder;
   final int count;
+
+  /// Folders directly inside this one.
+  final int folderCount;
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -38,7 +43,7 @@ class FolderTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+          padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -56,16 +61,23 @@ class FolderTile extends StatelessWidget {
                     child: Icon(folderIcon.icon, color: accentColor, size: 20),
                   ),
                   const Spacer(),
+                  // Held to the icon's 40pt: the menu's own 48pt tap target
+                  // made this row taller than the tile allows, pushing the
+                  // count off the bottom.
                   if (onEdit != null || onDelete != null)
-                    _FolderMenu(
+                    SizedBox(
+                      width: 32,
+                      height: 40,
+                      child: _FolderMenu(
                       onEdit: onEdit,
                       onDelete: onDelete != null
                           ? () => _confirmDelete(context, colors)
                           : null,
+                      ),
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 folder.name,
                 maxLines: 1,
@@ -73,7 +85,14 @@ class FolderTile extends StatelessWidget {
                 style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               Text(
-                '$count ${count == 1 ? 'document' : 'documents'}',
+                [
+                  if (folderCount > 0)
+                    '$folderCount ${folderCount == 1 ? 'folder' : 'folders'}',
+                  if (count > 0 || folderCount == 0)
+                    '$count ${count == 1 ? 'document' : 'documents'}',
+                ].join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -91,7 +110,8 @@ class FolderTile extends StatelessWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete folder?'),
         content: Text(
-          'Documents inside "${folder.name}" will be unassigned, not deleted.',
+          'Only the folder is deleted. Its documents and folders move up '
+          'to where "${folder.name}" was.',
         ),
         actions: [
           TextButton(
@@ -121,7 +141,7 @@ class _FolderMenu extends StatelessWidget {
     return PopupMenuButton<_FolderAction>(
       padding: EdgeInsets.zero,
       icon: Icon(
-        Icons.more_horiz,
+        LucideIcons.ellipsis,
         size: 18,
         color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),

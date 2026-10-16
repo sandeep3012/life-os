@@ -4,6 +4,7 @@ import '../../../core/database/app_database.dart';
 import '../../../core/database/app_database_provider.dart';
 import '../../../core/reminders/reminder_mode.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/services/sound_effects.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../settings/application/settings_providers.dart';
 import '../../../core/scheduling/repeat_schedule.dart';
@@ -128,11 +129,27 @@ class HabitsController {
   HabitsController(
     this._repo,
     this._notifications,
-    bool Function() remindersEnabled,
-  );
+    bool Function() remindersEnabled, {
+    SoundEffects? sounds,
+  }) : _sounds = sounds;
 
   final HabitsRepository _repo;
   final NotificationService _notifications;
+  final SoundEffects? _sounds;
+
+  /// Every check-in for today gets the habit sound, the way ticking a task
+  /// off gets its own; milestone streaks add a celebration on top (see
+  /// `celebrateStreakIfMilestone`). Played as the check-in is made, not
+  /// after the write: the sound is the acknowledgement of the tap.
+  void _checkedIn(DateTime date, bool completed) {
+    final now = DateTime.now();
+    if (completed &&
+        date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
+      _sounds?.play(SoundEffect.habitStreak);
+    }
+  }
 
   Future<void> addHabit(
     String name, {
@@ -214,7 +231,9 @@ class HabitsController {
   }
 
   Future<void> toggleToday(Habit habit, bool completed) {
-    return _repo.setCompletedForDate(habit.id, DateTime.now(), completed);
+    final now = DateTime.now();
+    _checkedIn(now, completed);
+    return _repo.setCompletedForDate(habit.id, now, completed);
   }
 
   Future<void> logAmount(Habit habit, DateTime date, double amount) {
@@ -242,6 +261,7 @@ class HabitsController {
     String? notes,
     double? amount,
   }) {
+    _checkedIn(date, completed);
     return _repo.setCompletedForDate(
       habit.id,
       date,
@@ -257,5 +277,6 @@ final habitsControllerProvider = Provider<HabitsController>((ref) {
     ref.watch(habitsRepositoryProvider),
     ref.watch(notificationServiceProvider),
     () => ref.read(settingsProvider).habitReminders,
+    sounds: ref.watch(soundEffectsProvider),
   );
 });
