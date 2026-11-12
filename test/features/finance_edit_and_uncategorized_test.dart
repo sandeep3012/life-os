@@ -7,6 +7,7 @@ import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
 import 'package:life_manager/features/finance/application/finance_providers.dart';
+import 'package:life_manager/features/finance/domain/payment_mode.dart';
 import 'package:life_manager/features/spend_analyzer/application/spend_analyzer_providers.dart';
 
 class _FakeNotifications extends NotificationService {
@@ -103,50 +104,53 @@ void main() {
   });
 
   group('recurring transactions can be edited', () {
-    test('moving the cadence resets the next due date, keeping history',
-        () async {
-      final accountId = await seedAccount();
-      final controller = container.read(financeControllerProvider);
+    test(
+      'moving the cadence resets the next due date, keeping history',
+      () async {
+        final accountId = await seedAccount();
+        final controller = container.read(financeControllerProvider);
 
-      // Starts today, so one occurrence generates immediately.
-      await controller.addRecurringTransaction(
-        accountId: accountId,
-        merchant: 'Gym',
-        amountMinor: -150000,
-        frequency: 'monthly',
-        startDate: DateTime.now(),
-      );
-      final generated = (await db.select(db.transactions).get()).length;
-      expect(generated, greaterThan(0));
+        // Starts today, so one occurrence generates immediately.
+        await controller.addRecurringTransaction(
+          accountId: accountId,
+          merchant: 'Gym',
+          amountMinor: -150000,
+          frequency: 'monthly',
+          startDate: DateTime.now(),
+        );
+        final generated = (await db.select(db.transactions).get()).length;
+        expect(generated, greaterThan(0));
 
-      final schedule = await db.select(db.recurringTransactions).getSingle();
-      final future = DateTime.now().add(const Duration(days: 40));
+        final schedule = await db.select(db.recurringTransactions).getSingle();
+        final future = DateTime.now().add(const Duration(days: 40));
 
-      await controller.updateRecurringTransaction(
-        existing: schedule,
-        accountId: accountId,
-        merchant: 'Gym — annual',
-        amountMinor: -1200000,
-        frequency: 'yearly',
-        startDate: future,
-      );
+        await controller.updateRecurringTransaction(
+          existing: schedule,
+          accountId: accountId,
+          merchant: 'Gym — annual',
+          amountMinor: -1200000,
+          frequency: 'yearly',
+          startDate: future,
+        );
 
-      final updated = await db.select(db.recurringTransactions).getSingle();
-      expect(updated.id, schedule.id);
-      expect(updated.merchant, 'Gym — annual');
-      expect(updated.amountMinor, -1200000);
-      expect(updated.frequency, 'yearly');
-      expect(
-        updated.nextDueDate.difference(future).inDays.abs(),
-        lessThanOrEqualTo(1),
-        reason: 'cadence moved, so the schedule should fire from the new date',
-      );
-      expect(
-        (await db.select(db.transactions).get()).length,
-        generated,
-        reason: 'a future start date must not generate anything yet',
-      );
-    });
+        final updated = await db.select(db.recurringTransactions).getSingle();
+        expect(updated.id, schedule.id);
+        expect(updated.merchant, 'Gym — annual');
+        expect(updated.amountMinor, -1200000);
+        expect(updated.frequency, 'yearly');
+        expect(
+          updated.nextDueDate.difference(future).inDays.abs(),
+          lessThanOrEqualTo(1),
+          reason:
+              'cadence moved, so the schedule should fire from the new date',
+        );
+        expect(
+          (await db.select(db.transactions).get()).length,
+          generated,
+          reason: 'a future start date must not generate anything yet',
+        );
+      },
+    );
 
     test('editing only the name leaves the schedule where it was', () async {
       final accountId = await seedAccount();
@@ -243,6 +247,81 @@ void main() {
       for (final s in subs) {
         s.close();
       }
+    });
+  });
+
+  group('payment mode', () {
+    test('the card covers the same spend as By category', () async {
+      final accountId = await seedAccount();
+      final otherId = await seedAccount();
+      final controller = container.read(financeControllerProvider);
+
+      await controller.addTransaction(
+        accountId: accountId,
+        merchant: 'Groceries',
+        amountMinor: -40000,
+        date: DateTime.now(),
+        paymentMode: 'upi',
+      );
+      // Recorded before payment modes were asked for.
+      await controller.addTransaction(
+        accountId: accountId,
+        merchant: 'Old entry',
+        amountMinor: -10000,
+        date: DateTime.now(),
+      );
+      // Moving money between your own accounts is not spending.
+      await container
+          .read(financeRepositoryProvider)
+          .transfer(
+            fromAccountId: accountId,
+            toAccountId: otherId,
+            amountMinor: 50000,
+            date: DateTime.now(),
+          );
+      await controller.addBill(
+        name: 'Broadband',
+        accountId: accountId,
+        amountMinor: 70000,
+        dueDate: DateTime.now(),
+      );
+      final bill = await db.select(db.bills).getSingle();
+      await controller.markBillPaid(
+        bill,
+        accountId: accountId,
+        paymentMode: 'card',
+      );
+
+      final subs = [
+        container.listen(transactionsProvider, (_, _) {}),
+        container.listen(categoriesProvider, (_, _) {}),
+      ];
+      await container.read(transactionsProvider.future);
+
+      final modes = container.read(paymentModeBreakdownProvider);
+      expect(
+        [for (final m in modes) (m.mode?.id, m.totalMinor)],
+        [('card', 70000), ('upi', 40000), (null, 10000)],
+        reason: 'the bill keeps its mode; untagged spend is "Not set", last',
+      );
+      final total = modes.fold<int>(0, (sum, m) => sum + m.totalMinor);
+      expect(total, container.read(monthExpenseTotalMinorProvider));
+      expect(
+        modes.fold<double>(0, (sum, m) => sum + m.share),
+        closeTo(1.0, 0.0001),
+      );
+
+      for (final s in subs) {
+        s.close();
+      }
+    });
+
+    test('an account suggests how it pays', () {
+      expect(suggestedPaymentModeFor('Credit Card'), 'card');
+      expect(suggestedPaymentModeFor('credit_card'), 'card');
+      expect(suggestedPaymentModeFor('Cash'), 'cash');
+      expect(suggestedPaymentModeFor('Savings'), 'upi');
+      expect(suggestedPaymentModeFor('Checking'), 'upi');
     });
   });
 }

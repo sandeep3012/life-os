@@ -284,11 +284,12 @@ doesn't exist, not by preference:
   module behind them.
 - The entry sheet omits the comp's **recurring block**: recurring entries are a
   separate table with their own sheet, which the menu's Recurring tile opens.
-- Login/Signup talk to **Supabase**, but only in a build given
-  `--dart-define=SUPABASE_PUBLISHABLE_KEY=…` (see `supabase/README.md`). Without
-  it `sync_auth_providers.dart` returns `SyncAuthNotConfigured` and the screens
-  say so verbatim — **do not make it fake a success.** Sync is opt-in; free use
-  stays fully local and nothing routes to sign-in on launch.
+- Login/Signup talk to **Supabase**. The project URL and its publishable key
+  are defaults in `supabase_config.dart` (overridable with
+  `--dart-define=SUPABASE_PUBLISHABLE_KEY=…`; see `supabase/README.md`). With
+  no key, `sync_auth_providers.dart` returns `SyncAuthNotConfigured` and the
+  screens say so verbatim — **do not make it fake a success.** Sync is opt-in;
+  free use stays fully local and nothing routes to sign-in on launch.
 - Social buttons carry **placeholder marks**. Google's multicolour "G" and the
   Apple logo must be their official assets per brand guidelines; a hand-drawn
   approximation would breach those.
@@ -444,8 +445,27 @@ on the network: screens read and write Drift as always, and sync runs beside it.
   pre-existing random-id duplicates into one.
 - **Keys:** a random data key in the keychain (`SecureSyncKeyStore`), wrapped on
   the server by the recovery key (HKDF-SHA256 → XChaCha20-Poly1305, via the
-  `cryptography` package). Lose every phone and the recovery key, and the data
-  is unrecoverable by design.
+  `cryptography` package). A copy of the data key also goes to the platform's
+  own E2E-encrypted backup (`SyncKeyBackup`: synchronizable iCloud Keychain
+  item on iOS, Google Block Store via `MainActivity`'s `keyBackup` channel on
+  Android — sent to the cloud only when the phone has a screen lock). On a
+  phone with no local key, a backup copy is used only after it decrypts one of
+  the account's records; one that doesn't is deleted. Sign-out keeps the
+  backup, account deletion removes it. **Approve from another phone:** the new
+  phone shows a QR (`LinkRequest.code`: request id + one-off X25519 public
+  key); a syncing phone scans it (`mobile_scanner`), seals the data key to it
+  and leaves it in `key_transfers` (own rows only, readable 15 min); the new
+  phone polls, opens it, checks it against a record and deletes the row. The
+  public key travels by camera, never via the server, so the server can't
+  substitute its own. **Recovery modes**, chosen at setup and switchable in
+  Sync & account: *Standard* (preselected) — the server keeps the data key in
+  Supabase Vault (`escrow_*` functions, own copy only; removed with the
+  account), so signing in alone restores it and no recovery key is shown at
+  setup; *Maximum privacy* — no server copy. Switching to Maximum privacy
+  makes the person save a new recovery key first. Restore order on a phone
+  with no key: platform backup → server copy → QR approval / recovery key.
+  Under Maximum privacy, lose every phone, that backup and the recovery key,
+  and the data is unrecoverable by design.
 - Tests run two "phones" against an in-memory server (`test/features/sync/`);
   `FakeSyncServer` mirrors the SQL functions' rules, so change both together.
 
@@ -472,11 +492,36 @@ on the network: screens read and write Drift as always, and sync runs beside it.
   upgrade and at every launch, so restored backups and older phones' sync
   data join too.
 
+## Voice entry (`features/voice_entry/`, server in `supabase/functions/voice-parse`)
+
++ → Speak: the phone's own recogniser (`speech_to_text`, `en_IN` first, with
+the person's account and category names as contextual hints) turns speech into
+text; the `voice-parse` Edge Function asks Claude Haiku for three structured
+readings; the sheet offers them and saving goes through the normal controllers,
+with Undo. Needs sign-in and a one-time consent (`AppSettings.voiceEntryConsent`,
+v36). The API key lives only in Supabase secrets.
+
+- The model returns **names**, never ids; `VoiceDraft.resolve` maps them to this
+  phone's rows (exact, then partial match; money falls back to the top account
+  and category). Keep it that way — ids must not leave the device.
+- `FakeSpeech` / `FakeParser` in `test/features/voice_entry/` drive the whole
+  flow without a microphone or network.
+
 ## Known gaps (not yet done)
 
 - Sync: document files, background sync while closed, and payments
-  (RevenueCat) aren't built. Uploads need an `entitlements` row, granted by
-  hand for now (`supabase/README.md`).
+  (RevenueCat) aren't built. Uploads need an `entitlements` row; during
+  testing, **every account gets one automatically** (`grant_beta_sync`
+  trigger, rows marked `store = 'beta'`, from
+  `supabase/migrations/20261110000000_beta_auto_entitlement.sql`). **Remove
+  that trigger when payments go live** — the file has the drop statements —
+  and decide what happens to existing `beta` grants.
+
+- Sync `devices` rows pile up: the device id lives in the app's database, so
+  clearing app data or reinstalling registers the same phone again (seen in
+  testing: one Android phone, four rows). Harmless — it's only a label, and
+  records aren't duplicated. Planned: on sign-in, delete the account's device
+  rows unseen for 30+ days; a "Your devices" list only if users need to see it.
 
 - Release signing (`android/key.properties` / keystore) is deliberately not
   set up yet.

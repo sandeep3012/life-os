@@ -216,7 +216,10 @@ end;
 $$;
 
 -- Only signed-in users may call these; never the anonymous role.
-revoke all on function public.has_sync(uuid) from public, anon;
+-- Supabase grants new functions to signed-in users by default; has_sync
+-- takes any user id, so it must not be callable from outside. The sync
+-- functions still use it — they run with the owner's rights.
+revoke all on function public.has_sync(uuid) from public, anon, authenticated;
 revoke all on function public.my_sync_access() from public, anon;
 revoke all on function public.push_records(jsonb) from public, anon;
 revoke all on function public.pull_records(bigint, int) from public, anon;

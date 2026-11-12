@@ -136,7 +136,8 @@ class CalendarController {
   final CalendarRepository _repo;
   final NotificationService _notifications;
 
-  Future<void> addEvent({
+  /// Returns the new event (a repeating one's first occurrence).
+  Future<Event> addEvent({
     required String title,
     String? description,
     RepeatSchedule? schedule,
@@ -148,7 +149,7 @@ class CalendarController {
     ReminderMode reminderMode = ReminderMode.notification,
     int reminderMinutesBefore = 0,
   }) async {
-    await _repo.createEvent(
+    return _repo.createEvent(
       title: title,
       description: description,
       schedule: schedule,

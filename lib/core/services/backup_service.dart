@@ -446,6 +446,8 @@ class BackupService {
     'toursSeen': 'home',
     'alarmTone': 'gentle',
     'soundEffectsEnabled': true,
+    // Consent isn't carried across: a restored backup asks again.
+    'voiceEntryConsent': false,
   };
 
   Future<void> _insertAll<T extends Table, D>(

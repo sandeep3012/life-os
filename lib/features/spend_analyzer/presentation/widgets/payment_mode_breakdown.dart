@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/utils/currency_utils.dart';
@@ -31,7 +32,11 @@ class PaymentModeBreakdown extends StatelessWidget {
                     color: colors.spend.withValues(alpha: 0.14),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(entry.mode.icon, size: 16, color: colors.spend),
+                  child: Icon(
+                    entry.mode?.icon ?? LucideIcons.circleHelp,
+                    size: 16,
+                    color: colors.spend,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -42,7 +47,7 @@ class PaymentModeBreakdown extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            entry.mode.label,
+                            entry.mode?.label ?? 'Not set',
                             style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           Text(

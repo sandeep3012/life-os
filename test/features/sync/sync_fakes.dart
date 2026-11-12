@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:life_manager/features/sync/data/sync_backend.dart';
+import 'package:life_manager/features/sync/data/sync_key_backup.dart';
 import 'package:life_manager/features/sync/data/sync_session.dart';
 
 /// The server's rules from `supabase/migrations/*_sync.sql`, in memory: one
@@ -12,6 +13,12 @@ class FakeSyncServer {
   bool entitled = true;
   bool offline = false;
   int _seq = 0;
+
+  /// key_transfers, by request id.
+  final transfers = <String, Uint8List>{};
+
+  /// The Vault copy for Standard recovery (one account per fake server).
+  Uint8List? escrow;
 
   FakeSyncBackend client() => FakeSyncBackend(this);
 }
@@ -85,8 +92,50 @@ class FakeSyncBackend implements SyncBackend {
   }
 
   @override
+  Future<void> leaveKeyTransfer(String id, Uint8List sealed) async {
+    _online();
+    if (server.transfers.containsKey(id)) throw StateError('duplicate id');
+    server.transfers[id] = sealed;
+  }
+
+  @override
+  Future<Uint8List?> collectKeyTransfer(String id) async {
+    _online();
+    return server.transfers[id];
+  }
+
+  @override
+  Future<void> removeKeyTransfer(String id) async => server.transfers.remove(id);
+
+  @override
+  Future<void> storeEscrowKey(Uint8List dataKey) async {
+    _online();
+    server.escrow = dataKey;
+  }
+
+  @override
+  Future<Uint8List?> fetchEscrowKey() async {
+    _online();
+    return server.escrow;
+  }
+
+  @override
+  Future<bool> hasEscrowKey() async {
+    _online();
+    return server.escrow != null;
+  }
+
+  @override
+  Future<void> removeEscrowKey() async {
+    _online();
+    server.escrow = null;
+  }
+
+  @override
   Future<void> deleteAccount() async {
     server.records.clear();
+    server.transfers.clear();
+    server.escrow = null;
     server.wrappedKey = null;
     deleted = true;
   }
@@ -141,6 +190,30 @@ class MemoryKeyStore implements SyncKeyStore {
 
   @override
   Future<void> write(String userId, Uint8List key) async => keys[userId] = key;
+
+  @override
+  Future<void> delete(String userId) async => keys.remove(userId);
+}
+
+/// iCloud Keychain / Block Store, for tests: share one between two devices
+/// to stand for the same Apple or Google account.
+class MemoryKeyBackup implements SyncKeyBackup {
+  final keys = <String, Uint8List>{};
+
+  /// False stands for a phone that keeps the copy only on itself.
+  bool offPhone = true;
+
+  @override
+  String get label => 'your Google account';
+
+  @override
+  Future<Uint8List?> read(String userId) async => keys[userId];
+
+  @override
+  Future<bool> write(String userId, Uint8List key) async {
+    keys[userId] = key;
+    return offPhone;
+  }
 
   @override
   Future<void> delete(String userId) async => keys.remove(userId);

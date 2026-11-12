@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -52,7 +53,9 @@ class SupabaseSyncBackend implements SyncBackend {
     try {
       final result = await _client.rpc<dynamic>(
         'push_records',
-        params: {'batch': [for (final r in records) r.toJson()]},
+        params: {
+          'batch': [for (final r in records) r.toJson()],
+        },
       );
       final map = (result as Map).cast<String, dynamic>();
       return PushResult(
@@ -83,14 +86,52 @@ class SupabaseSyncBackend implements SyncBackend {
   }
 
   @override
-  Future<void> registerDevice(String deviceId, String name) => _client
-      .from('devices')
-      .upsert({
+  Future<void> registerDevice(String deviceId, String name) =>
+      _client.from('devices').upsert({
         'id': deviceId,
         'user_id': _userId,
         'name': name,
         'last_seen': DateTime.now().toUtc().toIso8601String(),
       });
+
+  @override
+  Future<void> leaveKeyTransfer(String id, Uint8List sealed) => _client
+      .from('key_transfers')
+      .insert({'id': id, 'user_id': _userId, 'sealed': base64Encode(sealed)});
+
+  @override
+  Future<Uint8List?> collectKeyTransfer(String id) async {
+    final row = await _client
+        .from('key_transfers')
+        .select('sealed')
+        .eq('id', id)
+        .maybeSingle();
+    if (row == null) return null;
+    return base64Decode(row['sealed'] as String);
+  }
+
+  @override
+  Future<void> removeKeyTransfer(String id) =>
+      _client.from('key_transfers').delete().eq('id', id);
+
+  @override
+  Future<void> storeEscrowKey(Uint8List dataKey) => _client.rpc<dynamic>(
+    'escrow_store',
+    params: {'data_key': base64Encode(dataKey)},
+  );
+
+  @override
+  Future<Uint8List?> fetchEscrowKey() async {
+    final value = await _client.rpc<dynamic>('escrow_fetch');
+    return value is String ? base64Decode(value) : null;
+  }
+
+  @override
+  Future<bool> hasEscrowKey() async =>
+      (await _client.rpc<dynamic>('escrow_exists')) == true;
+
+  @override
+  Future<void> removeEscrowKey() => _client.rpc<dynamic>('escrow_remove');
 
   @override
   Future<void> deleteAccount() async {

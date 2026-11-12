@@ -151,7 +151,8 @@ class HabitsController {
     }
   }
 
-  Future<void> addHabit(
+  /// Returns the new habit's id.
+  Future<String> addHabit(
     String name, {
     String? categoryId,
     String? description,
@@ -163,7 +164,7 @@ class HabitsController {
     double? targetAmount,
     String? targetUnit,
   }) async {
-    await _repo.createHabit(
+    return _repo.createHabit(
       name,
       categoryId: categoryId,
       description: description,
@@ -175,6 +176,13 @@ class HabitsController {
       targetAmount: targetAmount,
       targetUnit: targetUnit,
     );
+  }
+
+  /// Takes back a habit that was just created; see
+  /// [HabitsRepository.deleteHabit].
+  Future<void> deleteNewHabit(String id) async {
+    await _notifications.cancelHabitReminder(id);
+    await _repo.deleteHabit(id);
   }
 
   Future<void> updateHabit({

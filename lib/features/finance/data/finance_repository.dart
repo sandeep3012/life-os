@@ -355,7 +355,8 @@ class FinanceRepository {
     );
   }
 
-  Future<void> createTransaction({
+  /// Returns the new transaction's id.
+  Future<String> createTransaction({
     required String accountId,
     String? categoryId,
     required String merchant,
@@ -364,9 +365,11 @@ class FinanceRepository {
     String? note,
     String? paymentMode,
   }) {
+    final id = const Uuid().v4();
     return _db.transaction(() async {
       await _db.into(_db.transactions).insert(
         TransactionsCompanion.insert(
+          id: Value(id),
           accountId: accountId,
           categoryId: Value(categoryId),
           merchant: merchant,
@@ -385,6 +388,7 @@ class FinanceRepository {
           updatedAt: Value(DateTime.now()),
         ),
       );
+      return id;
     });
   }
 
@@ -723,7 +727,11 @@ class FinanceRepository {
   /// (falling back to the bill's own default account, since the payer can
   /// choose a different one at pay-time) and either archives a one-time
   /// bill or rolls a repeating one forward to its next due date.
-  Future<Bill> markBillPaid(String billId, {required String accountId}) async {
+  Future<Bill> markBillPaid(
+    String billId, {
+    required String accountId,
+    String? paymentMode,
+  }) async {
     return _db.transaction(() async {
       final bill = await (_db.select(
         _db.bills,
@@ -735,6 +743,7 @@ class FinanceRepository {
         merchant: bill.name,
         amountMinor: -bill.amountMinor,
         date: DateTime.now(),
+        paymentMode: paymentMode,
       );
 
       final isOneOff = bill.frequency == 'once';

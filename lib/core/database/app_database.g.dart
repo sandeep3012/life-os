@@ -200,7 +200,9 @@ class Category extends DataClass implements Insertable<Category> {
   final String icon;
   final String colorHex;
 
-  /// expense | income | habit | goal | note | document
+  /// expense | income | task ([plannerCategoryKind], shared by tasks and
+  /// habits). `habit` is the older, separate habit kind, folded into the
+  /// shared one by `AppDatabase.mergePlannerCategories`.
   final String kind;
 
   /// Where the category sits in lists and pickers — set by dragging in
@@ -16120,6 +16122,21 @@ class $AppSettingsTable extends AppSettings
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _voiceEntryConsentMeta = const VerificationMeta(
+    'voiceEntryConsent',
+  );
+  @override
+  late final GeneratedColumn<bool> voiceEntryConsent = GeneratedColumn<bool>(
+    'voice_entry_consent',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("voice_entry_consent" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     hapticsEnabled,
@@ -16142,6 +16159,7 @@ class $AppSettingsTable extends AppSettings
     toursSeen,
     alarmTone,
     soundEffectsEnabled,
+    voiceEntryConsent,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -16317,6 +16335,15 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('voice_entry_consent')) {
+      context.handle(
+        _voiceEntryConsentMeta,
+        voiceEntryConsent.isAcceptableOrUnknown(
+          data['voice_entry_consent']!,
+          _voiceEntryConsentMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -16406,6 +16433,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.bool,
         data['${effectivePrefix}sound_effects_enabled'],
       )!,
+      voiceEntryConsent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}voice_entry_consent'],
+      )!,
     );
   }
 
@@ -16468,6 +16499,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   /// In-app sounds: a task ticked off, a streak kept, a goal reached, a
   /// budget crossed. They follow the phone's silent switch either way.
   final bool soundEffectsEnabled;
+
+  /// Voice entry's one-time opt-in: the person agreed that what they say,
+  /// and their account and category names, go to the AI service.
+  final bool voiceEntryConsent;
   const AppSetting({
     required this.hapticsEnabled,
     required this.saveAnimationsEnabled,
@@ -16489,6 +16524,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.toursSeen,
     required this.alarmTone,
     required this.soundEffectsEnabled,
+    required this.voiceEntryConsent,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -16517,6 +16553,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['tours_seen'] = Variable<String>(toursSeen);
     map['alarm_tone'] = Variable<String>(alarmTone);
     map['sound_effects_enabled'] = Variable<bool>(soundEffectsEnabled);
+    map['voice_entry_consent'] = Variable<bool>(voiceEntryConsent);
     return map;
   }
 
@@ -16542,6 +16579,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       toursSeen: Value(toursSeen),
       alarmTone: Value(alarmTone),
       soundEffectsEnabled: Value(soundEffectsEnabled),
+      voiceEntryConsent: Value(voiceEntryConsent),
     );
   }
 
@@ -16583,6 +16621,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       soundEffectsEnabled: serializer.fromJson<bool>(
         json['soundEffectsEnabled'],
       ),
+      voiceEntryConsent: serializer.fromJson<bool>(json['voiceEntryConsent']),
     );
   }
   @override
@@ -16615,6 +16654,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'toursSeen': serializer.toJson<String>(toursSeen),
       'alarmTone': serializer.toJson<String>(alarmTone),
       'soundEffectsEnabled': serializer.toJson<bool>(soundEffectsEnabled),
+      'voiceEntryConsent': serializer.toJson<bool>(voiceEntryConsent),
     };
   }
 
@@ -16639,6 +16679,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     String? toursSeen,
     String? alarmTone,
     bool? soundEffectsEnabled,
+    bool? voiceEntryConsent,
   }) => AppSetting(
     hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
     saveAnimationsEnabled: saveAnimationsEnabled ?? this.saveAnimationsEnabled,
@@ -16663,6 +16704,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     toursSeen: toursSeen ?? this.toursSeen,
     alarmTone: alarmTone ?? this.alarmTone,
     soundEffectsEnabled: soundEffectsEnabled ?? this.soundEffectsEnabled,
+    voiceEntryConsent: voiceEntryConsent ?? this.voiceEntryConsent,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -16718,6 +16760,9 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       soundEffectsEnabled: data.soundEffectsEnabled.present
           ? data.soundEffectsEnabled.value
           : this.soundEffectsEnabled,
+      voiceEntryConsent: data.voiceEntryConsent.present
+          ? data.voiceEntryConsent.value
+          : this.voiceEntryConsent,
     );
   }
 
@@ -16743,13 +16788,14 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('onboardingCompleted: $onboardingCompleted, ')
           ..write('toursSeen: $toursSeen, ')
           ..write('alarmTone: $alarmTone, ')
-          ..write('soundEffectsEnabled: $soundEffectsEnabled')
+          ..write('soundEffectsEnabled: $soundEffectsEnabled, ')
+          ..write('voiceEntryConsent: $voiceEntryConsent')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     hapticsEnabled,
     saveAnimationsEnabled,
     saveConfirmationsEnabled,
@@ -16770,7 +16816,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     toursSeen,
     alarmTone,
     soundEffectsEnabled,
-  );
+    voiceEntryConsent,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -16794,7 +16841,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.onboardingCompleted == this.onboardingCompleted &&
           other.toursSeen == this.toursSeen &&
           other.alarmTone == this.alarmTone &&
-          other.soundEffectsEnabled == this.soundEffectsEnabled);
+          other.soundEffectsEnabled == this.soundEffectsEnabled &&
+          other.voiceEntryConsent == this.voiceEntryConsent);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -16818,6 +16866,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<String> toursSeen;
   final Value<String> alarmTone;
   final Value<bool> soundEffectsEnabled;
+  final Value<bool> voiceEntryConsent;
   const AppSettingsCompanion({
     this.hapticsEnabled = const Value.absent(),
     this.saveAnimationsEnabled = const Value.absent(),
@@ -16839,6 +16888,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.toursSeen = const Value.absent(),
     this.alarmTone = const Value.absent(),
     this.soundEffectsEnabled = const Value.absent(),
+    this.voiceEntryConsent = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.hapticsEnabled = const Value.absent(),
@@ -16861,6 +16911,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.toursSeen = const Value.absent(),
     this.alarmTone = const Value.absent(),
     this.soundEffectsEnabled = const Value.absent(),
+    this.voiceEntryConsent = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<bool>? hapticsEnabled,
@@ -16883,6 +16934,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<String>? toursSeen,
     Expression<String>? alarmTone,
     Expression<bool>? soundEffectsEnabled,
+    Expression<bool>? voiceEntryConsent,
   }) {
     return RawValuesInsertable({
       if (hapticsEnabled != null) 'haptics_enabled': hapticsEnabled,
@@ -16911,6 +16963,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (alarmTone != null) 'alarm_tone': alarmTone,
       if (soundEffectsEnabled != null)
         'sound_effects_enabled': soundEffectsEnabled,
+      if (voiceEntryConsent != null) 'voice_entry_consent': voiceEntryConsent,
     });
   }
 
@@ -16935,6 +16988,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<String>? toursSeen,
     Value<String>? alarmTone,
     Value<bool>? soundEffectsEnabled,
+    Value<bool>? voiceEntryConsent,
   }) {
     return AppSettingsCompanion(
       hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
@@ -16961,6 +17015,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       toursSeen: toursSeen ?? this.toursSeen,
       alarmTone: alarmTone ?? this.alarmTone,
       soundEffectsEnabled: soundEffectsEnabled ?? this.soundEffectsEnabled,
+      voiceEntryConsent: voiceEntryConsent ?? this.voiceEntryConsent,
     );
   }
 
@@ -17035,6 +17090,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (soundEffectsEnabled.present) {
       map['sound_effects_enabled'] = Variable<bool>(soundEffectsEnabled.value);
     }
+    if (voiceEntryConsent.present) {
+      map['voice_entry_consent'] = Variable<bool>(voiceEntryConsent.value);
+    }
     return map;
   }
 
@@ -17060,7 +17118,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('onboardingCompleted: $onboardingCompleted, ')
           ..write('toursSeen: $toursSeen, ')
           ..write('alarmTone: $alarmTone, ')
-          ..write('soundEffectsEnabled: $soundEffectsEnabled')
+          ..write('soundEffectsEnabled: $soundEffectsEnabled, ')
+          ..write('voiceEntryConsent: $voiceEntryConsent')
           ..write(')'))
         .toString();
   }
@@ -30533,6 +30592,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<String> toursSeen,
       Value<String> alarmTone,
       Value<bool> soundEffectsEnabled,
+      Value<bool> voiceEntryConsent,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -30556,6 +30616,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<String> toursSeen,
       Value<String> alarmTone,
       Value<bool> soundEffectsEnabled,
+      Value<bool> voiceEntryConsent,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -30664,6 +30725,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<bool> get soundEffectsEnabled => $composableBuilder(
     column: $table.soundEffectsEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get voiceEntryConsent => $composableBuilder(
+    column: $table.voiceEntryConsent,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -30776,6 +30842,11 @@ class $$AppSettingsTableOrderingComposer
     column: $table.soundEffectsEnabled,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get voiceEntryConsent => $composableBuilder(
+    column: $table.voiceEntryConsent,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -30878,6 +30949,11 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.soundEffectsEnabled,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get voiceEntryConsent => $composableBuilder(
+    column: $table.voiceEntryConsent,
+    builder: (column) => column,
+  );
 }
 
 class $$AppSettingsTableTableManager
@@ -30931,6 +31007,7 @@ class $$AppSettingsTableTableManager
                 Value<String> toursSeen = const Value.absent(),
                 Value<String> alarmTone = const Value.absent(),
                 Value<bool> soundEffectsEnabled = const Value.absent(),
+                Value<bool> voiceEntryConsent = const Value.absent(),
               }) => AppSettingsCompanion(
                 hapticsEnabled: hapticsEnabled,
                 saveAnimationsEnabled: saveAnimationsEnabled,
@@ -30952,6 +31029,7 @@ class $$AppSettingsTableTableManager
                 toursSeen: toursSeen,
                 alarmTone: alarmTone,
                 soundEffectsEnabled: soundEffectsEnabled,
+                voiceEntryConsent: voiceEntryConsent,
               ),
           createCompanionCallback:
               ({
@@ -30975,6 +31053,7 @@ class $$AppSettingsTableTableManager
                 Value<String> toursSeen = const Value.absent(),
                 Value<String> alarmTone = const Value.absent(),
                 Value<bool> soundEffectsEnabled = const Value.absent(),
+                Value<bool> voiceEntryConsent = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 hapticsEnabled: hapticsEnabled,
                 saveAnimationsEnabled: saveAnimationsEnabled,
@@ -30996,6 +31075,7 @@ class $$AppSettingsTableTableManager
                 toursSeen: toursSeen,
                 alarmTone: alarmTone,
                 soundEffectsEnabled: soundEffectsEnabled,
+                voiceEntryConsent: voiceEntryConsent,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

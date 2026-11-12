@@ -13,6 +13,11 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.media.AudioAttributes
+import com.google.android.gms.auth.blockstore.Blockstore
+import com.google.android.gms.auth.blockstore.DeleteBytesRequest
+import com.google.android.gms.auth.blockstore.RetrieveBytesRequest
+import com.google.android.gms.auth.blockstore.StoreBytesData
+import com.google.android.gms.tasks.OnFailureListener
 
 // FlutterFragmentActivity, not FlutterActivity: local_auth shows the system
 // biometric / device-credential dialog through a FragmentActivity, and fails
@@ -74,6 +79,55 @@ class MainActivity : FlutterFragmentActivity() {
                     result.success(null)
                 } catch (error: Exception) {
                     result.error("widget_failed", error.message, null)
+                }
+            }
+        // Sync's data key in Google's Block Store (sync_key_backup.dart). It's
+        // sent to Google's cloud only when that copy can be end-to-end
+        // encrypted — i.e. the phone has a screen lock — otherwise it stays
+        // on this phone, where it still outlives a reinstall.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/keyBackup")
+            .setMethodCallHandler { call, result ->
+                val client = Blockstore.getClient(this)
+                val key = call.argument<String>("key")
+                if (key == null) {
+                    result.error("bad_args", "key is required", null)
+                    return@setMethodCallHandler
+                }
+                val fail = OnFailureListener { error -> result.error("block_store", error.message, null) }
+                when (call.method) {
+                    "read" -> client
+                        .retrieveBytes(RetrieveBytesRequest.Builder().setKeys(listOf(key)).build())
+                        .addOnSuccessListener { response ->
+                            result.success(response.blockstoreDataMap[key]?.bytes)
+                        }
+                        .addOnFailureListener(fail)
+                    "write" -> {
+                        val value = call.argument<ByteArray>("value")
+                        if (value == null) {
+                            result.error("bad_args", "value is required", null)
+                            return@setMethodCallHandler
+                        }
+                        var toCloud = false
+                        client.isEndToEndEncryptionAvailable
+                            .continueWithTask { available ->
+                                toCloud = available.isSuccessful && available.result == true
+                                client.storeBytes(
+                                    StoreBytesData.Builder()
+                                        .setKey(key)
+                                        .setBytes(value)
+                                        .setShouldBackupToCloud(toCloud)
+                                        .build()
+                                )
+                            }
+                            // Whether the copy left the phone.
+                            .addOnSuccessListener { result.success(toCloud) }
+                            .addOnFailureListener(fail)
+                    }
+                    "delete" -> client
+                        .deleteBytes(DeleteBytesRequest.Builder().setKeys(listOf(key)).build())
+                        .addOnSuccessListener { result.success(null) }
+                        .addOnFailureListener(fail)
+                    else -> result.notImplemented()
                 }
             }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/haptics")

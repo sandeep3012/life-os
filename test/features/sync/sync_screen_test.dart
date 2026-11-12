@@ -86,4 +86,36 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Your recovery key'), findsNothing);
   });
+
+  testWidgets('recovery offers Standard and Maximum privacy', (tester) async {
+    var chosen = true;
+    final db = AppDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(db.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) => RecoveryModeChoice(
+                serverRecovery: chosen,
+                onChanged: (v) => setState(() => chosen = v),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Standard'), findsOneWidget);
+    expect(find.text('Maximum privacy'), findsOneWidget);
+    await tester.tap(find.text('Maximum privacy'));
+    await tester.pump();
+    expect(chosen, isFalse);
+    await tester.tap(find.text('Standard'));
+    await tester.pump();
+    expect(chosen, isTrue);
+    expect(tester.takeException(), isNull);
+    await disposeCleanly(tester);
+  });
 }

@@ -138,7 +138,10 @@ class SyncEngine {
     if (latest != null) await store.writeState('hlc', '$latest');
 
     final result = await backend.push(records);
-    final settled = {...result.accepted, for (final c in result.conflicts) c.id};
+    final settled = {
+      ...result.accepted,
+      for (final c in result.conflicts) c.id,
+    };
     await store.markUploaded([
       for (final id in settled)
         if (byId[id] != null) byId[id]!,
@@ -160,11 +163,17 @@ class SyncEngine {
       if (record.deviceId == deviceId && !fromConflict) continue;
       final Map<dynamic, dynamic> decoded;
       try {
-        decoded = jsonDecode(
-          utf8.decode(
-            await crypto.decryptRecord(dataKey, record.id, record.payload),
-          ),
-        ) as Map;
+        decoded =
+            jsonDecode(
+                  utf8.decode(
+                    await crypto.decryptRecord(
+                      dataKey,
+                      record.id,
+                      record.payload,
+                    ),
+                  ),
+                )
+                as Map;
       } on Object {
         skipped++;
         continue;

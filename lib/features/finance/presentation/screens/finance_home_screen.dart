@@ -845,14 +845,55 @@ class _MonthAmount extends StatelessWidget {
 /// database, giving the snackbar's Undo button a window to cancel it.
 const _undoWindow = Duration(seconds: 4);
 
+/// A day in the list, with that day's net — earned minus spent, transfers
+/// between your own accounts left out — in brackets after the date, in a
+/// quiet grey: a summary, not a figure competing with the rows under it.
 class _DateHeader extends StatelessWidget {
-  const _DateHeader(this.label);
+  const _DateHeader(
+    this.label, {
+    required this.netMinor,
+    required this.currencyCode,
+  });
+
   final String label;
+
+  /// Null on a day with only transfers: there's no earning or spending.
+  final int? netMinor;
+  final String currencyCode;
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
-    child: Text(label, style: Theme.of(context).textTheme.labelLarge),
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final netMinor = this.netMinor;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 14, 4, 6),
+      // "Today (-₹1,250.00)": the net reads as part of the heading, in a
+      // quieter grey, rather than as a second figure out on the right.
+      child: Text.rich(
+        TextSpan(
+          text: label,
+          style: theme.textTheme.labelLarge,
+          children: [
+            if (netMinor != null)
+              TextSpan(
+                text:
+                    '  (${formatMinor(netMinor, currencyCode: currencyCode, showSign: netMinor > 0)})',
+                semanticsLabel: netMinor < 0
+                    ? ', net spent ${formatMinor(netMinor.abs(), currencyCode: currencyCode)}'
+                    : ', net earned ${formatMinor(netMinor, currencyCode: currencyCode)}',
+                style: TextStyle(
+                  fontFamily: AppFonts.numeric,
+                  fontFeatures: AppFonts.tabular,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _TransactionsSliver extends ConsumerStatefulWidget {
@@ -895,12 +936,31 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
       range,
       widget.categoryIds,
     ).where((t) => !_pendingDeleteIds.contains(t.id)).toList();
+    final accountById = {
+      for (final a in ref.watch(accountsProvider).value ?? const <Account>[])
+        a.id: a,
+    };
+    // Each day's net over what's listed (so a category filter narrows it
+    // too); a transfer is money moving between your own accounts, not
+    // earning or spending.
+    final netByDay = <DateTime, int>{};
+    for (final t in transactions) {
+      if (t.paymentMode == 'transfer') continue;
+      final day = dateOnly(t.date);
+      netByDay[day] = (netByDay[day] ?? 0) + t.amountMinor;
+    }
     final entries = <Object>[];
     DateTime? previous;
     for (final transaction in transactions) {
       final day = dateOnly(transaction.date);
       if (previous == null || day != previous) {
-        entries.add(_DateHeader(_dateLabel(day)));
+        entries.add(
+          _DateHeader(
+            _dateLabel(day),
+            netMinor: netByDay[day],
+            currencyCode: widget.currencyCode,
+          ),
+        );
         previous = day;
       }
       entries.add(transaction);
@@ -950,6 +1010,7 @@ class _TransactionsSliverState extends ConsumerState<_TransactionsSliver> {
             child: TransactionTile(
               transaction: t,
               category: widget.categoryById[t.categoryId],
+              account: accountById[t.accountId],
               currencyCode: widget.currencyCode,
               onEdit: () => _editTransaction(t),
             ),

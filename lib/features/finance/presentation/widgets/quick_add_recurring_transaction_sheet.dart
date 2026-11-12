@@ -101,7 +101,11 @@ class _QuickAddRecurringTransactionSheetState
   late String _accountId = widget.initial?.accountId ?? widget.accounts.first.id;
   late String? _categoryId = widget.initial?.categoryId;
   late bool _isExpense = (widget.initial?.amountMinor ?? -1) < 0;
-  late String? _paymentMode = widget.initial?.paymentMode;
+  /// Every generated transaction carries this, so it's required: a new
+  /// schedule starts on UPI, an older one saved without a mode asks.
+  late String? _paymentMode = widget.initial == null
+      ? paymentModes.first.id
+      : widget.initial!.paymentMode;
   late String _frequency = widget.initial?.frequency ?? 'monthly';
   late DateTime _startDate = widget.initial?.nextDueDate ?? DateTime.now();
   late DateTime? _endDate = widget.initial?.endDate;
@@ -146,7 +150,8 @@ class _QuickAddRecurringTransactionSheetState
   Widget build(BuildContext context) {
     final canSubmit =
         _merchantController.text.trim().isNotEmpty &&
-        (double.tryParse(_amountController.text.trim()) ?? 0) > 0;
+        (double.tryParse(_amountController.text.trim()) ?? 0) > 0 &&
+        _paymentMode != null;
 
     return CompactEditorSheet(
       title: _isEditing
@@ -227,11 +232,20 @@ class _QuickAddRecurringTransactionSheetState
                     avatar: Icon(m.icon, size: 16),
                     label: Text(m.label),
                     selected: _paymentMode == m.id,
-                    onSelected: (_) =>
-                        setState(() => _paymentMode = _paymentMode == m.id ? null : m.id),
+                    onSelected: (_) => setState(() => _paymentMode = m.id),
                   ),
               ],
             ),
+            if (_paymentMode == null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Choose how this is paid.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             Text('Repeats', style: Theme.of(context).textTheme.labelMedium),
             const SizedBox(height: 8),

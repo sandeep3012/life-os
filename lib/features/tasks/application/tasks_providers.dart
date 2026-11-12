@@ -71,7 +71,8 @@ class TasksController {
   final NotificationService _notifications;
   final SoundEffects? _sounds;
 
-  Future<void> addTask({
+  /// Returns the new task's id (a repeating task's first one).
+  Future<String> addTask({
     required String title,
     String? description,
     String? categoryId,
@@ -81,7 +82,7 @@ class TasksController {
     bool reminderEnabled = true,
     ReminderMode reminderMode = ReminderMode.notification,
   }) async {
-    await _repo.createTask(
+    return _repo.createTask(
       title: title,
       description: description,
       categoryId: categoryId,

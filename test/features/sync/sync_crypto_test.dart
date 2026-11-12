@@ -69,4 +69,58 @@ void main() {
     expect(Hlc.parse('$clockBehind'), clockBehind);
     expect('${Hlc.seed(device)}'.compareTo('$first'), lessThan(0));
   });
+
+  group('approve from another phone', () {
+    const id = '0b6a3f4e-2c1d-4e5f-8a9b-0c1d2e3f4a5b';
+
+    test('the joining phone opens what the other phone sealed', () async {
+      final request = await crypto.newLinkRequest(id);
+      final scanned = LinkRequest.parse(request.code);
+      expect(scanned.id, id);
+      expect(scanned.publicKey, request.publicKey);
+
+      final dataKey = crypto.newDataKey();
+      final sealed = await crypto.sealForLink(
+        dataKey,
+        scanned.publicKey,
+        'user-1',
+        scanned.id,
+      );
+      expect(await crypto.openLink(request, sealed, 'user-1'), dataKey);
+    });
+
+    test('it is bound to the account and to this request', () async {
+      final request = await crypto.newLinkRequest(id);
+      final sealed = await crypto.sealForLink(
+        crypto.newDataKey(),
+        request.publicKey,
+        'user-1',
+        id,
+      );
+      await expectLater(
+        crypto.openLink(request, sealed, 'user-2'),
+        throwsA(isA<SyncCryptoException>()),
+      );
+      final other = await crypto.newLinkRequest(id);
+      await expectLater(
+        crypto.openLink(other, sealed, 'user-1'),
+        throwsA(isA<SyncCryptoException>()),
+      );
+    });
+
+    test('codes that are not LifeOS ones are refused', () {
+      for (final code in [
+        'https://example.com',
+        'lifeos-link:1:not-an-id:AAAA',
+        'lifeos-link:1:$id:AAAA',
+        'lifeos-link:2:$id:${'A' * 43}',
+      ]) {
+        expect(
+          () => LinkRequest.parse(code),
+          throwsA(isA<SyncCryptoException>()),
+          reason: code,
+        );
+      }
+    });
+  });
 }

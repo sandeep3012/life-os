@@ -307,7 +307,8 @@ class FinanceController {
 
   Future<void> reactivateAccount(String accountId) => _repo.setAccountActive(accountId, true);
 
-  Future<void> addTransaction({
+  /// Returns the new transaction's id.
+  Future<String> addTransaction({
     required String accountId,
     String? categoryId,
     required String merchant,
@@ -567,9 +568,17 @@ class FinanceController {
 
   /// Pays the bill from [accountId] and, for a repeating bill, reschedules
   /// its reminder against the rolled-forward due date.
-  Future<void> markBillPaid(Bill bill, {required String accountId}) async {
+  Future<void> markBillPaid(
+    Bill bill, {
+    required String accountId,
+    String? paymentMode,
+  }) async {
     await _notifications.cancelBillReminder(bill.id);
-    final updated = await _repo.markBillPaid(bill.id, accountId: accountId);
+    final updated = await _repo.markBillPaid(
+      bill.id,
+      accountId: accountId,
+      paymentMode: paymentMode,
+    );
     if (updated.active) {
       await _scheduleBillReminder(updated, ReminderMode.fromStorage(updated.reminderMode));
     }

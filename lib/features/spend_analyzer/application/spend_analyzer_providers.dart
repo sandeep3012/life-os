@@ -136,38 +136,48 @@ final weeklyTrendProvider = Provider<List<int>>((ref) {
 });
 
 /// Expense share by payment mode for the selected month, sorted largest
-/// first. Transactions with no payment mode set (including everything
-/// recorded before this feature existed) are excluded rather than lumped
-/// into an "unknown" slice — the share is of *tagged* spend only.
+/// first. It covers the same spend as "By category" — transfers between
+/// your own accounts left out, everything else in — so the two always add
+/// up to the same total. Spend recorded without a payment mode (older
+/// entries, or one saved before the mode was asked for) is one "Not set"
+/// row, last, rather than silently dropped.
 final paymentModeBreakdownProvider = Provider<List<PaymentModeSpend>>((ref) {
   final txns = ref
       .watch(monthTransactionsProvider)
-      .where((t) => t.amountMinor < 0 && t.paymentMode != null)
+      .where((t) => t.paymentMode != 'transfer' && t.amountMinor < 0)
       .toList();
 
   final totals = <String, int>{};
+  var notSetMinor = 0;
   for (final t in txns) {
-    totals[t.paymentMode!] =
-        (totals[t.paymentMode!] ?? 0) + t.amountMinor.abs();
+    final mode = paymentModeById(t.paymentMode);
+    if (mode == null) {
+      notSetMinor += t.amountMinor.abs();
+    } else {
+      totals[mode.id] = (totals[mode.id] ?? 0) + t.amountMinor.abs();
+    }
   }
-  final grandTotal = totals.values.fold<int>(0, (a, b) => a + b);
+  final grandTotal =
+      totals.values.fold<int>(0, (a, b) => a + b) + notSetMinor;
   if (grandTotal == 0) return const [];
 
-  final entries =
-      totals.entries
-          .map((e) {
-            final mode = paymentModeById(e.key);
-            return mode == null
-                ? null
-                : PaymentModeSpend(
-                    mode: mode,
-                    totalMinor: e.value,
-                    share: e.value / grandTotal,
-                  );
-          })
-          .whereType<PaymentModeSpend>()
-          .toList()
-        ..sort((a, b) => b.totalMinor.compareTo(a.totalMinor));
+  final entries = [
+    for (final e in totals.entries)
+      PaymentModeSpend(
+        mode: paymentModeById(e.key),
+        totalMinor: e.value,
+        share: e.value / grandTotal,
+      ),
+  ]..sort((a, b) => b.totalMinor.compareTo(a.totalMinor));
+  if (notSetMinor > 0) {
+    entries.add(
+      PaymentModeSpend(
+        mode: null,
+        totalMinor: notSetMinor,
+        share: notSetMinor / grandTotal,
+      ),
+    );
+  }
   return entries;
 });
 

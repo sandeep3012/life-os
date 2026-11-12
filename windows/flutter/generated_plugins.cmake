@@ -10,6 +10,8 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_timezone
   local_auth_windows
   pdfx
+  share_plus
+  speech_to_text_windows
   url_launcher_windows
 )
 

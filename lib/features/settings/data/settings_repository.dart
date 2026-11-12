@@ -76,6 +76,9 @@ class SettingsRepository {
   Future<void> setSoundEffectsEnabled(bool enabled) =>
       _upsert(AppSettingsCompanion(soundEffectsEnabled: Value(enabled)));
 
+  Future<void> setVoiceEntryConsent(bool agreed) =>
+      _upsert(AppSettingsCompanion(voiceEntryConsent: Value(agreed)));
+
   Future<void> setTaskReminders(bool enabled) =>
       _upsert(AppSettingsCompanion(taskReminders: Value(enabled)));
 

@@ -37,6 +37,7 @@ import '../../features/finance/presentation/screens/accounts_screen.dart';
 /// each branch preserving its own navigation stack.
 GoRouter createAppRouter() => GoRouter(
   initialLocation: RoutePaths.home,
+  redirect: (context, state) => offRouteRedirect(state.uri),
   routes: [
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>
@@ -211,6 +212,20 @@ GoRouter createAppRouter() => GoRouter(
     ),
   ],
 );
+
+/// Addresses that aren't screens. The sign-in return link
+/// (lifeos://auth-callback?code=…) belongs to Supabase, which reads it
+/// itself; if it ever reaches the router, it goes to Sync & account, where
+/// the sign-in shows. A bare "/" goes Home.
+String? offRouteRedirect(Uri uri) {
+  if (uri.scheme == 'lifeos' ||
+      uri.host == 'auth-callback' ||
+      uri.path.startsWith('/auth-callback')) {
+    return RoutePaths.sync;
+  }
+  if (uri.path.isEmpty || uri.path == '/') return RoutePaths.home;
+  return null;
+}
 
 /// Shared router used by isolated widget tests. The live app creates a fresh
 /// router for each in-app restart.

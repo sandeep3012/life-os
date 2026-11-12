@@ -20,6 +20,7 @@ void main() {
     amountMinor: -25000,
     date: when,
     createdAt: when,
+    paymentMode: 'card',
   );
 
   Category category({required String icon, required String colorHex}) =>
@@ -33,7 +34,11 @@ void main() {
         createdAt: when,
       );
 
-  Future<void> pump(WidgetTester tester, Category? category) async {
+  Future<void> pump(
+    WidgetTester tester,
+    Category? category, {
+    Account? account,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -42,6 +47,7 @@ void main() {
             transaction: transaction(),
             currencyCode: 'INR',
             category: category,
+            account: account,
           ),
         ),
       ),
@@ -73,5 +79,32 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('🍽️'), findsOneWidget);
     expect(find.text('Cafe'), findsOneWidget);
+  });
+
+  testWidgets('the second line names the account, not the date or mode', (
+    tester,
+  ) async {
+    final account = Account(
+      id: 'a',
+      name: 'HDFC Savings',
+      type: 'Savings',
+      balanceMinor: 0,
+      openingBalanceMinor: 0,
+      currencyCode: 'INR',
+      isActive: true,
+      position: 0,
+      isDefault: false,
+      createdAt: when,
+      updatedAt: when,
+    );
+    await pump(
+      tester,
+      category(icon: 'restaurant', colorHex: '#E0475A'),
+      account: account,
+    );
+
+    expect(find.text('Eating out · HDFC Savings'), findsOneWidget);
+    expect(find.textContaining('Oct'), findsNothing);
+    expect(find.byIcon(LucideIcons.creditCard), findsNothing);
   });
 }

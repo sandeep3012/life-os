@@ -102,7 +102,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 35;
+  int get schemaVersion => 36;
 
   /// For upgrade steps that read another table, on a database partly
   /// behind its recorded version (see [_addColumnIfMissing]).
@@ -430,6 +430,10 @@ class AppDatabase extends _$AppDatabase {
         if (await _tableExists('categories') && await _tableExists('habits')) {
           await mergePlannerCategories();
         }
+      }
+      if (from < 36) {
+        // v35 -> v36: voice entry's opt-in.
+        await _addColumnIfMissing(m, appSettings, appSettings.voiceEntryConsent);
       }
     },
   );

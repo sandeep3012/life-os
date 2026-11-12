@@ -78,7 +78,9 @@ class AddMenuSheet extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: Padding(
+        // Scrolls on a screen shorter than the menu (a small phone, or
+        // landscape) instead of overflowing.
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,

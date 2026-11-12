@@ -17,7 +17,7 @@ abstract final class SupabaseConfig {
   /// can reach. Never the secret or service-role key.
   static const publishableKey = String.fromEnvironment(
     'SUPABASE_PUBLISHABLE_KEY',
-    defaultValue: 'sb_publishable_DqILynDEuaGXnSQaUjZZfQ_KRFYoaet'
+    defaultValue: 'sb_publishable_DqILynDEuaGXnSQaUjZZfQ_KRFYoaet',
   );
 
   static bool get isConfigured => url.isNotEmpty && publishableKey.isNotEmpty;
