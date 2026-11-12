@@ -24,3 +24,14 @@ const paymentModes = [
 final _paymentModeById = {for (final m in paymentModes) m.id: m};
 
 PaymentMode? paymentModeById(String? id) => id == null ? null : _paymentModeById[id];
+
+/// The payment mode an account most likely means, for places that don't ask
+/// (voice entry) or as the starting choice where they do (paying a bill): a
+/// credit-card account pays by card, a cash account in cash, anything else
+/// by UPI. [accountType] is `Accounts.type`, in any of its stored spellings.
+String suggestedPaymentModeFor(String accountType) {
+  final type = accountType.toLowerCase().replaceAll('_', ' ');
+  if (type.contains('card')) return 'card';
+  if (type.contains('cash')) return 'cash';
+  return 'upi';
+}

@@ -231,7 +231,7 @@ class _SpendAnalyzerScreenState extends ConsumerState<SpendAnalyzerScreen> {
                   ? Padding(
                       padding: const EdgeInsets.symmetric(vertical: 20),
                       child: Text(
-                        'No payment mode tagged for $monthLabel yet.',
+                        'No spending logged for $monthLabel yet.',
                       ),
                     )
                   : PaymentModeBreakdown(

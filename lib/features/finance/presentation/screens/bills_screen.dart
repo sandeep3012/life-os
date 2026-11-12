@@ -14,6 +14,7 @@ import '../../../../core/utils/icon_lookup.dart';
 import '../../../../core/utils/category_color.dart';
 import '../../../settings/application/settings_providers.dart';
 import '../../application/finance_providers.dart';
+import '../../domain/payment_mode.dart';
 import '../widgets/account_option_row.dart';
 import '../widgets/quick_add_bill_sheet.dart';
 
@@ -160,7 +161,7 @@ class _BillTile extends ConsumerWidget {
     var accountId = bill.accountId ?? accounts.first.id;
     if (!accounts.any((a) => a.id == accountId)) accountId = accounts.first.id;
 
-    final chosen = await showDialog<String>(
+    final chosen = await showDialog<({String accountId, String paymentMode})>(
       context: context,
       builder: (context) => _PayFromDialog(
         accounts: accounts,
@@ -171,7 +172,11 @@ class _BillTile extends ConsumerWidget {
     if (chosen == null) return;
     await ref
         .read(financeControllerProvider)
-        .markBillPaid(bill, accountId: chosen);
+        .markBillPaid(
+          bill,
+          accountId: chosen.accountId,
+          paymentMode: chosen.paymentMode,
+        );
     if (!context.mounted) return;
     await showCelebration(
       context,
@@ -293,21 +298,64 @@ class _PayFromDialog extends StatefulWidget {
 
 class _PayFromDialogState extends State<_PayFromDialog> {
   late String _accountId = widget.initialAccountId;
+  late String _paymentMode = _suggestFor(_accountId);
+
+  /// Until the person picks a mode themselves, it follows the account: a
+  /// credit card pays by card, a cash account in cash.
+  bool _modePicked = false;
+
+  String _suggestFor(String accountId) {
+    final account = widget.accounts.where((a) => a.id == accountId).firstOrNull;
+    return account == null ? 'upi' : suggestedPaymentModeFor(account.type);
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Pay from'),
-      content: DropdownButtonFormField<String>(
-        initialValue: _accountId,
-        items: [
-          for (final a in widget.accounts)
-            DropdownMenuItem(
-              value: a.id,
-              child: OptionRow.account(a, widget.accountTypes),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: _accountId,
+              items: [
+                for (final a in widget.accounts)
+                  DropdownMenuItem(
+                    value: a.id,
+                    child: OptionRow.account(a, widget.accountTypes),
+                  ),
+              ],
+              onChanged: (v) => setState(() {
+                _accountId = v ?? _accountId;
+                if (!_modePicked) _paymentMode = _suggestFor(_accountId);
+              }),
             ),
-        ],
-        onChanged: (v) => setState(() => _accountId = v ?? _accountId),
+            const SizedBox(height: 16),
+            Text(
+              'Payment mode',
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final m in paymentModes)
+                  ChoiceChip(
+                    avatar: Icon(m.icon, size: 16),
+                    label: Text(m.label),
+                    selected: _paymentMode == m.id,
+                    onSelected: (_) => setState(() {
+                      _paymentMode = m.id;
+                      _modePicked = true;
+                    }),
+                  ),
+              ],
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -315,7 +363,10 @@ class _PayFromDialogState extends State<_PayFromDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () => Navigator.pop(context, _accountId),
+          onPressed: () => Navigator.pop(context, (
+            accountId: _accountId,
+            paymentMode: _paymentMode,
+          )),
           child: const Text('Mark paid'),
         ),
       ],

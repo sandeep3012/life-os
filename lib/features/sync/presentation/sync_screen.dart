@@ -3,14 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../app/router/route_paths.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_fonts.dart';
 import '../../../core/widgets/surface_card.dart';
+import '../../../core/widgets/tappable.dart';
 import '../../auth/application/sync_auth_providers.dart';
 import '../application/sync_providers.dart';
 import '../domain/sync_crypto.dart';
+import 'sync_link_sheets.dart';
 
 /// Sidebar → Sync & account, and Settings → Sync: everything about sync on
 /// one screen, whatever stage it's at — not available, signed out, setting
@@ -197,14 +200,24 @@ class _SetUp extends ConsumerStatefulWidget {
 class _SetUpState extends ConsumerState<_SetUp> {
   bool _busy = false;
 
+  /// Standard recovery unless the person picks Maximum privacy.
+  bool _serverRecovery = true;
+
   Future<void> _start() async {
     final controller = ref.read(syncControllerProvider.notifier);
     final pending = controller.newAccountKeys();
-    final kept = await showRecoveryKeySheet(context, pending.recoveryKey);
-    if (!kept || !mounted) return;
+    // Standard recovery doesn't need a recovery key to be kept: signing in
+    // is the way back. One can be made later from Sync & account.
+    if (!_serverRecovery) {
+      final kept = await showRecoveryKeySheet(context, pending.recoveryKey);
+      if (!kept || !mounted) return;
+    }
     setState(() => _busy = true);
     try {
-      await controller.saveRecoveryKey(pending);
+      await controller.saveRecoveryKey(
+        pending,
+        serverRecovery: _serverRecovery,
+      );
     } on Object {
       if (mounted) {
         _snack(context, "Couldn't reach the server. Try again in a moment.");
@@ -224,12 +237,25 @@ class _SetUpState extends ConsumerState<_SetUp> {
           title: 'Set up sync',
           body:
               'Signed in as ${widget.email ?? 'you'}.\n\n'
-              'Your data is locked with a key only your phones hold. You\'ll '
-              'get a recovery key to keep somewhere safe — it\'s the only way '
-              'to unlock your data on a new phone if this one is lost. We '
-              'can\'t recover it for you.',
+              'Your data is encrypted on this phone before it\'s uploaded. '
+              'Choose how you\'d get it back if you lose this phone.',
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 20),
+        RecoveryModeChoice(
+          serverRecovery: _serverRecovery,
+          onChanged: _busy
+              ? null
+              : (value) => setState(() => _serverRecovery = value),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'You can change this later in Sync & account.',
+          style: TextStyle(
+            fontSize: 13,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 24),
         FilledButton(
           onPressed: _busy ? null : _start,
           child: _busy
@@ -237,7 +263,9 @@ class _SetUpState extends ConsumerState<_SetUp> {
                   dimension: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Create my recovery key'),
+              : Text(
+                  _serverRecovery ? 'Turn on sync' : 'Create my recovery key',
+                ),
         ),
         const SizedBox(height: 10),
         const _SignOutButton(),
@@ -292,11 +320,25 @@ class _UnlockState extends ConsumerState<_Unlock> {
           title: 'Unlock your data',
           body:
               'Signed in as ${widget.email ?? 'you'}. This account already '
-              'syncs from another phone. Enter the recovery key you saved '
-              'when you set it up.\n\n'
+              'syncs from another phone. Approve this phone from that one, '
+              'or enter the recovery key you saved when you set it up.\n\n'
               'Anything already on this phone is kept and joins the rest.',
         ),
         const SizedBox(height: 24),
+        FilledButton.icon(
+          onPressed: _busy ? null : () => showLinkQrSheet(context),
+          icon: const Icon(LucideIcons.qrCode, size: 18),
+          label: const Text('Approve from my other phone'),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Or use your recovery key',
+          style: TextStyle(
+            fontSize: 13,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 4),
         TextField(
           controller: _key,
           textCapitalization: TextCapitalization.characters,
@@ -310,14 +352,14 @@ class _UnlockState extends ConsumerState<_Unlock> {
           ),
         ),
         const SizedBox(height: 16),
-        FilledButton(
+        OutlinedButton(
           onPressed: _busy ? null : _unlock,
-          child: const Text('Unlock'),
+          child: const Text('Unlock with recovery key'),
         ),
         const SizedBox(height: 12),
         Text(
-          'Lost it? On a phone that still syncs, open Sync & account → New '
-          'recovery key.',
+          'Lost the key and no other phone? On a phone that still syncs, '
+          'open Sync & account → New recovery key.',
           style: TextStyle(
             fontSize: 13,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -433,10 +475,50 @@ class _Ready extends ConsumerWidget {
           'settings (app lock, motion, sounds) stay on each phone.',
           style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
         ),
+        if (status.keyBackedUpTo case final where?) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Your key is also saved in $where, so a new phone signed in '
+            'there unlocks without the recovery key.',
+            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+          ),
+        ],
         const SizedBox(height: 16),
         Card(
           child: Column(
             children: [
+              ListTile(
+                leading: const Icon(LucideIcons.smartphone),
+                title: const Text('Add a phone'),
+                subtitle: const Text('Scan the code your new phone shows'),
+                onTap: () async {
+                  if (await scanToAddPhone(context) && context.mounted) {
+                    _snack(context, 'Approved. The new phone unlocks now.');
+                  }
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(LucideIcons.lifeBuoy),
+                title: const Text('Recovery'),
+                subtitle: Text(switch (status.serverRecovery) {
+                  true => 'Standard · signing in gets your data back',
+                  false => 'Maximum privacy · only your key and phones',
+                  null => 'Checking…',
+                }),
+                onTap: status.serverRecovery == null
+                    ? null
+                    : () =>
+                          _changeRecovery(context, ref, status.serverRecovery!),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(LucideIcons.shieldCheck),
+                title: const Text('Check recovery key'),
+                subtitle: const Text('Make sure the one you saved still works'),
+                onTap: () => showCheckRecoveryKeyDialog(context),
+              ),
+              const Divider(height: 1),
               ListTile(
                 leading: const Icon(LucideIcons.keyRound),
                 title: const Text('New recovery key'),
@@ -465,6 +547,50 @@ class _Ready extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _changeRecovery(
+    BuildContext context,
+    WidgetRef ref,
+    bool current,
+  ) async {
+    final controller = ref.read(syncControllerProvider.notifier);
+    final wanted = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _RecoveryModeSheet(serverRecovery: current),
+    );
+    if (wanted == null || wanted == current || !context.mounted) return;
+    try {
+      if (wanted) {
+        await controller.setServerRecovery(true);
+        if (context.mounted) {
+          _snack(
+            context,
+            'Standard recovery on. Signing in gets your data back.',
+          );
+        }
+        return;
+      }
+      // Maximum privacy leaves the recovery key as the last way back, so
+      // one has to be saved first — Standard setups never showed one.
+      final pending = controller.replacementRecoveryKey();
+      final kept = await showRecoveryKeySheet(
+        context,
+        pending.recoveryKey,
+        replacing: true,
+      );
+      if (!kept) return;
+      await controller.saveRecoveryKey(pending);
+      await controller.setServerRecovery(false);
+      if (context.mounted) {
+        _snack(context, 'Maximum privacy on. The server\'s copy is deleted.');
+      }
+    } on Object {
+      if (context.mounted) {
+        _snack(context, "Couldn't reach the server. Nothing was changed.");
+      }
+    }
   }
 
   Future<void> _newRecoveryKey(BuildContext context, WidgetRef ref) async {
@@ -561,6 +687,180 @@ class _SignOutButton extends ConsumerWidget {
   );
 }
 
+/// Standard recovery or Maximum privacy, as two cards to pick from.
+class RecoveryModeChoice extends StatelessWidget {
+  const RecoveryModeChoice({
+    super.key,
+    required this.serverRecovery,
+    required this.onChanged,
+  });
+
+  final bool serverRecovery;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _ModeCard(
+        selected: serverRecovery,
+        icon: LucideIcons.lifeBuoy,
+        title: 'Standard',
+        body:
+            'Sign in on any phone and your data comes back, even if you '
+            'lose every phone. LifeOS keeps a protected copy of your key, '
+            'so in principle we could read your data.',
+        onTap: onChanged == null ? null : () => onChanged!(true),
+      ),
+      const SizedBox(height: 10),
+      _ModeCard(
+        selected: !serverRecovery,
+        icon: LucideIcons.lockKeyhole,
+        title: 'Maximum privacy',
+        body:
+            'Only your phones and a recovery key you keep can unlock your '
+            'data — nobody else, including us. Lose them all and your synced '
+            'data is gone for good.',
+        onTap: onChanged == null ? null : () => onChanged!(false),
+      ),
+    ],
+  );
+}
+
+class _ModeCard extends StatelessWidget {
+  const _ModeCard({
+    required this.selected,
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.onTap,
+  });
+
+  final bool selected;
+  final IconData icon;
+  final String title;
+  final String body;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Tappable(
+      selected: selected,
+      onTap: onTap,
+      haptic: TapHaptic.selection,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? scheme.primary : scheme.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+          color: selected ? scheme.primary.withValues(alpha: 0.06) : null,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: scheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    body,
+                    style: TextStyle(
+                      height: 1.4,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              selected ? LucideIcons.circleCheck : LucideIcons.circle,
+              size: 20,
+              color: selected ? scheme.primary : scheme.outline,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Sync & account → Recovery: pick a mode; returns the choice.
+class _RecoveryModeSheet extends StatefulWidget {
+  const _RecoveryModeSheet({required this.serverRecovery});
+
+  final bool serverRecovery;
+
+  @override
+  State<_RecoveryModeSheet> createState() => _RecoveryModeSheetState();
+}
+
+class _RecoveryModeSheetState extends State<_RecoveryModeSheet> {
+  late bool _serverRecovery = widget.serverRecovery;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Recovery',
+            style: TextStyle(
+              fontFamily: AppFonts.serif,
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          RecoveryModeChoice(
+            serverRecovery: _serverRecovery,
+            onChanged: (value) => setState(() => _serverRecovery = value),
+          ),
+          if (widget.serverRecovery && !_serverRecovery) ...[
+            const SizedBox(height: 12),
+            Text(
+              'You\'ll save a new recovery key first; then the server\'s copy '
+              'is deleted.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: _serverRecovery == widget.serverRecovery
+                ? null
+                : () => Navigator.of(context).pop(_serverRecovery),
+            child: const Text('Save'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 /// Shows [recoveryKey] and returns true once the person confirms they've
 /// kept it. Nothing is saved until they do.
 Future<bool> showRecoveryKeySheet(
@@ -615,9 +915,10 @@ class _RecoveryKeySheetState extends State<_RecoveryKeySheet> {
               widget.replacing
                   ? 'Keep this somewhere safe. Once saved, the old recovery key '
                         'stops working.'
-                  : 'Keep this somewhere safe — a password manager, a photo, or '
-                        'on paper. You\'ll need it to unlock your data on a new '
-                        'phone. Nobody, including us, can recover it.',
+                  : 'Keep this somewhere safe — a password manager, your '
+                        'notes, an email to yourself, or on paper. You\'ll need '
+                        'it only if you lose every phone and your phone\'s '
+                        'backup. Nobody, including us, can recover it.',
               style: TextStyle(height: 1.5, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 18),
@@ -639,13 +940,38 @@ class _RecoveryKeySheetState extends State<_RecoveryKeySheet> {
               ),
             ),
             const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: widget.recoveryKey));
-                if (context.mounted) _snack(context, 'Recovery key copied.');
-              },
-              icon: const Icon(LucideIcons.copy, size: 16),
-              label: const Text('Copy'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(
+                      ClipboardData(text: widget.recoveryKey),
+                    );
+                    if (context.mounted) {
+                      _snack(context, 'Recovery key copied.');
+                    }
+                  },
+                  icon: const Icon(LucideIcons.copy, size: 16),
+                  label: const Text('Copy'),
+                ),
+                const SizedBox(width: 8),
+                // Drive, Notes, email, a password manager — whatever the
+                // phone offers.
+                TextButton.icon(
+                  onPressed: () => SharePlus.instance.share(
+                    ShareParams(
+                      subject: 'LifeOS recovery key',
+                      text:
+                          'LifeOS recovery key\n${widget.recoveryKey}\n\n'
+                          'Unlocks your synced LifeOS data on a new phone. '
+                          'Keep it private.',
+                    ),
+                  ),
+                  icon: const Icon(LucideIcons.share2, size: 16),
+                  label: const Text('Save to…'),
+                ),
+              ],
             ),
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,

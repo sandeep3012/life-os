@@ -86,6 +86,26 @@ abstract class SyncBackend {
 
   Future<void> registerDevice(String deviceId, String name);
 
+  /// "Approve from my other phone": the data key sealed for the joining
+  /// phone, left under its request [id] for it to collect.
+  Future<void> leaveKeyTransfer(String id, Uint8List sealed);
+
+  /// The sealed key left for request [id], or null while it isn't there.
+  Future<Uint8List?> collectKeyTransfer(String id);
+
+  Future<void> removeKeyTransfer(String id);
+
+  /// Standard recovery: the data key itself, held by the server so signing
+  /// in is enough to get the data back.
+  Future<void> storeEscrowKey(Uint8List dataKey);
+
+  /// The server's copy, or null when the account uses Maximum privacy.
+  Future<Uint8List?> fetchEscrowKey();
+
+  Future<bool> hasEscrowKey();
+
+  Future<void> removeEscrowKey();
+
   /// Removes the account and everything stored for it on the server.
   Future<void> deleteAccount();
 }

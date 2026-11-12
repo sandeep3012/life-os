@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../core/utils/currency_utils.dart';
 import '../../core/widgets/save_feedback.dart';
 import '../../core/widgets/tappable.dart';
+import '../../features/voice_entry/presentation/voice_entry_sheet.dart';
 import '../../features/finance/application/finance_providers.dart';
 import '../../features/finance/presentation/widgets/entry_form_sheet.dart';
 import '../../features/finance/presentation/widgets/quick_add_account_sheet.dart';
@@ -20,6 +21,7 @@ import '../../features/home/presentation/widgets/add_menu_sheet.dart';
 import '../../features/settings/application/settings_providers.dart';
 import '../../features/tasks/application/tasks_providers.dart';
 import '../../features/tasks/presentation/widgets/quick_add_task_sheet.dart';
+import '../haptics.dart';
 import '../motion.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -76,6 +78,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           selectedIndex: widget.navigationShell.currentIndex,
           addMenuOpen: _addMenuOpen,
           onAdd: _openAddMenu,
+          onAddLongPress: _openVoiceEntry,
           onSelected: (index) => widget.navigationShell.goBranch(
             index,
             // initialLocation: index == widget.navigationShell.currentIndex,
@@ -103,6 +106,14 @@ class _AppShellState extends ConsumerState<AppShell> {
     await showAddMenuSheet(
       context,
       items: [
+        // Say it instead of filling a form: an expense, task, habit or event.
+        AddMenuItem(
+          label: 'Speak',
+          subtitle: 'Say it, pick the match',
+          icon: LucideIcons.mic,
+          color: colors.calendar,
+          onTap: () => showVoiceEntrySheet(_sheetContext, ref),
+        ),
         AddMenuItem(
           label: 'Expense',
           subtitle: 'One-off spend',
@@ -149,6 +160,14 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
 
     if (mounted) setState(() => _addMenuOpen = false);
+  }
+
+  /// Holding the + button skips the menu and starts listening. The hold
+  /// gets its own buzz — Tappable's haptic is for taps — so it's felt
+  /// that the long press registered.
+  void _openVoiceEntry() {
+    ref.read(hapticsProvider).heavy();
+    showVoiceEntrySheet(_sheetContext, ref);
   }
 
   /// The shell watches none of these streams, and Riverpod tears an unlistened
@@ -330,6 +349,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           merchant: result.merchant,
           amountMinor: result.amountMinor,
           date: result.date,
+          paymentMode: result.paymentMode,
         );
 
     if (!mounted) return;
@@ -395,6 +415,7 @@ class AppFloatingNavBar extends StatelessWidget {
     required this.selectedIndex,
     required this.onSelected,
     this.onAdd,
+    this.onAddLongPress,
     this.addMenuOpen = false,
   });
 
@@ -407,6 +428,9 @@ class AppFloatingNavBar extends StatelessWidget {
 
   /// When set, a centre add button is inserted between the two halves of the bar.
   final VoidCallback? onAdd;
+
+  /// Holding the add button: straight to voice entry.
+  final VoidCallback? onAddLongPress;
 
   /// Rotates the plus to 135°, per the comp.
   final bool addMenuOpen;
@@ -469,7 +493,11 @@ class AppFloatingNavBar extends StatelessWidget {
                         // matching the comp's Home · Finance · [+] · Planner ·
                         // Calendar order.
                         if (onAdd != null && i == addAt)
-                          _AddButton(onTap: onAdd!, rotated: addMenuOpen),
+                          _AddButton(
+                            onTap: onAdd!,
+                            onLongPress: onAddLongPress,
+                            rotated: addMenuOpen,
+                          ),
                         Expanded(
                           child: _NavButton(
                             destination: destinations[i],
@@ -625,13 +653,20 @@ class _NavHighlightState extends State<_NavHighlight>
 /// `FloatingActionButton`s are `elevation: 0` at the same radius 17
 /// (`AppTheme.floatingActionButtonTheme`), so this matches them.
 class _AddButton extends StatelessWidget {
-  const _AddButton({required this.onTap, required this.rotated});
+  const _AddButton({
+    required this.onTap,
+    this.onLongPress,
+    required this.rotated,
+  });
 
   /// The button's 50px plus the 6px of padding either side — the width it takes
   /// out of the bar, which the tab highlight needs to find each tab's centre.
   static const double slotWidth = 62;
 
   final VoidCallback onTap;
+
+  /// Opens voice entry instead of the add menu.
+  final VoidCallback? onLongPress;
   final bool rotated;
 
   @override
@@ -642,8 +677,11 @@ class _AddButton extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Tappable(
         onTap: onTap,
+        onLongPress: onLongPress,
         haptic: TapHaptic.medium,
-        semanticLabel: 'Add',
+        semanticLabel: onLongPress == null
+            ? 'Add'
+            : 'Add. Long press to add by voice',
         child: Container(
           key: TourTargets.addButton,
           width: 50,

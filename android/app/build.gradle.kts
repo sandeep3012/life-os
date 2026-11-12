@@ -56,4 +56,7 @@ dependencies {
     // Provides the Theme.AppCompat styles LaunchTheme now extends (local_auth
     // needs them). Declared here so the theme resolves whatever else pulls it in.
     implementation("androidx.appcompat:appcompat:1.7.0")
+    // Google's Block Store: keeps sync's data key across reinstalls and onto
+    // a new phone restored from this one's backup (sync_key_backup.dart).
+    implementation("com.google.android.gms:play-services-auth-blockstore:16.4.0")
 }

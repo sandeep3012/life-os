@@ -23,6 +23,7 @@ class SyncCrypto {
 
   final Random _random;
   final _aead = Xchacha20.poly1305Aead();
+  final _x25519 = X25519();
 
   static const keyLength = 32;
   static const _recoveryBytes = 16;
@@ -80,14 +81,12 @@ class SyncCrypto {
 
   Future<List<int>> _wrappingKey(String recoveryKey, String userId) async {
     final bytes = parseRecoveryKey(recoveryKey);
-    final key = await Hkdf(
-      hmac: Hmac.sha256(),
-      outputLength: keyLength,
-    ).deriveKey(
-      secretKey: SecretKey(bytes),
-      nonce: utf8.encode(userId),
-      info: utf8.encode('lifeos recovery wrap v1'),
-    );
+    final key = await Hkdf(hmac: Hmac.sha256(), outputLength: keyLength)
+        .deriveKey(
+          secretKey: SecretKey(bytes),
+          nonce: utf8.encode(userId),
+          info: utf8.encode('lifeos recovery wrap v1'),
+        );
     return key.extractBytes();
   }
 
@@ -101,7 +100,11 @@ class SyncCrypto {
     return Uint8List.fromList(box.concatenation());
   }
 
-  Future<Uint8List> _open(List<int> key, List<int> sealed, List<int> aad) async {
+  Future<Uint8List> _open(
+    List<int> key,
+    List<int> sealed,
+    List<int> aad,
+  ) async {
     try {
       final box = SecretBox.fromConcatenation(
         sealed,
@@ -118,8 +121,85 @@ class SyncCrypto {
     }
   }
 
-  Uint8List _randomBytes(int length) =>
-      Uint8List.fromList([for (var i = 0; i < length; i++) _random.nextInt(256)]);
+  /// A one-off key pair for a phone asking to join an account; its public
+  /// half goes in the QR code the other phone scans.
+  Future<LinkRequest> newLinkRequest(String requestId) async {
+    final keyPair = await _x25519.newKeyPair();
+    final public = await keyPair.extractPublicKey();
+    return LinkRequest._(requestId, keyPair, Uint8List.fromList(public.bytes));
+  }
+
+  /// On the phone that already syncs: [dataKey] sealed to the joining
+  /// phone's [publicKey]. The result starts with this side's one-off public
+  /// key, which the joining phone needs to open it.
+  Future<Uint8List> sealForLink(
+    List<int> dataKey,
+    List<int> publicKey,
+    String userId,
+    String requestId,
+  ) async {
+    if (publicKey.length != 32) {
+      throw const SyncCryptoException("That code isn't from LifeOS.");
+    }
+    final mine = await _x25519.newKeyPair();
+    final minePublic = await mine.extractPublicKey();
+    final key = await _linkKey(mine, publicKey, minePublic.bytes, publicKey);
+    final box = await _seal(key, dataKey, _linkAad(userId, requestId));
+    return Uint8List.fromList([...minePublic.bytes, ...box]);
+  }
+
+  /// On the joining phone: the data key out of what [sealForLink] made.
+  Future<Uint8List> openLink(
+    LinkRequest request,
+    List<int> sealed,
+    String userId,
+  ) async {
+    if (sealed.length <= 32) {
+      throw const SyncCryptoException('The other phone sent a damaged key.');
+    }
+    final theirs = sealed.sublist(0, 32);
+    final key = await _linkKey(
+      request._keyPair,
+      theirs,
+      theirs,
+      request.publicKey,
+    );
+    try {
+      return await _open(key, sealed.sublist(32), _linkAad(userId, request.id));
+    } on SyncCryptoException {
+      throw const SyncCryptoException(
+        "The other phone's key couldn't be opened here.",
+      );
+    }
+  }
+
+  /// Both public keys go into the derivation, sender's first, so the key is
+  /// tied to this exact exchange.
+  Future<List<int>> _linkKey(
+    SimpleKeyPair mine,
+    List<int> theirPublic,
+    List<int> senderPublic,
+    List<int> joinerPublic,
+  ) async {
+    final shared = await _x25519.sharedSecretKey(
+      keyPair: mine,
+      remotePublicKey: SimplePublicKey(theirPublic, type: KeyPairType.x25519),
+    );
+    final key = await Hkdf(hmac: Hmac.sha256(), outputLength: keyLength)
+        .deriveKey(
+          secretKey: shared,
+          nonce: [...senderPublic, ...joinerPublic],
+          info: utf8.encode('lifeos link v1'),
+        );
+    return key.extractBytes();
+  }
+
+  List<int> _linkAad(String userId, String requestId) =>
+      utf8.encode('lifeos link v1|$userId|$requestId');
+
+  Uint8List _randomBytes(int length) => Uint8List.fromList([
+    for (var i = 0; i < length; i++) _random.nextInt(256),
+  ]);
 
   /// Crockford base32: no I, L, O or U, so it survives being read aloud or
   /// copied by hand.
@@ -152,7 +232,8 @@ class SyncCrypto {
     var text = input.toUpperCase().replaceAll(RegExp('[^0-9A-Z]'), '');
     if (text.startsWith('LOS')) text = text.substring(3);
     text = text.replaceAll('O', '0').replaceAll(RegExp('[IL]'), '1');
-    if (text.length != 26 || text.split('').any((c) => !_alphabet.contains(c))) {
+    if (text.length != 26 ||
+        text.split('').any((c) => !_alphabet.contains(c))) {
       throw const SyncCryptoException(
         'A recovery key has 26 letters and numbers after "LOS".',
       );
@@ -168,5 +249,42 @@ class SyncCrypto {
       }
     }
     return Uint8List.fromList(out.take(_recoveryBytes).toList());
+  }
+}
+
+/// A joining phone's side of "Approve from my other phone": the request id
+/// and one-off key pair, kept in memory only while the QR code is showing.
+class LinkRequest {
+  const LinkRequest._(this.id, this._keyPair, this.publicKey);
+
+  static const _prefix = 'lifeos-link:1:';
+
+  final String id;
+  final SimpleKeyPair _keyPair;
+  final Uint8List publicKey;
+
+  /// What the QR code holds.
+  String get code =>
+      '$_prefix$id:${base64Url.encode(publicKey).replaceAll('=', '')}';
+
+  /// Reads a scanned [code]: the request id and the joining phone's public
+  /// key. Throws [SyncCryptoException] for anything that isn't one.
+  static ({String id, Uint8List publicKey}) parse(String code) {
+    final text = code.trim();
+    if (!text.startsWith(_prefix)) {
+      throw const SyncCryptoException("That code isn't from LifeOS.");
+    }
+    final parts = text.substring(_prefix.length).split(':');
+    if (parts.length != 2 || !RegExp(r'^[0-9a-f-]{36}$').hasMatch(parts[0])) {
+      throw const SyncCryptoException("That code isn't from LifeOS.");
+    }
+    try {
+      final padded = parts[1].padRight((parts[1].length + 3) ~/ 4 * 4, '=');
+      final key = base64Url.decode(padded);
+      if (key.length != 32) throw const FormatException();
+      return (id: parts[0], publicKey: key);
+    } on FormatException {
+      throw const SyncCryptoException("That code isn't from LifeOS.");
+    }
   }
 }

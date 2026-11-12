@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
-import '../../../../core/utils/date_utils.dart';
 import '../../../../core/utils/icon_lookup.dart';
 import '../../../../core/utils/category_color.dart';
-import '../../domain/payment_mode.dart';
 import '../../../../app/theme/app_fonts.dart';
 
 class TransactionTile extends StatelessWidget {
@@ -18,12 +15,17 @@ class TransactionTile extends StatelessWidget {
     required this.transaction,
     required this.currencyCode,
     this.category,
+    this.account,
     this.onEdit,
   });
 
   final Transaction transaction;
   final String currencyCode;
   final Category? category;
+
+  /// Named on the second line. The list groups rows under date headers, so
+  /// the row itself carries no date.
+  final Account? account;
   final VoidCallback? onEdit;
 
   @override
@@ -35,83 +37,96 @@ class TransactionTile extends StatelessWidget {
         ? (categoryColor(category!.colorHex) ??
               theme.colorScheme.onSurfaceVariant)
         : (isIncome ? colors.good : colors.warm);
-    final mode = paymentModeById(transaction.paymentMode);
 
     return InkWell(
-      onTap: onEdit,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 11),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.16), shape: BoxShape.circle),
-              // IconOrEmoji, not Icon(resolveIcon(...)): a category can carry a
-              // colourful emoji, which resolveIcon doesn't know and silently
-              // swaps for the default tag glyph.
-              child: category != null
-                  ? IconOrEmoji(value: category!.icon, size: 18, color: color)
-                  : Icon(LucideIcons.arrowLeftRight, size: 18, color: color),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    transaction.merchant,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          onTap: onEdit,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 11),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.16),
+                    shape: BoxShape.circle,
                   ),
-                  Row(
+                  // IconOrEmoji, not Icon(resolveIcon(...)): a category can carry a
+                  // colourful emoji, which resolveIcon doesn't know and silently
+                  // swaps for the default tag glyph.
+                  child: category != null
+                      ? IconOrEmoji(
+                          value: category!.icon,
+                          size: 18,
+                          color: color,
+                        )
+                      : Icon(
+                          LucideIcons.arrowLeftRight,
+                          size: 18,
+                          color: color,
+                        ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
-                        child: Text(
-                          '${transaction.paymentMode == 'transfer' ? 'Transfer' : category?.name ?? 'Uncategorized'} · ${_relativeDate(transaction.date)}',
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                      Text(
+                        transaction.merchant,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (mode != null) ...[
-                        const SizedBox(width: 6),
-                        Icon(mode.icon, size: 12, color: theme.colorScheme.onSurfaceVariant),
-                      ],
-                      if (transaction.receiptDocumentId != null) ...[
-                        const SizedBox(width: 6),
-                        Icon(
-                          LucideIcons.paperclip,
-                          size: 12,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ],
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              [
+                                transaction.paymentMode == 'transfer'
+                                    ? 'Transfer'
+                                    : category?.name ?? 'Uncategorized',
+                                ?account?.name,
+                              ].join(' · '),
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          if (transaction.receiptDocumentId != null) ...[
+                            const SizedBox(width: 6),
+                            Icon(
+                              LucideIcons.paperclip,
+                              size: 12,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                Text(
+                  formatMinor(
+                    transaction.amountMinor,
+                    currencyCode: currencyCode,
+                    showSign: isIncome,
+                  ),
+                  style: TextStyle(
+                    fontFamily: AppFonts.numeric,
+                    fontFeatures: AppFonts.tabular,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isIncome ? colors.good : theme.colorScheme.onSurface,
+                  ),
+                ),
+              ],
             ),
-            Text(
-              formatMinor(transaction.amountMinor, currencyCode: currencyCode, showSign: isIncome),
-              style: TextStyle(
-                fontFamily: AppFonts.numeric,
-                fontFeatures: AppFonts.tabular,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: isIncome ? colors.good : theme.colorScheme.onSurface,
-              ),
-            ),
-          ],
-        ),
-      ),
-    ).animate().fadeIn(duration: 200.ms).slideX(begin: 0.03, end: 0, duration: 200.ms);
-  }
-
-  static String _relativeDate(DateTime date) {
-    final now = DateTime.now();
-    if (isSameDay(date, now)) return 'Today';
-    if (isSameDay(date, now.subtract(const Duration(days: 1)))) return 'Yesterday';
-    return DateFormat.MMMd().format(date);
+          ),
+        )
+        .animate()
+        .fadeIn(duration: 200.ms)
+        .slideX(begin: 0.03, end: 0, duration: 200.ms);
   }
 }

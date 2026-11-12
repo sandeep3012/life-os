@@ -165,10 +165,8 @@ class LocalSyncStore {
       final derived = _derivedColumns[name] ?? const <String>{};
       final watched = derived.isEmpty
           ? ''
-          : ' OF ${[
-              for (final c in table.$columns)
-                if (!derived.contains(c.name)) '"${c.name}"',
-            ].join(', ')}';
+          : ' OF ${[for (final c in table.$columns)
+              if (!derived.contains(c.name)) '"${c.name}"'].join(', ')}';
 
       await _db.customStatement(
         'CREATE TRIGGER ${_triggerName(name, 'ins')} AFTER INSERT ON "$name" '
@@ -236,10 +234,11 @@ class LocalSyncStore {
 
   /// The oldest waiting changes, each with its row as it is now.
   Future<List<OutboxEntry>> readOutbox({int limit = 200}) async {
-    final waiting = await (_db.select(_db.syncOutbox)
-          ..orderBy([(o) => OrderingTerm.asc(o.changedAt)])
-          ..limit(limit))
-        .get();
+    final waiting =
+        await (_db.select(_db.syncOutbox)
+              ..orderBy([(o) => OrderingTerm.asc(o.changedAt)])
+              ..limit(limit))
+            .get();
     final entries = <OutboxEntry>[];
     for (final item in waiting) {
       final table = _byName[item.entity];
@@ -248,7 +247,9 @@ class LocalSyncStore {
         await _forget(item.entity, item.rowKey, item.changedAt);
         continue;
       }
-      final row = item.op == 'delete' ? null : await readRow(table, item.rowKey);
+      final row = item.op == 'delete'
+          ? null
+          : await readRow(table, item.rowKey);
       entries.add(
         OutboxEntry(
           table: item.entity,
@@ -265,9 +266,10 @@ class LocalSyncStore {
 
   /// The waiting change for one row, if there is one.
   Future<OutboxEntry?> pendingFor(String table, String key) async {
-    final item = await (_db.select(_db.syncOutbox)
-          ..where((o) => o.entity.equals(table) & o.rowKey.equals(key)))
-        .getSingleOrNull();
+    final item =
+        await (_db.select(_db.syncOutbox)
+              ..where((o) => o.entity.equals(table) & o.rowKey.equals(key)))
+            .getSingleOrNull();
     if (item == null) return null;
     return OutboxEntry(
       table: item.entity,
@@ -304,9 +306,7 @@ class LocalSyncStore {
     final row = await _db
         .customSelect(
           'SELECT * FROM "${table.actualTableName}" WHERE ${_keyWhere(table)}',
-          variables: [
-            for (final v in _keyValues(table, key)) Variable(v),
-          ],
+          variables: [for (final v in _keyValues(table, key)) Variable(v)],
         )
         .getSingleOrNull();
     if (row == null) return null;
@@ -342,7 +342,8 @@ class LocalSyncStore {
           }
         }
         if (touched.any(
-          (t) => t.actualTableName == 'transactions' ||
+          (t) =>
+              t.actualTableName == 'transactions' ||
               t.actualTableName == 'accounts',
         )) {
           await _recomputeBalances();

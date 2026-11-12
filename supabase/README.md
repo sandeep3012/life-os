@@ -57,6 +57,12 @@ Both social sign-ins open in the browser and come back through
 
 ## 3. Give your account sync (until payments exist)
 
+**Now automatic during testing:** run
+[`migrations/20261110000000_beta_auto_entitlement.sql`](migrations/20261110000000_beta_auto_entitlement.sql)
+once and every account — existing and new — gets sync (marked
+`store = 'beta'`). **Temporary: remove it when payments go live**; the file
+has the drop statements. The manual grant below is only needed without it.
+
 Uploads are refused without an active entitlement. After signing up in the
 app, run in the SQL editor with your email:
 
@@ -88,3 +94,34 @@ currency), and sample data.
 Not yet: document **files** (only their records sync, so a document added on
 another phone shows without its file), background sync while the app is
 closed, and payments.
+
+## Voice entry (+ → Speak)
+
+Turns a spoken sentence into three candidate records with Claude Haiku. The
+phone does the speech-to-text; only the sentence (plus account and category
+names) reaches the server.
+
+1. **SQL editor:** run [`migrations/20261105000000_voice.sql`](migrations/20261105000000_voice.sql)
+   (per-user daily allowance, 100 requests).
+2. **Anthropic API key** (console.anthropic.com → API keys), stored only as a
+   Supabase secret — never in the app:
+
+   ```bash
+   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+   ```
+
+3. **Deploy the function** (Supabase CLI, linked to the project):
+
+   ```bash
+   supabase functions deploy voice-parse
+   ```
+
+   Or Dashboard → Edge Functions → Create function `voice-parse` and paste
+   [`functions/voice-parse/index.ts`](functions/voice-parse/index.ts).
+
+If the function's logs show `missing_public_key`, add one more secret,
+`LIFEOS_PUBLISHABLE_KEY`, set to the same publishable key the app uses.
+
+The function rejects callers who aren't signed in, and returns 429 once a
+user passes the daily allowance (change `DAILY_LIMIT` in the function).
+Rough cost: a fraction of a rupee per entry.

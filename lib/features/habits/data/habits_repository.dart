@@ -130,6 +130,13 @@ class HabitsRepository {
     );
   }
 
+  /// Hard delete, with its logs — only for taking back a habit that was
+  /// just created (voice entry's Undo). Everywhere else habits archive.
+  Future<void> deleteHabit(String id) => _db.transaction(() async {
+    await (_db.delete(_db.habitLogs)..where((l) => l.habitId.equals(id))).go();
+    await (_db.delete(_db.habits)..where((h) => h.id.equals(id))).go();
+  });
+
   /// Soft delete — [watchHabits] already excludes archived rows, so no
   /// other query needs to change.
   Future<void> archiveHabit(String id) {

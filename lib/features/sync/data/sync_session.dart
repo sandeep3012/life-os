@@ -64,9 +64,10 @@ class SecureSyncKeyStore implements SyncKeyStore {
   Future<Uint8List?> read(String userId) async {
     final value = await _storage.read(key: _name(userId));
     if (value == null) return null;
-    return Uint8List.fromList(
-      [for (var i = 0; i < value.length; i += 2) int.parse(value.substring(i, i + 2), radix: 16)],
-    );
+    return Uint8List.fromList([
+      for (var i = 0; i < value.length; i += 2)
+        int.parse(value.substring(i, i + 2), radix: 16),
+    ]);
   }
 
   @override

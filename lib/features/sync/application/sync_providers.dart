@@ -5,11 +5,13 @@ import 'package:drift/drift.dart' show TableUpdateQuery;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database_provider.dart';
 import '../data/local_sync_store.dart';
 import '../data/supabase_config.dart';
 import '../data/supabase_sync_backend.dart';
+import '../data/sync_key_backup.dart';
 import '../data/sync_backend.dart';
 import '../data/sync_session.dart';
 import '../domain/sync_crypto.dart';
@@ -38,6 +40,11 @@ final syncSessionProvider = Provider<SyncSession?>((ref) {
 
 final syncKeyStoreProvider = Provider<SyncKeyStore>(
   (ref) => SecureSyncKeyStore(),
+);
+
+/// The copy of the data key in iCloud Keychain / Google's Block Store.
+final syncKeyBackupProvider = Provider<SyncKeyBackup>(
+  (ref) => SyncKeyBackup.forPlatform(),
 );
 
 final syncCryptoProvider = Provider<SyncCrypto>((ref) => SyncCrypto());
@@ -74,6 +81,8 @@ class SyncStatus {
     this.skipped = 0,
     this.error,
     this.choosingNewPassword = false,
+    this.keyBackedUpTo,
+    this.serverRecovery,
   });
 
   final SyncPhase phase;
@@ -94,6 +103,15 @@ class SyncStatus {
   /// A password-reset link was opened: ask for the new password.
   final bool choosingNewPassword;
 
+  /// Where the data key is also kept — "iCloud Keychain", "your Google
+  /// account" — so a new phone unlocks on sign-in. Null when it isn't.
+  final String? keyBackedUpTo;
+
+  /// Standard recovery: the server holds a copy of the key, so signing in
+  /// is enough to get the data back. False for Maximum privacy; null until
+  /// known.
+  final bool? serverRecovery;
+
   SyncStatus copyWith({
     SyncPhase? phase,
     String? email,
@@ -104,6 +122,8 @@ class SyncStatus {
     int? skipped,
     String? Function()? error,
     bool? choosingNewPassword,
+    String? keyBackedUpTo,
+    bool? serverRecovery,
   }) => SyncStatus(
     phase: phase ?? this.phase,
     email: email ?? this.email,
@@ -114,6 +134,8 @@ class SyncStatus {
     skipped: skipped ?? this.skipped,
     error: error == null ? this.error : error(),
     choosingNewPassword: choosingNewPassword ?? this.choosingNewPassword,
+    keyBackedUpTo: keyBackedUpTo ?? this.keyBackedUpTo,
+    serverRecovery: serverRecovery ?? this.serverRecovery,
   );
 }
 
@@ -158,10 +180,17 @@ class SyncController extends Notifier<SyncStatus> {
   Timer? _retry;
   final _subscriptions = <StreamSubscription<Object?>>[];
 
+  /// Debug builds only: sync's steps in the phone's log ("sync:" in
+  /// logcat), for tracing a restore on a real phone.
+  static void _log(String message) {
+    if (kDebugMode) debugPrint('sync: $message');
+  }
+
   SyncSession? get _session => ref.read(syncSessionProvider);
   SyncBackend? get _backend => ref.read(syncBackendProvider);
   LocalSyncStore get _store => ref.read(localSyncStoreProvider);
   SyncKeyStore get _keys => ref.read(syncKeyStoreProvider);
+  SyncKeyBackup get _backup => ref.read(syncKeyBackupProvider);
   SyncCrypto get _crypto => ref.read(syncCryptoProvider);
 
   @override
@@ -231,12 +260,31 @@ class SyncController extends Notifier<SyncStatus> {
 
     final key = await _keys.read(userId);
     if (key != null) {
+      _log('key found on this phone');
       await _enable(userId, key);
       return;
     }
+    _log('no key on this phone, checking the account');
     try {
       final wrapped = await backend.fetchWrappedKey();
       if (_userId != userId) return;
+      if (wrapped != null) {
+        // A reinstall, or a new phone on the same Apple / Google account:
+        // the platform's backup may already hold the key.
+        final fromBackup = await _restoreFromBackup(userId, backend);
+        _log('platform backup copy: ${fromBackup == null ? 'none' : 'found'}');
+        final restored = fromBackup ?? await _restoreFromServer(backend);
+        if (fromBackup == null) {
+          _log('server copy: ${restored == null ? 'none' : 'found'}');
+        }
+        if (_userId != userId) return;
+        if (restored != null) {
+          await _keys.write(userId, restored);
+          await _enable(userId, restored);
+          return;
+        }
+      }
+      _log(wrapped == null ? 'account not set up yet' : 'needs recovery key');
       state = state.copyWith(
         phase: wrapped == null
             ? SyncPhase.needsSetup
@@ -246,6 +294,81 @@ class SyncController extends Notifier<SyncStatus> {
     } on Object catch (e) {
       state = state.copyWith(error: () => _describe(e));
       _scheduleRetry(_evaluateAgain);
+    }
+  }
+
+  /// The data key from the platform's backup, once it has opened one of
+  /// this account's records — a key that can't is ignored and removed.
+  /// Null when there's no usable copy.
+  Future<Uint8List?> _restoreFromBackup(
+    String userId,
+    SyncBackend backend,
+  ) async {
+    final backup = _backup;
+    final Uint8List? key;
+    try {
+      key = await backup.read(userId);
+    } on Object {
+      return null;
+    }
+    if (key == null || key.length != SyncCrypto.keyLength) return null;
+    if (!await _opensAccountRecords(key, backend)) {
+      unawaited(_forgetBackup(userId));
+      return null;
+    }
+    return key;
+  }
+
+  /// Standard recovery's copy, once it has opened one of this account's
+  /// records. Null for Maximum privacy or a copy that doesn't fit.
+  Future<Uint8List?> _restoreFromServer(SyncBackend backend) async {
+    final Uint8List? key;
+    try {
+      key = await backend.fetchEscrowKey();
+    } on Object {
+      // The recovery key and the other phone still work.
+      return null;
+    }
+    if (key == null || key.length != SyncCrypto.keyLength) return null;
+    return await _opensAccountRecords(key, backend) ? key : null;
+  }
+
+  /// Whether [key] opens this account's records — true for an account with
+  /// none uploaded yet, where there's nothing to tell by.
+  Future<bool> _opensAccountRecords(Uint8List key, SyncBackend backend) async {
+    final sample = await backend.pull(0, limit: 20);
+    final record = sample.where((r) => r.payload.isNotEmpty).firstOrNull;
+    if (record == null) return true;
+    try {
+      await _crypto.decryptRecord(key, record.id, record.payload);
+      return true;
+    } on Object {
+      return false;
+    }
+  }
+
+  /// Keeps the platform's copy of [key] current. Never fails sync: without
+  /// it the recovery key still works.
+  Future<void> _backUpKey(String userId, Uint8List key) async {
+    final backup = _backup;
+    final label = backup.label;
+    if (label == null) return;
+    try {
+      final offPhone = await backup.write(userId, key);
+      if (offPhone && ref.mounted && _userId == userId) {
+        state = state.copyWith(keyBackedUpTo: label);
+      }
+    } on Object {
+      // No iCloud Keychain, no Google Play services, or the platform said
+      // no: the recovery key is the way back.
+    }
+  }
+
+  Future<void> _forgetBackup(String userId) async {
+    try {
+      await _backup.delete(userId);
+    } on Object {
+      // Nothing to remove, or it can't be reached; harmless either way.
     }
   }
 
@@ -271,8 +394,12 @@ class SyncController extends Notifier<SyncStatus> {
   }
 
   /// Stores [pending] once the person has kept its recovery key, then
-  /// starts syncing.
-  Future<void> saveRecoveryKey(PendingRecoveryKey pending) async {
+  /// starts syncing. With [serverRecovery] (Standard recovery) the server
+  /// also keeps a copy of the data key, and the recovery key is never shown.
+  Future<void> saveRecoveryKey(
+    PendingRecoveryKey pending, {
+    bool serverRecovery = false,
+  }) async {
     final userId = _requireUser();
     final wrapped = await _crypto.wrapDataKey(
       pending._dataKey,
@@ -284,6 +411,8 @@ class SyncController extends Notifier<SyncStatus> {
       replace: pending._replacing,
     );
     if (pending._replacing) return;
+    if (serverRecovery) await _backend!.storeEscrowKey(pending._dataKey);
+    state = state.copyWith(serverRecovery: serverRecovery);
     await _keys.write(userId, pending._dataKey);
     await _enable(userId, pending._dataKey);
   }
@@ -307,9 +436,97 @@ class SyncController extends Notifier<SyncStatus> {
     await _enable(userId, key);
   }
 
+  /// The joining phone's side of "Approve from my other phone": a one-off
+  /// request whose [LinkRequest.code] goes in the QR code.
+  Future<LinkRequest> startLink() => _crypto.newLinkRequest(const Uuid().v4());
+
+  /// Looks once for the key the other phone left for [request], and unlocks
+  /// sync with it. False while it hasn't arrived; throws
+  /// [SyncCryptoException] if what arrived can't be used.
+  Future<bool> collectLink(LinkRequest request) async {
+    final userId = _requireUser();
+    final backend = _backend!;
+    final sealed = await backend.collectKeyTransfer(request.id);
+    if (sealed == null) return false;
+    unawaited(backend.removeKeyTransfer(request.id).catchError((_) {}));
+    final key = await _crypto.openLink(request, sealed, userId);
+    if (!await _opensAccountRecords(key, backend)) {
+      throw const SyncCryptoException(
+        "The other phone's key doesn't open this account's data.",
+      );
+    }
+    await _keys.write(userId, key);
+    await _enable(userId, key);
+    return true;
+  }
+
+  /// The syncing phone's side: hands this phone's data key to the phone
+  /// that showed [code]. Throws [SyncCryptoException] for a code that isn't
+  /// LifeOS's.
+  Future<void> approveLink(String code) async {
+    final userId = _requireUser();
+    final key = _dataKey;
+    if (key == null) throw StateError('Sync is not set up on this phone');
+    final request = LinkRequest.parse(code);
+    final sealed = await _crypto.sealForLink(
+      key,
+      request.publicKey,
+      userId,
+      request.id,
+    );
+    await _backend!.leaveKeyTransfer(request.id, sealed);
+  }
+
+  /// Switches between Standard recovery ([on]: the server keeps a copy of
+  /// the key) and Maximum privacy (its copy is deleted). Before turning it
+  /// off, the person should have a recovery key they've saved.
+  Future<void> setServerRecovery(bool on) async {
+    final key = _dataKey;
+    final backend = _backend;
+    if (key == null || backend == null) {
+      throw StateError('Sync is not set up on this phone');
+    }
+    if (on) {
+      await backend.storeEscrowKey(key);
+    } else {
+      await backend.removeEscrowKey();
+    }
+    state = state.copyWith(serverRecovery: on);
+  }
+
+  Future<void> _refreshServerRecovery(String userId) async {
+    try {
+      final on = await _backend!.hasEscrowKey();
+      if (ref.mounted && _userId == userId) {
+        state = state.copyWith(serverRecovery: on);
+      }
+    } on Object {
+      // Shown as unknown; the next launch asks again.
+    }
+  }
+
+  /// Whether [recoveryKey] is the one this account's key is stored under —
+  /// for checking a saved key still works, without changing anything.
+  Future<bool> checkRecoveryKey(String recoveryKey) async {
+    final userId = _requireUser();
+    final wrapped = await _backend!.fetchWrappedKey();
+    if (wrapped == null) return false;
+    try {
+      final key = await _crypto.unwrapDataKey(
+        wrapped.wrapped,
+        recoveryKey,
+        userId,
+      );
+      return _dataKey == null || listEquals(key, _dataKey);
+    } on SyncCryptoException {
+      return false;
+    }
+  }
+
   Future<void> _enable(String userId, Uint8List key) async {
     final store = _store;
     final enabledFor = await store.readState('enabled_user');
+    _log('enabling (last account here: ${enabledFor ?? 'none'})');
     if (enabledFor != userId) {
       // A different account than last time: start over, so its records
       // aren't mixed with the last account's sync state.
@@ -329,6 +546,10 @@ class SyncController extends Notifier<SyncStatus> {
     _periodic?.cancel();
     _periodic = Timer.periodic(interval, (_) => syncNow());
     unawaited(_registerDevice());
+    unawaited(_backUpKey(userId, key));
+    if (state.serverRecovery == null) {
+      unawaited(_refreshServerRecovery(userId));
+    }
     unawaited(syncNow());
   }
 
@@ -378,7 +599,13 @@ class SyncController extends Notifier<SyncStatus> {
         deviceId: await _store.deviceId(),
         schemaVersion: ref.read(appDatabaseProvider).schemaVersion,
       );
+      final pendingBefore = await _store.pendingCount();
       final result = await engine.run();
+      _log(
+        'round: $pendingBefore queued, ${result.uploaded} up, '
+        '${result.downloaded} down, ${result.skipped} skipped'
+        '${result.uploadsRefused ? ', uploads refused' : ''}',
+      );
       _failures = 0;
       state = state.copyWith(
         syncing: false,
@@ -389,6 +616,7 @@ class SyncController extends Notifier<SyncStatus> {
         error: () => null,
       );
     } on Object catch (e) {
+      _log('round failed: $e');
       state = state.copyWith(
         syncing: false,
         pending: await _store.pendingCount(),
@@ -411,7 +639,9 @@ class SyncController extends Notifier<SyncStatus> {
     _retry = Timer(delay, action);
   }
 
-  /// Stops syncing and signs out. The data stays on this phone.
+  /// Stops syncing and signs out. The data stays on this phone, and so does
+  /// the platform backup of the key: signing in again unlocks without the
+  /// recovery key.
   Future<void> signOut() async {
     final userId = _userId;
     _stopTimers();
@@ -431,6 +661,7 @@ class SyncController extends Notifier<SyncStatus> {
     await _backend!.deleteAccount();
     await _store.reset();
     await _keys.delete(userId);
+    await _forgetBackup(userId);
     _dataKey = null;
     _userId = null;
     state = const SyncStatus(phase: SyncPhase.signedOut);
@@ -452,9 +683,7 @@ class SyncController extends Notifier<SyncStatus> {
       value == null ? null : DateTime.tryParse(value)?.toLocal();
 
   static String _describe(Object error) => switch (error) {
-    SocketException() ||
-    TimeoutException() ||
-    AuthRetryableFetchException() =>
+    SocketException() || TimeoutException() || AuthRetryableFetchException() =>
       'Offline. Changes are kept and will sync when you\'re back online.',
     // package:http's ClientException, wrapping a failed connection.
     _ when '$error'.contains('SocketException') =>

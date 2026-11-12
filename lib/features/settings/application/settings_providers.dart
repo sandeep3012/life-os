@@ -40,6 +40,7 @@ class ResolvedSettings {
     this.toursSeen = const {},
     this.alarmTone = AlarmTone.gentle,
     this.soundEffectsEnabled = true,
+    this.voiceEntryConsent = false,
   });
 
   final ThemeMode themeMode;
@@ -73,6 +74,9 @@ class ResolvedSettings {
 
   /// In-app sounds for finishing things.
   final bool soundEffectsEnabled;
+
+  /// Voice entry's one-time opt-in to sending speech to the AI service.
+  final bool voiceEntryConsent;
 
   static const defaults = ResolvedSettings(
     themeMode: ThemeMode.system,
@@ -137,6 +141,7 @@ final settingsProvider = Provider<ResolvedSettings>((ref) {
     },
     alarmTone: AlarmTone.fromStorage(row.alarmTone),
     soundEffectsEnabled: row.soundEffectsEnabled,
+    voiceEntryConsent: row.voiceEntryConsent,
   );
 });
 
@@ -188,6 +193,9 @@ class SettingsController {
 
   Future<void> setSoundEffectsEnabled(bool enabled) =>
       _repo.setSoundEffectsEnabled(enabled);
+
+  Future<void> setVoiceEntryConsent(bool agreed) =>
+      _repo.setVoiceEntryConsent(agreed);
 
   Future<void> setTaskReminders(bool enabled) =>
       _repo.setTaskReminders(enabled);

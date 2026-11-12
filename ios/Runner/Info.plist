@@ -27,7 +27,7 @@
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<key>NSCameraUsageDescription</key>
-		<string>Take a photo of a receipt or document to attach it to a transaction or your document library.</string>
+		<string>Take a photo of a receipt or document to attach it, or scan the code a new phone shows to add it to your sync.</string>
 		<key>NSFaceIDUsageDescription</key>
 		<string>Unlock LifeOS with Face ID instead of typing a PIN.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
@@ -74,8 +74,17 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<!-- Supabase handles lifeos://auth-callback itself; Flutter's own
+		     deep linking would hand it to the router as a page address. -->
+		<key>FlutterDeepLinkingEnabled</key>
+		<false/>
 		<!-- Sync sign-in: email confirmation, password reset and the
 		     Google/Apple pages come back to lifeos://auth-callback. -->
+		<!-- Voice entry: speak a record instead of typing it. -->
+		<key>NSMicrophoneUsageDescription</key>
+		<string>LifeOS listens when you tap Speak, so you can add an expense, task, habit or event by voice.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>LifeOS turns what you say into text so it can fill in the record for you.</string>
 		<key>CFBundleURLTypes</key>
 		<array>
 			<dict>

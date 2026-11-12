@@ -35,6 +35,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../ai_analyser/application/ai_analyser_providers.dart';
 import '../../../sync/application/sync_providers.dart';
+import '../../../voice_entry/data/sample_voice_parser.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -372,6 +373,7 @@ class SettingsScreen extends ConsumerWidget {
           if (kDebugMode) ...[
             const _SectionTitle('Developer tools'),
             const _DemoDataCard(),
+            const _VoiceTestModeRow(),
           ],
 
           const _SectionTitle('More'),
@@ -756,6 +758,28 @@ class _PreviewNavItem extends StatelessWidget {
           style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color),
         ),
       ],
+    );
+  }
+}
+
+/// Voice entry without the server: speech is real, the three options are
+/// samples. Debug builds only.
+class _VoiceTestModeRow extends ConsumerWidget {
+  const _VoiceTestModeRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final on = ref.watch(voiceTestModeProvider);
+    return Card(
+      child: SwitchListTile(
+        secondary: const _IconWell(LucideIcons.mic),
+        title: const Text('Voice entry test mode'),
+        subtitle: const Text(
+          'Real speech recognition, sample options — no AI or Supabase needed',
+        ),
+        value: on,
+        onChanged: (v) => ref.read(voiceTestModeProvider.notifier).set(v),
+      ),
     );
   }
 }

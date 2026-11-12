@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:life_manager/app/app.dart';
+import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/app/router/app_shell.dart';
 import 'package:life_manager/app/router/app_sidebar.dart';
 import 'package:life_manager/core/database/app_database.dart';
@@ -76,6 +77,40 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 1));
   }
+
+  testWidgets('holding + asks for voice entry; tapping it asks for the menu', (
+    tester,
+  ) async {
+    var taps = 0, holds = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          bottomNavigationBar: AppFloatingNavBar(
+            destinations: const [
+              AppNavDestination(LucideIcons.house, LucideIcons.house, 'Home'),
+              AppNavDestination(LucideIcons.wallet, LucideIcons.wallet, 'Money'),
+            ],
+            selectedIndex: 0,
+            onSelected: (_) {},
+            onAdd: () => taps++,
+            onAddLongPress: () => holds++,
+          ),
+        ),
+        ),
+      ),
+    );
+    final plus = find.byIcon(LucideIcons.plus);
+
+    await tester.longPress(plus);
+    await tester.pumpAndSettle();
+    expect((taps, holds), (0, 1), reason: 'a hold is not also a tap');
+
+    await tester.tap(plus);
+    await tester.pumpAndSettle();
+    expect((taps, holds), (1, 1));
+  });
 
   testWidgets('the hamburger opens the sidebar drawer', (tester) async {
     await tester.pumpWidget(buildApp());

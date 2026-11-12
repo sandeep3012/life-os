@@ -2,6 +2,8 @@
     <!-- Sync and sign-in. Debug builds get this from the debug manifest;
          without it here a release build can't reach the server at all. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Voice entry: the phone's own speech recognition. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Required to fire task/habit reminders at their exact requested time
@@ -37,6 +39,13 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- The only deep link is Supabase's sign-in return
+                 (lifeos://auth-callback), which supabase_flutter handles
+                 itself. Left on, Flutter also hands it to the router as a
+                 page address, and it lands on "Page Not Found". -->
+            <meta-data
+              android:name="flutter_deeplinking_enabled"
+              android:value="false" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -93,6 +102,10 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Voice entry: finds the phone's speech recognizer (Android 11+). -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>

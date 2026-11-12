@@ -70,6 +70,11 @@ class AppSettings extends Table {
   BoolColumn get soundEffectsEnabled =>
       boolean().withDefault(const Constant(true))();
 
+  /// Voice entry's one-time opt-in: the person agreed that what they say,
+  /// and their account and category names, go to the AI service.
+  BoolColumn get voiceEntryConsent =>
+      boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

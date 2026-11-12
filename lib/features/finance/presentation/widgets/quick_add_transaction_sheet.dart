@@ -145,7 +145,9 @@ class _QuickAddTransactionSheetState
         (category) => category.kind == (_isExpense ? 'expense' : 'income'),
       ),
     );
-    _paymentMode ??= paymentModes.first.id;
+    // A new entry starts on UPI; editing one recorded without a payment mode
+    // asks for it rather than quietly stamping UPI on it.
+    if (widget.initial == null) _paymentMode ??= paymentModes.first.id;
     _merchantController.addListener(() => setState(() {}));
     _amountController.addListener(() => setState(() {}));
   }
@@ -398,6 +400,13 @@ class _QuickAddTransactionSheetState
                   ),
               ],
             ),
+            if (_paymentMode == null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Choose how this was paid.',
+                style: TextStyle(fontSize: 12.5, color: scheme.error),
+              ),
+            ],
             const SizedBox(height: 12),
             InkWell(
               onTap: _pickDate,
