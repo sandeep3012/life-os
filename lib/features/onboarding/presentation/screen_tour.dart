@@ -178,7 +178,7 @@ class _TipCard extends StatelessWidget {
         children: [
           Text(
             step.title,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: AppFonts.serif,
               fontSize: 18,
               fontWeight: FontWeight.w600,

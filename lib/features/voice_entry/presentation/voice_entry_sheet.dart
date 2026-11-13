@@ -284,7 +284,7 @@ class _VoiceEntrySheetState extends ConsumerState<VoiceEntrySheet> {
       Text(
         state.message ?? 'Something went wrong.',
         textAlign: TextAlign.center,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: AppFonts.sans,
           fontSize: 15,
           height: 1.45,
@@ -359,7 +359,7 @@ class _Heading extends StatelessWidget {
   Widget build(BuildContext context) => Text(
     text,
     textAlign: TextAlign.center,
-    style: const TextStyle(
+    style: TextStyle(
       fontFamily: AppFonts.serif,
       fontSize: 24,
       fontWeight: FontWeight.w600,
@@ -621,7 +621,7 @@ class _OptionCard extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         option.draft.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: AppFonts.sans,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -757,7 +757,7 @@ class _OptionCard extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: AppFonts.serif,
                 fontSize: 20,
                 fontWeight: FontWeight.w600,

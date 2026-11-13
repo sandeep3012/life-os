@@ -15,6 +15,8 @@ import 'launch/launch_splash.dart';
 import 'launch_timeline.dart';
 import 'router/app_router.dart';
 import 'splash_gate.dart';
+import 'theme/app_font_style.dart';
+import 'theme/app_fonts.dart';
 import 'theme/app_theme.dart';
 import 'transitions/screen_reveal.dart';
 import '../features/onboarding/application/onboarding_gate.dart';
@@ -139,6 +141,7 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
       }
       LaunchTimeline.mark('landing screen queries answered');
       if (!mounted) return;
+
       // The answers reach the widgets a beat after the probe resolves; give
       // them two frames to rebuild before the first one is shown.
       await WidgetsBinding.instance.endOfFrame;
@@ -226,11 +229,36 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     });
   }
 
+  /// A new font look was picked. Text styles read the family when their
+  /// widget builds, and most of the tree has no reason to build again — it's
+  /// `const`, or simply unchanged — so every element is told to. State,
+  /// scroll positions and the open screen all stay as they are.
+  void _onFontStyleChanged(AppFontStyle? _, AppFontStyle style) {
+    AppFonts.use(style);
+    // After the frame: this can be called while a widget is building, when
+    // marking others dirty isn't allowed.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      void rebuild(Element element) {
+        element.markNeedsBuild();
+        element.visitChildren(rebuild);
+      }
+
+      (context as Element).visitChildren(rebuild);
+      setState(() {});
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(
       syncControllerProvider.select((s) => s.choosingNewPassword),
       _onChoosingNewPassword,
+    );
+    ref.listen(
+      settingsProvider.select((s) => s.fontStyle),
+      _onFontStyleChanged,
     );
     // The colour theme is stored in the database, so it isn't known on the
     // first frames; painting the app then would flash the default theme. On a
@@ -287,6 +315,9 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     final settings = ref.watch(settingsProvider);
     final themeMode = settings.themeMode;
     _syncHabitReminder(settings.habitReminders);
+    // Before anything below builds a text style: settings are loaded by
+    // now, so the app never shows in one font and then changes.
+    AppFonts.use(settings.fontStyle);
 
     final isLocked = ref.watch(isLockedProvider);
     final showLockScreen = settings.appLockEnabled && isLocked;

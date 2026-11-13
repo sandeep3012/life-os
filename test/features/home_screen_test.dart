@@ -155,6 +155,15 @@ void main() {
     );
     expect(find.text('Morning workout'), findsOneWidget);
     expect(find.text('0 / 1'), findsOneWidget);
+    // One habit is one row: the grid is a single tile tall, not the two-row
+    // height that left an empty gap above the next section.
+    final grid = find.byKey(const ValueKey('home-habit-grid'));
+    expect(tester.getSize(grid).height, 78);
+    expect(
+      tester.getSize(find.text('Morning workout')).height,
+      lessThan(78),
+      reason: 'the tile fits its row',
+    );
 
     // The summary rail makes the requested current-month spend and active
     // goal count visible without taking over the main dashboard column.

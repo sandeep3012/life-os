@@ -210,7 +210,7 @@ class _LaunchSplashState extends ConsumerState<LaunchSplash> {
                       child: AnimatedOpacity(
                         opacity: _lifted ? 0.95 : 0,
                         duration: ms(LaunchSplash.lift),
-                        child: const Text(
+                        child: Text(
                           'LifeOS',
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -288,7 +288,7 @@ class _LaunchSplashState extends ConsumerState<LaunchSplash> {
                               ? 'Tap to skip'
                               : 'Opening as soon as your data is ready',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: AppFonts.sans,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -413,7 +413,7 @@ class _LaunchItemState extends State<_LaunchItem>
   }
 
   static const _spentMinor = 1245000;
-  static const _amountStyle = TextStyle(
+  static final _amountStyle = TextStyle(
     fontFamily: AppFonts.serif,
     fontSize: 36,
     fontWeight: FontWeight.w600,
@@ -506,7 +506,7 @@ class _LaunchItemState extends State<_LaunchItem>
               Flexible(
                 child: CustomPaint(
                   foregroundPainter: _StrikePainter(strike.value),
-                  child: const Text(
+                  child: Text(
                     'Pay electricity bill',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -542,7 +542,7 @@ class _LaunchItemState extends State<_LaunchItem>
             height: 92,
             child: CustomPaint(
               painter: _RingPainter(ring.value),
-              child: const Center(
+              child: Center(
                 child: Text(
                   '7/7',
                   style: TextStyle(
@@ -602,7 +602,7 @@ class _LaunchItemState extends State<_LaunchItem>
                   child: Text(
                     DateFormat('MMM').format(now).toUpperCase(),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppFonts.sans,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
@@ -615,7 +615,7 @@ class _LaunchItemState extends State<_LaunchItem>
                   padding: const EdgeInsets.only(top: 2, bottom: 6),
                   child: Text(
                     '${now.day}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppFonts.serif,
                       fontSize: 30,
                       fontWeight: FontWeight.w600,
@@ -677,7 +677,7 @@ class _LaunchItemState extends State<_LaunchItem>
       children: [
         const _Label('Goals'),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Emergency fund',
           style: TextStyle(
             fontFamily: AppFonts.sans,

@@ -16137,6 +16137,18 @@ class $AppSettingsTable extends AppSettings
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _fontStyleMeta = const VerificationMeta(
+    'fontStyle',
+  );
+  @override
+  late final GeneratedColumn<String> fontStyle = GeneratedColumn<String>(
+    'font_style',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('classic'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     hapticsEnabled,
@@ -16160,6 +16172,7 @@ class $AppSettingsTable extends AppSettings
     alarmTone,
     soundEffectsEnabled,
     voiceEntryConsent,
+    fontStyle,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -16344,6 +16357,12 @@ class $AppSettingsTable extends AppSettings
         ),
       );
     }
+    if (data.containsKey('font_style')) {
+      context.handle(
+        _fontStyleMeta,
+        fontStyle.isAcceptableOrUnknown(data['font_style']!, _fontStyleMeta),
+      );
+    }
     return context;
   }
 
@@ -16437,6 +16456,10 @@ class $AppSettingsTable extends AppSettings
         DriftSqlType.bool,
         data['${effectivePrefix}voice_entry_consent'],
       )!,
+      fontStyle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}font_style'],
+      )!,
     );
   }
 
@@ -16503,6 +16526,10 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
   /// Voice entry's one-time opt-in: the person agreed that what they say,
   /// and their account and category names, go to the AI service.
   final bool voiceEntryConsent;
+
+  /// The font look from Settings → Appearance → Font: an `AppFontStyle`
+  /// storage value.
+  final String fontStyle;
   const AppSetting({
     required this.hapticsEnabled,
     required this.saveAnimationsEnabled,
@@ -16525,6 +16552,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     required this.alarmTone,
     required this.soundEffectsEnabled,
     required this.voiceEntryConsent,
+    required this.fontStyle,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -16554,6 +16582,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     map['alarm_tone'] = Variable<String>(alarmTone);
     map['sound_effects_enabled'] = Variable<bool>(soundEffectsEnabled);
     map['voice_entry_consent'] = Variable<bool>(voiceEntryConsent);
+    map['font_style'] = Variable<String>(fontStyle);
     return map;
   }
 
@@ -16580,6 +16609,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       alarmTone: Value(alarmTone),
       soundEffectsEnabled: Value(soundEffectsEnabled),
       voiceEntryConsent: Value(voiceEntryConsent),
+      fontStyle: Value(fontStyle),
     );
   }
 
@@ -16622,6 +16652,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
         json['soundEffectsEnabled'],
       ),
       voiceEntryConsent: serializer.fromJson<bool>(json['voiceEntryConsent']),
+      fontStyle: serializer.fromJson<String>(json['fontStyle']),
     );
   }
   @override
@@ -16655,6 +16686,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       'alarmTone': serializer.toJson<String>(alarmTone),
       'soundEffectsEnabled': serializer.toJson<bool>(soundEffectsEnabled),
       'voiceEntryConsent': serializer.toJson<bool>(voiceEntryConsent),
+      'fontStyle': serializer.toJson<String>(fontStyle),
     };
   }
 
@@ -16680,6 +16712,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     String? alarmTone,
     bool? soundEffectsEnabled,
     bool? voiceEntryConsent,
+    String? fontStyle,
   }) => AppSetting(
     hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
     saveAnimationsEnabled: saveAnimationsEnabled ?? this.saveAnimationsEnabled,
@@ -16705,6 +16738,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     alarmTone: alarmTone ?? this.alarmTone,
     soundEffectsEnabled: soundEffectsEnabled ?? this.soundEffectsEnabled,
     voiceEntryConsent: voiceEntryConsent ?? this.voiceEntryConsent,
+    fontStyle: fontStyle ?? this.fontStyle,
   );
   AppSetting copyWithCompanion(AppSettingsCompanion data) {
     return AppSetting(
@@ -16763,6 +16797,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
       voiceEntryConsent: data.voiceEntryConsent.present
           ? data.voiceEntryConsent.value
           : this.voiceEntryConsent,
+      fontStyle: data.fontStyle.present ? data.fontStyle.value : this.fontStyle,
     );
   }
 
@@ -16789,7 +16824,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           ..write('toursSeen: $toursSeen, ')
           ..write('alarmTone: $alarmTone, ')
           ..write('soundEffectsEnabled: $soundEffectsEnabled, ')
-          ..write('voiceEntryConsent: $voiceEntryConsent')
+          ..write('voiceEntryConsent: $voiceEntryConsent, ')
+          ..write('fontStyle: $fontStyle')
           ..write(')'))
         .toString();
   }
@@ -16817,6 +16853,7 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
     alarmTone,
     soundEffectsEnabled,
     voiceEntryConsent,
+    fontStyle,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -16842,7 +16879,8 @@ class AppSetting extends DataClass implements Insertable<AppSetting> {
           other.toursSeen == this.toursSeen &&
           other.alarmTone == this.alarmTone &&
           other.soundEffectsEnabled == this.soundEffectsEnabled &&
-          other.voiceEntryConsent == this.voiceEntryConsent);
+          other.voiceEntryConsent == this.voiceEntryConsent &&
+          other.fontStyle == this.fontStyle);
 }
 
 class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
@@ -16867,6 +16905,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   final Value<String> alarmTone;
   final Value<bool> soundEffectsEnabled;
   final Value<bool> voiceEntryConsent;
+  final Value<String> fontStyle;
   const AppSettingsCompanion({
     this.hapticsEnabled = const Value.absent(),
     this.saveAnimationsEnabled = const Value.absent(),
@@ -16889,6 +16928,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.alarmTone = const Value.absent(),
     this.soundEffectsEnabled = const Value.absent(),
     this.voiceEntryConsent = const Value.absent(),
+    this.fontStyle = const Value.absent(),
   });
   AppSettingsCompanion.insert({
     this.hapticsEnabled = const Value.absent(),
@@ -16912,6 +16952,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     this.alarmTone = const Value.absent(),
     this.soundEffectsEnabled = const Value.absent(),
     this.voiceEntryConsent = const Value.absent(),
+    this.fontStyle = const Value.absent(),
   });
   static Insertable<AppSetting> custom({
     Expression<bool>? hapticsEnabled,
@@ -16935,6 +16976,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Expression<String>? alarmTone,
     Expression<bool>? soundEffectsEnabled,
     Expression<bool>? voiceEntryConsent,
+    Expression<String>? fontStyle,
   }) {
     return RawValuesInsertable({
       if (hapticsEnabled != null) 'haptics_enabled': hapticsEnabled,
@@ -16964,6 +17006,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       if (soundEffectsEnabled != null)
         'sound_effects_enabled': soundEffectsEnabled,
       if (voiceEntryConsent != null) 'voice_entry_consent': voiceEntryConsent,
+      if (fontStyle != null) 'font_style': fontStyle,
     });
   }
 
@@ -16989,6 +17032,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     Value<String>? alarmTone,
     Value<bool>? soundEffectsEnabled,
     Value<bool>? voiceEntryConsent,
+    Value<String>? fontStyle,
   }) {
     return AppSettingsCompanion(
       hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
@@ -17016,6 +17060,7 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
       alarmTone: alarmTone ?? this.alarmTone,
       soundEffectsEnabled: soundEffectsEnabled ?? this.soundEffectsEnabled,
       voiceEntryConsent: voiceEntryConsent ?? this.voiceEntryConsent,
+      fontStyle: fontStyle ?? this.fontStyle,
     );
   }
 
@@ -17093,6 +17138,9 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
     if (voiceEntryConsent.present) {
       map['voice_entry_consent'] = Variable<bool>(voiceEntryConsent.value);
     }
+    if (fontStyle.present) {
+      map['font_style'] = Variable<String>(fontStyle.value);
+    }
     return map;
   }
 
@@ -17119,7 +17167,8 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
           ..write('toursSeen: $toursSeen, ')
           ..write('alarmTone: $alarmTone, ')
           ..write('soundEffectsEnabled: $soundEffectsEnabled, ')
-          ..write('voiceEntryConsent: $voiceEntryConsent')
+          ..write('voiceEntryConsent: $voiceEntryConsent, ')
+          ..write('fontStyle: $fontStyle')
           ..write(')'))
         .toString();
   }
@@ -30593,6 +30642,7 @@ typedef $$AppSettingsTableCreateCompanionBuilder =
       Value<String> alarmTone,
       Value<bool> soundEffectsEnabled,
       Value<bool> voiceEntryConsent,
+      Value<String> fontStyle,
     });
 typedef $$AppSettingsTableUpdateCompanionBuilder =
     AppSettingsCompanion Function({
@@ -30617,6 +30667,7 @@ typedef $$AppSettingsTableUpdateCompanionBuilder =
       Value<String> alarmTone,
       Value<bool> soundEffectsEnabled,
       Value<bool> voiceEntryConsent,
+      Value<String> fontStyle,
     });
 
 class $$AppSettingsTableFilterComposer
@@ -30730,6 +30781,11 @@ class $$AppSettingsTableFilterComposer
 
   ColumnFilters<bool> get voiceEntryConsent => $composableBuilder(
     column: $table.voiceEntryConsent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fontStyle => $composableBuilder(
+    column: $table.fontStyle,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -30847,6 +30903,11 @@ class $$AppSettingsTableOrderingComposer
     column: $table.voiceEntryConsent,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get fontStyle => $composableBuilder(
+    column: $table.fontStyle,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AppSettingsTableAnnotationComposer
@@ -30954,6 +31015,9 @@ class $$AppSettingsTableAnnotationComposer
     column: $table.voiceEntryConsent,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get fontStyle =>
+      $composableBuilder(column: $table.fontStyle, builder: (column) => column);
 }
 
 class $$AppSettingsTableTableManager
@@ -31008,6 +31072,7 @@ class $$AppSettingsTableTableManager
                 Value<String> alarmTone = const Value.absent(),
                 Value<bool> soundEffectsEnabled = const Value.absent(),
                 Value<bool> voiceEntryConsent = const Value.absent(),
+                Value<String> fontStyle = const Value.absent(),
               }) => AppSettingsCompanion(
                 hapticsEnabled: hapticsEnabled,
                 saveAnimationsEnabled: saveAnimationsEnabled,
@@ -31030,6 +31095,7 @@ class $$AppSettingsTableTableManager
                 alarmTone: alarmTone,
                 soundEffectsEnabled: soundEffectsEnabled,
                 voiceEntryConsent: voiceEntryConsent,
+                fontStyle: fontStyle,
               ),
           createCompanionCallback:
               ({
@@ -31054,6 +31120,7 @@ class $$AppSettingsTableTableManager
                 Value<String> alarmTone = const Value.absent(),
                 Value<bool> soundEffectsEnabled = const Value.absent(),
                 Value<bool> voiceEntryConsent = const Value.absent(),
+                Value<String> fontStyle = const Value.absent(),
               }) => AppSettingsCompanion.insert(
                 hapticsEnabled: hapticsEnabled,
                 saveAnimationsEnabled: saveAnimationsEnabled,
@@ -31076,6 +31143,7 @@ class $$AppSettingsTableTableManager
                 alarmTone: alarmTone,
                 soundEffectsEnabled: soundEffectsEnabled,
                 voiceEntryConsent: voiceEntryConsent,
+                fontStyle: fontStyle,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

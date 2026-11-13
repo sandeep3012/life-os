@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/utils/currency_utils.dart';
 import '../../domain/category_spend.dart';
+import '../../domain/donut_slice_colors.dart';
 import '../../../../app/theme/app_fonts.dart';
-import '../../../../core/utils/category_color.dart';
 import '../../../../app/motion.dart';
 
 /// The chart's box, and the hole inside its ring. The ring is 16 thick (20 for
@@ -60,6 +60,7 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = donutSliceColors(widget.breakdown);
     final selected =
         (_selectedIndex != null &&
             _selectedIndex! >= 0 &&
@@ -85,13 +86,11 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
                     for (int i = 0; i < widget.breakdown.length; i++)
                       PieChartSectionData(
                         value: widget.breakdown[i].totalMinor.toDouble(),
-                        color: _sliceColor(context, widget.breakdown[i])
-                            .withValues(
-                              alpha:
-                                  _selectedIndex == null || _selectedIndex == i
-                                  ? 1.0
-                                  : 0.35,
-                            ),
+                        color: colors[i].withValues(
+                          alpha: _selectedIndex == null || _selectedIndex == i
+                              ? 1.0
+                              : 0.35,
+                        ),
                         radius: _selectedIndex == i ? 20 : 16,
                         showTitle: false,
                       ),
@@ -125,7 +124,7 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
                             _FitLine(
                               '${(selected.share * 100).round()}%',
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: _sliceColor(context, selected),
+                                color: colors[_selectedIndex!],
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -169,7 +168,7 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final entry in widget.breakdown)
+              for (final (i, entry) in widget.breakdown.indexed)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
@@ -178,7 +177,7 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
                         width: 7,
                         height: 7,
                         decoration: BoxDecoration(
-                          color: _sliceColor(context, entry),
+                          color: colors[i],
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -214,7 +213,7 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
                         child: Text(
                           '${(entry.share * 100).round()}%',
                           textAlign: TextAlign.right,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: AppFonts.numeric,
                             fontFeatures: AppFonts.tabular,
                             fontSize: 12,
@@ -231,17 +230,6 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
       ],
     );
   }
-}
-
-/// Uncategorized has no colour of its own, so it takes a neutral from the
-/// theme rather than borrowing a category hue and reading as a real category.
-/// A category the user left on "No color" takes a different neutral, so the
-/// two stay tellable apart in the legend.
-Color _sliceColor(BuildContext context, CategorySpend entry) {
-  final category = entry.category;
-  if (category == null) return Theme.of(context).colorScheme.outlineVariant;
-  return categoryColor(category.colorHex) ??
-      Theme.of(context).colorScheme.onSurfaceVariant;
 }
 
 /// One centred line that shrinks to fit its parent's width instead of

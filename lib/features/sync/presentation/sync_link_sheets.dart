@@ -96,7 +96,7 @@ class _LinkQrSheetState extends ConsumerState<_LinkQrSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'Approve from your other phone',
               style: TextStyle(
                 fontFamily: AppFonts.serif,

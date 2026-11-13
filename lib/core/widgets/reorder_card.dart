@@ -23,7 +23,11 @@ class ReorderHint extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(LucideIcons.gripVertical, size: 18, color: scheme.onSurfaceVariant),
+          Icon(
+            LucideIcons.gripVertical,
+            size: 18,
+            color: scheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -79,10 +83,8 @@ class ReorderCard extends StatelessWidget {
   ) => AnimatedBuilder(
     animation: animation,
     child: child,
-    builder: (context, child) => _Lift(
-      amount: Curves.easeOut.transform(animation.value),
-      child: child!,
-    ),
+    builder: (context, child) =>
+        _Lift(amount: Curves.easeOut.transform(animation.value), child: child!),
   );
 
   @override
@@ -123,7 +125,7 @@ class ReorderCard extends StatelessWidget {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: AppFonts.sans,
                         fontSize: 15,
                         fontWeight: FontWeight.w600,

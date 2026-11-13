@@ -448,6 +448,7 @@ class BackupService {
     'soundEffectsEnabled': true,
     // Consent isn't carried across: a restored backup asks again.
     'voiceEntryConsent': false,
+    'fontStyle': 'classic',
   };
 
   Future<void> _insertAll<T extends Table, D>(
