@@ -97,7 +97,7 @@ class _Intro extends StatelessWidget {
         const SizedBox(height: 14),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontFamily: AppFonts.serif,
             fontSize: 26,
             fontWeight: FontWeight.w600,
@@ -418,7 +418,7 @@ class _Ready extends ConsumerWidget {
                           : status.uploadsRefused
                           ? 'Not uploading'
                           : _when(status.lastSyncedAt),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: AppFonts.serif,
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
@@ -820,7 +820,7 @@ class _RecoveryModeSheetState extends State<_RecoveryModeSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Recovery',
             style: TextStyle(
               fontFamily: AppFonts.serif,
@@ -902,7 +902,7 @@ class _RecoveryKeySheetState extends State<_RecoveryKeySheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'Your recovery key',
               style: TextStyle(
                 fontFamily: AppFonts.serif,

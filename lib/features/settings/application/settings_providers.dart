@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_color_theme.dart';
+import '../../../app/theme/app_font_style.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/reminders/alarm_tone.dart';
 import '../../../core/database/app_database_provider.dart';
@@ -41,6 +42,7 @@ class ResolvedSettings {
     this.alarmTone = AlarmTone.gentle,
     this.soundEffectsEnabled = true,
     this.voiceEntryConsent = false,
+    this.fontStyle = AppFontStyle.classic,
   });
 
   final ThemeMode themeMode;
@@ -77,6 +79,9 @@ class ResolvedSettings {
 
   /// Voice entry's one-time opt-in to sending speech to the AI service.
   final bool voiceEntryConsent;
+
+  /// The font look — see [AppFontStyle].
+  final AppFontStyle fontStyle;
 
   static const defaults = ResolvedSettings(
     themeMode: ThemeMode.system,
@@ -142,6 +147,7 @@ final settingsProvider = Provider<ResolvedSettings>((ref) {
     alarmTone: AlarmTone.fromStorage(row.alarmTone),
     soundEffectsEnabled: row.soundEffectsEnabled,
     voiceEntryConsent: row.voiceEntryConsent,
+    fontStyle: AppFontStyle.fromStorage(row.fontStyle),
   );
 });
 
@@ -196,6 +202,9 @@ class SettingsController {
 
   Future<void> setVoiceEntryConsent(bool agreed) =>
       _repo.setVoiceEntryConsent(agreed);
+
+  Future<void> setFontStyle(AppFontStyle style) =>
+      _repo.setFontStyle(style.storageValue);
 
   Future<void> setTaskReminders(bool enabled) =>
       _repo.setTaskReminders(enabled);

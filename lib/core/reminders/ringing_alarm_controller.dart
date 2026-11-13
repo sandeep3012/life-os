@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/notification_service.dart';
@@ -13,6 +14,15 @@ import 'ringing_alarm.dart';
 class RingingAlarmController extends Notifier<RingingAlarm?> {
   StreamSubscription<RingingAlarm>? _taps;
 
+  /// The phone goes on reporting "this alarm opened the app" for as long as
+  /// the app stays open — hours or days. It's acted on once: a colour theme
+  /// change restarts the app's screens (and this controller with them), and
+  /// asking again rang that same alarm, long after its time.
+  static bool _launchAlarmTaken = false;
+
+  @visibleForTesting
+  static void forgetLaunchAlarm() => _launchAlarmTaken = false;
+
   @override
   RingingAlarm? build() {
     ref.onDispose(() => _taps?.cancel());
@@ -24,6 +34,8 @@ class RingingAlarmController extends Notifier<RingingAlarm?> {
     if (_taps != null) return;
     final notifications = ref.read(notificationServiceProvider);
     _taps = notifications.ringingAlarms.listen(_ring);
+    if (_launchAlarmTaken) return;
+    _launchAlarmTaken = true;
     final launched = await notifications.alarmThatLaunchedApp();
     if (launched != null) await _ring(launched);
   }

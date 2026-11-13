@@ -53,7 +53,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     try {
       switch (how) {
         case 'reminders':
-          await ref.read(notificationServiceProvider).requestReminderPermissions();
+          await ref
+              .read(notificationServiceProvider)
+              .requestReminderPermissions();
         case 'sample':
           await ref.read(demoDataServiceProvider).generate();
       }
@@ -115,7 +117,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         ? () => _finish('reminders')
                         : null,
                     child: Text(
-                      _busy == 'reminders' ? 'One moment…' : 'Turn on reminders',
+                      _busy == 'reminders'
+                          ? 'One moment…'
+                          : 'Turn on reminders',
                     ),
                   ),
                 ),
@@ -162,7 +166,7 @@ class _Page extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: AppFonts.serif,
               fontSize: 28,
               height: 1.15,
@@ -220,7 +224,7 @@ class _WelcomePage extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: AppFonts.sans,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w700,
@@ -292,7 +296,7 @@ class _SetupPage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Make it yours.',
             style: TextStyle(
               fontFamily: AppFonts.serif,

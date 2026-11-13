@@ -54,6 +54,40 @@ const _alarm = RingingAlarm(
 );
 
 void main() {
+  setUp(RingingAlarmController.forgetLaunchAlarm);
+
+  test('the alarm that opened the app rings once, not after a restart',
+      () async {
+    // The phone keeps reporting the same launch alarm while the app is open.
+    final notifications = _FakeNotifications()..launched = _alarm;
+    final sound = _FakeSound();
+    ProviderContainer appScreens() => ProviderContainer(
+      overrides: [
+        notificationServiceProvider.overrideWithValue(notifications),
+        alarmSoundProvider.overrideWithValue(sound),
+      ],
+    );
+
+    final first = appScreens();
+    addTearDown(first.dispose);
+    await first.read(ringingAlarmProvider.notifier).start();
+    expect(first.read(ringingAlarmProvider), _alarm);
+    await first.read(ringingAlarmProvider.notifier).dismiss();
+    expect(sound.ringing, isFalse);
+
+    // A colour theme change restarts the screens: a fresh controller.
+    final restarted = appScreens();
+    addTearDown(restarted.dispose);
+    await restarted.read(ringingAlarmProvider.notifier).start();
+    expect(restarted.read(ringingAlarmProvider), isNull);
+    expect(sound.played, hasLength(1), reason: 'no second ring');
+
+    // A new alarm arriving while the app is open still rings.
+    notifications.taps.add(_alarm);
+    await Future<void>.delayed(Duration.zero);
+    expect(restarted.read(ringingAlarmProvider), _alarm);
+  });
+
   test('an alarm payload carries what the ringing screen and Snooze need', () {
     final line = RingingAlarm.detailsLine(
       title: 'Gym: legs',

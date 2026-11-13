@@ -168,7 +168,8 @@ GoRouter createAppRouter() => GoRouter(
                       path: 'folder/:folderId',
                       builder: (context, state) => FolderDocumentsScreen(
                         folderId: state.pathParameters['folderId']!,
-                        folderName: state.uri.queryParameters['name'] ?? 'Folder',
+                        folderName:
+                            state.uri.queryParameters['name'] ?? 'Folder',
                       ),
                     ),
                   ],

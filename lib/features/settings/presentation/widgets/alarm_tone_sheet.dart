@@ -127,7 +127,7 @@ class _AlarmToneSheetState extends State<_AlarmToneSheet> {
                             children: [
                               Text(
                                 tone.label,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: AppFonts.sans,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,

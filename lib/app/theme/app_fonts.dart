@@ -1,5 +1,7 @@
 import 'dart:ui' show FontFeature;
 
+import 'app_font_style.dart';
+
 /// Font families and numeric styling from the design comp, as named constants
 /// rather than string literals scattered through widget code.
 ///
@@ -12,14 +14,29 @@ import 'dart:ui' show FontFeature;
 class AppFonts {
   AppFonts._();
 
-  /// Headings, hero numbers, section titles. Comp: `font-family:'Newsreader',serif`.
-  static const serif = 'Newsreader';
+  static AppFontStyle _style = AppFontStyle.classic;
 
-  /// Body, labels, buttons, nav. Comp: `font-family:'Manrope',system-ui,sans-serif`.
-  static const sans = 'Manrope';
+  /// The font look in use (Settings → Appearance → Font).
+  static AppFontStyle get style => _style;
+
+  /// Switches the look. Text picks it up the next time its widget builds, so
+  /// the caller rebuilds the tree — see `LifeOSApp`.
+  static void use(AppFontStyle style) => _style = style;
+
+  /// Headings, hero numbers, section titles. Comp:
+  /// `font-family:'Newsreader',serif` — or the chosen look's heading family.
+  ///
+  /// A getter, not a constant: it changes with the setting, so a `TextStyle`
+  /// that names it can't be `const`.
+  static String get serif => _style.headingFamily;
+
+  /// Body, labels, buttons, nav. Comp:
+  /// `font-family:'Manrope',system-ui,sans-serif` — or the chosen look's
+  /// body family.
+  static String get sans => _style.bodyFamily;
 
   /// Currency figures, dates, counts. Same family as [sans] — pair with [tabular].
-  static const numeric = sans;
+  static String get numeric => sans;
 
   /// IDs, file names and code blocks — and nothing else. Kit §2 reserves a
   /// monospace face for these; numbers stay in [numeric] with tabular figures so

@@ -184,6 +184,20 @@ never as string literals: 19 widget-level `fontFamily: 'Fraunces'` /
 fallen back to the system font once those families left `pubspec.yaml`, since a
 missing family is not an analyzer or runtime error in Flutter.
 
+**Font looks (Settings → Appearance → Font, `AppSettings.fontStyle`, v37).**
+`AppFontStyle` (`lib/app/theme/app_font_style.dart`) offers seven heading/body
+pairs — Classic (Newsreader + Manrope, the default) plus Plus Jakarta Sans,
+Inter, Nunito, Playfair Display + DM Sans, Outfit and Lexend, all bundled OFL
+variable fonts registered under their own names. `AppFonts.serif` / `.sans` /
+`.numeric` are **getters** naming the chosen style's families, so a `TextStyle`
+that uses them can't be `const` (`AppFonts.mono` still is). `LifeOSApp` calls
+`AppFonts.use(...)` before building, and on a change marks every element for
+rebuild — most of the tree is `const` or otherwise wouldn't build again — which
+keeps state and the open screen. Don't cache such a style in a `static final`
+or a `State` field: it would keep the old family. Loading the new files over
+the old family names with `FontLoader` was tried and does **not** work: the
+engine keeps the first face registered for a name when two match equally.
+
 Radii come from `AppSpacing`, which carries the comp's own scale (cards 22,
 tiles 16, controls 15, icon buttons 13, nav pill 24, sheets 30) rather than one
 shared value.

@@ -75,6 +75,10 @@ class AppSettings extends Table {
   BoolColumn get voiceEntryConsent =>
       boolean().withDefault(const Constant(false))();
 
+  /// The font look from Settings → Appearance → Font: an `AppFontStyle`
+  /// storage value.
+  TextColumn get fontStyle => text().withDefault(const Constant('classic'))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

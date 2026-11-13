@@ -37,7 +37,7 @@ class GoalRing extends StatelessWidget {
       trackColor: scheme.onSurface.withValues(alpha: 0.18),
       child: Text(
         '${(ratio * 100).round()}%',
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: AppFonts.numeric,
           fontFeatures: AppFonts.tabular,
           fontSize: 13,

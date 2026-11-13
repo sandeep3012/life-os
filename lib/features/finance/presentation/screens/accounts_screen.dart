@@ -270,7 +270,7 @@ class _NetWorthCard extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 total,
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: AppFonts.serif,
                   fontSize: 32,
                   fontWeight: FontWeight.w600,
@@ -298,7 +298,7 @@ class _GroupLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     text,
-    style: const TextStyle(
+    style: TextStyle(
       fontFamily: AppFonts.serif,
       fontSize: 18,
       fontWeight: FontWeight.w600,

@@ -19,7 +19,9 @@ import '../../../../core/services/system_settings.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_font_style.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/widgets/tappable.dart';
 import '../../../../core/widgets/initial_well.dart';
 import '../../../../core/widgets/section_header.dart';
 import '../../../../core/widgets/tab_rail.dart';
@@ -146,6 +148,33 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                     ],
                   ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Font', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Changes the lettering across the app, straight away.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  for (final style in AppFontStyle.values)
+                    _FontStyleRow(
+                      style: style,
+                      selected: settings.fontStyle == style,
+                      onTap: () => controller.setFontStyle(style),
+                    ),
                 ],
               ),
             ),
@@ -1499,6 +1528,94 @@ class _SampleDataRowState extends ConsumerState<_SampleDataRow> {
             _busy ? 'Removing…' : 'Clear the example entries',
           ),
           onTap: _busy ? null : _remove,
+        ),
+      ),
+    );
+  }
+}
+
+/// One font look in Settings → Appearance → Font, drawn in its own faces so
+/// it can be judged before it's picked.
+class _FontStyleRow extends StatelessWidget {
+  const _FontStyleRow({
+    required this.style,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppFontStyle style;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Tappable(
+      selected: selected,
+      onTap: onTap,
+      haptic: TapHaptic.selection,
+      semanticLabel: '${style.label} font. ${style.description}',
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
+          border: Border.all(
+            color: selected ? scheme.primary : scheme.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+          color: selected ? scheme.primary.withValues(alpha: 0.06) : null,
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 46,
+              child: Text(
+                'Ag',
+                style: TextStyle(
+                  fontFamily: style.headingFamily,
+                  fontSize: 26,
+                  height: 1.1,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    style.label,
+                    style: TextStyle(
+                      fontFamily: style.headingFamily,
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${style.description} · ₹1,250.00',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: style.bodyFamily,
+                      fontSize: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              selected ? LucideIcons.circleCheck : LucideIcons.circle,
+              size: 20,
+              color: selected ? scheme.primary : scheme.outline,
+            ),
+          ],
         ),
       ),
     );

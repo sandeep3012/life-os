@@ -783,9 +783,18 @@ class _TodayTaskRow extends ConsumerWidget {
 }
 
 /// Keeps the original compact two-column, two-row tile grid, with horizontal
-/// paging when more than four habits are due today.
+/// paging when more than four habits are due today. With one or two habits
+/// there's only one row, and the grid is only that tall — a fixed two-row
+/// height left an empty row's gap above the next section.
 class _HabitGrid extends ConsumerWidget {
   const _HabitGrid();
+
+  static const _tileHeight = 78.0;
+  static const _rowGap = 10.0;
+
+  /// The grid's height for [habitCount] habits: one row or two.
+  static double heightFor(int habitCount) =>
+      habitCount <= 2 ? _tileHeight : _tileHeight * 2 + _rowGap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -796,7 +805,8 @@ class _HabitGrid extends ConsumerWidget {
     }
 
     return SizedBox(
-      height: 166,
+      key: const ValueKey('home-habit-grid'),
+      height: heightFor(shown.length),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final cardWidth = (constraints.maxWidth - 11) / 2;
@@ -818,7 +828,7 @@ class _HabitGrid extends ConsumerWidget {
                     )
                       Padding(
                         padding: EdgeInsets.only(
-                          bottom: rowIndex + 2 < page.length ? 10 : 0,
+                          bottom: rowIndex + 2 < page.length ? _rowGap : 0,
                         ),
                         child: Row(
                           children: [
