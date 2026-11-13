@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../database/app_database.dart';
 import '../database/app_database_provider.dart';
@@ -59,6 +61,50 @@ class InvalidBackupException implements Exception {
   String toString() => message;
 }
 
+/// The backup is password-protected and none (or no usable one) was given.
+class BackupPasswordRequired implements Exception {
+  const BackupPasswordRequired({this.wrong = false});
+
+  /// A password was given, and it doesn't open this backup.
+  final bool wrong;
+
+  @override
+  String toString() =>
+      wrong ? "That password doesn't open this backup." : 'Password needed.';
+}
+
+/// A backup written to disk by [BackupService.exportBackupFile].
+class BackupExport {
+  const BackupExport({
+    required this.file,
+    required this.documentFiles,
+    required this.missingFiles,
+    required this.sizeBytes,
+  });
+
+  /// The zip, in a temporary folder of its own — call [discard] when it has
+  /// been saved or shared.
+  final File file;
+
+  /// Document files the backup carries.
+  final int documentFiles;
+
+  /// Documents whose file isn't on this phone — one that arrived through
+  /// sync, which carries the record but not the file. Their records are in
+  /// the backup; the files can't be.
+  final int missingFiles;
+
+  final int sizeBytes;
+
+  Future<void> discard() async {
+    try {
+      await file.parent.delete(recursive: true);
+    } on FileSystemException {
+      // The system clears its temporary folder anyway.
+    }
+  }
+}
+
 /// Full backup/restore across every module: a single zip containing one JSON
 /// manifest (every table, as rows) plus copies of every file a `Document`
 /// references. Restoring **replaces** all local data — this is a
@@ -70,9 +116,77 @@ class BackupService {
   final AppDatabase _db;
   final FileStorageService _storage;
 
-  Future<Uint8List> exportBackup() => _db.transaction(_exportSnapshot);
+  /// The backup as bytes. Holds the whole file in memory: fine for tests and
+  /// small backups; the app exports with [exportBackupFile].
+  Future<Uint8List> exportBackup({String? password}) async {
+    final export = await exportBackupFile(password: password);
+    try {
+      return await export.file.readAsBytes();
+    } finally {
+      await export.discard();
+    }
+  }
 
-  Future<Uint8List> _exportSnapshot() async {
+  /// Writes the backup to a temporary file, a document at a time, so a large
+  /// document library is never held in memory. With a [password] every entry
+  /// is AES-256 encrypted (a standard password-protected zip).
+  Future<BackupExport> exportBackupFile({String? password}) async {
+    final snapshot = await _db.transaction(_readSnapshot);
+    final dir = await Directory.systemTemp.createTemp('lifeos-backup');
+    final zip = File(p.join(dir.path, 'backup.zip'));
+    final encoder = ZipFileEncoder(
+      password: password == null || password.isEmpty ? null : password,
+    )..create(zip.path);
+    var written = 0;
+    var missing = 0;
+    try {
+      encoder.addArchiveFile(
+        ArchiveFile(
+          _manifestEntryName,
+          snapshot.manifest.length,
+          snapshot.manifest,
+        ),
+      );
+      // Bundle every file a Document references — otherwise a restore leaves
+      // behind rows pointing at files that don't exist on the new device.
+      final seenPaths = <String>{};
+      for (final doc in snapshot.documents) {
+        for (final relPath in [
+          doc.filePath,
+          if (doc.thumbnailPath != null) doc.thumbnailPath!,
+        ]) {
+          if (!seenPaths.add(relPath)) continue;
+          final file = await _storage.absoluteFile(relPath);
+          if (await file.exists()) {
+            await encoder.addFile(file, '$_filesPrefix$relPath');
+            if (relPath == doc.filePath) written++;
+          } else if (relPath == doc.filePath) {
+            missing++;
+          }
+        }
+      }
+      await encoder.close();
+    } on Object {
+      try {
+        await encoder.close();
+      } on Object {
+        // Already failing; the temporary folder goes either way.
+      }
+      await dir.delete(recursive: true);
+      rethrow;
+    }
+    return BackupExport(
+      file: zip,
+      documentFiles: written,
+      missingFiles: missing,
+      sizeBytes: await zip.length(),
+    );
+  }
+
+  /// Every table as JSON rows, read in one transaction so the backup is a
+  /// single moment in time.
+  Future<({Uint8List manifest, List<Document> documents})>
+  _readSnapshot() async {
     final tables = <String, List<Map<String, dynamic>>>{
       'medications': (await _db.select(_db.medications).get())
           .map((e) => e.toJson())
@@ -173,41 +287,67 @@ class BackupService {
       'exportedAt': DateTime.now().toIso8601String(),
       'tables': tables,
     };
-
-    final archive = Archive();
-    final manifestBytes = utf8.encode(jsonEncode(manifest));
-    archive.addFile(
-      ArchiveFile(_manifestEntryName, manifestBytes.length, manifestBytes),
+    return (
+      manifest: Uint8List.fromList(utf8.encode(jsonEncode(manifest))),
+      documents: await _db.select(_db.documents).get(),
     );
-
-    // Bundle every file a Document references — otherwise a restore leaves
-    // behind rows pointing at files that don't exist on the new device.
-    final documents = await _db.select(_db.documents).get();
-    final seenPaths = <String>{};
-    for (final doc in documents) {
-      for (final relPath in [
-        doc.filePath,
-        if (doc.thumbnailPath != null) doc.thumbnailPath!,
-      ]) {
-        if (!seenPaths.add(relPath)) continue;
-        final file = await _storage.absoluteFile(relPath);
-        if (await file.exists()) {
-          final bytes = await file.readAsBytes();
-          archive.addFile(
-            ArchiveFile('$_filesPrefix$relPath', bytes.length, bytes),
-          );
-        }
-      }
-    }
-
-    final zipBytes = ZipEncoder().encode(archive);
-    return Uint8List.fromList(zipBytes);
   }
 
-  Future<void> importBackup(Uint8List zipBytes) async {
+  /// Restores from a backup held in memory. See [importBackupFile].
+  Future<void> importBackup(Uint8List zipBytes, {String? password}) => _restore(
+    InputMemoryStream(zipBytes),
+    password,
+    encrypted: _isEncryptedZip(zipBytes),
+  );
+
+  /// Restores from a backup file, reading it from disk as it goes. Throws
+  /// [BackupPasswordRequired] for a protected backup with no (or the wrong)
+  /// [password], before anything is changed.
+  Future<void> importBackupFile(File file, {String? password}) async {
+    final encrypted = await isPasswordProtected(file);
+    final input = InputFileStream(file.path);
+    try {
+      await _restore(input, password, encrypted: encrypted);
+    } finally {
+      await input.close();
+    }
+  }
+
+  /// Whether [file] is a backup that needs a password to open.
+  Future<bool> isPasswordProtected(File file) async {
+    try {
+      final handle = await file.open();
+      try {
+        return _isEncryptedZip(await handle.read(8));
+      } finally {
+        await handle.close();
+      }
+    } on FileSystemException {
+      return false;
+    }
+  }
+
+  /// A zip's first entry starts "PK\x03\x04", a version, then its flags;
+  /// bit 0 of those says the entry is encrypted. The manifest is always the
+  /// first entry of a backup.
+  static bool _isEncryptedZip(List<int> head) =>
+      head.length >= 8 &&
+      head[0] == 0x50 &&
+      head[1] == 0x4B &&
+      head[2] == 0x03 &&
+      head[3] == 0x04 &&
+      head[6] & 0x01 != 0;
+
+  Future<void> _restore(
+    InputStream input,
+    String? password, {
+    required bool encrypted,
+  }) async {
+    final usePassword = password == null || password.isEmpty ? null : password;
+    if (encrypted && usePassword == null) throw const BackupPasswordRequired();
     final Archive archive;
     try {
-      archive = ZipDecoder().decodeBytes(zipBytes);
+      archive = ZipDecoder().decodeStream(input, password: usePassword);
     } catch (_) {
       throw const InvalidBackupException(
         'That file isn\'t a valid LifeOS backup.',
@@ -228,7 +368,10 @@ class BackupService {
       manifest =
           jsonDecode(utf8.decode(manifestFile.content as List<int>))
               as Map<String, dynamic>;
-    } catch (_) {
+    } on Object {
+      // An encrypted entry that won't open, or opens to noise: the password
+      // is wrong. Otherwise the file itself is damaged.
+      if (encrypted) throw const BackupPasswordRequired(wrong: true);
       throw const InvalidBackupException('That backup file is corrupted.');
     }
 
@@ -360,13 +503,12 @@ class BackupService {
       await _insertAll(
         _db.accounts,
         tables['accounts'],
-        (json) =>
-            Account.fromJson({
-              'position': 0,
-              'isDefault': false,
-              'openingBalanceMinor': 0,
-              ...json,
-            }),
+        (json) => Account.fromJson({
+          'position': 0,
+          'isDefault': false,
+          'openingBalanceMinor': 0,
+          ...json,
+        }),
       );
       await _insertAll(_db.folders, tables['folders'], Folder.fromJson);
       await _insertAll(_db.habits, tables['habits'], Habit.fromJson);
@@ -375,7 +517,13 @@ class BackupService {
       await _insertAll(
         _db.appSettings,
         tables['appSettings'],
-        (json) => AppSetting.fromJson({..._settingsAddedSinceV28, ...json}),
+        (json) => AppSetting.fromJson({
+          ..._settingsAddedSinceV28,
+          ...json,
+          // Never carried across: sending speech to the AI service is
+          // agreed to on each phone, so a restored backup asks again.
+          'voiceEntryConsent': false,
+        }),
       );
       await _insertAll(_db.insights, tables['insights'], Insight.fromJson);
 
@@ -430,7 +578,13 @@ class BackupService {
       final relPath = file.name.substring(_filesPrefix.length);
       final dest = await _storage.absoluteFile(relPath);
       await dest.parent.create(recursive: true);
-      await dest.writeAsBytes(file.content as List<int>);
+      // Straight to disk, a block at a time, rather than through memory.
+      final out = OutputFileStream(dest.path);
+      try {
+        file.writeContent(out);
+      } finally {
+        await out.close();
+      }
     }
   }
 
@@ -446,7 +600,6 @@ class BackupService {
     'toursSeen': 'home',
     'alarmTone': 'gentle',
     'soundEffectsEnabled': true,
-    // Consent isn't carried across: a restored backup asks again.
     'voiceEntryConsent': false,
     'fontStyle': 'classic',
     'backgroundStyle': 'recommended',

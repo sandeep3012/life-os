@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/theme/app_color_theme.dart';
 import '../../../../app/app_restart.dart';
@@ -1248,26 +1249,68 @@ enum _BackupOp { none, exporting, importing }
 class _BackupCardState extends ConsumerState<_BackupCard> {
   _BackupOp _op = _BackupOp.none;
 
+  /// Above this, the backup isn't loaded into memory to hand to the save
+  /// dialog; it's passed as a file to the share sheet instead.
+  static const _maxSaveDialogBytes = 150 * 1024 * 1024;
+
   Future<void> _export() async {
+    // Optional: a backup holds every account, transaction and document.
+    final password = await showDialog<String>(
+      context: context,
+      builder: (_) => const _BackupPasswordDialog.choose(),
+    );
+    if (password == null || !mounted) return;
+
     setState(() => _op = _BackupOp.exporting);
+    BackupExport? export;
     try {
-      final bytes = await ref.read(backupServiceProvider).exportBackup();
+      export = await ref
+          .read(backupServiceProvider)
+          .exportBackupFile(password: password);
       final fileName =
           'lifeos-backup-${DateFormat('yyyyMMdd-HHmm').format(DateTime.now())}.zip';
-      final path = await FilePicker.saveFile(
-        dialogTitle: 'Save LifeOS backup',
-        fileName: fileName,
-        bytes: bytes,
-      );
+      final bool saved;
+      if (export.sizeBytes <= _maxSaveDialogBytes) {
+        final path = await FilePicker.saveFile(
+          dialogTitle: 'Save LifeOS backup',
+          fileName: fileName,
+          bytes: await export.file.readAsBytes(),
+        );
+        saved = path != null;
+      } else {
+        // A big document library: send the file itself rather than hold
+        // hundreds of megabytes in memory.
+        final named = await export.file.rename(
+          '${export.file.parent.path}/$fileName',
+        );
+        final result = await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(named.path, mimeType: 'application/zip')],
+            subject: 'LifeOS backup',
+          ),
+        );
+        saved = result.status == ShareResultStatus.success;
+      }
       if (!mounted) return;
-      if (path == null) {
+      if (!saved) {
         _showSnack('Export cancelled.');
       } else {
-        _showSnack('Backup saved.');
+        final missing = export.missingFiles;
+        _showSnack(
+          missing == 0
+              ? 'Backup saved.'
+              : 'Backup saved, but $missing document '
+                    '${missing == 1 ? 'file isn\'t' : 'files aren\'t'} on this '
+                    'phone, so ${missing == 1 ? 'it isn\'t' : 'they aren\'t'} '
+                    'in it. Export from the phone that has '
+                    '${missing == 1 ? 'it' : 'them'} to include '
+                    '${missing == 1 ? 'it' : 'them'}.',
+        );
       }
     } catch (e) {
       if (mounted) _showSnack('Could not export backup: $e', isError: true);
     } finally {
+      await export?.discard();
       if (mounted) setState(() => _op = _BackupOp.none);
     }
   }
@@ -1279,13 +1322,32 @@ class _BackupCardState extends ConsumerState<_BackupCard> {
     );
     final picked = result?.files.single;
     if (picked == null || !mounted) return;
+    final service = ref.read(backupServiceProvider);
+    final file = picked.path == null ? null : File(picked.path!);
 
+    String? password;
+    if (file != null && await service.isPasswordProtected(file)) {
+      if (!mounted) return;
+      password = await showDialog<String>(
+        context: context,
+        builder: (_) => const _BackupPasswordDialog.enter(),
+      );
+      if (password == null || !mounted) return;
+    }
+    if (!mounted) return;
+
+    // With sync on, the restore doesn't stop at this phone.
+    final syncing = ref.read(syncControllerProvider).phase == SyncPhase.ready;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Restore this backup?'),
-        content: const Text(
-          'This replaces all local data with what\'s in the backup. Older backups do not include bills, recurring transactions, or custom account types; those lists will be cleared. Export your current data first if you want to keep a copy. This can\'t be undone.',
+        content: Text(
+          'This replaces all local data with what\'s in the backup. Older '
+          'backups do not include bills, recurring transactions, or custom '
+          'account types; those lists will be cleared. Export your current '
+          'data first if you want to keep a copy. This can\'t be undone.'
+          '${syncing ? '\n\nSync is on, so your other phones will be changed to match this backup too. Anything added since the backup was made will be removed everywhere.' : ''}',
         ),
         actions: [
           TextButton(
@@ -1307,9 +1369,21 @@ class _BackupCardState extends ConsumerState<_BackupCard> {
 
     setState(() => _op = _BackupOp.importing);
     try {
-      final bytes = picked.bytes ?? await File(picked.path!).readAsBytes();
-      await ref.read(backupServiceProvider).importBackup(bytes);
+      if (file != null) {
+        await service.importBackupFile(file, password: password);
+      } else {
+        await service.importBackup(picked.bytes!, password: password);
+      }
       if (mounted) _showSnack('Backup restored.');
+    } on BackupPasswordRequired catch (e) {
+      if (mounted) {
+        _showSnack(
+          e.wrong
+              ? "That password doesn't open this backup. Nothing was changed."
+              : 'This backup is password-protected. Nothing was changed.',
+          isError: true,
+        );
+      }
     } on InvalidBackupException catch (e) {
       if (mounted) _showSnack(e.message, isError: true);
     } catch (e) {
@@ -1655,6 +1729,122 @@ class _FontStyleRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Asks for a backup's password: [choose] when exporting (optional, typed
+/// twice — a typo here is a backup nobody can open), [enter] when restoring
+/// a protected one. Pops with the password, or an empty string for "no
+/// password"; dismissing it pops null.
+class _BackupPasswordDialog extends StatefulWidget {
+  const _BackupPasswordDialog.choose() : choosing = true;
+  const _BackupPasswordDialog.enter() : choosing = false;
+
+  final bool choosing;
+
+  @override
+  State<_BackupPasswordDialog> createState() => _BackupPasswordDialogState();
+}
+
+class _BackupPasswordDialogState extends State<_BackupPasswordDialog> {
+  final _password = TextEditingController();
+  final _again = TextEditingController();
+  bool _hidden = true;
+  String? _error;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    _again.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final password = _password.text;
+    if (widget.choosing && password != _again.text) {
+      setState(() => _error = "The two passwords don't match.");
+      return;
+    }
+    if (!widget.choosing && password.isEmpty) {
+      setState(() => _error = 'Enter the password for this backup.');
+      return;
+    }
+    Navigator.of(context).pop(password);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final choosing = widget.choosing;
+    return AlertDialog(
+      title: Text(choosing ? 'Protect this backup?' : 'Backup password'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              choosing
+                  ? 'A backup holds all your finances and documents. Add a '
+                        'password so only you can open it, or leave it empty '
+                        'to save it without one. If you forget the password, '
+                        'the backup can\'t be opened.'
+                  : 'This backup is protected. Enter the password it was '
+                        'saved with.',
+              style: TextStyle(height: 1.4, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _password,
+              autofocus: !choosing,
+              obscureText: _hidden,
+              autocorrect: false,
+              enableSuggestions: false,
+              decoration: InputDecoration(
+                labelText: choosing ? 'Password (optional)' : 'Password',
+                errorText: choosing ? null : _error,
+                suffixIcon: IconButton(
+                  tooltip: _hidden ? 'Show password' : 'Hide password',
+                  icon: Icon(_hidden ? LucideIcons.eye : LucideIcons.eyeOff),
+                  onPressed: () => setState(() => _hidden = !_hidden),
+                ),
+              ),
+              onChanged: (_) {
+                if (_error != null) setState(() => _error = null);
+              },
+              onSubmitted: choosing ? null : (_) => _submit(),
+            ),
+            if (choosing) ...[
+              const SizedBox(height: 10),
+              TextField(
+                controller: _again,
+                obscureText: _hidden,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: InputDecoration(
+                  labelText: 'Password again',
+                  errorText: _error,
+                ),
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
+                onSubmitted: (_) => _submit(),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(choosing ? 'Export' : 'Continue'),
+        ),
+      ],
     );
   }
 }
