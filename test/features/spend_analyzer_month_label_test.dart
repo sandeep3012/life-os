@@ -67,12 +67,13 @@ void main() {
     expect(find.text('this month'), findsNothing);
 
     // Step back a month: nothing was logged then, and the message names it.
+    // By category and By payment mode cover the same spend, so both cards
+    // say the same thing when there is none.
     await tester.tap(find.byTooltip('Previous month'));
     await tester.pumpAndSettle();
-    expect(find.text('No spending logged for $lastMonth yet.'), findsOneWidget);
     expect(
-      find.text('No payment mode tagged for $lastMonth yet.'),
-      findsOneWidget,
+      find.text('No spending logged for $lastMonth yet.'),
+      findsNWidgets(2),
     );
     expect(find.textContaining('this month yet'), findsNothing);
 
