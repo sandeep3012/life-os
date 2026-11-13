@@ -102,7 +102,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 37;
+  int get schemaVersion => 38;
 
   /// For upgrade steps that read another table, on a database partly
   /// behind its recorded version (see [_addColumnIfMissing]).
@@ -438,6 +438,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 37) {
         // v36 -> v37: the font look.
         await _addColumnIfMissing(m, appSettings, appSettings.fontStyle);
+      }
+      if (from < 38) {
+        // v37 -> v38: the light-mode page background.
+        await _addColumnIfMissing(m, appSettings, appSettings.backgroundStyle);
       }
     },
   );

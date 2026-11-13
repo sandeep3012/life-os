@@ -327,7 +327,7 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     return MaterialApp.router(
       title: 'LifeOS',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(settings.colorTheme),
+      theme: AppTheme.light(settings.colorTheme, settings.background),
       darkTheme: AppTheme.dark(settings.colorTheme),
       themeMode: themeMode,
       // Under a reveal the new theme must be final the moment it's uncovered;

@@ -79,6 +79,11 @@ class AppSettings extends Table {
   /// storage value.
   TextColumn get fontStyle => text().withDefault(const Constant('classic'))();
 
+  /// The light-mode page background from Settings → Appearance → Background:
+  /// an `AppBackground` storage value.
+  TextColumn get backgroundStyle =>
+      text().withDefault(const Constant('recommended'))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

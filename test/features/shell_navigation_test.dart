@@ -102,10 +102,22 @@ void main() {
       ),
     );
     final plus = find.byIcon(LucideIcons.plus);
+    // At rest it's a clean plus: no mic anywhere on it.
+    expect(find.byIcon(LucideIcons.mic), findsNothing);
 
-    await tester.longPress(plus);
-    await tester.pumpAndSettle();
+    // Held, the plus becomes a mic before the long press fires — the button
+    // shows what holding it does.
+    final press = await tester.startGesture(tester.getCenter(plus));
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(find.byIcon(LucideIcons.mic), findsOneWidget);
+    expect(holds, 0, reason: 'not a long press yet');
+    await tester.pump(const Duration(milliseconds: 400));
     expect((taps, holds), (0, 1), reason: 'a hold is not also a tap');
+    await press.up();
+    await tester.pumpAndSettle();
+    expect(find.byIcon(LucideIcons.mic), findsNothing);
+    expect(find.byIcon(LucideIcons.plus), findsOneWidget);
 
     await tester.tap(plus);
     await tester.pumpAndSettle();

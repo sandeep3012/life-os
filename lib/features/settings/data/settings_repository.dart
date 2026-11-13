@@ -82,6 +82,9 @@ class SettingsRepository {
   Future<void> setFontStyle(String style) =>
       _upsert(AppSettingsCompanion(fontStyle: Value(style)));
 
+  Future<void> setBackgroundStyle(String style) =>
+      _upsert(AppSettingsCompanion(backgroundStyle: Value(style)));
+
   Future<void> setTaskReminders(bool enabled) =>
       _upsert(AppSettingsCompanion(taskReminders: Value(enabled)));
 

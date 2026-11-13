@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -109,7 +111,8 @@ class _AppShellState extends ConsumerState<AppShell> {
         // Say it instead of filling a form: an expense, task, habit or event.
         AddMenuItem(
           label: 'Speak',
-          subtitle: 'Say it, pick the match',
+          // Teaches the shortcut where people look for voice anyway.
+          subtitle: 'Or hold + anytime',
           icon: LucideIcons.mic,
           color: colors.calendar,
           onTap: () => showVoiceEntrySheet(_sheetContext, ref),
@@ -652,7 +655,7 @@ class _NavHighlightState extends State<_NavHighlight>
 /// the button on every palette rather than as depth. The app's other
 /// `FloatingActionButton`s are `elevation: 0` at the same radius 17
 /// (`AppTheme.floatingActionButtonTheme`), so this matches them.
-class _AddButton extends StatelessWidget {
+class _AddButton extends StatefulWidget {
   const _AddButton({
     required this.onTap,
     this.onLongPress,
@@ -670,31 +673,91 @@ class _AddButton extends StatelessWidget {
   final bool rotated;
 
   @override
+  State<_AddButton> createState() => _AddButtonState();
+}
+
+class _AddButtonState extends State<_AddButton> {
+  /// How long a press lasts before the button shows it's about to listen —
+  /// longer than a tap, well short of the long-press itself.
+  static const _holdHint = Duration(milliseconds: 170);
+
+  Timer? _hintTimer;
+  bool _holding = false;
+
+  void _pressed() {
+    if (widget.onLongPress == null) return;
+    _hintTimer?.cancel();
+    _hintTimer = Timer(_holdHint, () {
+      if (mounted) setState(() => _holding = true);
+    });
+  }
+
+  void _released() {
+    _hintTimer?.cancel();
+    if (_holding) setState(() => _holding = false);
+  }
+
+  @override
+  void dispose() {
+    _hintTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Tappable(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        haptic: TapHaptic.medium,
-        semanticLabel: onLongPress == null
-            ? 'Add'
-            : 'Add. Long press to add by voice',
-        child: Container(
-          key: TourTargets.addButton,
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: scheme.primary,
-            borderRadius: BorderRadius.circular(17),
-          ),
-          child: AnimatedRotation(
-            turns: rotated ? AppMotion.fabRotationTurns : 0,
-            duration: AppMotion.of(context, AppMotion.fabRotate),
+      // A plus sign doesn't say "hold me to speak", and a mic badge on it
+      // was clutter. Instead the button answers a hold: it swells and its
+      // plus becomes a mic, so what a long press does is shown as it
+      // happens — including to someone who held it by accident.
+      child: Listener(
+        onPointerDown: (_) => _pressed(),
+        onPointerUp: (_) => _released(),
+        onPointerCancel: (_) => _released(),
+        child: Tappable(
+          onTap: widget.onTap,
+          onLongPress: widget.onLongPress,
+          haptic: TapHaptic.medium,
+          semanticLabel: widget.onLongPress == null
+              ? 'Add'
+              : 'Add. Long press to add by voice',
+          child: AnimatedScale(
+            scale: _holding ? 1.14 : 1,
+            duration: AppMotion.of(context, AppMotion.navColor),
             curve: AppMotion.curveOf(context, AppMotion.emphasized),
-            child: Icon(LucideIcons.plus, size: 26, color: scheme.onPrimary),
+            child: Container(
+              key: TourTargets.addButton,
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                borderRadius: BorderRadius.circular(17),
+              ),
+              child: AnimatedSwitcher(
+                duration: AppMotion.of(context, AppMotion.tap),
+                child: _holding
+                    ? Icon(
+                        LucideIcons.mic,
+                        key: const ValueKey('add-button-mic'),
+                        size: 24,
+                        color: scheme.onPrimary,
+                      )
+                    : AnimatedRotation(
+                        key: const ValueKey('add-button-plus'),
+                        turns: widget.rotated ? AppMotion.fabRotationTurns : 0,
+                        duration: AppMotion.of(context, AppMotion.fabRotate),
+                        curve: AppMotion.curveOf(context, AppMotion.emphasized),
+                        child: Icon(
+                          LucideIcons.plus,
+                          size: 26,
+                          color: scheme.onPrimary,
+                        ),
+                      ),
+              ),
+            ),
           ),
         ),
       ),

@@ -98,4 +98,26 @@ void main() {
       isNotNull,
     );
   });
+
+  test('the notification icon is a plain white mark, kept from shrinking', () {
+    // Android draws the small icon from its transparency alone: the
+    // full-colour launcher icon shows up as a blank blob.
+    const icon = NotificationService.notificationIcon;
+    expect(icon, isNot(contains('ic_launcher')));
+    final drawable = File('android/app/src/main/res/drawable/$icon.xml');
+    expect(drawable.existsSync(), isTrue);
+    final xml = drawable.readAsStringSync();
+    final colours = RegExp(
+      r'(?:fillColor|strokeColor)="(#[0-9A-Fa-f]{8})"',
+    ).allMatches(xml).map((m) => m.group(1)!.toUpperCase()).toSet();
+    expect(colours, {'#FFFFFFFF', '#00000000'}, reason: 'white or clear only');
+    expect(
+      File('android/app/src/main/res/raw/keep.xml').readAsStringSync(),
+      contains('@drawable/$icon'),
+    );
+    expect(
+      File('lib/core/services/notification_service.dart').readAsStringSync(),
+      isNot(contains("AndroidInitializationSettings('@mipmap")),
+    );
+  });
 }

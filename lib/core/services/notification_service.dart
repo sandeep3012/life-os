@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:ui' show Color;
 
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -185,7 +186,15 @@ class NotificationService {
     }
   }
 
+  /// The drawable Android shows in the status bar and on each notification.
+  static const notificationIcon = 'ic_stat_lifeos';
+
+  /// Tints that icon (and the app name beside it) in the notification shade:
+  /// the launcher icon's indigo.
+  static const notificationAccent = Color(0xFF6750E7);
+
   static const _taskChannel = AndroidNotificationDetails(
+    color: notificationAccent,
     'task_reminders_v2',
     'Task reminders',
     channelDescription: 'Reminders for tasks with a due time',
@@ -194,6 +203,7 @@ class NotificationService {
   );
 
   static const _habitChannel = AndroidNotificationDetails(
+    color: notificationAccent,
     'habit_reminders_v2',
     'Habit reminders',
     channelDescription: 'Daily nudge for habits not yet logged today',
@@ -208,6 +218,7 @@ class NotificationService {
       _alarmChannel('habit_alarms', 'Habit alarms', 'Alarm-style reminders for habits');
 
   static const _billChannel = AndroidNotificationDetails(
+    color: notificationAccent,
     'bill_reminders_v2',
     'Bill reminders',
     channelDescription: 'Reminders for upcoming bill due dates',
@@ -219,6 +230,7 @@ class NotificationService {
       _alarmChannel('bill_alarms', 'Bill alarms', 'Alarm-style reminders for upcoming bill due dates');
 
   static const _eventChannel = AndroidNotificationDetails(
+    color: notificationAccent,
     'event_reminders_v2',
     'Event reminders',
     channelDescription: 'Reminders for upcoming calendar events',
@@ -230,6 +242,7 @@ class NotificationService {
       _alarmChannel('event_alarms', 'Event alarms', 'Alarm-style reminders for upcoming calendar events');
 
   static const _goalChannel = AndroidNotificationDetails(
+    color: notificationAccent,
     'goal_reminders_v2',
     'Goal reminders',
     channelDescription: 'Reminders for upcoming goal deadlines',
@@ -273,6 +286,7 @@ class NotificationService {
     String name,
     String description,
   ) => AndroidNotificationDetails(
+    color: notificationAccent,
     alarmChannelId(base, _alarmTone),
     name,
     channelDescription: description,
@@ -350,6 +364,7 @@ class NotificationService {
   static const _insightDigestId = 1;
 
   static const _insightChannel = AndroidNotificationDetails(
+    color: notificationAccent,
     'insight_alerts',
     'Insight alerts',
     channelDescription: 'A morning note when LifeOS finds something new',
@@ -408,7 +423,10 @@ class NotificationService {
         // wall-clock time, which beats not firing at all.
       }
 
-      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      // A white-on-transparent mark (res/drawable/ic_stat_lifeos.xml), not
+      // the launcher icon: Android draws a notification's small icon from
+      // its transparency alone, so the full-colour icon came out as a blob.
+      const androidInit = AndroidInitializationSettings(notificationIcon);
       final iosInit = DarwinInitializationSettings(
         notificationCategories: [
           DarwinNotificationCategory(
