@@ -9,6 +9,7 @@ import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
 import 'package:life_manager/features/onboarding/application/onboarding_gate.dart';
+import 'package:life_manager/features/onboarding/presentation/home_tour.dart';
 
 class _FakeNotificationService extends NotificationService {
   int permissionRequests = 0;
@@ -45,6 +46,7 @@ void main() {
   late _FakeNotificationService notifications;
 
   setUp(() {
+    HomeTour.debugReset();
     db = AppDatabase.forTesting(NativeDatabase.memory());
     notifications = _FakeNotificationService();
   });
@@ -115,7 +117,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Everything else lives here'), findsNothing);
-    expect((await settings()).toursSeen, 'home');
+    // The tour's first step covers hold-to-speak, so that tip is seen too.
+    expect((await settings()).toursSeen, 'home,hold_to_speak');
     await disposeCleanly(tester);
   });
 
@@ -155,13 +158,41 @@ void main() {
           const AppSettingsCompanion(
             id: Value(0),
             onboardingCompleted: Value(true),
-            toursSeen: Value('home'),
+            toursSeen: Value('home,hold_to_speak'),
           ),
         );
     OnboardingGate.debugOffer = true;
     await pumpApp(tester);
     expect(find.text('Add anything from here'), findsNothing);
+    expect(find.text('Tap to add. Hold to speak.'), findsNothing);
     expect(find.textContaining('Your whole day'), findsNothing);
+    await disposeCleanly(tester);
+  });
+
+  testWidgets('someone who saw the tour before gets the hold-to-speak tip '
+      'once', (tester) async {
+    await db
+        .into(db.appSettings)
+        .insert(
+          const AppSettingsCompanion(
+            id: Value(0),
+            onboardingCompleted: Value(true),
+            toursSeen: Value('home'),
+          ),
+        );
+    OnboardingGate.debugOffer = true;
+    await pumpApp(tester);
+
+    // Just the tip — not the whole tour again, and no "1 of 1".
+    expect(find.text('Tap to add. Hold to speak.'), findsOneWidget);
+    expect(find.text('Add anything from here'), findsNothing);
+    expect(find.text('1 of 1'), findsNothing);
+    expect(find.text('Skip tour'), findsNothing);
+
+    await tester.tap(find.text('Got it'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tap to add. Hold to speak.'), findsNothing);
+    expect((await settings()).toursSeen, 'home,hold_to_speak');
     await disposeCleanly(tester);
   });
 

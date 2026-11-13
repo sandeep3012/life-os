@@ -20,18 +20,23 @@ import 'app_spacing.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData light([AppColorTheme colorTheme = AppColorTheme.forest]) =>
-      _buildTheme(Brightness.light, colorTheme);
+  /// [background] is the page colour chosen in Settings; it only applies in
+  /// light mode.
+  static ThemeData light([
+    AppColorTheme colorTheme = AppColorTheme.forest,
+    AppBackground background = AppBackground.recommended,
+  ]) => _buildTheme(Brightness.light, colorTheme, background);
 
   static ThemeData dark([AppColorTheme colorTheme = AppColorTheme.forest]) =>
-      _buildTheme(Brightness.dark, colorTheme);
+      _buildTheme(Brightness.dark, colorTheme, AppBackground.recommended);
 
   static ThemeData _buildTheme(
     Brightness brightness,
     AppColorTheme colorTheme,
+    AppBackground background,
   ) {
     final isLight = brightness == Brightness.light;
-    final palette = colorTheme.forBrightness(brightness);
+    final palette = colorTheme.paletteFor(brightness, background);
     final appColors = (isLight ? AppColors.light : AppColors.dark).copyWith(
       surfaceAlt: palette.surfaceDim,
       raised: palette.raised,

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The status-bar / notification icon: LifeOS's ring mark as a plain white
+     shape. Android draws a notification's small icon from its transparency
+     alone, so the full-colour launcher icon showed up there as a blank
+     blob. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- The ring: from the top, clockwise to about eight o'clock. -->
+    <path
+        android:pathData="M12,4.5 A7.5,7.5 0 1 1 5.2,15.17"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <!-- The bead where the ring starts. -->
+    <path
+        android:pathData="M10.1,4.5 a1.9,1.9 0 1,0 3.8,0 a1.9,1.9 0 1,0 -3.8,0"
+        android:fillColor="#FFFFFFFF" />
+</vector>

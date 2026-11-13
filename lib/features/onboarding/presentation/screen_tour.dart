@@ -129,7 +129,10 @@ class _ScreenTourState extends State<_ScreenTour> {
             bottom: below ? null : screen.height - hole.top + 14,
             child: _TipCard(
               step: step,
-              position: '${_index + 1} of ${widget.steps.length}',
+              // A single tip isn't a tour: no "1 of 1".
+              position: widget.steps.length == 1
+                  ? ''
+                  : '${_index + 1} of ${widget.steps.length}',
               last: last,
               onNext: _advance,
               onSkip: widget.onDone,

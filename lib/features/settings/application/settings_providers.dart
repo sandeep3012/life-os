@@ -43,6 +43,7 @@ class ResolvedSettings {
     this.soundEffectsEnabled = true,
     this.voiceEntryConsent = false,
     this.fontStyle = AppFontStyle.classic,
+    this.background = AppBackground.recommended,
   });
 
   final ThemeMode themeMode;
@@ -82,6 +83,9 @@ class ResolvedSettings {
 
   /// The font look — see [AppFontStyle].
   final AppFontStyle fontStyle;
+
+  /// The light-mode page background — see [AppBackground].
+  final AppBackground background;
 
   static const defaults = ResolvedSettings(
     themeMode: ThemeMode.system,
@@ -148,6 +152,7 @@ final settingsProvider = Provider<ResolvedSettings>((ref) {
     soundEffectsEnabled: row.soundEffectsEnabled,
     voiceEntryConsent: row.voiceEntryConsent,
     fontStyle: AppFontStyle.fromStorage(row.fontStyle),
+    background: AppBackground.fromStorage(row.backgroundStyle),
   );
 });
 
@@ -205,6 +210,9 @@ class SettingsController {
 
   Future<void> setFontStyle(AppFontStyle style) =>
       _repo.setFontStyle(style.storageValue);
+
+  Future<void> setBackground(AppBackground background) =>
+      _repo.setBackgroundStyle(background.storageValue);
 
   Future<void> setTaskReminders(bool enabled) =>
       _repo.setTaskReminders(enabled);

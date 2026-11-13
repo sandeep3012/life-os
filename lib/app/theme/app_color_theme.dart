@@ -2,189 +2,39 @@ import 'package:flutter/material.dart';
 
 /// Curated brand palettes. Display mode (light, dark, or system) is selected
 /// independently in Settings; every palette supplies both appearances.
-enum AppColorTheme {
-  forest,
-  nordicSlate,
-  matchaSand,
-  warmSandstone,
-  oledMidnight,
-  ocean,
-  indigo,
-  plum,
-  terracotta,
-}
+enum AppColorTheme { forest, oledMidnight, ocean, indigo, plum }
 
 extension AppColorThemeX on AppColorTheme {
   String get storageValue => name;
 
   String get label => switch (this) {
-    AppColorTheme.nordicSlate => 'Nordic Slate',
-    AppColorTheme.matchaSand => 'Matcha & Sand',
-    AppColorTheme.warmSandstone => 'Warm Sandstone',
     AppColorTheme.oledMidnight => 'OLED Midnight',
     AppColorTheme.forest => 'Forest',
     AppColorTheme.ocean => 'Ocean',
     AppColorTheme.indigo => 'Indigo',
     AppColorTheme.plum => 'Plum',
-    AppColorTheme.terracotta => 'Terracotta',
   };
 
   Color get previewColor => switch (this) {
-    AppColorTheme.nordicSlate => const Color(0xFF1E3A4C),
-    AppColorTheme.matchaSand => const Color(0xFF3D4A3E),
-    AppColorTheme.warmSandstone => const Color(0xFFA45A48),
     AppColorTheme.oledMidnight => const Color(0xFF4FD1C5),
     AppColorTheme.forest => const Color(0xFF0B7C56),
     AppColorTheme.ocean => const Color(0xFF096B8A),
     AppColorTheme.indigo => const Color(0xFF6750E7),
     AppColorTheme.plum => const Color(0xFF8B3F8F),
-    AppColorTheme.terracotta => const Color(0xFFB45309),
   };
 
   ThemePalette forBrightness(Brightness brightness) {
     final light = brightness == Brightness.light;
     return switch (this) {
-      AppColorTheme.nordicSlate =>
-        light
-            ? const ThemePalette(
-                seed: Color(0xFF1E3A4C),
-                background: Color(0xFFF7F9FA),
-                surface: Color(0xFFFFFFFF),
-                surfaceDim: Color(0xFFEEF3F5),
-                raised: Color(0xFFFFFFFF),
-                stage: Color(0xFFDFE8EB),
-                ink: Color(0xFF172B36),
-                ink2: Color(0xFF60727B),
-                text3: Color(0xFF8B9BA3),
-                primary: Color(0xFF1E3A4C),
-                secondary: Color(0xFF3B7A57),
-                onPrimary: Color(0xFFFFFFFF),
-                accentSoft: Color(0x1F1E3A4C),
-                accentInk: Color(0xFF1E3A4C),
-                heroA: Color(0xFF173243),
-                heroB: Color(0xFF3B7A57),
-                heroVeil: Color(0x1AFFFFFF),
-                heroTrack: Color(0x47FFFFFF),
-                codeBg: Color(0xFFEDF3F5),
-              )
-            : const ThemePalette(
-                seed: Color(0xFF9AB9C7),
-                background: Color(0xFF121A1E),
-                surface: Color(0xFF1C272D),
-                surfaceDim: Color(0xFF26343A),
-                raised: Color(0xFF223037),
-                stage: Color(0xFF090D0F),
-                ink: Color(0xFFEAF1F3),
-                ink2: Color(0xFFB0C1C7),
-                text3: Color(0xFF74868D),
-                primary: Color(0xFF9AB9C7),
-                secondary: Color(0xFF78AA87),
-                onPrimary: Color(0xFF10242D),
-                accentSoft: Color(0x299AB9C7),
-                accentInk: Color(0xFFC1DCE6),
-                heroA: Color(0xFF507A8C),
-                heroB: Color(0xFF78AA87),
-                heroVeil: Color(0x1A090D0F),
-                heroTrack: Color(0x3D090D0F),
-                codeBg: Color(0xFF121B1F),
-              ),
-      AppColorTheme.matchaSand =>
-        light
-            ? const ThemePalette(
-                seed: Color(0xFF3D4A3E),
-                background: Color(0xFFF6F5F0),
-                surface: Color(0xFFFFFFFF),
-                surfaceDim: Color(0xFFEFEEE7),
-                raised: Color(0xFFFFFFFF),
-                stage: Color(0xFFE4E2D8),
-                ink: Color(0xFF202820),
-                ink2: Color(0xFF667066),
-                text3: Color(0xFF929B8C),
-                primary: Color(0xFF3D4A3E),
-                secondary: Color(0xFFC89D4B),
-                onPrimary: Color(0xFFFFFFFF),
-                accentSoft: Color(0x1F3D4A3E),
-                accentInk: Color(0xFF3D4A3E),
-                heroA: Color(0xFF344036),
-                heroB: Color(0xFFC89D4B),
-                heroVeil: Color(0x1AFFFFFF),
-                heroTrack: Color(0x47FFFFFF),
-                codeBg: Color(0xFFEEEDE5),
-              )
-            : const ThemePalette(
-                seed: Color(0xFFB9C8AD),
-                background: Color(0xFF171A16),
-                surface: Color(0xFF21261F),
-                surfaceDim: Color(0xFF2B3228),
-                raised: Color(0xFF262D24),
-                stage: Color(0xFF0A0C09),
-                ink: Color(0xFFF0F4EC),
-                ink2: Color(0xFFC0C9B9),
-                text3: Color(0xFF838D7A),
-                primary: Color(0xFFB9C8AD),
-                secondary: Color(0xFFE6C77D),
-                onPrimary: Color(0xFF1A241A),
-                accentSoft: Color(0x29B9C8AD),
-                accentInk: Color(0xFFD3DFC9),
-                heroA: Color(0xFF6E816A),
-                heroB: Color(0xFFE6C77D),
-                heroVeil: Color(0x1A0A0C09),
-                heroTrack: Color(0x3D0A0C09),
-                codeBg: Color(0xFF151814),
-              ),
-      AppColorTheme.warmSandstone =>
-        light
-            ? const ThemePalette(
-                seed: Color(0xFFA45A48),
-                background: Color(0xFFFAF8F5),
-                surface: Color(0xFFFFFFFF),
-                surfaceDim: Color(0xFFF6EFE9),
-                raised: Color(0xFFFFFFFF),
-                stage: Color(0xFFEBDDD4),
-                ink: Color(0xFF30211E),
-                ink2: Color(0xFF786763),
-                text3: Color(0xFFA18E88),
-                primary: Color(0xFFA45A48),
-                secondary: Color(0xFF4F5D4E),
-                onPrimary: Color(0xFFFFFFFF),
-                accentSoft: Color(0x1FA45A48),
-                accentInk: Color(0xFF914A3A),
-                heroA: Color(0xFF8E4B3A),
-                heroB: Color(0xFF4F5D4E),
-                heroVeil: Color(0x1AFFFFFF),
-                heroTrack: Color(0x47FFFFFF),
-                codeBg: Color(0xFFF5ECE6),
-              )
-            : const ThemePalette(
-                seed: Color(0xFFE7A18D),
-                background: Color(0xFF211915),
-                surface: Color(0xFF2C221E),
-                surfaceDim: Color(0xFF392C27),
-                raised: Color(0xFF352923),
-                stage: Color(0xFF120D0B),
-                ink: Color(0xFFFAF0EB),
-                ink2: Color(0xFFCDB9B1),
-                text3: Color(0xFF927C75),
-                primary: Color(0xFFE7A18D),
-                secondary: Color(0xFFA9C0A7),
-                onPrimary: Color(0xFF3D1E17),
-                accentSoft: Color(0x29E7A18D),
-                accentInk: Color(0xFFFFD0C2),
-                heroA: Color(0xFFC47763),
-                heroB: Color(0xFFA9C0A7),
-                heroVeil: Color(0x1A120D0B),
-                heroTrack: Color(0x3D120D0B),
-                codeBg: Color(0xFF1D1512),
-              ),
       AppColorTheme.oledMidnight =>
         light
             ? const ThemePalette(
                 seed: Color(0xFF167C76),
-                background: Color(0xFFF3F8F8),
+                background: Color(0xFFF7EEE9),
                 surface: Color(0xFFFFFFFF),
-                surfaceDim: Color(0xFFEAF2F2),
+                surfaceDim: Color(0xFFFBF6F4),
                 raised: Color(0xFFFFFFFF),
-                stage: Color(0xFFDDE8E7),
+                stage: Color(0xFFE8E0DB),
                 ink: Color(0xFF162427),
                 ink2: Color(0xFF617174),
                 text3: Color(0xFF899A9B),
@@ -197,7 +47,7 @@ extension AppColorThemeX on AppColorTheme {
                 heroB: Color(0xFF2F925D),
                 heroVeil: Color(0x1AFFFFFF),
                 heroTrack: Color(0x47FFFFFF),
-                codeBg: Color(0xFFE8F0F0),
+                codeBg: Color(0xFFF2E9E4),
               )
             : const ThemePalette(
                 seed: Color(0xFF4FD1C5),
@@ -266,11 +116,11 @@ extension AppColorThemeX on AppColorTheme {
         light
             ? const ThemePalette(
                 seed: Color(0xFF096B8A),
-                background: Color(0xFFF3F8FA),
+                background: Color(0xFFF8EFE3),
                 surface: Color(0xFFFFFFFF),
-                surfaceDim: Color(0xFFEDF5F7),
+                surfaceDim: Color(0xFFFCF7F1),
                 raised: Color(0xFFFFFFFF),
-                stage: Color(0xFFDDECEF),
+                stage: Color(0xFFE9E1D5),
                 ink: Color(0xFF15252B),
                 ink2: Color(0xFF61737A),
                 text3: Color(0xFF8B9CA2),
@@ -282,15 +132,15 @@ extension AppColorThemeX on AppColorTheme {
                 heroB: Color(0xFF087A98),
                 heroVeil: Color(0x1AFFFFFF),
                 heroTrack: Color(0x47FFFFFF),
-                codeBg: Color(0xFFE8F1F4),
+                codeBg: Color(0xFFF3EADE),
               )
             : const ThemePalette(
                 seed: Color(0xFF67D5EE),
-                background: Color(0xFF111A1D),
-                surface: Color(0xFF182428),
-                surfaceDim: Color(0xFF223136),
-                raised: Color(0xFF1E2B30),
-                stage: Color(0xFF091114),
+                background: Color(0xFF161412),
+                surface: Color(0xFF211E1A),
+                surfaceDim: Color(0xFF2C2722),
+                raised: Color(0xFF27231F),
+                stage: Color(0xFF0C0A09),
                 ink: Color(0xFFE7F4F7),
                 ink2: Color(0xFFA9C1C8),
                 text3: Color(0xFF718B92),
@@ -300,19 +150,19 @@ extension AppColorThemeX on AppColorTheme {
                 accentInk: Color(0xFF9BE7F5),
                 heroA: Color(0xFF117A92),
                 heroB: Color(0xFF67D5EE),
-                heroVeil: Color(0x1A091114),
-                heroTrack: Color(0x3D091114),
-                codeBg: Color(0xFF10191C),
+                heroVeil: Color(0x1A0C0A09),
+                heroTrack: Color(0x3D0C0A09),
+                codeBg: Color(0xFF141210),
               ),
       AppColorTheme.indigo =>
         light
             ? const ThemePalette(
                 seed: Color(0xFF6750E7),
-                background: Color(0xFFF3F1FA),
+                background: Color(0xFFF5EEF2),
                 surface: Color(0xFFFFFFFF),
-                surfaceDim: Color(0xFFFBFAFE),
+                surfaceDim: Color(0xFFFAF6F8),
                 raised: Color(0xFFFFFFFF),
-                stage: Color(0xFFECE8F7),
+                stage: Color(0xFFE6E0E3),
                 ink: Color(0xFF211B36),
                 ink2: Color(0xFF5B5570),
                 text3: Color(0xFF8B84A3),
@@ -325,15 +175,15 @@ extension AppColorThemeX on AppColorTheme {
                 heroB: Color(0xFF8D7BF5),
                 heroVeil: Color(0x1AFFFFFF),
                 heroTrack: Color(0x47FFFFFF),
-                codeBg: Color(0xFFECE8F7),
+                codeBg: Color(0xFFF0E9ED),
               )
             : const ThemePalette(
                 seed: Color(0xFF6750E7),
-                background: Color(0xFF14121F),
-                surface: Color(0xFF1E1B2E),
-                surfaceDim: Color(0xFF262238),
-                raised: Color(0xFF1E1B2E),
-                stage: Color(0xFF100E19),
+                background: Color(0xFF161214),
+                surface: Color(0xFF201B1E),
+                surfaceDim: Color(0xFF2B2427),
+                raised: Color(0xFF262023),
+                stage: Color(0xFF0B0A0A),
                 ink: Color(0xFFECE9F7),
                 ink2: Color(0xFFABA5C4),
                 text3: Color(0xFF726C8C),
@@ -344,19 +194,19 @@ extension AppColorThemeX on AppColorTheme {
                 accentInk: Color(0xFF8D7BF5),
                 heroA: Color(0xFF6D5FE0),
                 heroB: Color(0xFF8D7BF5),
-                heroVeil: Color(0x1A100E19),
-                heroTrack: Color(0x3D100E19),
-                codeBg: Color(0xFF100E19),
+                heroVeil: Color(0x1A0B0A0A),
+                heroTrack: Color(0x3D0B0A0A),
+                codeBg: Color(0xFF131012),
               ),
       AppColorTheme.plum =>
         light
             ? const ThemePalette(
                 seed: Color(0xFF8B3F8F),
-                background: Color(0xFFFCF6FC),
+                background: Color(0xFFF0F2E6),
                 surface: Color(0xFFFFFFFF),
-                surfaceDim: Color(0xFFF7EEF7),
+                surfaceDim: Color(0xFFF8F8F2),
                 raised: Color(0xFFFFFFFF),
-                stage: Color(0xFFEEDFEF),
+                stage: Color(0xFFE2E3D8),
                 ink: Color(0xFF30202F),
                 ink2: Color(0xFF786779),
                 text3: Color(0xFFA18EA2),
@@ -368,15 +218,15 @@ extension AppColorThemeX on AppColorTheme {
                 heroB: Color(0xFF974B9B),
                 heroVeil: Color(0x1AFFFFFF),
                 heroTrack: Color(0x47FFFFFF),
-                codeBg: Color(0xFFF5EAF5),
+                codeBg: Color(0xFFEBEDE1),
               )
             : const ThemePalette(
                 seed: Color(0xFFE9A8ED),
-                background: Color(0xFF201620),
-                surface: Color(0xFF2B1F2B),
-                surfaceDim: Color(0xFF382A38),
-                raised: Color(0xFF342534),
-                stage: Color(0xFF120B12),
+                background: Color(0xFF151512),
+                surface: Color(0xFF1F201B),
+                surfaceDim: Color(0xFF292A24),
+                raised: Color(0xFF242620),
+                stage: Color(0xFF0B0B0A),
                 ink: Color(0xFFF9EFF9),
                 ink2: Color(0xFFCAB5CA),
                 text3: Color(0xFF907A91),
@@ -386,53 +236,90 @@ extension AppColorThemeX on AppColorTheme {
                 accentInk: Color(0xFFF2C5F4),
                 heroA: Color(0xFFAC67B1),
                 heroB: Color(0xFFE9A8ED),
-                heroVeil: Color(0x1A120B12),
-                heroTrack: Color(0x3D120B12),
-                codeBg: Color(0xFF1D131D),
-              ),
-      AppColorTheme.terracotta =>
-        light
-            ? const ThemePalette(
-                seed: Color(0xFFB45309),
-                background: Color(0xFFFCF7F1),
-                surface: Color(0xFFFFFFFF),
-                surfaceDim: Color(0xFFFAF0E5),
-                raised: Color(0xFFFFFFFF),
-                stage: Color(0xFFEFE1D2),
-                ink: Color(0xFF302116),
-                ink2: Color(0xFF786858),
-                text3: Color(0xFFA18E7C),
-                primary: Color(0xFFB45309),
-                onPrimary: Color(0xFFFFFFFF),
-                accentSoft: Color(0x1FB45309),
-                accentInk: Color(0xFF9A4608),
-                heroA: Color(0xFF974407),
-                heroB: Color(0xFFC56315),
-                heroVeil: Color(0x1AFFFFFF),
-                heroTrack: Color(0x47FFFFFF),
-                codeBg: Color(0xFFF5E9DD),
-              )
-            : const ThemePalette(
-                seed: Color(0xFFFBC07E),
-                background: Color(0xFF211912),
-                surface: Color(0xFF2D2219),
-                surfaceDim: Color(0xFF392C21),
-                raised: Color(0xFF35281D),
-                stage: Color(0xFF120D09),
-                ink: Color(0xFFF9F0E8),
-                ink2: Color(0xFFCDB9A6),
-                text3: Color(0xFF927D6B),
-                primary: Color(0xFFFBC07E),
-                onPrimary: Color(0xFF3A1C06),
-                accentSoft: Color(0x29FBC07E),
-                accentInk: Color(0xFFFFD7AA),
-                heroA: Color(0xFFC9813B),
-                heroB: Color(0xFFFBC07E),
-                heroVeil: Color(0x1A120D09),
-                heroTrack: Color(0x3D120D09),
-                codeBg: Color(0xFF1F1711),
+                heroVeil: Color(0x1A0B0B0A),
+                heroTrack: Color(0x3D0B0B0A),
+                codeBg: Color(0xFF131310),
               ),
     };
+  }
+}
+
+/// The page background in light mode (Settings → Appearance → Background).
+///
+/// Each colour theme has a background chosen to pair with its accent the way
+/// Forest's cream pairs with its green — a soft paper from a different colour
+/// family than the accent, clearly darker than the white cards. That's
+/// [recommended]; the others are the same for every theme. Dark mode has no
+/// choice: each theme's dark background is fixed.
+enum AppBackground {
+  recommended('recommended', 'Recommended'),
+  cream('cream', 'Cream'),
+  stone('stone', 'Stone'),
+  softWhite('soft_white', 'Soft white');
+
+  const AppBackground(this.storageValue, this.label);
+
+  final String storageValue;
+  final String label;
+
+  static AppBackground fromStorage(String? value) => values.firstWhere(
+    (b) => b.storageValue == value,
+    orElse: () => AppBackground.recommended,
+  );
+}
+
+extension AppColorThemeBackgrounds on AppColorTheme {
+  static const _cream = Color(0xFFF5F1E9);
+  static const _stone = Color(0xFFEFEDE8);
+
+  /// The backgrounds offered for this theme. Forest's recommended background
+  /// *is* cream, so it's listed once.
+  List<AppBackground> get backgrounds => this == AppColorTheme.forest
+      ? const [
+          AppBackground.cream,
+          AppBackground.stone,
+          AppBackground.softWhite,
+        ]
+      : AppBackground.values;
+
+  /// [background] as this theme lists it: Forest shows "Recommended" as
+  /// Cream.
+  AppBackground shown(AppBackground background) =>
+      this == AppColorTheme.forest && background == AppBackground.recommended
+      ? AppBackground.cream
+      : background;
+
+  /// What to save when [background] is picked under this theme. Picking
+  /// Forest's Cream saves "recommended", so moving to another theme later
+  /// still gets that theme's own pairing rather than cream everywhere.
+  AppBackground saved(AppBackground background) =>
+      this == AppColorTheme.forest && background == AppBackground.cream
+      ? AppBackground.recommended
+      : background;
+
+  /// The light-mode page colour for [background] under this theme.
+  Color lightBackground(AppBackground background) => switch (background) {
+    AppBackground.recommended => forBrightness(Brightness.light).background,
+    AppBackground.cream => _cream,
+    AppBackground.stone => _stone,
+    // A near-white with a breath of the theme's own colour.
+    AppBackground.softWhite => switch (this) {
+      AppColorTheme.forest => const Color(0xFFFBF9F5),
+      AppColorTheme.oledMidnight => const Color(0xFFF3F8F8),
+      AppColorTheme.ocean => const Color(0xFFF3F8FA),
+      AppColorTheme.indigo => const Color(0xFFF3F1FA),
+      AppColorTheme.plum => const Color(0xFFFCF6FC),
+    },
+  };
+
+  /// This theme's palette for [brightness], on [background] in light mode.
+  ThemePalette paletteFor(Brightness brightness, AppBackground background) {
+    final palette = forBrightness(brightness);
+    if (brightness == Brightness.dark) return palette;
+    final color = lightBackground(background);
+    return color == palette.background
+        ? palette
+        : palette.withBackground(color);
   }
 }
 
@@ -484,4 +371,38 @@ class ThemePalette {
   final Color heroVeil;
   final Color heroTrack;
   final Color codeBg;
+
+  /// This palette on a different page [background]. The shades that sit
+  /// around it follow, in the proportions Forest's keep to its cream: the
+  /// dimmed surface halfway to white, the stage a step darker, the code
+  /// block a touch darker.
+  ThemePalette withBackground(Color background) {
+    Color scaled(double factor) => Color.from(
+      alpha: 1,
+      red: background.r * factor,
+      green: background.g * factor,
+      blue: background.b * factor,
+    );
+    return ThemePalette(
+      seed: seed,
+      background: background,
+      surface: surface,
+      surfaceDim: Color.lerp(background, const Color(0xFFFFFFFF), 0.5)!,
+      raised: raised,
+      stage: scaled(0.94),
+      ink: ink,
+      ink2: ink2,
+      text3: text3,
+      primary: primary,
+      secondary: secondary,
+      onPrimary: onPrimary,
+      accentSoft: accentSoft,
+      accentInk: accentInk,
+      heroA: heroA,
+      heroB: heroB,
+      heroVeil: heroVeil,
+      heroTrack: heroTrack,
+      codeBg: scaled(0.98),
+    );
+  }
 }

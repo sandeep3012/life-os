@@ -198,6 +198,19 @@ or a `State` field: it would keep the old family. Loading the new files over
 the old family names with `FontLoader` was tried and does **not** work: the
 engine keeps the first face registered for a name when two match equally.
 
+**Colour themes and backgrounds (`app_color_theme.dart`).** Five themes:
+Forest, OLED Midnight, Ocean, Indigo, Plum (Nordic Slate, Matcha & Sand, Warm
+Sandstone and Terracotta were removed; a stored value for one falls back to
+Forest). Each theme's light background follows Forest's formula — a soft paper
+from a *different* colour family than the accent, clearly darker than the white
+cards (Ocean → Shell, Indigo → Petal, Plum → Pistachio cream, Midnight → Blush)
+— not a near-white tint of the accent, which made cards blend into the page.
+Settings → Appearance → Background (`AppBackground`, `AppSettings.backgroundStyle`,
+v38) lets the person swap it in light mode for Cream, Stone or Soft white;
+`ThemePalette.withBackground` derives the surrounding shades. "Recommended"
+follows the theme; Forest lists it as Cream. Dark backgrounds are fixed per
+theme: near-neutral charcoals (~8% lightness, ~10% saturation).
+
 Radii come from `AppSpacing`, which carries the comp's own scale (cards 22,
 tiles 16, controls 15, icon buttons 13, nav pill 24, sheets 30) rather than one
 shared value.

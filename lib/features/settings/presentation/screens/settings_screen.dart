@@ -148,6 +148,45 @@ class SettingsScreen extends ConsumerWidget {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 18),
+                  Text('Background', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    'The page colour behind the cards, in light mode.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final background in settings.colorTheme.backgrounds)
+                        ChoiceChip(
+                          avatar: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: settings.colorTheme.lightBackground(
+                                background,
+                              ),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant,
+                              ),
+                            ),
+                          ),
+                          label: Text(background.label),
+                          selected:
+                              settings.colorTheme.shown(settings.background) ==
+                              background,
+                          onSelected: (_) => controller.setBackground(
+                            settings.colorTheme.saved(background),
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -460,7 +499,7 @@ Future<void> _previewAndApplyTheme(
   };
   final previewTheme = brightness == Brightness.dark
       ? AppTheme.dark(colorTheme)
-      : AppTheme.light(colorTheme);
+      : AppTheme.light(colorTheme, ref.read(settingsProvider).background);
   final approved = await showDialog<bool>(
     context: context,
     builder: (context) => Theme(
@@ -1524,9 +1563,7 @@ class _SampleDataRowState extends ConsumerState<_SampleDataRow> {
         child: ListTile(
           leading: const _IconWell(LucideIcons.eraser),
           title: const Text('Remove sample data'),
-          subtitle: Text(
-            _busy ? 'Removing…' : 'Clear the example entries',
-          ),
+          subtitle: Text(_busy ? 'Removing…' : 'Clear the example entries'),
           onTap: _busy ? null : _remove,
         ),
       ),
