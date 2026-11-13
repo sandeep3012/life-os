@@ -480,4 +480,152 @@ void main() {
       expect((await db.select(db.notes).get()).single.title, 'Keep me');
     },
   );
+
+  group('password, missing files and file-based restore', () {
+    Future<Document> addDocument(String title, {bool withFile = true}) async {
+      final source = File('${tempDir.path}/$title.txt')
+        ..writeAsStringSync('contents of $title');
+      final stored = await storage.importFile(
+        source,
+        originalName: '$title.txt',
+      );
+      if (!withFile) {
+        await (await storage.absoluteFile(stored.relativePath)).delete();
+      }
+      return db
+          .into(db.documents)
+          .insertReturning(
+            DocumentsCompanion.insert(
+              title: title,
+              filePath: stored.relativePath,
+              mimeType: stored.mimeType,
+            ),
+          );
+    }
+
+    test(
+      'a password-protected backup restores with its password only',
+      () async {
+        final doc = await addDocument('Passport');
+        await db.into(db.notes).insert(NotesCompanion.insert(title: 'Secret'));
+        final export = await backup.exportBackupFile(password: 'open sesame');
+        addTearDown(export.discard);
+        expect(await backup.isPasswordProtected(export.file), isTrue);
+
+        // Not readable as plain text: neither the note nor the file.
+        final raw = String.fromCharCodes(await export.file.readAsBytes());
+        expect(raw, isNot(contains('Secret')));
+        expect(raw, isNot(contains('contents of Passport')));
+
+        await db.delete(db.notes).go();
+        await db.delete(db.documents).go();
+        await (await storage.absoluteFile(doc.filePath)).delete();
+
+        await expectLater(
+          backup.importBackupFile(export.file),
+          throwsA(
+            isA<BackupPasswordRequired>().having(
+              (e) => e.wrong,
+              'wrong',
+              isFalse,
+            ),
+          ),
+        );
+        await expectLater(
+          backup.importBackupFile(export.file, password: 'not it'),
+          throwsA(
+            isA<BackupPasswordRequired>().having(
+              (e) => e.wrong,
+              'wrong',
+              isTrue,
+            ),
+          ),
+        );
+        expect(await db.select(db.notes).get(), isEmpty, reason: 'untouched');
+
+        await backup.importBackupFile(export.file, password: 'open sesame');
+        expect((await db.select(db.notes).getSingle()).title, 'Secret');
+        expect(
+          await (await storage.absoluteFile(doc.filePath)).readAsString(),
+          'contents of Passport',
+        );
+      },
+    );
+
+    test('a backup without a password is not reported as protected', () async {
+      await db.into(db.notes).insert(NotesCompanion.insert(title: 'Plain'));
+      final export = await backup.exportBackupFile();
+      addTearDown(export.discard);
+      expect(await backup.isPasswordProtected(export.file), isFalse);
+      await db.delete(db.notes).go();
+      await backup.importBackupFile(export.file);
+      expect((await db.select(db.notes).getSingle()).title, 'Plain');
+    });
+
+    test('documents whose file is not on this phone are counted', () async {
+      await addDocument('Here');
+      await addDocument('Synced from another phone', withFile: false);
+      final export = await backup.exportBackupFile();
+      addTearDown(export.discard);
+      expect(export.documentFiles, 1);
+      expect(export.missingFiles, 1);
+      expect(export.sizeBytes, greaterThan(0));
+      // Both records are in the backup; only one file can be.
+      final rows =
+          (manifest(await export.file.readAsBytes())['tables']
+                  as Map)['documents']
+              as List;
+      expect(rows, hasLength(2));
+    });
+
+    test('a backup made before passwords existed restores with no password '
+        'asked', () async {
+      final doc = await addDocument('Old receipt');
+      await db
+          .into(db.notes)
+          .insert(NotesCompanion.insert(title: 'From before'));
+
+      // Built the way the app wrote backups before this change: the whole
+      // zip in memory, no password, files stored under files/.
+      final current = manifest(await backup.exportBackup());
+      final manifestBytes = utf8.encode(jsonEncode(current));
+      final fileBytes = await (await storage.absoluteFile(
+        doc.filePath,
+      )).readAsBytes();
+      final archive = Archive()
+        ..addFile(
+          ArchiveFile('backup.json', manifestBytes.length, manifestBytes),
+        )
+        ..addFile(
+          ArchiveFile('files/${doc.filePath}', fileBytes.length, fileBytes),
+        );
+      final oldFile = File('${tempDir.path}/lifeos-backup-old.zip')
+        ..writeAsBytesSync(ZipEncoder().encode(archive));
+
+      await db.delete(db.notes).go();
+      await db.delete(db.documents).go();
+      await (await storage.absoluteFile(doc.filePath)).delete();
+
+      expect(await backup.isPasswordProtected(oldFile), isFalse);
+      await backup.importBackupFile(oldFile);
+      expect((await db.select(db.notes).getSingle()).title, 'From before');
+      expect((await db.select(db.documents).getSingle()).title, 'Old receipt');
+      expect(
+        await (await storage.absoluteFile(doc.filePath)).readAsString(),
+        'contents of Old receipt',
+      );
+    });
+
+    test('voice entry consent is asked again after a restore', () async {
+      await db
+          .into(db.appSettings)
+          .insert(const AppSettingsCompanion(voiceEntryConsent: Value(true)));
+      final bytes = await backup.exportBackup();
+      await backup.importBackup(bytes);
+      expect(
+        (await db.select(db.appSettings).getSingle()).voiceEntryConsent,
+        isFalse,
+      );
+    });
+  });
 }

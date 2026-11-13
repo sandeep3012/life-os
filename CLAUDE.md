@@ -447,6 +447,27 @@ dumps it.
 `git worktree add --detach <dir> HEAD` gives a clean checkout to run the same
 test against, without touching your working tree.
 
+## Backup (`core/services/backup_service.dart`)
+
+Settings → Export / Import data: one zip with `backup.json` (every table but
+sync's own, as rows) and every document's file under `files/`. Restore
+**replaces** all local data.
+
+- **Export goes to disk, not memory** (`exportBackupFile`, `ZipFileEncoder`): a
+  document library is added a file at a time. Up to 150 MB it's handed to the
+  save dialog as bytes; beyond that the file goes to the share sheet.
+- **Optional password** = a standard AES-256 password-protected zip (the
+  `archive` package's). Detect one from the zip's first local header flag
+  (`_isEncryptedZip`), not by trying to read it: with no password the package
+  throws a `TypeError`, and with a wrong one a bare `Exception`.
+- **`missingFiles`** counts documents whose file isn't on this phone (sync
+  carries a document's record, not its file); the export says so.
+- **With sync on, a restore reaches every phone**: the replaced rows upload as
+  the newest state. The restore dialog warns about it.
+- Voice entry consent is always reset by a restore.
+- `backup_service_test.dart` asserts every table is in the backup — add a new
+  table to the export map, `_tableNames`, the wipe and the re-insert.
+
 ## Sync (`features/sync/`, server in `supabase/`)
 
 Optional, end-to-end encrypted, last-edit-wins per row. The app never waits
