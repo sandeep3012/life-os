@@ -48,7 +48,7 @@ void main() {
             _FakeNotificationService(),
           ),
         ],
-        child: const LifeOSApp(),
+        child: const PersonalOSApp(),
       ),
     );
     await tester.pumpAndSettle();

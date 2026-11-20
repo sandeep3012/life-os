@@ -1,3 +1,4 @@
+import '../../subscription/domain/plan.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +13,9 @@ import 'voice_parser.dart';
 /// are deliberately simple; they are not what the AI would return.
 class SampleVoiceParser implements VoiceParser {
   const SampleVoiceParser();
+
+  @override
+  VoiceAllowance? get allowance => null;
 
   @override
   Future<List<VoiceDraft>> parse(VoiceRequest request) async {
@@ -131,7 +135,8 @@ class SampleVoiceParser implements VoiceParser {
       final n = name.toLowerCase();
       if (lower.contains(n)) return name;
       final first = n.split(RegExp(r'\s+')).first;
-      if (first.length >= 3 && RegExp('\\b${RegExp.escape(first)}\\b').hasMatch(lower)) {
+      if (first.length >= 3 &&
+          RegExp('\\b${RegExp.escape(first)}\\b').hasMatch(lower)) {
         return name;
       }
     }
@@ -159,14 +164,15 @@ class SampleVoiceParser implements VoiceParser {
 
   /// "at 6", "6 pm", "6:30 am", "18:00".
   static String? _time(String lower) {
-    final m = RegExp(
-      r'\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?',
-    ).allMatches(lower).where((m) {
-      // Only something that reads as a time: "at 6", "6 pm" or "6:30".
-      return lower.substring(m.start, m.end).startsWith('at') ||
-          m.group(2) != null ||
-          m.group(3) != null;
-    }).firstOrNull;
+    final m =
+        RegExp(
+          r'\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?',
+        ).allMatches(lower).where((m) {
+          // Only something that reads as a time: "at 6", "6 pm" or "6:30".
+          return lower.substring(m.start, m.end).startsWith('at') ||
+              m.group(2) != null ||
+              m.group(3) != null;
+        }).firstOrNull;
     if (m == null) return null;
     var h = int.parse(m.group(1)!);
     final min = int.tryParse(m.group(2) ?? '0') ?? 0;

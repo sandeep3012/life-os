@@ -20,6 +20,7 @@ import '../../../../core/services/system_settings.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../app/router/app_sidebar.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/motion.dart';
 import '../../../../app/theme/app_font_style.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/tappable.dart';
@@ -37,6 +38,9 @@ import '../widgets/reminder_status_card.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../ai_analyser/application/ai_analyser_providers.dart';
+import '../../../subscription/application/plan_providers.dart';
+import '../../../subscription/domain/plan.dart';
+import '../../../subscription/presentation/paywall_sheet.dart';
 import '../../../sync/application/sync_providers.dart';
 import '../../../voice_entry/data/sample_voice_parser.dart';
 
@@ -49,6 +53,11 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final controller = ref.read(settingsControllerProvider);
 
+    final plan = ref.watch(planControllerProvider);
+    // What's on screen: the chosen theme and font, or the free ones when
+    // the plan doesn't include the choice.
+    final shownTheme = ref.watch(effectiveColorThemeProvider);
+    final shownFont = ref.watch(effectiveFontStyleProvider);
     return Scaffold(
       drawer: const AppSidebar(),
       appBar: AppBar(title: const Text('Settings')),
@@ -73,7 +82,7 @@ class SettingsScreen extends ConsumerWidget {
                       children: [
                         Text('This device', style: theme.textTheme.titleSmall),
                         Text(
-                          'Everything is stored locally — sync coming later',
+                          'Everything is stored on this phone. Sync is optional.',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -85,6 +94,9 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+
+          const SizedBox(height: 10),
+          const _PlusCard(),
 
           const _SectionTitle('Appearance'),
           Card(
@@ -138,14 +150,30 @@ class SettingsScreen extends ConsumerWidget {
                               shape: BoxShape.circle,
                             ),
                           ),
-                          label: Text(colorTheme.label),
-                          selected: settings.colorTheme == colorTheme,
-                          onSelected: (_) => _previewAndApplyTheme(
-                            context,
-                            ref,
-                            colorTheme,
-                            settings.themeMode,
-                          ),
+                          // A theme the plan doesn't include wears a lock
+                          // and opens the Plus sheet instead.
+                          label:
+                              _locked(
+                                plan,
+                                colorTheme.isPlus,
+                                PlusFeature.themes,
+                              )
+                              ? _LockedLabel(colorTheme.label)
+                              : Text(colorTheme.label),
+                          selected: shownTheme == colorTheme,
+                          onSelected: (_) =>
+                              _locked(
+                                plan,
+                                colorTheme.isPlus,
+                                PlusFeature.themes,
+                              )
+                              ? showPaywall(context, from: PlusFeature.themes)
+                              : _previewAndApplyTheme(
+                                  context,
+                                  ref,
+                                  colorTheme,
+                                  settings.themeMode,
+                                ),
                         ),
                     ],
                   ),
@@ -163,15 +191,13 @@ class SettingsScreen extends ConsumerWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      for (final background in settings.colorTheme.backgrounds)
+                      for (final background in shownTheme.backgrounds)
                         ChoiceChip(
                           avatar: Container(
                             width: 16,
                             height: 16,
                             decoration: BoxDecoration(
-                              color: settings.colorTheme.lightBackground(
-                                background,
-                              ),
+                              color: shownTheme.lightBackground(background),
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color: theme.colorScheme.outlineVariant,
@@ -180,10 +206,10 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                           label: Text(background.label),
                           selected:
-                              settings.colorTheme.shown(settings.background) ==
+                              shownTheme.shown(settings.background) ==
                               background,
                           onSelected: (_) => controller.setBackground(
-                            settings.colorTheme.saved(background),
+                            shownTheme.saved(background),
                           ),
                         ),
                     ],
@@ -209,12 +235,15 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  for (final style in AppFontStyle.values)
-                    _FontStyleRow(
-                      style: style,
-                      selected: settings.fontStyle == style,
-                      onTap: () => controller.setFontStyle(style),
-                    ),
+                  _FontPicker(
+                    shown: shownFont,
+                    isLocked: (style) =>
+                        _locked(plan, style.isPlus, PlusFeature.fonts),
+                    onPick: (style) =>
+                        _locked(plan, style.isPlus, PlusFeature.fonts)
+                        ? showPaywall(context, from: PlusFeature.fonts)
+                        : controller.setFontStyle(style),
+                  ),
                 ],
               ),
             ),
@@ -321,7 +350,7 @@ class SettingsScreen extends ConsumerWidget {
                 _SettingSwitch(
                   icon: LucideIcons.lightbulb,
                   title: 'AI insight alerts',
-                  subtitle: 'A note at 9 AM when LifeOS finds something new',
+                  subtitle: 'A note at 9 AM when PersonalOS finds something new',
                   value: settings.aiInsightAlerts,
                   onChanged: (enabled) async {
                     await controller.setAiInsightAlerts(enabled);
@@ -1268,11 +1297,11 @@ class _BackupCardState extends ConsumerState<_BackupCard> {
           .read(backupServiceProvider)
           .exportBackupFile(password: password);
       final fileName =
-          'lifeos-backup-${DateFormat('yyyyMMdd-HHmm').format(DateTime.now())}.zip';
+          'personalos-backup-${DateFormat('yyyyMMdd-HHmm').format(DateTime.now())}.zip';
       final bool saved;
       if (export.sizeBytes <= _maxSaveDialogBytes) {
         final path = await FilePicker.saveFile(
-          dialogTitle: 'Save LifeOS backup',
+          dialogTitle: 'Save PersonalOS backup',
           fileName: fileName,
           bytes: await export.file.readAsBytes(),
         );
@@ -1286,7 +1315,7 @@ class _BackupCardState extends ConsumerState<_BackupCard> {
         final result = await SharePlus.instance.share(
           ShareParams(
             files: [XFile(named.path, mimeType: 'application/zip')],
-            subject: 'LifeOS backup',
+            subject: 'PersonalOS backup',
           ),
         );
         saved = result.status == ShareResultStatus.success;
@@ -1603,7 +1632,7 @@ class _SampleDataRowState extends ConsumerState<_SampleDataRow> {
       builder: (context) => AlertDialog(
         title: const Text('Remove sample data?'),
         content: const Text(
-          'Takes out the example entries added when you tried LifeOS. '
+          'Takes out the example entries added when you tried PersonalOS. '
           'Anything you added yourself stays.',
         ),
         actions: [
@@ -1645,17 +1674,102 @@ class _SampleDataRowState extends ConsumerState<_SampleDataRow> {
   }
 }
 
+/// The font looks, folded away: only the one in use shows, with an arrow
+/// under it that opens the rest. Seven rows made the card the longest thing
+/// on the screen for a choice most people make once.
+class _FontPicker extends StatefulWidget {
+  const _FontPicker({
+    required this.shown,
+    required this.isLocked,
+    required this.onPick,
+  });
+
+  /// The font on screen now.
+  final AppFontStyle shown;
+  final bool Function(AppFontStyle style) isLocked;
+  final void Function(AppFontStyle style) onPick;
+
+  @override
+  State<_FontPicker> createState() => _FontPickerState();
+}
+
+class _FontPickerState extends State<_FontPicker> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final styles = _expanded ? AppFontStyle.values : [widget.shown];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AnimatedSize(
+          duration: AppMotion.of(context, AppMotion.recurringReveal),
+          curve: AppMotion.curveOf(context, AppMotion.standard),
+          alignment: Alignment.topCenter,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final style in styles)
+                _FontStyleRow(
+                  key: ValueKey(style),
+                  style: style,
+                  selected: widget.shown == style,
+                  locked: widget.isLocked(style),
+                  onTap: () => widget.onPick(style),
+                ),
+            ],
+          ),
+        ),
+        Tappable(
+          onTap: () => setState(() => _expanded = !_expanded),
+          haptic: TapHaptic.selection,
+          semanticLabel: _expanded ? 'Show fewer fonts' : 'Show all fonts',
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _expanded ? 'Show less' : 'More fonts',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  _expanded ? LucideIcons.chevronUp : LucideIcons.chevronDown,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// One font look in Settings → Appearance → Font, drawn in its own faces so
 /// it can be judged before it's picked.
 class _FontStyleRow extends StatelessWidget {
   const _FontStyleRow({
+    super.key,
     required this.style,
     required this.selected,
     required this.onTap,
+    this.locked = false,
   });
 
   final AppFontStyle style;
   final bool selected;
+
+  /// Part of PersonalOS Plus, and the plan doesn't have it: a lock replaces the
+  /// radio mark, and [onTap] is expected to explain.
+  final bool locked;
   final VoidCallback onTap;
 
   @override
@@ -1665,7 +1779,9 @@ class _FontStyleRow extends StatelessWidget {
       selected: selected,
       onTap: onTap,
       haptic: TapHaptic.selection,
-      semanticLabel: '${style.label} font. ${style.description}',
+      semanticLabel:
+          '${style.label} font. ${style.description}'
+          '${locked ? '. Part of PersonalOS Plus' : ''}',
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1708,7 +1824,7 @@ class _FontStyleRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${style.description} · ₹1,250.00',
+                    style.description,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -1722,8 +1838,12 @@ class _FontStyleRow extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Icon(
-              selected ? LucideIcons.circleCheck : LucideIcons.circle,
-              size: 20,
+              locked
+                  ? LucideIcons.lock
+                  : selected
+                  ? LucideIcons.circleCheck
+                  : LucideIcons.circle,
+              size: locked ? 18 : 20,
               color: selected ? scheme.primary : scheme.outline,
             ),
           ],
@@ -1845,6 +1965,58 @@ class _BackupPasswordDialogState extends State<_BackupPasswordDialog> {
           child: Text(choosing ? 'Export' : 'Continue'),
         ),
       ],
+    );
+  }
+}
+
+/// Whether a Plus-only choice is out of reach on [plan].
+bool _locked(PlanState plan, bool isPlus, PlusFeature feature) =>
+    isPlus && !plan.allows(feature);
+
+/// A chip label with a small lock: the choice is part of PersonalOS Plus.
+class _LockedLabel extends StatelessWidget {
+  const _LockedLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(text),
+      const SizedBox(width: 6),
+      Icon(
+        LucideIcons.lock,
+        size: 13,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        semanticLabel: 'Part of PersonalOS Plus',
+      ),
+    ],
+  );
+}
+
+/// Settings' entry to PersonalOS Plus: what the plan is, and the sheet that
+/// explains it.
+class _PlusCard extends ConsumerWidget {
+  const _PlusCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final plan = ref.watch(planControllerProvider);
+    return Card(
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Icon(LucideIcons.sparkles, color: context.appColors.accentInk),
+        title: Text('PersonalOS Plus', style: theme.textTheme.titleSmall),
+        subtitle: Text(switch (plan.status) {
+          PlanStatus.checking => 'Checking your plan…',
+          _ when plan.isPlus => "You're on Plus",
+          _ => 'Sync, voice entry and every theme and font',
+        }),
+        trailing: const Icon(LucideIcons.chevronRight),
+        onTap: () => showPaywall(context),
+      ),
     );
   }
 }

@@ -11,6 +11,8 @@ import '../../../app/theme/app_fonts.dart';
 import '../../../core/widgets/surface_card.dart';
 import '../../../core/widgets/tappable.dart';
 import '../../auth/application/sync_auth_providers.dart';
+import '../../subscription/domain/plan.dart';
+import '../../subscription/presentation/paywall_sheet.dart';
 import '../application/sync_providers.dart';
 import '../domain/sync_crypto.dart';
 import 'sync_link_sheets.dart';
@@ -144,10 +146,10 @@ class _SignedOut extends StatelessWidget {
           icon: LucideIcons.cloud,
           title: 'Your data on all your phones',
           body:
-              'Sign in to keep LifeOS in step across devices and safe if a '
+              'Sign in to keep PersonalOS in step across devices and safe if a '
               'phone is lost. Everything is encrypted on your phone before it '
               'leaves — the server can\'t read any of it.\n\n'
-              'You don\'t need an account to use LifeOS. Without one, your '
+              'You don\'t need an account to use PersonalOS. Without one, your '
               'data stays on this device.',
         ),
         const SizedBox(height: 28),
@@ -443,9 +445,14 @@ class _Ready extends ConsumerWidget {
               if (status.uploadsRefused) ...[
                 const SizedBox(height: 10),
                 Text(
-                  'Sync isn\'t active on this account, so changes stay on '
-                  'this phone for now. Downloads still work.',
+                  'Syncing is part of PersonalOS Plus, so changes stay on this '
+                  'phone for now. Downloads still work.',
                   style: TextStyle(color: colors.warm),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  onPressed: () => showPaywall(context, from: PlusFeature.sync),
+                  child: const Text('See PersonalOS Plus'),
                 ),
               ],
               if (status.error != null) ...[
@@ -708,7 +715,7 @@ class RecoveryModeChoice extends StatelessWidget {
         title: 'Standard',
         body:
             'Sign in on any phone and your data comes back, even if you '
-            'lose every phone. LifeOS keeps a protected copy of your key, '
+            'lose every phone. PersonalOS keeps a protected copy of your key, '
             'so in principle we could read your data.',
         onTap: onChanged == null ? null : () => onChanged!(true),
       ),
@@ -961,10 +968,10 @@ class _RecoveryKeySheetState extends State<_RecoveryKeySheet> {
                 TextButton.icon(
                   onPressed: () => SharePlus.instance.share(
                     ShareParams(
-                      subject: 'LifeOS recovery key',
+                      subject: 'PersonalOS recovery key',
                       text:
-                          'LifeOS recovery key\n${widget.recoveryKey}\n\n'
-                          'Unlocks your synced LifeOS data on a new phone. '
+                          'PersonalOS recovery key\n${widget.recoveryKey}\n\n'
+                          'Unlocks your synced PersonalOS data on a new phone. '
                           'Keep it private.',
                     ),
                   ),

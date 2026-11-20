@@ -5,14 +5,14 @@
 // Secret:   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 //
 // Only signed-in users can call it (the Supabase JWT is verified), and each
-// is held to a daily allowance by `consume_voice_quota`. The API key never
-// leaves this function.
+// is held to their plan's allowance by `use_voice_entry` — 15 once on the
+// free plan, 300 a month on LifeOS Plus (the numbers live in that SQL
+// function). The API key never leaves this function.
 
 import Anthropic from "npm:@anthropic-ai/sdk@1.1.0";
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 
 const MODEL = "claude-haiku-5-5";
-const DAILY_LIMIT = 100;
 const MAX_SENTENCE = 500;
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
@@ -134,12 +134,18 @@ Deno.serve(async (req) => {
   const text = typeof body.text === "string" ? body.text.trim() : "";
   if (!text || text.length > MAX_SENTENCE) return reply(400, { error: "bad_request" });
 
-  const { data: allowed, error: quotaError } = await supabase.rpc(
-    "consume_voice_quota",
-    { daily_limit: DAILY_LIMIT },
+  // Anything left on this person's plan? Checked before the AI is asked;
+  // the entry itself is only counted once there's an answer to show, so a
+  // failed request costs nothing.
+  const { data: allowance, error: quotaError } = await supabase.rpc(
+    "my_voice_allowance",
   );
-  if (quotaError) return reply(500, { error: "quota_unavailable" });
-  if (allowed !== true) return reply(429, { error: "daily_limit" });
+  if (quotaError || !allowance) {
+    return reply(500, { error: "quota_unavailable" });
+  }
+  if (!(allowance.remaining > 0)) {
+    return reply(429, { error: "voice_limit", quota: allowance });
+  }
 
   const categories = (body.categories ?? {}) as Record<string, unknown>;
   const context = [
@@ -177,7 +183,8 @@ Deno.serve(async (req) => {
     const parsed = JSON.parse(out.text) as { options?: unknown[] };
     const options = Array.isArray(parsed.options) ? parsed.options.slice(0, 3) : [];
     if (options.length === 0) return reply(422, { error: "not_understood" });
-    return reply(200, { options });
+    const { data: used } = await supabase.rpc("use_voice_entry");
+    return reply(200, { options, quota: used ?? allowance });
   } catch (e) {
     if (e instanceof Anthropic.RateLimitError) return reply(503, { error: "busy" });
     if (e instanceof Anthropic.APIConnectionError) return reply(503, { error: "busy" });

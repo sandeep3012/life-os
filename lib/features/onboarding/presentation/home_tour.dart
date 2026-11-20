@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/preview_features.dart';
 import '../../settings/application/settings_providers.dart';
 import '../application/onboarding_gate.dart';
 import 'screen_tour.dart';
@@ -17,25 +18,38 @@ abstract final class HomeTour {
   @visibleForTesting
   static void debugReset() => _running = false;
 
-  static final steps = [
+  /// The tour's stops. [preview] is whether Health and Learn are in the
+  /// side menu (debug builds), so the menu's step doesn't name what isn't
+  /// there.
+  static List<TourStep> steps({required bool preview}) => [
     TourStep(
       target: TourTargets.addButton,
       title: 'Add anything from here',
       body:
-          'Tap for an expense, a task, a habit or an event. Hold it to say '
-          'it instead.',
+          'An expense, a task, a habit or an event — one button, always in '
+          'the middle.',
+    ),
+    TourStep(
+      target: TourTargets.addButton,
+      title: 'Or just say it',
+      body:
+          'Hold the same button and speak — "spent 250 on lunch", "call Mom '
+          'at 6". PersonalOS fills it in and you pick the match.',
     ),
     TourStep(
       target: TourTargets.menuButton,
       title: 'Everything else lives here',
-      body:
-          'Health, Learn, Goals, Documents, Reports and Settings are in the '
-          'side menu.',
+      body: preview
+          ? 'Health, Learn, Goals, Documents, Reports and Settings are in '
+                'the side menu.'
+          : 'Goals, Documents, Reports and Settings are in the side menu.',
     ),
     TourStep(
       target: TourTargets.homeHero,
       title: "What's next, at a glance",
-      body: 'Your next workout, event or task shows here as the day goes on.',
+      body: preview
+          ? 'Your next workout, event or task shows here as the day goes on.'
+          : 'Your next event or task shows here as the day goes on.',
     ),
     TourStep(
       target: TourTargets.homeStats,
@@ -64,6 +78,7 @@ abstract final class HomeTour {
   /// call on every build.
   static void maybeStart(BuildContext context, WidgetRef ref) {
     final settings = ref.read(settingsProvider);
+    final preview = ref.read(previewFeaturesProvider);
     final tourDue = !settings.toursSeen.contains(id);
     final tipDue = !settings.toursSeen.contains(holdToSpeakId);
     // Home stays built in the background while another tab is open; its
@@ -83,8 +98,11 @@ abstract final class HomeTour {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         if (!context.mounted) return;
-        await showScreenTour(context, tourDue ? steps : holdToSpeakTip);
-        // The tour's first step says it too, so either way both are seen.
+        await showScreenTour(
+          context,
+          tourDue ? steps(preview: preview) : holdToSpeakTip,
+        );
+        // The tour has its own step for it, so either way both are seen.
         await container.read(settingsControllerProvider).markTourSeen({
           ...container.read(settingsProvider).toursSeen,
           id,

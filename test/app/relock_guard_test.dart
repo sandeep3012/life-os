@@ -76,7 +76,7 @@ void main() {
           appLockServiceProvider.overrideWithValue(lock),
           relockPolicyProvider.overrideWithValue(RelockPolicy(now: () => now)),
         ],
-        child: const LifeOSApp(),
+        child: const PersonalOSApp(),
       ),
     );
     await tester.pumpAndSettle();

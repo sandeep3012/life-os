@@ -101,7 +101,7 @@ void main() {
           appDatabaseProvider.overrideWithValue(db),
           notificationServiceProvider.overrideWithValue(_FakeNotificationService()),
         ],
-        child: const LifeOSApp(),
+        child: const PersonalOSApp(),
       ),
     );
     await tester.pumpAndSettle();

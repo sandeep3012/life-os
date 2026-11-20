@@ -236,7 +236,9 @@ class ResolvedVoiceDraft {
       // A category picked by hand is no longer "as last time".
       categoryFromHistory:
           categoryFromHistory ??
-          (category != null || clearCategory ? false : this.categoryFromHistory),
+          (category != null || clearCategory
+              ? false
+              : this.categoryFromHistory),
     );
   }
 

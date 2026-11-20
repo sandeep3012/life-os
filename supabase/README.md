@@ -1,4 +1,4 @@
-# LifeOS sync — server setup
+# PersonalOS sync — server setup
 
 Sync is optional: a build without the key below is the same local-only app
 as before. Everything is encrypted on the phone, so the server only ever
@@ -20,7 +20,7 @@ row-level security, plus the `push_records`, `pull_records`,
 
 **Authentication → URL Configuration**
 
-- Redirect URLs: add `lifeos://auth-callback`
+- Redirect URLs: add `personalos://auth-callback`
 
 **Authentication → Providers → Email**: on, with *Confirm email* on.
 
@@ -36,8 +36,8 @@ row-level security, plus the `push_records`, `pull_records`,
 Apple button until `SupabaseConfig.appleSignIn` is true.* Needs a paid Apple
 Developer membership.
 
-1. Identifiers → App ID `com.sandeep.lifeos` with *Sign in with Apple*.
-2. Identifiers → a **Services ID** (e.g. `com.sandeep.lifeos.signin`) with
+1. Identifiers → App ID `com.personalos.app` with *Sign in with Apple*.
+2. Identifiers → a **Services ID** (e.g. `com.personalos.app.signin`) with
    *Sign in with Apple*: domain `hxqvkhtulmmocfwpzeiv.supabase.co`, return URL
    `https://hxqvkhtulmmocfwpzeiv.supabase.co/auth/v1/callback`.
 3. Keys → a key with *Sign in with Apple* → download the `.p8` (once only);
@@ -52,7 +52,7 @@ Note: App Store review requires Sign in with Apple on iOS once Google sign-in
 is offered there — set this up before submitting to the App Store.
 
 Both social sign-ins open in the browser and come back through
-`lifeos://auth-callback`, which the app registers on Android
+`personalos://auth-callback`, which the app registers on Android
 (`AndroidManifest.xml`) and iOS (`Info.plist`).
 
 ## 3. Give your account sync (until payments exist)

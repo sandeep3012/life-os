@@ -1,11 +1,11 @@
 {
-    "name": "LifeOS",
-    "short_name": "LifeOS",
+    "name": "PersonalOS",
+    "short_name": "PersonalOS",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#6750E7",
     "theme_color": "#6750E7",
-    "description": "LifeOS — an all-in-one daily life manager: finance, habits, tasks, notes, documents, calendar, goals, and AI-driven insights.",
+    "description": "PersonalOS — an all-in-one daily life manager: finance, habits, tasks, notes, documents, calendar, goals, and AI-driven insights.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

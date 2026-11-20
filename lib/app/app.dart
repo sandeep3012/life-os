@@ -24,20 +24,21 @@ import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/home_widget/application/home_widget_sync.dart';
 import '../core/reminders/alarm_tone_sync.dart';
 import '../core/services/budget_alert_sound.dart';
+import '../features/subscription/application/plan_providers.dart';
 import '../features/sync/application/sync_providers.dart';
 import '../features/sync/presentation/sync_screen.dart';
 import 'router/route_paths.dart';
 import '../core/reminders/ringing_alarm_controller.dart';
 import '../core/widgets/alarm_ringing_layer.dart';
 
-class LifeOSApp extends ConsumerStatefulWidget {
-  const LifeOSApp({super.key});
+class PersonalOSApp extends ConsumerStatefulWidget {
+  const PersonalOSApp({super.key});
 
   @override
-  ConsumerState<LifeOSApp> createState() => _LifeOSAppState();
+  ConsumerState<PersonalOSApp> createState() => _PersonalOSAppState();
 }
 
-class _LifeOSAppState extends ConsumerState<LifeOSApp>
+class _PersonalOSAppState extends ConsumerState<PersonalOSApp>
     with WidgetsBindingObserver {
   bool? _habitReminderScheduled;
   bool _choresStarted = false;
@@ -106,6 +107,9 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     // Sync, if this build has it and someone's signed in. Never in the way
     // of a screen: the app only ever reads its own database.
     ref.read(syncControllerProvider.notifier).start();
+    // Which plan the signed-in account is on — what the extra themes and
+    // fonts hang on. Free and local-only until it says otherwise.
+    ref.read(planControllerProvider.notifier).start();
     // A new user is asked for reminder permissions during onboarding, where
     // the reason is on screen; everyone past it is asked here as before (a
     // no-op once they've answered).
@@ -179,6 +183,7 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
       // task or habit did.
       if (_choresStarted) ref.read(homeWidgetSyncProvider).refreshNow();
       if (_choresStarted) ref.read(syncControllerProvider.notifier).onResumed();
+      if (_choresStarted) ref.read(planControllerProvider.notifier).refresh();
     }
     if (!ref.read(settingsProvider).appLockEnabled) return;
     final policy = ref.read(relockPolicyProvider);
@@ -256,10 +261,9 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
       syncControllerProvider.select((s) => s.choosingNewPassword),
       _onChoosingNewPassword,
     );
-    ref.listen(
-      settingsProvider.select((s) => s.fontStyle),
-      _onFontStyleChanged,
-    );
+    // The font actually drawn: the chosen one, or the free one when the
+    // plan doesn't include it.
+    ref.listen(effectiveFontStyleProvider, _onFontStyleChanged);
     // The colour theme is stored in the database, so it isn't known on the
     // first frames; painting the app then would flash the default theme. On a
     // cold start the launch animation covers that time (and Home's data
@@ -317,7 +321,8 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
     _syncHabitReminder(settings.habitReminders);
     // Before anything below builds a text style: settings are loaded by
     // now, so the app never shows in one font and then changes.
-    AppFonts.use(settings.fontStyle);
+    AppFonts.use(ref.watch(effectiveFontStyleProvider));
+    final colorTheme = ref.watch(effectiveColorThemeProvider);
 
     final isLocked = ref.watch(isLockedProvider);
     final showLockScreen = settings.appLockEnabled && isLocked;
@@ -325,10 +330,10 @@ class _LifeOSAppState extends ConsumerState<LifeOSApp>
         OnboardingGate.offered && !settings.onboardingCompleted;
 
     return MaterialApp.router(
-      title: 'LifeOS',
+      title: 'PersonalOS',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(settings.colorTheme, settings.background),
-      darkTheme: AppTheme.dark(settings.colorTheme),
+      theme: AppTheme.light(colorTheme, settings.background),
+      darkTheme: AppTheme.dark(colorTheme),
       themeMode: themeMode,
       // Under a reveal the new theme must be final the moment it's uncovered;
       // blending it in would show the circle sweeping half-changed colours.

@@ -255,7 +255,7 @@ class NotificationService {
 
   static final _insistentFlag = Int32List.fromList(<int>[4]);
 
-  // LifeOS's own sounds (assets in android/app/src/main/res/raw as OGG and in
+  // PersonalOS's own sounds (assets in android/app/src/main/res/raw as OGG and in
   // the iOS Runner bundle as WAV). Reminders for things to act on — tasks,
   // bills, habits, doses — use "reminder"; events and goal deadlines, which
   // are informational, use the softer "notify"; every alarm uses "alarm_gentle",
@@ -367,7 +367,7 @@ class NotificationService {
     color: notificationAccent,
     'insight_alerts',
     'Insight alerts',
-    channelDescription: 'A morning note when LifeOS finds something new',
+    channelDescription: 'A morning note when PersonalOS finds something new',
     importance: Importance.defaultImportance,
     sound: RawResourceAndroidNotificationSound('insight'),
   );

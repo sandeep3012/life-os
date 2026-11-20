@@ -54,7 +54,7 @@ class _ReminderStatusCardState extends ConsumerState<ReminderStatusCard>
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Could not request permissions. Check LifeOS notifications in device settings.',
+              'Could not request permissions. Check PersonalOS notifications in device settings.',
             ),
           ),
         );
@@ -113,7 +113,7 @@ class _ReminderStatusCardState extends ConsumerState<ReminderStatusCard>
               ],
               const SizedBox(height: 8),
               const Text(
-                'The local queue is replenished while LifeOS is running or reopened. Pending does not guarantee delivery; device settings can silence reminders. Bill and goal times are not included in the dates above.',
+                'The local queue is replenished while PersonalOS is running or reopened. Pending does not guarantee delivery; device settings can silence reminders. Bill and goal times are not included in the dates above.',
               ),
               Wrap(
                 spacing: 8,

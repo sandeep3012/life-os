@@ -75,7 +75,7 @@ Future<String?> openInOtherApp(File file) async {
       ResultType.done => null,
       ResultType.noAppToOpen => 'No app on this phone can open this file.',
       ResultType.fileNotFound => "This file isn't on this phone.",
-      ResultType.permissionDenied => 'LifeOS isn\'t allowed to open this file.',
+      ResultType.permissionDenied => 'PersonalOS isn\'t allowed to open this file.',
       ResultType.error => "Couldn't open this file.",
     };
   } catch (_) {

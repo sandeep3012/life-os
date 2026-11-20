@@ -293,7 +293,7 @@ class _ScanScreenState extends ConsumerState<_ScanScreen> {
                     padding: const EdgeInsets.all(32),
                     child: Text(
                       error.errorCode == MobileScannerErrorCode.permissionDenied
-                          ? 'LifeOS needs the camera to scan the code. Allow '
+                          ? 'PersonalOS needs the camera to scan the code. Allow '
                                 'it in your phone\'s settings.'
                           : "The camera couldn't start.",
                       textAlign: TextAlign.center,

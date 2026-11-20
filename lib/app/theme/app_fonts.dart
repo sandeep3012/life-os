@@ -20,7 +20,7 @@ class AppFonts {
   static AppFontStyle get style => _style;
 
   /// Switches the look. Text picks it up the next time its widget builds, so
-  /// the caller rebuilds the tree — see `LifeOSApp`.
+  /// the caller rebuilds the tree — see `PersonalOSApp`.
   static void use(AppFontStyle style) => _style = style;
 
   /// Headings, hero numbers, section titles. Comp:

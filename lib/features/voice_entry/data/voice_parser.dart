@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../subscription/domain/plan.dart';
 import '../../sync/application/sync_providers.dart';
 import '../domain/voice_draft.dart';
 import 'sample_voice_parser.dart';
@@ -61,9 +62,22 @@ class VoiceParseException implements Exception {
   String toString() => message;
 }
 
+/// The plan's voice entries are used up. [allowance] says which plan and
+/// how many, so the sheet can offer PersonalOS Plus or say when they refill.
+class VoiceLimitReached extends VoiceParseException {
+  VoiceLimitReached(this.allowance) : super(allowance.exhaustedMessage);
+
+  final VoiceAllowance allowance;
+}
+
 abstract class VoiceParser {
-  /// Up to three readings, the most likely first.
+  /// Up to three readings, the most likely first. Throws
+  /// [VoiceLimitReached] when the plan has none left.
   Future<List<VoiceDraft>> parse(VoiceRequest request);
+
+  /// What the server last said is left on the plan, or null if it hasn't
+  /// (the sample parser never does).
+  VoiceAllowance? get allowance;
 }
 
 /// [VoiceParser] over the `voice-parse` Edge Function
@@ -72,6 +86,10 @@ class SupabaseVoiceParser implements VoiceParser {
   SupabaseVoiceParser(this._client);
 
   final SupabaseClient _client;
+  VoiceAllowance? _allowance;
+
+  @override
+  VoiceAllowance? get allowance => _allowance;
 
   @override
   Future<List<VoiceDraft>> parse(VoiceRequest request) async {
@@ -85,7 +103,15 @@ class SupabaseVoiceParser implements VoiceParser {
         body: request.toJson(),
       );
     } on FunctionException catch (e) {
-      throw VoiceParseException(_message(e.status, e.details));
+      final details = e.details;
+      final left = VoiceAllowance.fromJson(
+        details is Map ? details['quota'] : null,
+      );
+      if (e.status == 429 && left != null) {
+        _allowance = left;
+        throw VoiceLimitReached(left);
+      }
+      throw VoiceParseException(_message(e.status, details));
     } on Object {
       throw const VoiceParseException(
         "Couldn't reach the server. Check your connection and try again.",
@@ -93,9 +119,11 @@ class SupabaseVoiceParser implements VoiceParser {
     }
     final data = response.data;
     final options = data is Map ? data['options'] : null;
+    _allowance =
+        VoiceAllowance.fromJson(data is Map ? data['quota'] : null) ??
+        _allowance;
     final drafts = [
-      for (final o in (options as List?) ?? const [])
-        ?VoiceDraft.fromJson(o),
+      for (final o in (options as List?) ?? const []) ?VoiceDraft.fromJson(o),
     ];
     if (drafts.isEmpty) {
       throw const VoiceParseException(
@@ -109,8 +137,7 @@ class SupabaseVoiceParser implements VoiceParser {
     final code = details is Map ? details['error'] : null;
     return switch ((status, code)) {
       (401, _) => 'Sign in to use voice entry.',
-      (429, _) => "You've reached today's voice entry limit. Try again "
-          'tomorrow.',
+      (429, _) => "You've used up your voice entries for now.",
       (422, _) => "Couldn't work out what to add. Try saying it another way.",
       (503, _) => 'Voice entry is busy right now. Try again in a moment.',
       _ => "Couldn't understand that just now. Try again in a moment.",

@@ -30,5 +30,5 @@ abstract final class SupabaseConfig {
 
   /// Where email confirmation and Google/Apple sign-in come back to. Must be
   /// listed under Authentication → URL Configuration → Redirect URLs.
-  static const authRedirect = 'lifeos://auth-callback';
+  static const authRedirect = 'personalos://auth-callback';
 }

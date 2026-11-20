@@ -7,6 +7,7 @@ import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/core/services/notification_service.dart';
+import 'package:life_manager/features/subscription/domain/plan.dart';
 import 'package:life_manager/features/voice_entry/application/voice_entry_controller.dart';
 import 'package:life_manager/features/voice_entry/data/sample_voice_parser.dart';
 import 'package:life_manager/features/voice_entry/data/speech_capture.dart';
@@ -43,6 +44,9 @@ class FakeParser implements VoiceParser {
   List<Map<String, Object?>> options;
   VoiceRequest? last;
   Object? error;
+
+  @override
+  VoiceAllowance? allowance;
 
   @override
   Future<List<VoiceDraft>> parse(VoiceRequest request) async {
@@ -103,22 +107,26 @@ void main() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
     speech = FakeSpeech();
     parser = FakeParser(_options);
-    await db.into(db.accounts).insert(
-      AccountsCompanion.insert(
-        id: const Value('hdfc'),
-        name: 'HDFC Savings',
-        type: 'savings',
-        balanceMinor: const Value(100000),
-        openingBalanceMinor: const Value(100000),
-      ),
-    );
-    await db.into(db.categories).insert(
-      CategoriesCompanion.insert(
-        id: const Value('food'),
-        name: 'Dining',
-        colorHex: '#E0475A',
-      ),
-    );
+    await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            id: const Value('hdfc'),
+            name: 'HDFC Savings',
+            type: 'savings',
+            balanceMinor: const Value(100000),
+            openingBalanceMinor: const Value(100000),
+          ),
+        );
+    await db
+        .into(db.categories)
+        .insert(
+          CategoriesCompanion.insert(
+            id: const Value('food'),
+            name: 'Dining',
+            colorHex: '#E0475A',
+          ),
+        );
     container = ProviderContainer(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
@@ -168,43 +176,51 @@ void main() {
     expect(speech.hints, containsAll(['HDFC Savings', 'Dining']));
   });
 
-  test('choosing an expense saves it, moves the balance, and Undo takes it back',
-      () async {
-    final controller = await heard('spent 250 on lunch');
-    final option = container.read(voiceEntryControllerProvider).options.first;
+  test(
+    'choosing an expense saves it, moves the balance, and Undo takes it back',
+    () async {
+      final controller = await heard('spent 250 on lunch');
+      final option = container.read(voiceEntryControllerProvider).options.first;
 
-    final saved = await controller.choose(option);
-    expect(saved.message, 'Expense added');
-    final txn = await db.select(db.transactions).getSingle();
-    expect(txn.amountMinor, -25000);
-    expect(txn.merchant, 'Lunch at Subway');
-    expect((await db.select(db.accounts).getSingle()).balanceMinor, 75000);
+      final saved = await controller.choose(option);
+      expect(saved.message, 'Expense added');
+      final txn = await db.select(db.transactions).getSingle();
+      expect(txn.amountMinor, -25000);
+      expect(txn.merchant, 'Lunch at Subway');
+      expect((await db.select(db.accounts).getSingle()).balanceMinor, 75000);
 
-    await saved.undo();
-    expect(await db.select(db.transactions).get(), isEmpty);
-    expect((await db.select(db.accounts).getSingle()).balanceMinor, 100000);
-  });
+      await saved.undo();
+      expect(await db.select(db.transactions).get(), isEmpty);
+      expect((await db.select(db.accounts).getSingle()).balanceMinor, 100000);
+    },
+  );
 
-  test('a task and a repeating event save, and Undo removes them whole', () async {
-    final controller = await heard('lunch tomorrow at one');
-    final options = container.read(voiceEntryControllerProvider).options;
+  test(
+    'a task and a repeating event save, and Undo removes them whole',
+    () async {
+      final controller = await heard('lunch tomorrow at one');
+      final options = container.read(voiceEntryControllerProvider).options;
 
-    final task = await controller.choose(options[1]);
-    final row = await db.select(db.tasks).getSingle();
-    expect(row.title, 'Lunch with Riya');
-    expect(row.dueDate, DateTime(2026, 11, 6, 13));
-    expect(row.reminderEnabled, isTrue, reason: 'a time was said');
-    await task.undo();
-    expect(await db.select(db.tasks).get(), isEmpty);
+      final task = await controller.choose(options[1]);
+      final row = await db.select(db.tasks).getSingle();
+      expect(row.title, 'Lunch with Riya');
+      expect(row.dueDate, DateTime(2026, 11, 6, 13));
+      expect(row.reminderEnabled, isTrue, reason: 'a time was said');
+      await task.undo();
+      expect(await db.select(db.tasks).get(), isEmpty);
 
-    final event = await controller.choose(options[2]);
-    expect(event.message, 'Repeating event added');
-    final events = await db.select(db.events).get();
-    expect(events.length, greaterThan(1));
-    expect(events.every((e) => e.startTime.weekday == DateTime.friday), isTrue);
-    await event.undo();
-    expect(await db.select(db.events).get(), isEmpty);
-  });
+      final event = await controller.choose(options[2]);
+      expect(event.message, 'Repeating event added');
+      final events = await db.select(db.events).get();
+      expect(events.length, greaterThan(1));
+      expect(
+        events.every((e) => e.startTime.weekday == DateTime.friday),
+        isTrue,
+      );
+      await event.undo();
+      expect(await db.select(db.events).get(), isEmpty);
+    },
+  );
 
   test('a habit saves and Undo deletes it', () async {
     parser.options = [
@@ -228,7 +244,10 @@ void main() {
 
   test('nothing heard, or a server problem, says so', () async {
     await heard('');
-    expect(container.read(voiceEntryControllerProvider).phase, VoicePhase.error);
+    expect(
+      container.read(voiceEntryControllerProvider).phase,
+      VoicePhase.error,
+    );
 
     parser.error = const VoiceParseException(
       "You've reached today's voice entry limit. Try again tomorrow.",
@@ -238,6 +257,36 @@ void main() {
     expect(state.phase, VoicePhase.error);
     expect(state.message, contains('limit'));
     expect(state.text, 'add milk to the list', reason: 'kept for Try again');
+  });
+
+  test('out of voice entries says so, and offers no retry', () async {
+    const used = VoiceAllowance(
+      plan: AppPlan.free,
+      limit: 15,
+      used: 15,
+      remaining: 0,
+    );
+    parser.error = VoiceLimitReached(used);
+    await heard('spent 200 on lunch');
+    final state = container.read(voiceEntryControllerProvider);
+    expect(state.phase, VoicePhase.error);
+    expect(state.limitReached, isTrue);
+    expect(state.allowance?.plan, AppPlan.free);
+    expect(state.message, contains('15 free voice entries'));
+    expect(state.message, contains('PersonalOS Plus'));
+  });
+
+  test('what is left on the plan comes back with the options', () async {
+    parser.allowance = const VoiceAllowance(
+      plan: AppPlan.free,
+      limit: 15,
+      used: 4,
+      remaining: 11,
+    );
+    await heard('spent 200 on lunch');
+    final state = container.read(voiceEntryControllerProvider);
+    expect(state.phase, VoicePhase.choosing);
+    expect(state.allowance?.hint, '11 of 15 free voice entries left');
   });
 
   testWidgets('asks once, then shows the options and saves the one tapped', (
@@ -310,14 +359,16 @@ void main() {
   testWidgets('a detail can be changed on the card before saving', (
     tester,
   ) async {
-    await db.into(db.categories).insert(
-      CategoriesCompanion.insert(
-        id: const Value('errands'),
-        name: 'Errands',
-        colorHex: '#000000',
-        kind: const Value(plannerCategoryKind),
-      ),
-    );
+    await db
+        .into(db.categories)
+        .insert(
+          CategoriesCompanion.insert(
+            id: const Value('errands'),
+            name: 'Errands',
+            colorHex: '#000000',
+            kind: const Value(plannerCategoryKind),
+          ),
+        );
     tester.view.physicalSize = const Size(392, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -356,7 +407,9 @@ void main() {
 
     await tester.tap(find.text('Lunch with Riya'));
     await settle();
-    final task = (await tester.runAsync(() => db.select(db.tasks).getSingle()))!;
+    final task = (await tester.runAsync(
+      () => db.select(db.tasks).getSingle(),
+    ))!;
     expect(task.categoryId, 'errands');
     expect(tester.takeException(), isNull);
 

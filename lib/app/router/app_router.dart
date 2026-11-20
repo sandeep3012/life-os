@@ -215,11 +215,14 @@ GoRouter createAppRouter() => GoRouter(
 );
 
 /// Addresses that aren't screens. The sign-in return link
-/// (lifeos://auth-callback?code=…) belongs to Supabase, which reads it
+/// (personalos://auth-callback?code=…) belongs to Supabase, which reads it
 /// itself; if it ever reaches the router, it goes to Sync & account, where
 /// the sign-in shows. A bare "/" goes Home.
 String? offRouteRedirect(Uri uri) {
-  if (uri.scheme == 'lifeos' ||
+  // 'lifeos' was the scheme before the app was renamed; a sign-in email
+  // sent then can still be opened.
+  if (uri.scheme == 'personalos' ||
+      uri.scheme == 'lifeos' ||
       uri.host == 'auth-callback' ||
       uri.path.startsWith('/auth-callback')) {
     return RoutePaths.sync;

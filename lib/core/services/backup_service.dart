@@ -51,7 +51,7 @@ const _manifestEntryName = 'backup.json';
 const _filesPrefix = 'files/';
 
 /// Thrown when [BackupService.importBackup] is given something that isn't a
-/// LifeOS backup archive — surfaced to the user as-is via [message].
+/// PersonalOS backup archive — surfaced to the user as-is via [message].
 class InvalidBackupException implements Exception {
   const InvalidBackupException(this.message);
 
@@ -132,7 +132,7 @@ class BackupService {
   /// is AES-256 encrypted (a standard password-protected zip).
   Future<BackupExport> exportBackupFile({String? password}) async {
     final snapshot = await _db.transaction(_readSnapshot);
-    final dir = await Directory.systemTemp.createTemp('lifeos-backup');
+    final dir = await Directory.systemTemp.createTemp('personalos-backup');
     final zip = File(p.join(dir.path, 'backup.zip'));
     final encoder = ZipFileEncoder(
       password: password == null || password.isEmpty ? null : password,
@@ -350,7 +350,7 @@ class BackupService {
       archive = ZipDecoder().decodeStream(input, password: usePassword);
     } catch (_) {
       throw const InvalidBackupException(
-        'That file isn\'t a valid LifeOS backup.',
+        'That file isn\'t a valid PersonalOS backup.',
       );
     }
 
@@ -359,7 +359,7 @@ class BackupService {
         .firstOrNull;
     if (manifestFile == null) {
       throw const InvalidBackupException(
-        'That file isn\'t a valid LifeOS backup.',
+        'That file isn\'t a valid PersonalOS backup.',
       );
     }
 
@@ -378,13 +378,13 @@ class BackupService {
     final tables = manifest['tables'];
     if (manifest['app'] != 'lifeos' || tables is! Map) {
       throw const InvalidBackupException(
-        'That file isn\'t a valid LifeOS backup.',
+        'That file isn\'t a valid PersonalOS backup.',
       );
     }
     final version = manifest['formatVersion'];
     if (version is! int || version < 1 || version > _backupFormatVersion) {
       throw const InvalidBackupException(
-        'Unsupported backup version. Please use a compatible version of LifeOS.',
+        'Unsupported backup version. Please use a compatible version of PersonalOS.',
       );
     }
     for (final name in _tableNames) {

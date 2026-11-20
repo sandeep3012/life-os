@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../preview_features.dart';
 import 'route_paths.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_fonts.dart';
@@ -35,6 +36,7 @@ class AppSidebar extends ConsumerWidget {
     final scheme = theme.colorScheme;
     final colors = context.appColors;
 
+    final preview = ref.watch(previewFeaturesProvider);
     final habitCount = ref.watch(habitsWithProgressProvider).length;
     final openTodoCount = (ref.watch(allTasksProvider).value ?? const [])
         .where((t) => t.status != 'done')
@@ -82,7 +84,7 @@ class AppSidebar extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'LifeOS',
+                          'PersonalOS',
                           style: TextStyle(
                             fontFamily: AppFonts.serif,
                             fontSize: 17,
@@ -240,18 +242,22 @@ class AppSidebar extends ConsumerWidget {
                     key: const ValueKey('growth'),
                     title: 'Growth',
                     children: [
-                      _Item(
-                        icon: LucideIcons.heart,
-                        label: 'Health',
-                        path: RoutePaths.health,
-                        current: current,
-                      ),
-                      _Item(
-                        icon: LucideIcons.bookOpen,
-                        label: 'Learn',
-                        path: RoutePaths.learn,
-                        current: current,
-                      ),
+                      // Health and Learn aren't tested enough to ship yet:
+                      // debug builds only (previewFeaturesProvider).
+                      if (preview) ...[
+                        _Item(
+                          icon: LucideIcons.heart,
+                          label: 'Health',
+                          path: RoutePaths.health,
+                          current: current,
+                        ),
+                        _Item(
+                          icon: LucideIcons.bookOpen,
+                          label: 'Learn',
+                          path: RoutePaths.learn,
+                          current: current,
+                        ),
+                      ],
                       _Item(
                         icon: LucideIcons.sparkles,
                         label: 'AI analyser',
@@ -278,24 +284,25 @@ class AppSidebar extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  _SidebarGroup(
-                    key: const ValueKey('extra'),
-                    title: 'Extra',
-                    children: [
-                      _Item(
-                        icon: LucideIcons.chartLine,
-                        label: 'Finance overview',
-                        path: RoutePaths.financeOverview,
-                        current: current,
-                      ),
-                      _Item(
-                        icon: LucideIcons.repeat,
-                        label: 'Habits overview',
-                        path: RoutePaths.habitsOverview,
-                        current: current,
-                      ),
-                    ],
-                  ),
+                  if (preview)
+                    _SidebarGroup(
+                      key: const ValueKey('extra'),
+                      title: 'Extra',
+                      children: [
+                        _Item(
+                          icon: LucideIcons.chartLine,
+                          label: 'Finance overview',
+                          path: RoutePaths.financeOverview,
+                          current: current,
+                        ),
+                        _Item(
+                          icon: LucideIcons.repeat,
+                          label: 'Habits overview',
+                          path: RoutePaths.habitsOverview,
+                          current: current,
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),

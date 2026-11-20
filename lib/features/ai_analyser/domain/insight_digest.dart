@@ -43,7 +43,7 @@ class InsightDigest {
       title: fresh.length == 1
           ? 'Worth knowing'
           : '${fresh.length} things worth knowing',
-      body: more == 0 ? lead : '$lead — and $more more in LifeOS.',
+      body: more == 0 ? lead : '$lead — and $more more in PersonalOS.',
     );
   }
 

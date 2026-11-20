@@ -11,6 +11,8 @@ import '../../../core/database/app_database.dart';
 import '../../../core/utils/currency_utils.dart';
 import '../../../core/widgets/undo_snack_bar.dart';
 import '../../settings/application/settings_providers.dart';
+import '../../subscription/domain/plan.dart';
+import '../../subscription/presentation/paywall_sheet.dart';
 import '../application/voice_entry_controller.dart';
 import '../data/sample_voice_parser.dart';
 import '../domain/voice_draft.dart';
@@ -48,7 +50,7 @@ class _ConsentDialog extends StatelessWidget {
     title: const Text('Add things by voice'),
     content: const Text(
       'Your phone turns what you say into text. To work out what to add, '
-      'LifeOS sends that sentence — with your account and category names, '
+      'PersonalOS sends that sentence — with your account and category names, '
       'so it can pick the right ones — to an AI service (Anthropic). Nothing '
       'else from your data is sent, and it isn\'t used to train models.\n\n'
       'Needs internet and a signed-in account.',
@@ -94,11 +96,7 @@ class _VoiceEntrySheetState extends ConsumerState<VoiceEntrySheet> {
           .read(voiceEntryControllerProvider.notifier)
           .choose(option);
       navigator.pop();
-      showUndoSnackBar(
-        messenger,
-        message: saved.message,
-        onUndo: saved.undo,
-      );
+      showUndoSnackBar(messenger, message: saved.message, onUndo: saved.undo);
     } on Object {
       if (mounted) setState(() => _saving = false);
       messenger.showSnackBar(
@@ -133,33 +131,33 @@ class _VoiceEntrySheetState extends ConsumerState<VoiceEntrySheet> {
         // overflowing.
         child: SingleChildScrollView(
           child: AnimatedSize(
-          duration: AppMotion.of(context, const Duration(milliseconds: 220)),
-          alignment: Alignment.topCenter,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
+            duration: AppMotion.of(context, const Duration(milliseconds: 220)),
+            alignment: Alignment.topCenter,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 18),
-              if (ref.watch(voiceTestModeProvider)) const _TestModeBadge(),
-              ...switch (state.phase) {
-                VoicePhase.idle ||
-                VoicePhase.listening => _listening(state, controller),
-                VoicePhase.thinking => _thinking(state),
-                VoicePhase.choosing => _choosing(state, controller),
-                VoicePhase.error => _error(state, controller),
-              },
-            ],
-          ),
+                const SizedBox(height: 18),
+                if (ref.watch(voiceTestModeProvider)) const _TestModeBadge(),
+                ...switch (state.phase) {
+                  VoicePhase.idle ||
+                  VoicePhase.listening => _listening(state, controller),
+                  VoicePhase.thinking => _thinking(state),
+                  VoicePhase.choosing => _choosing(state, controller),
+                  VoicePhase.error => _error(state, controller),
+                },
+              ],
+            ),
           ),
         ),
       ),
@@ -244,6 +242,18 @@ class _VoiceEntrySheetState extends ConsumerState<VoiceEntrySheet> {
     const _Heading('Which one did you mean?'),
     const SizedBox(height: 12),
     _Quote(state.text),
+    if (state.allowance?.hint case final hint?) ...[
+      const SizedBox(height: 8),
+      Text(
+        hint,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontFamily: AppFonts.sans,
+          fontSize: 12.5,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    ],
     const SizedBox(height: 16),
     for (final (i, option) in state.options.indexed)
       Padding(
@@ -284,27 +294,37 @@ class _VoiceEntrySheetState extends ConsumerState<VoiceEntrySheet> {
       Text(
         state.message ?? 'Something went wrong.',
         textAlign: TextAlign.center,
-        style: TextStyle(
-          fontFamily: AppFonts.sans,
-          fontSize: 15,
-          height: 1.45,
-        ),
+        style: TextStyle(fontFamily: AppFonts.sans, fontSize: 15, height: 1.45),
       ),
       if (state.text.isNotEmpty) ...[
         const SizedBox(height: 12),
         _Quote(state.text),
       ],
       const SizedBox(height: 20),
-      if (state.text.isNotEmpty)
-        FilledButton(
-          onPressed: () => controller.understand(state.text),
-          child: const Text('Try again'),
+      // Out of voice entries: saying it again won't help. On the free plan
+      // the way forward is Plus; on Plus it's waiting for the refill.
+      if (state.limitReached) ...[
+        if (state.allowance?.plan == AppPlan.free)
+          FilledButton(
+            onPressed: () {
+              final navigator = Navigator.of(context, rootNavigator: true);
+              Navigator.of(context).pop();
+              showPaywall(navigator.context, from: PlusFeature.voice);
+            },
+            child: const Text('See PersonalOS Plus'),
+          ),
+      ] else ...[
+        if (state.text.isNotEmpty)
+          FilledButton(
+            onPressed: () => controller.understand(state.text),
+            child: const Text('Try again'),
+          ),
+        OutlinedButton.icon(
+          onPressed: controller.listen,
+          icon: const Icon(LucideIcons.mic, size: 18),
+          label: const Text('Say it again'),
         ),
-      OutlinedButton.icon(
-        onPressed: controller.listen,
-        icon: const Icon(LucideIcons.mic, size: 18),
-        label: const Text('Say it again'),
-      ),
+      ],
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
         child: const Text('Close'),
@@ -419,9 +439,10 @@ class _PulsingMicState extends State<_PulsingMic>
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return ScaleTransition(
-      scale: Tween(begin: 1.0, end: 1.12).animate(
-        CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
-      ),
+      scale: Tween(
+        begin: 1.0,
+        end: 1.12,
+      ).animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut)),
       child: Container(
         width: 88,
         height: 88,
@@ -429,7 +450,11 @@ class _PulsingMicState extends State<_PulsingMic>
           shape: BoxShape.circle,
           color: scheme.primary.withValues(alpha: 0.14),
         ),
-        child: Icon(LucideIcons.mic, size: 38, color: context.appColors.accentInk),
+        child: Icon(
+          LucideIcons.mic,
+          size: 38,
+          color: context.appColors.accentInk,
+        ),
       ),
     );
   }
@@ -438,7 +463,12 @@ class _PulsingMicState extends State<_PulsingMic>
 /// One detail on an option card. With [onTap] it can be changed; [missing]
 /// marks one the AI couldn't fill in.
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, this.icon, this.onTap, this.missing = false});
+  const _Chip({
+    required this.label,
+    this.icon,
+    this.onTap,
+    this.missing = false,
+  });
 
   final String label;
   final IconData? icon;
@@ -458,7 +488,9 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         side: onTap == null
             ? BorderSide.none
-            : BorderSide(color: missing ? scheme.primary : scheme.outlineVariant),
+            : BorderSide(
+                color: missing ? scheme.primary : scheme.outlineVariant,
+              ),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -569,7 +601,10 @@ class _OptionCard extends ConsumerWidget {
           onTap: () => _pickDate(context, update),
         ),
       if (option.kind == VoiceDraftKind.habit && option.hasTime)
-        _Chip(icon: LucideIcons.bell, label: DateFormat.jm().format(option.when!)),
+        _Chip(
+          icon: LucideIcons.bell,
+          label: DateFormat.jm().format(option.when!),
+        ),
       if (option.draft.repeat != 'none')
         _Chip(icon: LucideIcons.repeat, label: _repeat(option.draft)),
     ];
@@ -577,7 +612,9 @@ class _OptionCard extends ConsumerWidget {
     return Opacity(
       opacity: option.canSave ? 1 : 0.55,
       child: Material(
-        color: best ? scheme.primary.withValues(alpha: 0.06) : Colors.transparent,
+        color: best
+            ? scheme.primary.withValues(alpha: 0.06)
+            : Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.tileRadius),
           side: BorderSide(

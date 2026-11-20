@@ -1,4 +1,4 @@
-package com.sandeep.lifeos
+package com.personalos.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -27,7 +27,7 @@ class MainActivity : FlutterFragmentActivity() {
         super.configureFlutterEngine(flutterEngine)
         // Settings → Notification sounds: Android's own per-channel sound
         // settings for this app, where each reminder type's tone can be set.
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/system")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.personalos.app/system")
             .setMethodCallHandler { call, result ->
                 // An alarm was dealt with on the lock screen: step back so the
                 // phone returns to its lock screen, like the clock app's alarm.
@@ -58,7 +58,7 @@ class MainActivity : FlutterFragmentActivity() {
             }
         // The Today home-screen widget: the app hands over a ready-made
         // snapshot (TodayWidgetSnapshot), saved here for TodayWidgetProvider.
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/widget")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.personalos.app/widget")
             .setMethodCallHandler { call, result ->
                 if (call.method != "updateToday") {
                     result.notImplemented()
@@ -85,7 +85,7 @@ class MainActivity : FlutterFragmentActivity() {
         // sent to Google's cloud only when that copy can be end-to-end
         // encrypted — i.e. the phone has a screen lock — otherwise it stays
         // on this phone, where it still outlives a reinstall.
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/keyBackup")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.personalos.app/keyBackup")
             .setMethodCallHandler { call, result ->
                 val client = Blockstore.getClient(this)
                 val key = call.argument<String>("key")
@@ -130,7 +130,7 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.sandeep.lifeos/haptics")
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.personalos.app/haptics")
             .setMethodCallHandler { call, result ->
                 if (call.method != "save") {
                     result.notImplemented()

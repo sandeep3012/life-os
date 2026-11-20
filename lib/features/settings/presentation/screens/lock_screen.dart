@@ -260,7 +260,7 @@ class _DeviceView extends StatelessWidget {
         const Spacer(),
         Icon(LucideIcons.lock, size: 40, color: colors.finance),
         const SizedBox(height: 16),
-        Text('LifeOS is locked', style: theme.textTheme.titleLarge),
+        Text('PersonalOS is locked', style: theme.textTheme.titleLarge),
         const SizedBox(height: 8),
         Text(
           "Unlock with your phone's Face ID, fingerprint or passcode.",
@@ -323,7 +323,7 @@ class _NoLockView extends StatelessWidget {
         Text('No phone lock is set', style: theme.textTheme.titleLarge),
         const SizedBox(height: 8),
         Text(
-          "LifeOS can't use your phone's lock because there isn't one. "
+          "PersonalOS can't use your phone's lock because there isn't one. "
           'Set an app PIN to keep your data protected.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(

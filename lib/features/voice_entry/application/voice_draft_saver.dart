@@ -118,6 +118,4 @@ class VoiceDraftSaver {
   }
 }
 
-final voiceDraftSaverProvider = Provider<VoiceDraftSaver>(
-  VoiceDraftSaver.new,
-);
+final voiceDraftSaverProvider = Provider<VoiceDraftSaver>(VoiceDraftSaver.new);

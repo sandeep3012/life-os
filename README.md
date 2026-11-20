@@ -1,4 +1,4 @@
-# LifeOS
+# PersonalOS
 
 An all-in-one daily life manager built with Flutter: finance & spend analysis,
 habits, tasks, notes, documents, calendar, goals, and rule-based AI insights —

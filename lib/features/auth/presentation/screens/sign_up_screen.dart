@@ -13,7 +13,7 @@ import '../../../sync/data/supabase_config.dart';
 import '../../application/sync_auth_providers.dart';
 import '../widgets/auth_widgets.dart';
 
-/// The comp's Signup screen: a back row, the "Start your / LifeOS." hero, then
+/// The comp's Signup screen: a back row, the "Start your / PersonalOS." hero, then
 /// Full name / Email / Password with the four-bar strength meter under the
 /// password, a terms checkbox, and the "Create account" CTA.
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -150,7 +150,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 ),
               ),
               const SizedBox(height: 14),
-              const AuthHero(lines: ['Start your', 'LifeOS'], fontSize: 38),
+              const AuthHero(lines: ['Start your', 'PersonalOS'], fontSize: 38),
               const SizedBox(height: 10),
               Text(
                 'Finance, habits, gym, calendar — organised from day one.',

@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:life_manager/app/preview_features.dart';
 import 'package:life_manager/app/app.dart';
 import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/app/router/app_shell.dart';
@@ -61,15 +62,19 @@ void main() {
 
   tearDown(() => db.close());
 
-  Widget buildApp() {
+  /// [preview] stands for the build: true is a debug build, false a
+  /// release one, where the untested parts are hidden.
+  Widget buildApp({bool? preview}) {
     return ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
         notificationServiceProvider.overrideWithValue(
           _FakeNotificationService(),
         ),
+        if (preview != null)
+          previewFeaturesProvider.overrideWithValue(preview),
       ],
-      child: const LifeOSApp(),
+      child: const PersonalOSApp(),
     );
   }
 
@@ -152,6 +157,71 @@ void main() {
       findsOneWidget,
     );
 
+    await disposeCleanly(tester);
+  });
+
+  /// Every label in the open drawer, scrolling it to the end: its list
+  /// builds lazily, so the last sections aren't in the tree until then.
+  Future<Set<String>> drawerLabels(WidgetTester tester) async {
+    final labels = <String>{};
+    final list = find.descendant(
+      of: find.byType(AppSidebar),
+      matching: find.byType(Scrollable),
+    );
+    for (var i = 0; i < 12; i++) {
+      labels.addAll(
+        tester
+            .widgetList<Text>(
+              find.descendant(
+                of: find.byType(AppSidebar),
+                matching: find.byType(Text),
+              ),
+            )
+            .map((t) => t.data ?? ''),
+      );
+      await tester.drag(list.first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+    }
+    return labels;
+  }
+
+  testWidgets('a release build hides Health, Learn and the Extra section', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(392, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(buildApp(preview: false));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(LucideIcons.menu));
+    await tester.pumpAndSettle();
+
+    final labels = await drawerLabels(tester);
+    expect(labels, isNot(contains('Health')));
+    expect(labels, isNot(contains('Learn')));
+    expect(labels.map((l) => l.toLowerCase()), isNot(contains('extra')));
+    expect(labels, isNot(contains('Finance overview')));
+    expect(labels, isNot(contains('Habits overview')));
+    // The rest of the menu is all still there.
+    expect(labels, containsAll(['AI analyser', 'Settings', 'Sync & account']));
+    expect(tester.takeException(), isNull);
+    await disposeCleanly(tester);
+  });
+
+  testWidgets('a debug build still shows them', (tester) async {
+    tester.view.physicalSize = const Size(392, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(buildApp(preview: true));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(LucideIcons.menu));
+    await tester.pumpAndSettle();
+
+    final labels = await drawerLabels(tester);
+    expect(
+      labels,
+      containsAll(['Health', 'Learn', 'Finance overview', 'Habits overview']),
+    );
     await disposeCleanly(tester);
   });
 

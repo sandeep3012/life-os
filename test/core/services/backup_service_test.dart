@@ -351,7 +351,7 @@ void main() {
     },
   );
 
-  test('importBackup rejects a file that is not a LifeOS backup', () async {
+  test('importBackup rejects a file that is not a PersonalOS backup', () async {
     final notABackup = File('${tempDir.path}/not-a-backup.zip')
       ..writeAsBytesSync([1, 2, 3, 4]);
 
