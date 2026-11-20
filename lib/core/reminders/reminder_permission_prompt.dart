@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/notification_service.dart';
 
 /// Called as a reminder is switched on (or set to ring as an alarm): if the
-/// phone has notifications or "Alarms & reminders" turned off for LifeOS,
+/// phone has notifications or "Alarms & reminders" turned off for PersonalOS,
 /// says so and offers to turn them on — rather than the reminder silently
 /// never firing. Does nothing when everything's already allowed.
 Future<void> checkReminderPermissions(
@@ -28,7 +28,7 @@ Future<void> checkReminderPermissions(
     builder: (context) => AlertDialog(
       title: Text(alarm ? 'Allow alarms' : 'Allow reminders'),
       content: Text(
-        'LifeOS has $what turned off on this phone, so this '
+        'PersonalOS has $what turned off on this phone, so this '
         '${alarm ? 'alarm won\'t ring' : 'reminder won\'t arrive'} on time. '
         'Turn ${missing.notificationsOff && missing.exactAlarmsOff ? 'them' : 'it'} on?',
       ),

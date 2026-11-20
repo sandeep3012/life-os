@@ -212,7 +212,7 @@ String reportToCsv(
 }) {
   final buffer = StringBuffer();
 
-  buffer.writeln('LifeOS Finance Report');
+  buffer.writeln('PersonalOS Finance Report');
   buffer.writeln(_csvRow(['Period', report.period.label]));
   buffer.writeln(_csvRow(['Filters', report.scopeLabel]));
   buffer.writeln(_csvRow(['Total income', _rupees(report.totalIncomeMinor)]));

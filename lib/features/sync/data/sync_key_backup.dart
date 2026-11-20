@@ -10,7 +10,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Google account unlocks sync without the recovery key.
 ///
 /// Both platforms keep it end-to-end encrypted — Apple and Google can't read
-/// it either — so LifeOS's promise that nobody but you can read your data
+/// it either — so PersonalOS's promise that nobody but you can read your data
 /// still holds. The recovery key remains the way back when this isn't there.
 abstract class SyncKeyBackup {
   /// Where the copy lives, as the person would know it — or null when this
@@ -101,7 +101,7 @@ class ICloudKeychainBackup implements SyncKeyBackup {
 /// encrypted; without one it stays on this phone.
 class BlockStoreBackup implements SyncKeyBackup {
   BlockStoreBackup([MethodChannel? channel])
-    : _channel = channel ?? const MethodChannel('com.sandeep.lifeos/keyBackup');
+    : _channel = channel ?? const MethodChannel('com.personalos.app/keyBackup');
 
   final MethodChannel _channel;
 

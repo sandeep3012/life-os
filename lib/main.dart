@@ -12,7 +12,7 @@ import 'features/sync/data/supabase_config.dart';
 Future<void> main() async {
   LaunchTimeline.start();
   final binding = WidgetsFlutterBinding.ensureInitialized();
-  // The native splash stays up until LifeOSApp's first screen has its data.
+  // The native splash stays up until PersonalOSApp's first screen has its data.
   SplashGate.hold(binding);
   // Only in a build with sync's key. It reads the saved session from disk
   // and makes no network call, so launch isn't held up waiting on one.
@@ -28,7 +28,7 @@ Future<void> main() async {
   }
   runApp(
     const ScreenReveal(
-      child: AppRestartBoundary(child: ProviderScope(child: LifeOSApp())),
+      child: AppRestartBoundary(child: ProviderScope(child: PersonalOSApp())),
     ),
   );
 }

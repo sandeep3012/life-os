@@ -4,11 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-LifeOS — a Flutter daily-life-management app (finance & spend analysis, habits,
+PersonalOS — a Flutter daily-life-management app (finance & spend analysis, habits,
 tasks, notes, documents, calendar, goals, rule-based AI insights). Local-only
 SQLite storage, no accounts/backend, mobile-first (Android/iOS) with desktop
 targets scaffolded for development convenience. All 9 planned build phases are
 complete; work is now bug-fix/iteration, not net-new module scaffolding.
+
+## The app's name
+
+The app is **PersonalOS** (package id `com.personalos.app`, sign-in link
+`personalos://auth-callback`, paid plan "PersonalOS Plus"). It was called
+LifeOS until November 2026, and the old name is still in places on purpose —
+**don't "finish the rename" in these**:
+
+- **Anything existing data depends on:** the encryption labels (`'lifeos
+  recovery wrap v1'`, `'lifeos data key v1'`, `'lifeos link v1'`), the backup
+  marker (`'app': 'lifeos'`), the `LOS-` recovery-key prefix, notification
+  payload prefixes (`lifeos.schedule:`, `lifeos.snooze:`, `lifeos.alarm`), the
+  QR prefix `lifeos-link:`, and the server's names (`lifeos_escrow_…` in Vault,
+  `LIFEOS_PUBLISHABLE_KEY`). Changing any of them stops old backups, recovery
+  keys, queued reminders or synced keys from being read.
+- **Names nobody sees:** the Dart package (`life_manager`), the repo folder,
+  `ui-kit/LifeOS.dc.html`, `ic_stat_lifeos`, the desktop binary names, and the
+  Supabase migrations and `voice-parse` function, which are as deployed.
+- The router still accepts the old `lifeos://` scheme, so a sign-in email sent
+  before the rename opens.
 
 ## Critical: local environment setup
 
@@ -190,7 +210,7 @@ pairs — Classic (Newsreader + Manrope, the default) plus Plus Jakarta Sans,
 Inter, Nunito, Playfair Display + DM Sans, Outfit and Lexend, all bundled OFL
 variable fonts registered under their own names. `AppFonts.serif` / `.sans` /
 `.numeric` are **getters** naming the chosen style's families, so a `TextStyle`
-that uses them can't be `const` (`AppFonts.mono` still is). `LifeOSApp` calls
+that uses them can't be `const` (`AppFonts.mono` still is). `PersonalOSApp` calls
 `AppFonts.use(...)` before building, and on a change marks every element for
 rebuild — most of the tree is `const` or otherwise wouldn't build again — which
 keeps state and the open screen. Don't cache such a style in a `static final`
@@ -280,6 +300,12 @@ segments are borderless and transparent, so `SegmentedButton` renders no track
 and disappears into the page. Habits, Health and Learn live in the `more` branch
 with the other drawer destinations; nesting them under `tasks-habits` made them
 render inside the Tasks screen.
+
+**Health, Learn and the side menu's "Extra" section are debug-only for now**
+(`previewFeaturesProvider` in `lib/app/preview_features.dart`, `kDebugMode`):
+they aren't tested enough to ship, so release builds hide the ways in — the
+sidebar rows and the tour's mentions — while the screens, routes and data stay.
+Override the provider in a test to check either build.
 
 Reusable comp primitives are in `core/widgets/`: `Tappable` (the universal 0.94
 press), `SurfaceCard`, `SectionHeader`/`Overline`, `ProgressRing`, `DonutChart`,
@@ -540,6 +566,33 @@ on the network: screens read and write Drift as always, and sync runs beside it.
   upgrade and at every launch, so restored backups and older phones' sync
   data join too.
 
+## PersonalOS Plus (`features/subscription/`)
+
+The whole local app is free. Plus is the subscription: sync, voice entry
+beyond the free taste, and every colour theme and font but Forest and Classic
+(`PlusFeature`, `AppColorTheme.isPlus`, `AppFontStyle.isPlus`).
+
+- **The server decides what costs money.** Plus = an active `entitlements` row
+  (`has_sync` / `my_sync_access`); sync uploads and `voice-parse` check it
+  themselves. The app's `PlanController` only asks, to decide what to *draw*:
+  `effectiveColorThemeProvider` / `effectiveFontStyleProvider` fall back to the
+  free looks without overwriting the saved choice.
+- **States:** signed out = free; signed in but not yet answered = `checking`,
+  where themes and fonts stay as chosen (no flicker at launch) but nothing
+  paid is promised; then `known`. A remembered Plus (`SecurePlanCache`, in
+  secure storage, per account) is trusted for 14 days offline.
+- **Voice allowance** lives in SQL (`voice_allowance`): free 15 once, Plus 300
+  a month and 40 a day. `voice-parse` checks before asking the AI and counts
+  the entry only on success; a 429 carries the allowance, which becomes
+  `VoiceLimitReached`.
+- **Buying isn't connected yet.** `purchaseServiceProvider` is
+  `UnavailablePurchases`; the paywall says subscriptions aren't open and its
+  button is disabled — **do not make it fake a purchase.** The plan is Google
+  Play Billing through RevenueCat, whose webhook writes `entitlements`.
+- Tests override `planControllerProvider` with `FixedPlan.plus` / `.free`
+  (`test/features/subscription/plan_fakes.dart`): with nobody signed in, a
+  test that picks a Plus theme or font would otherwise get the free one.
+
 ## Voice entry (`features/voice_entry/`, server in `supabase/functions/voice-parse`)
 
 + → Speak: the phone's own recogniser (`speech_to_text`, `en_IN` first, with
@@ -547,7 +600,8 @@ the person's account and category names as contextual hints) turns speech into
 text; the `voice-parse` Edge Function asks Claude Haiku for three structured
 readings; the sheet offers them and saving goes through the normal controllers,
 with Undo. Needs sign-in and a one-time consent (`AppSettings.voiceEntryConsent`,
-v36). The API key lives only in Supabase secrets.
+v36). The API key lives only in Supabase secrets. How many entries an
+account gets depends on its plan — see PersonalOS Plus above.
 
 - The model returns **names**, never ids; `VoiceDraft.resolve` maps them to this
   phone's rows (exact, then partial match; money falls back to the top account

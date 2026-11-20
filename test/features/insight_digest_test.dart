@@ -56,7 +56,7 @@ void main() {
     ], now: now)!;
 
     expect(digest.title, '2 things worth knowing');
-    expect(digest.body, 'Dining is 120% of budget — and 1 more in LifeOS.');
+    expect(digest.body, 'Dining is 120% of budget — and 1 more in PersonalOS.');
   });
 
   test('one new insight reads as itself', () {

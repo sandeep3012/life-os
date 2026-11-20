@@ -108,7 +108,7 @@ void main() {
       );
     });
 
-    test('codes that are not LifeOS ones are refused', () {
+    test('codes that are not PersonalOS ones are refused', () {
       for (final code in [
         'https://example.com',
         'lifeos-link:1:not-an-id:AAAA',

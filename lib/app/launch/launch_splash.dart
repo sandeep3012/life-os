@@ -172,7 +172,7 @@ class _LaunchSplashState extends ConsumerState<LaunchSplash> {
       opacity: _leaving ? 0 : 1,
       duration: ms(LaunchSplash.fadeOut),
       child: Semantics(
-        label: 'LifeOS is opening',
+        label: 'PersonalOS is opening',
         button: widget.ready,
         onTapHint: widget.ready ? 'Skip to the app' : null,
         child: GestureDetector(
@@ -211,7 +211,7 @@ class _LaunchSplashState extends ConsumerState<LaunchSplash> {
                         opacity: _lifted ? 0.95 : 0,
                         duration: ms(LaunchSplash.lift),
                         child: Text(
-                          'LifeOS',
+                          'PersonalOS',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: AppFonts.serif,

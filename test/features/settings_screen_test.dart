@@ -2,6 +2,8 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:life_manager/app/theme/app_font_style.dart';
+import 'package:life_manager/features/subscription/application/plan_providers.dart';
 import 'package:life_manager/app/theme/app_color_theme.dart';
 import 'package:life_manager/app/theme/app_theme.dart';
 import 'package:life_manager/core/database/app_database.dart';
@@ -12,6 +14,8 @@ import 'package:life_manager/core/services/notification_service.dart';
 import 'package:life_manager/features/settings/application/app_lock_providers.dart';
 import 'package:life_manager/features/settings/application/settings_providers.dart';
 import 'package:life_manager/features/settings/presentation/screens/settings_screen.dart';
+
+import 'subscription/plan_fakes.dart';
 
 class _FakeAppLockService extends AppLockService {
   String? _pin;
@@ -37,7 +41,7 @@ class _FakeAppLockService extends AppLockService {
 
   @override
   Future<DeviceAuthResult> authenticateWithDevice({
-    String reason = 'Unlock LifeOS',
+    String reason = 'Unlock PersonalOS',
   }) async {
     authReasons.add(reason);
     return nextAuth;
@@ -71,7 +75,12 @@ void main() {
   late _FakeNotificationService notifications;
   late _FakeAppLockService appLock;
 
+  /// The plan the screen sees. Plus unless a test says otherwise, so the
+  /// theme and font tests can pick any of them.
+  late FixedPlan Function() plan;
+
   setUp(() {
+    plan = FixedPlan.plus;
     db = AppDatabase.forTesting(NativeDatabase.memory());
     notifications = _FakeNotificationService();
     appLock = _FakeAppLockService();
@@ -80,6 +89,7 @@ void main() {
         appDatabaseProvider.overrideWithValue(db),
         notificationServiceProvider.overrideWithValue(notifications),
         appLockServiceProvider.overrideWithValue(appLock),
+        planControllerProvider.overrideWith(() => plan()),
       ],
     );
   });
@@ -130,6 +140,48 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1));
     },
   );
+
+  testWidgets('on the free plan a Plus theme or font opens PersonalOS Plus', (
+    tester,
+  ) async {
+    plan = FixedPlan.free;
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    // Forest and Classic are everyone's; the rest wear a lock.
+    await tester.scrollUntilVisible(find.text('Ocean'), 200);
+    await tester.tap(find.text('Ocean'));
+    await tester.pumpAndSettle();
+    expect(find.text('Preview Ocean'), findsNothing);
+    expect(find.text('PersonalOS Plus'), findsWidgets);
+    expect(find.text('Every colour theme'), findsOneWidget);
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+    expect(container.read(settingsProvider).colorTheme, AppColorTheme.forest);
+
+    // The font list is folded: only the one in use shows until it's opened.
+    await tester.scrollUntilVisible(find.text('More fonts'), 200);
+    expect(find.text('Classic'), findsOneWidget);
+    expect(find.text('Friendly'), findsNothing);
+    expect(find.textContaining('₹1,250'), findsNothing);
+    await tester.ensureVisible(find.text('More fonts'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('More fonts'));
+    await tester.pumpAndSettle();
+    expect(find.text('Show less'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Friendly'), 200);
+    await tester.ensureVisible(find.text('Friendly'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Friendly'));
+    await tester.pumpAndSettle();
+    expect(find.text('Every font style'), findsOneWidget);
+    await tester.tap(find.text('Not now'));
+    await tester.pumpAndSettle();
+    expect(container.read(settingsProvider).fontStyle, AppFontStyle.classic);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 
   testWidgets('changing color theme persists and updates resolved settings', (
     tester,

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The status-bar / notification icon: LifeOS's ring mark as a plain white
+<!-- The status-bar / notification icon: PersonalOS's ring mark as a plain white
      shape. Android draws a notification's small icon from its transparency
      alone, so the full-colour launcher icon showed up there as a blank
      blob. -->

@@ -51,7 +51,7 @@ class LifeHaptics {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       try {
         await const MethodChannel(
-          'com.sandeep.lifeos/haptics',
+          'com.personalos.app/haptics',
         ).invokeMethod<void>('save');
         return;
       } catch (_) {

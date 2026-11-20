@@ -1,4 +1,4 @@
-package com.sandeep.lifeos
+package com.personalos.app
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -14,7 +14,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * LifeOS · Today: today's to-dos, habits done, and this month's spend.
+ * PersonalOS · Today: today's to-dos, habits done, and this month's spend.
  *
  * Everything shown is worked out by the app (TodayWidgetSnapshot) and saved
  * here; this only lays it out. If what was saved is from an earlier day, the
@@ -23,7 +23,7 @@ import java.util.Locale
  */
 class TodayWidgetProvider : AppWidgetProvider() {
     companion object {
-        /** Where MainActivity's `com.sandeep.lifeos/widget` channel saves the snapshot. */
+        /** Where MainActivity's `com.personalos.app/widget` channel saves the snapshot. */
         private const val PREFS = "lifeos_today_widget"
 
         fun prefs(context: Context): SharedPreferences =
@@ -70,8 +70,8 @@ class TodayWidgetProvider : AppWidgetProvider() {
                     R.id.widget_message,
                     // The list is worked out by the app, so a new day's
                     // can't appear until the app has run since midnight.
-                    if (savedDay == null) "Open LifeOS to see your day here."
-                    else "A new day — open LifeOS to load today's list.",
+                    if (savedDay == null) "Open PersonalOS to see your day here."
+                    else "A new day — open PersonalOS to load today's list.",
                 )
                 return views
             }
@@ -99,7 +99,7 @@ class TodayWidgetProvider : AppWidgetProvider() {
 
             // App lock on: counts only, nothing readable over someone's shoulder.
             val message = when {
-                locked -> "App lock is on — open LifeOS to see details."
+                locked -> "App lock is on — open PersonalOS to see details."
                 total > 0 && left == 0 -> "Nothing left on the list."
                 else -> ""
             }

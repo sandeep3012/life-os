@@ -34,7 +34,7 @@ Future<UnlockMethod?> showUnlockMethodSheet(BuildContext context) {
           _Option(
             icon: LucideIcons.keyRound,
             title: 'App PIN',
-            subtitle: 'A separate PIN just for LifeOS.',
+            subtitle: 'A separate PIN just for PersonalOS.',
             onTap: () => Navigator.of(context).pop(UnlockMethod.appPin),
           ),
         ],

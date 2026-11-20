@@ -74,8 +74,7 @@ class SpeechTranscript {
       final revision = next.toLowerCase().startsWith(
         last.toLowerCase().split(' ').first,
       );
-      final newPiece =
-          words.startsWith(' ') || next.length < last.length ~/ 2;
+      final newPiece = words.startsWith(' ') || next.length < last.length ~/ 2;
       if (newPiece && !revision) _pieces.add(last);
     }
     _pending = next;
@@ -182,7 +181,7 @@ class SpeechSession implements SpeechCapture {
       if (!_ready) {
         throw const SpeechCaptureException(
           'Speech recognition isn\'t available. Allow the microphone for '
-          'LifeOS, and check the phone has a speech service (Google on '
+          'PersonalOS, and check the phone has a speech service (Google on '
           'Android).',
         );
       }

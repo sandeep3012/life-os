@@ -81,13 +81,13 @@ Future<Uint8List> reportToPdf(
       footer: (context) => pw.Align(
         alignment: pw.Alignment.centerRight,
         child: pw.Text(
-          'LifeOS | ${context.pageNumber} / ${context.pagesCount}',
+          'PersonalOS | ${context.pageNumber} / ${context.pagesCount}',
           style: const pw.TextStyle(fontSize: 9),
         ),
       ),
       build: (context) => [
         pw.Text(
-          'LifeOS Finance Report',
+          'PersonalOS Finance Report',
           style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
         ),
         pw.SizedBox(height: 6),

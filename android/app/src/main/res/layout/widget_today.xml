@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- LifeOS · Today. Left: today's to-dos. Right: two stat wells — this
+<!-- PersonalOS · Today. Left: today's to-dos. Right: two stat wells — this
      month's spend and habits done. Filled in by TodayWidgetProvider. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"

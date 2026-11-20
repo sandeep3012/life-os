@@ -6,7 +6,7 @@ import '../../../../app/theme/app_fonts.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/widgets/tappable.dart';
 
-/// Comp: a 34×34 radius-11 accent square carrying a serif "L", then "LifeOS" at
+/// Comp: a 34×34 radius-11 accent square carrying a serif "L", then "PersonalOS" at
 /// 20px Newsreader w600.
 class AuthBrandRow extends StatelessWidget {
   const AuthBrandRow({super.key});
@@ -36,7 +36,7 @@ class AuthBrandRow extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Text(
-          'LifeOS',
+          'PersonalOS',
           style: TextStyle(
             fontFamily: AppFonts.serif,
             fontSize: 20,

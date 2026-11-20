@@ -36,7 +36,7 @@ class _FakeLock extends AppLockService {
 
   @override
   Future<DeviceAuthResult> authenticateWithDevice({
-    String reason = 'Unlock LifeOS',
+    String reason = 'Unlock PersonalOS',
   }) async {
     authCalls++;
     return next;
@@ -153,7 +153,7 @@ void main() {
 
         // Dismissing the phone's prompt leaves its screen, not a keypad.
         expect(locked(), isTrue);
-        expect(find.text('LifeOS is locked'), findsOneWidget);
+        expect(find.text('PersonalOS is locked'), findsOneWidget);
         expect(find.text('Enter PIN'), findsNothing);
 
         await tester.tap(find.text('Use PIN instead'));
@@ -229,7 +229,7 @@ void main() {
         await pump(tester, lock, phoneLockOn: true);
 
         expect(locked(), isTrue);
-        expect(find.text('LifeOS is locked'), findsOneWidget);
+        expect(find.text('PersonalOS is locked'), findsOneWidget);
         expect(find.text('Unlock'), findsOneWidget);
         expect(find.text('Enter PIN'), findsNothing, reason: 'no PIN to enter');
         await disposeCleanly(tester);

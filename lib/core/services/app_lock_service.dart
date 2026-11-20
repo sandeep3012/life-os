@@ -63,7 +63,7 @@ class AppLockService {
   /// phone's passcode, PIN or pattern when the biometric isn't available or
   /// fails. The app never sees the passcode, only the answer.
   Future<DeviceAuthResult> authenticateWithDevice({
-    String reason = 'Unlock LifeOS',
+    String reason = 'Unlock PersonalOS',
   }) async {
     _authenticating = true;
     try {

@@ -139,7 +139,7 @@ class SyncCrypto {
     String requestId,
   ) async {
     if (publicKey.length != 32) {
-      throw const SyncCryptoException("That code isn't from LifeOS.");
+      throw const SyncCryptoException("That code isn't from PersonalOS.");
     }
     final mine = await _x25519.newKeyPair();
     final minePublic = await mine.extractPublicKey();
@@ -272,11 +272,11 @@ class LinkRequest {
   static ({String id, Uint8List publicKey}) parse(String code) {
     final text = code.trim();
     if (!text.startsWith(_prefix)) {
-      throw const SyncCryptoException("That code isn't from LifeOS.");
+      throw const SyncCryptoException("That code isn't from PersonalOS.");
     }
     final parts = text.substring(_prefix.length).split(':');
     if (parts.length != 2 || !RegExp(r'^[0-9a-f-]{36}$').hasMatch(parts[0])) {
-      throw const SyncCryptoException("That code isn't from LifeOS.");
+      throw const SyncCryptoException("That code isn't from PersonalOS.");
     }
     try {
       final padded = parts[1].padRight((parts[1].length + 3) ~/ 4 * 4, '=');
@@ -284,7 +284,7 @@ class LinkRequest {
       if (key.length != 32) throw const FormatException();
       return (id: parts[0], publicKey: key);
     } on FormatException {
-      throw const SyncCryptoException("That code isn't from LifeOS.");
+      throw const SyncCryptoException("That code isn't from PersonalOS.");
     }
   }
 }

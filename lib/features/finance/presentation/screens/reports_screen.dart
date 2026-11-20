@@ -85,7 +85,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ),
             );
       final fileName =
-          'lifeos-report-${DateFormat('yyyy-MM-dd').format(report.period.start)}-to-${DateFormat('yyyy-MM-dd').format(report.period.end.subtract(const Duration(days: 1)))}.${pdf ? 'pdf' : 'csv'}';
+          'personalos-report-${DateFormat('yyyy-MM-dd').format(report.period.start)}-to-${DateFormat('yyyy-MM-dd').format(report.period.end.subtract(const Duration(days: 1)))}.${pdf ? 'pdf' : 'csv'}';
       final path = await FilePicker.saveFile(
         dialogTitle: 'Save report',
         fileName: fileName,

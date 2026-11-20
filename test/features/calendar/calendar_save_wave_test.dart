@@ -9,7 +9,7 @@ void main() {
   testWidgets('Android save uses native pattern; disabled haptics skip it', (
     tester,
   ) async {
-    const channel = MethodChannel('com.sandeep.lifeos/haptics');
+    const channel = MethodChannel('com.personalos.app/haptics');
     final calls = <String>[];
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
       call,

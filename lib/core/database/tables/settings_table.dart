@@ -44,7 +44,7 @@ class AppSettings extends Table {
       boolean().withDefault(const Constant(true))();
 
   /// The in-app "Animations: Reduced" choice. Applies the phone's own
-  /// reduce-motion behaviour to LifeOS alone; the phone's setting, when on,
+  /// reduce-motion behaviour to PersonalOS alone; the phone's setting, when on,
   /// still wins regardless of this.
   BoolColumn get reduceMotion => boolean().withDefault(const Constant(false))();
 

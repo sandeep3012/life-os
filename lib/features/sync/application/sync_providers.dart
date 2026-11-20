@@ -462,7 +462,7 @@ class SyncController extends Notifier<SyncStatus> {
 
   /// The syncing phone's side: hands this phone's data key to the phone
   /// that showed [code]. Throws [SyncCryptoException] for a code that isn't
-  /// LifeOS's.
+  /// PersonalOS's.
   Future<void> approveLink(String code) async {
     final userId = _requireUser();
     final key = _dataKey;

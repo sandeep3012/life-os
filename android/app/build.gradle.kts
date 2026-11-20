@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.sandeep.lifeos"
+    namespace = "com.personalos.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,10 +21,10 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.sandeep.lifeos"
+        applicationId = "com.personalos.app"
         // Release builds keep this identity. Debug builds override both the
         // application id and label below so they can live beside production.
-        manifestPlaceholders["appLabel"] = "LifeOS"
+        manifestPlaceholders["appLabel"] = "PersonalOS"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -37,7 +37,7 @@ android {
         debug {
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
-            manifestPlaceholders["appLabel"] = "LifeOS Dev"
+            manifestPlaceholders["appLabel"] = "PersonalOS Dev"
         }
         release {
             // TODO: Add your own signing config for the release build.

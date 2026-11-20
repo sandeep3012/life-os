@@ -66,7 +66,7 @@ void main() {
           appDatabaseProvider.overrideWithValue(db),
           notificationServiceProvider.overrideWithValue(notifications),
         ],
-        child: const LifeOSApp(),
+        child: const PersonalOSApp(),
       ),
     );
     await tester.pumpAndSettle();
@@ -110,6 +110,10 @@ void main() {
 
     // Home, with its tour on top.
     expect(find.text('Add anything from here'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    // Voice entry has a stop of its own, on the same button.
+    expect(find.text('Or just say it'), findsOneWidget);
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
     expect(find.text('Everything else lives here'), findsOneWidget);

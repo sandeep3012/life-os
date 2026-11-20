@@ -259,7 +259,7 @@ void main() {
       expect(accounts.single.balanceMinor, 5000);
     });
 
-    test('a scanned code that is not LifeOS changes nothing', () async {
+    test('a scanned code that is not PersonalOS changes nothing', () async {
       final first = await _setUp(server, 'user-l2');
       await expectLater(
         first.controller.approveLink('https://example.com'),

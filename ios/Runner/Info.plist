@@ -7,7 +7,7 @@
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>LifeOS</string>
+		<string>PersonalOS</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>LifeOS</string>
+		<string>PersonalOS</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
@@ -29,7 +29,7 @@
 		<key>NSCameraUsageDescription</key>
 		<string>Take a photo of a receipt or document to attach it, or scan the code a new phone shows to add it to your sync.</string>
 		<key>NSFaceIDUsageDescription</key>
-		<string>Unlock LifeOS with Face ID instead of typing a PIN.</string>
+		<string>Unlock PersonalOS with Face ID instead of typing a PIN.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>Choose an existing photo of a receipt or document to attach it to a transaction or your document library.</string>
 		<key>UIApplicationSceneManifest</key>
@@ -74,27 +74,27 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
-		<!-- Supabase handles lifeos://auth-callback itself; Flutter's own
+		<!-- Supabase handles personalos://auth-callback itself; Flutter's own
 		     deep linking would hand it to the router as a page address. -->
 		<key>FlutterDeepLinkingEnabled</key>
 		<false/>
 		<!-- Sync sign-in: email confirmation, password reset and the
-		     Google/Apple pages come back to lifeos://auth-callback. -->
+		     Google/Apple pages come back to personalos://auth-callback. -->
 		<!-- Voice entry: speak a record instead of typing it. -->
 		<key>NSMicrophoneUsageDescription</key>
-		<string>LifeOS listens when you tap Speak, so you can add an expense, task, habit or event by voice.</string>
+		<string>PersonalOS listens when you tap Speak, so you can add an expense, task, habit or event by voice.</string>
 		<key>NSSpeechRecognitionUsageDescription</key>
-		<string>LifeOS turns what you say into text so it can fill in the record for you.</string>
+		<string>PersonalOS turns what you say into text so it can fill in the record for you.</string>
 		<key>CFBundleURLTypes</key>
 		<array>
 			<dict>
 				<key>CFBundleTypeRole</key>
 				<string>Editor</string>
 				<key>CFBundleURLName</key>
-				<string>lifeos-auth</string>
+				<string>personalos-auth</string>
 				<key>CFBundleURLSchemes</key>
 				<array>
-					<string>lifeos</string>
+					<string>personalos</string>
 				</array>
 			</dict>
 		</array>

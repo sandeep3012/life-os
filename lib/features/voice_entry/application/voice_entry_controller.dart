@@ -10,6 +10,7 @@ import '../../settings/application/settings_providers.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../data/speech_capture.dart';
 import '../data/voice_parser.dart';
+import '../../subscription/domain/plan.dart';
 import '../domain/voice_draft.dart';
 import 'category_memory.dart';
 import 'voice_draft_saver.dart';
@@ -25,6 +26,8 @@ class VoiceEntryState {
     this.message,
     this.accounts = const [],
     this.categories = const [],
+    this.allowance,
+    this.limitReached = false,
   });
 
   final VoicePhase phase;
@@ -46,6 +49,13 @@ class VoiceEntryState {
   /// What a card's account and category can be changed to.
   final List<Account> accounts;
   final List<Category> categories;
+
+  /// What's left on the plan, as of the last answer from the server.
+  final VoiceAllowance? allowance;
+
+  /// The error is "none left on the plan", not a misheard sentence: trying
+  /// again won't help.
+  final bool limitReached;
 
   /// The categories an option of [kind] can take, in the person's order.
   List<Category> categoriesFor(VoiceDraftKind kind) {
@@ -70,6 +80,8 @@ class VoiceEntryState {
         message: message,
         accounts: accounts,
         categories: categories,
+        allowance: allowance,
+        limitReached: limitReached,
       );
 }
 
@@ -184,11 +196,26 @@ class VoiceEntryController extends Notifier<VoiceEntryState> {
           options: options,
           accounts: setup.accountRows,
           categories: setup.categoryRows,
+          allowance: parser.allowance,
+        ),
+      );
+    } on VoiceLimitReached catch (e) {
+      _set(
+        VoiceEntryState(
+          phase: VoicePhase.error,
+          text: text,
+          message: e.message,
+          allowance: e.allowance,
+          limitReached: true,
         ),
       );
     } on VoiceParseException catch (e) {
       _set(
-        VoiceEntryState(phase: VoicePhase.error, text: text, message: e.message),
+        VoiceEntryState(
+          phase: VoicePhase.error,
+          text: text,
+          message: e.message,
+        ),
       );
     } on Object {
       _set(

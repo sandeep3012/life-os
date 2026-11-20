@@ -12,7 +12,7 @@ import '../../../core/utils/currency_utils.dart';
 import '../../../core/widgets/tab_rail.dart';
 import '../../settings/application/settings_providers.dart';
 
-/// The first-launch welcome: what LifeOS is, that it's private, a quick
+/// The first-launch welcome: what PersonalOS is, that it's private, a quick
 /// setup, and reminders. Shown once, in place of the app, until finished or
 /// skipped; see `OnboardingGate` for when it is offered at all.
 ///
@@ -238,7 +238,7 @@ class _WelcomePage extends StatelessWidget {
       title: 'Your whole day,\nin one calm place.',
       body:
           'Track spending, build habits, plan tasks, take your medication on '
-          'time and keep notes — LifeOS brings them together.',
+          'time and keep notes — PersonalOS brings them together.',
     );
   }
 }

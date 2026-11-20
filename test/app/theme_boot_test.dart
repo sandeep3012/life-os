@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:life_manager/features/subscription/application/plan_providers.dart';
 import 'package:life_manager/app/app.dart';
 import 'package:life_manager/app/boot_plate.dart';
 import 'package:life_manager/app/theme/app_color_theme.dart';
@@ -15,6 +16,8 @@ import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
 import 'package:life_manager/core/services/schedule_coordinator.dart';
 import 'package:life_manager/features/settings/application/settings_providers.dart';
+
+import '../features/subscription/plan_fakes.dart';
 
 class _FakeNotificationService extends NotificationService {
   @override
@@ -65,6 +68,9 @@ void main() {
   Widget host() => ProviderScope(
     overrides: [
       appDatabaseProvider.overrideWithValue(db),
+      // The stored theme here is a Plus one; this test is about when it's
+      // painted, not who may have it.
+      planControllerProvider.overrideWith(FixedPlan.plus),
       notificationServiceProvider.overrideWithValue(_FakeNotificationService()),
       scheduleCoordinatorProvider.overrideWith(
         (ref) => _InertScheduleCoordinator(
@@ -73,7 +79,7 @@ void main() {
         ),
       ),
     ],
-    child: const LifeOSApp(),
+    child: const PersonalOSApp(),
   );
 
   group('settingsLoadedProvider', () {
