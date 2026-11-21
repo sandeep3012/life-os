@@ -16,12 +16,12 @@ abstract class HomeWidgetBridge {
   Future<void> push(Map<String, Object> data);
 }
 
-/// Hands the snapshot to MainActivity's `com.personalos.app/widget` channel,
+/// Hands the snapshot to MainActivity's `com.sandit.personalos/widget` channel,
 /// which saves it and redraws `TodayWidgetProvider`. A channel of our own
 /// rather than the `home_widget` package: that plugin needs iOS 14, and the
 /// widget is Android-only.
 class _PlatformHomeWidgetBridge implements HomeWidgetBridge {
-  static const _channel = MethodChannel('com.personalos.app/widget');
+  static const _channel = MethodChannel('com.sandit.personalos/widget');
 
   @override
   Future<void> push(Map<String, Object> data) async {

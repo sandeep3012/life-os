@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/router/app_sidebar.dart';
+import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../core/widgets/collection_layout.dart';
@@ -94,9 +95,12 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
 
     return Scaffold(
       drawer: const AppSidebar(),
-      appBar: AppBar(
-        title: const Text('Goals'),
-        actions: const [CollectionLayoutButton(screen: CollectionScreen.goals)],
+      appBar: AppPageBar(
+        title: 'Goals',
+        trailingIcon: LucideIcons.slidersVertical,
+        trailingLabel: 'Layout settings',
+        onTrailing: () =>
+            showCollectionLayoutSheet(context, CollectionScreen.goals),
       ),
       body: allGoals.isEmpty
           // Nothing to filter yet — no filter bar, just the first-run prompt.

@@ -36,8 +36,8 @@ row-level security, plus the `push_records`, `pull_records`,
 Apple button until `SupabaseConfig.appleSignIn` is true.* Needs a paid Apple
 Developer membership.
 
-1. Identifiers → App ID `com.personalos.app` with *Sign in with Apple*.
-2. Identifiers → a **Services ID** (e.g. `com.personalos.app.signin`) with
+1. Identifiers → App ID `com.sandit.personalos` with *Sign in with Apple*.
+2. Identifiers → a **Services ID** (e.g. `com.sandit.personalos.signin`) with
    *Sign in with Apple*: domain `hxqvkhtulmmocfwpzeiv.supabase.co`, return URL
    `https://hxqvkhtulmmocfwpzeiv.supabase.co/auth/v1/callback`.
 3. Keys → a key with *Sign in with Apple* → download the `.p8` (once only);

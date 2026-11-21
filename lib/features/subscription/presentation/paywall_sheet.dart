@@ -34,20 +34,34 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
   List<PlusOffer> _offers = const [];
   PlusOffer? _chosen;
   bool _busy = false;
+
+  /// The store has answered (with offers or without).
+  bool _loaded = false;
+
+  /// The store took the purchase but the server hasn't caught up yet.
+  bool _confirming = false;
   String? _message;
 
   @override
   void initState() {
     super.initState();
     final purchases = ref.read(purchaseServiceProvider);
-    if (purchases.available) {
-      purchases.offers().then((offers) {
-        if (!mounted) return;
-        setState(() {
-          _offers = offers;
-          _chosen = offers.firstOrNull;
-        });
-      });
+    if (purchases.available &&
+        ref.read(planControllerProvider).status != PlanStatus.signedOut) {
+      purchases
+          .offers()
+          .then((offers) {
+            if (!mounted) return;
+            setState(() {
+              _offers = offers;
+              _chosen = offers.firstOrNull;
+              _loaded = true;
+            });
+          })
+          .catchError((Object _) {
+            // No network, or the store has nothing set up for this build.
+            if (mounted) setState(() => _loaded = true);
+          });
     }
   }
 
@@ -57,22 +71,37 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
       _message = null;
     });
     var done = false;
+    var cancelled = false;
     try {
       done = await action();
+    } on PurchaseCancelled {
+      cancelled = true;
     } on Object {
       done = false;
     }
     if (!mounted) return;
-    if (done) {
-      // The store has confirmed; the server hears from it too, and the
-      // plan is re-read from there.
-      await ref.read(planControllerProvider.notifier).refresh();
-      if (mounted) Navigator.of(context).pop();
+    if (!done) {
+      setState(() {
+        _busy = false;
+        // Backing out of the store's sheet needs no comment.
+        _message = cancelled ? null : failed;
+      });
+      return;
+    }
+    // The store has confirmed. The server hears from the store itself and
+    // is what unlocks Plus, so wait for it to agree.
+    final unlocked = await ref
+        .read(planControllerProvider.notifier)
+        .refreshUntilPlus();
+    if (!mounted) return;
+    if (unlocked) {
+      Navigator.of(context).pop();
       return;
     }
     setState(() {
       _busy = false;
-      _message = failed;
+      _confirming = true;
+      _message = null;
     });
   }
 
@@ -184,6 +213,13 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
                 },
                 child: const Text('Sign in to get Plus'),
               ),
+            ] else if (_confirming) ...[
+              Text(
+                'Your purchase went through. PersonalOS Plus will switch on '
+                "in a few minutes — reopen the app if it hasn't by then.",
+                textAlign: TextAlign.center,
+                style: TextStyle(height: 1.45, color: scheme.onSurface),
+              ),
             ] else if (!purchases.available) ...[
               FilledButton(onPressed: null, child: const Text('Subscribe')),
               const SizedBox(height: 8),
@@ -192,6 +228,13 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
                 'through Google Play.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+              ),
+            ] else if (_loaded && _offers.isEmpty) ...[
+              Text(
+                "Couldn't load the subscription options. Check your "
+                'connection and try again.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: scheme.onSurfaceVariant),
               ),
             ] else ...[
               for (final offer in _offers)
@@ -247,7 +290,7 @@ class _PaywallSheetState extends ConsumerState<PaywallSheet> {
             const SizedBox(height: 4),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(plan.isPlus ? 'Close' : 'Not now'),
+              child: Text(plan.isPlus || _confirming ? 'Close' : 'Not now'),
             ),
             if (signedIn)
               Text(

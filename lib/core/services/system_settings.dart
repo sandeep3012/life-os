@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 
 /// Opens parts of the phone's own settings for this app.
 abstract final class SystemSettings {
-  static const _channel = MethodChannel('com.personalos.app/system');
+  static const _channel = MethodChannel('com.sandit.personalos/system');
 
   /// Whether [openNotificationSettings] has somewhere to go. Android only:
   /// iOS has no per-app sound settings to open.

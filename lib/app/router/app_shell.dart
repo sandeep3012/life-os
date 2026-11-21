@@ -1,3 +1,4 @@
+import 'menu_origin.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -67,6 +68,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    MenuOrigin.showing(widget.navigationShell.currentIndex);
     return PopScope(
       // A branch route handles its own back navigation before this root shell
       // sees it. At a branch root, intercepting here lets Android return to

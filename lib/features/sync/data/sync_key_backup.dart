@@ -101,7 +101,7 @@ class ICloudKeychainBackup implements SyncKeyBackup {
 /// encrypted; without one it stays on this phone.
 class BlockStoreBackup implements SyncKeyBackup {
   BlockStoreBackup([MethodChannel? channel])
-    : _channel = channel ?? const MethodChannel('com.personalos.app/keyBackup');
+    : _channel = channel ?? const MethodChannel('com.sandit.personalos/keyBackup');
 
   final MethodChannel _channel;
 

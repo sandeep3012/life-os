@@ -153,6 +153,35 @@ void main() {
     expect(looks(), (AppColorTheme.forest, AppFontStyle.classic));
   });
 
+  test('after a purchase it keeps asking until the server agrees', () async {
+    session.userId = 'u1';
+    await controller().start();
+    expect(plan().isPlus, isFalse);
+
+    // The store's notice reaches the server a moment after the purchase.
+    Future<void>.delayed(
+      const Duration(milliseconds: 25),
+      () => backend.plus = true,
+    );
+    final unlocked = await controller().refreshUntilPlus(
+      tries: 20,
+      every: const Duration(milliseconds: 10),
+    );
+    expect(unlocked, isTrue);
+    expect(plan().isPlus, isTrue);
+  });
+
+  test('and gives up, still free, when the server never does', () async {
+    session.userId = 'u1';
+    await controller().start();
+    final unlocked = await controller().refreshUntilPlus(
+      tries: 3,
+      every: const Duration(milliseconds: 5),
+    );
+    expect(unlocked, isFalse);
+    expect(plan().isPlus, isFalse);
+  });
+
   test('the voice allowance reads the server and says what is left', () {
     final free = VoiceAllowance.fromJson({
       'plan': 'free',

@@ -12,7 +12,16 @@ import 'package:life_manager/core/database/app_database.dart';
 import 'package:life_manager/core/database/app_database_provider.dart';
 import 'package:life_manager/core/reminders/reminder_mode.dart';
 import 'package:life_manager/core/services/notification_service.dart';
+import 'package:go_router/go_router.dart';
+import 'package:life_manager/app/router/route_paths.dart';
+import 'package:life_manager/features/calendar/presentation/screens/calendar_screen.dart';
+import 'package:life_manager/features/documents/presentation/screens/documents_screen.dart';
+import 'package:life_manager/features/goals/presentation/screens/goals_screen.dart';
+import 'package:life_manager/features/home/presentation/screens/home_screen.dart';
 import 'package:life_manager/features/home/presentation/widgets/add_menu_sheet.dart';
+import 'package:life_manager/features/notes/presentation/screens/notes_screen.dart';
+import 'package:life_manager/features/search/presentation/screens/search_screen.dart';
+import 'package:life_manager/features/settings/presentation/screens/settings_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class _FakeNotificationService extends NotificationService {
@@ -71,8 +80,7 @@ void main() {
         notificationServiceProvider.overrideWithValue(
           _FakeNotificationService(),
         ),
-        if (preview != null)
-          previewFeaturesProvider.overrideWithValue(preview),
+        if (preview != null) previewFeaturesProvider.overrideWithValue(preview),
       ],
       child: const PersonalOSApp(),
     );
@@ -90,19 +98,23 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(
-          bottomNavigationBar: AppFloatingNavBar(
-            destinations: const [
-              AppNavDestination(LucideIcons.house, LucideIcons.house, 'Home'),
-              AppNavDestination(LucideIcons.wallet, LucideIcons.wallet, 'Money'),
-            ],
-            selectedIndex: 0,
-            onSelected: (_) {},
-            onAdd: () => taps++,
-            onAddLongPress: () => holds++,
+          theme: AppTheme.light(),
+          home: Scaffold(
+            bottomNavigationBar: AppFloatingNavBar(
+              destinations: const [
+                AppNavDestination(LucideIcons.house, LucideIcons.house, 'Home'),
+                AppNavDestination(
+                  LucideIcons.wallet,
+                  LucideIcons.wallet,
+                  'Money',
+                ),
+              ],
+              selectedIndex: 0,
+              onSelected: (_) {},
+              onAdd: () => taps++,
+              onAddLongPress: () => holds++,
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -156,6 +168,56 @@ void main() {
       ),
       findsOneWidget,
     );
+
+    await disposeCleanly(tester);
+  });
+
+  // The side menu's screens open on top of the tab they were opened from,
+  // so Android's back button slides them away and lands back there — not on
+  // the old "More" page, and not with a jump to Home from another tab.
+  testWidgets('back from a side-menu screen returns to where it was opened', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    final router = GoRouter.of(tester.element(find.byType(HomeScreen)));
+
+    for (final (path, screen) in [
+      (RoutePaths.notes, NotesScreen),
+      (RoutePaths.goals, GoalsScreen),
+      (RoutePaths.documents, DocumentsScreen),
+      (RoutePaths.settings, SettingsScreen),
+      (RoutePaths.search, SearchScreen),
+    ]) {
+      router.go(path);
+      await tester.pumpAndSettle();
+      expect(find.byType(screen), findsOneWidget, reason: path);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(screen), findsNothing, reason: 'left $path');
+      expect(
+        find.byType(HomeScreen),
+        findsOneWidget,
+        reason: 'back from $path',
+      );
+    }
+
+    // Opened from the Calendar tab, back returns to Calendar.
+    router.go(RoutePaths.calendar);
+    await tester.pumpAndSettle();
+    router.go(RoutePaths.notes);
+    await tester.pumpAndSettle();
+    expect(find.byType(NotesScreen), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(NotesScreen), findsNothing);
+    expect(find.byType(CalendarScreen), findsOneWidget);
+
+    // The old page's own address has no screen behind it any more.
+    router.go(RoutePaths.more);
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
 
     await disposeCleanly(tester);
   });
@@ -401,10 +463,7 @@ void main() {
 
     // The dialog closing is acknowledged, not silent.
     expect(find.text('Transfer complete'), findsOneWidget);
-    expect(
-      find.text('₹150.00 moved from Wallet to Savings.'),
-      findsOneWidget,
-    );
+    expect(find.text('₹150.00 moved from Wallet to Savings.'), findsOneWidget);
     // Let the card dismiss itself before the test ends.
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();

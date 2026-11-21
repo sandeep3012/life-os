@@ -14,6 +14,27 @@ void main() {
     // Real screens are left alone.
     expect(offRouteRedirect(Uri.parse(RoutePaths.home)), isNull);
     expect(offRouteRedirect(Uri.parse(RoutePaths.sync)), isNull);
-    expect(offRouteRedirect(Uri.parse(RoutePaths.settings)), isNull);
+    expect(offRouteRedirect(Uri.parse('/home/more/settings')), isNull);
+  });
+
+  test('a side-menu screen opens on top of the tab that is showing', () {
+    expect(
+      offRouteRedirect(Uri.parse(RoutePaths.settings)),
+      '/home/more/settings',
+    );
+    expect(
+      offRouteRedirect(
+        Uri.parse(RoutePaths.notes),
+        tabRoot: RoutePaths.finance,
+      ),
+      '/finance/more/notes',
+    );
+    expect(
+      offRouteRedirect(
+        Uri.parse('/more/documents/folder/abc?name=Bills'),
+        tabRoot: RoutePaths.calendar,
+      ),
+      '/calendar/more/documents/folder/abc?name=Bills',
+    );
   });
 }

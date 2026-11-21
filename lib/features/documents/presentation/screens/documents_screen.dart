@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_sidebar.dart';
+import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/widgets/filter_pill.dart';
 import '../../../../core/widgets/save_feedback.dart';
@@ -75,29 +76,26 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
 
     return Scaffold(
       drawer: const AppSidebar(),
-      appBar: AppBar(
-        title: _searchVisible
+      appBar: AppPageBar(
+        title: 'Documents',
+        center: _searchVisible
             ? TextField(
                 controller: _searchController,
                 autofocus: true,
                 decoration: const InputDecoration(
                   hintText: 'Search documents…',
-                  border: InputBorder.none,
+                  isDense: true,
                 ),
               )
-            : const Text('Documents'),
-        actions: [
-          IconButton(
-            tooltip: _searchVisible ? 'Close search' : 'Search',
-            icon: Icon(_searchVisible ? LucideIcons.x : LucideIcons.search),
-            onPressed: () {
-              setState(() {
-                _searchVisible = !_searchVisible;
-                if (!_searchVisible) _searchController.clear();
-              });
-            },
-          ),
-        ],
+            : null,
+        trailingIcon: _searchVisible ? LucideIcons.x : LucideIcons.search,
+        trailingLabel: _searchVisible ? 'Close search' : 'Search',
+        onTrailing: () {
+          setState(() {
+            _searchVisible = !_searchVisible;
+            if (!_searchVisible) _searchController.clear();
+          });
+        },
       ),
       body: CustomScrollView(
         slivers: [

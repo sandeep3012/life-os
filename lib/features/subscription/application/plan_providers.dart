@@ -91,6 +91,23 @@ class PlanController extends Notifier<PlanState> {
     await refresh();
   }
 
+  /// After the store has confirmed a purchase: asks the server until it
+  /// agrees. The store tells the server itself, which takes a moment, so
+  /// the first answer is often still "free". True once the account has Plus.
+  Future<bool> refreshUntilPlus({
+    int tries = 10,
+    Duration every = const Duration(seconds: 2),
+  }) async {
+    for (var i = 0; i < tries; i++) {
+      if (i > 0) await Future<void>.delayed(every);
+      if (!ref.mounted) return false;
+      await refresh();
+      if (!ref.mounted) return false;
+      if (state.isPlus) return true;
+    }
+    return false;
+  }
+
   /// Reads the remembered plan, then asks the server.
   Future<void> refresh() async {
     final generation = ++_generation;

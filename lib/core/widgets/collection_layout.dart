@@ -34,7 +34,15 @@ class CollectionLayoutButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) => IconButton(
     tooltip: 'Layout settings',
     icon: const Icon(LucideIcons.slidersVertical),
-    onPressed: () => showModalBottomSheet<void>(
+    onPressed: () => showCollectionLayoutSheet(context, screen),
+  );
+}
+
+/// The list-or-grid choice for [screen].
+Future<void> showCollectionLayoutSheet(
+  BuildContext context,
+  CollectionScreen screen,
+) => showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (context) => SafeArea(
@@ -74,9 +82,7 @@ class CollectionLayoutButton extends ConsumerWidget {
           },
         ),
       ),
-    ),
-  );
-}
+    );
 
 /// Lazy rows with content-sized cards, avoiding fixed-height grid overflows
 /// for large text, long titles and linked-goal labels.

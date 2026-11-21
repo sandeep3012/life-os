@@ -420,14 +420,21 @@ class _FinanceHomeScreenState extends ConsumerState<FinanceHomeScreen> {
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              Text(
-                                formatMinorMasked(
-                                  totalBalance,
-                                  currencyCode: currencyCode,
-                                  visible: balancesVisible,
-                                ),
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontFamily: AppFonts.serif,
+                              // Shrinks to fit: a seven-figure total used
+                              // to wrap mid-number on a narrow phone.
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  formatMinorMasked(
+                                    totalBalance,
+                                    currencyCode: currencyCode,
+                                    visible: balancesVisible,
+                                  ),
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  style: theme.textTheme.headlineMedium
+                                      ?.copyWith(fontFamily: AppFonts.serif),
                                 ),
                               ),
                             ],

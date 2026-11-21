@@ -1,4 +1,4 @@
-package com.personalos.app
+package com.sandit.personalos
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -23,7 +23,7 @@ import java.util.Locale
  */
 class TodayWidgetProvider : AppWidgetProvider() {
     companion object {
-        /** Where MainActivity's `com.personalos.app/widget` channel saves the snapshot. */
+        /** Where MainActivity's `com.sandit.personalos/widget` channel saves the snapshot. */
         private const val PREFS = "lifeos_today_widget"
 
         fun prefs(context: Context): SharedPreferences =

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../preview_features.dart';
+import 'menu_origin.dart';
 import 'route_paths.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_fonts.dart';
@@ -48,7 +49,9 @@ class AppSidebar extends ConsumerWidget {
         (settings.themeMode == ThemeMode.system &&
             MediaQuery.platformBrightnessOf(context) == Brightness.dark);
 
-    final current = GoRouterState.of(context).uri.toString();
+    final current = MenuOrigin.plain(
+      GoRouterState.of(context).uri.toString(),
+    );
 
     return Drawer(
       width: 290,

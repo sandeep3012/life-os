@@ -26,9 +26,13 @@ class AppTopBar extends StatelessWidget {
     this.centerIsTitle = false,
     this.showTrailing = true,
     this.trailingLabel = 'Filter',
+    this.center,
   });
 
   final String centerText;
+
+  /// Replaces the centre text — a search field, say.
+  final Widget? center;
   final VoidCallback? onMenu;
 
   /// Lets a screen tour point at the menu button.
@@ -63,7 +67,12 @@ class AppTopBar extends StatelessWidget {
         ),
         Expanded(
           child: Center(
-            child: centerIsTitle
+            child: center != null
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: center,
+                  )
+                : centerIsTitle
                 ? Text(
                     centerText,
                     style: Theme.of(
@@ -158,6 +167,53 @@ class _Avatar extends StatelessWidget {
                   ),
                 ),
               ),
+      ),
+    );
+  }
+}
+
+/// [AppTopBar] as a Scaffold's `appBar`, for the screens the side menu opens
+/// (Goals, Notes, Documents, Insights, Search, Settings). They used Material's
+/// own app bar, so the header changed shape — small left-hand title, bare
+/// icons — whenever someone moved between one of them and Home or Planner.
+/// The menu button opens the enclosing Scaffold's drawer.
+class AppPageBar extends StatelessWidget implements PreferredSizeWidget {
+  const AppPageBar({
+    super.key,
+    required this.title,
+    this.center,
+    this.trailingIcon,
+    this.trailingLabel = 'Options',
+    this.onTrailing,
+  });
+
+  final String title;
+  final Widget? center;
+  final IconData? trailingIcon;
+  final String trailingLabel;
+  final VoidCallback? onTrailing;
+
+  /// The same 10 / 14 padding the tab screens give the bar, around its
+  /// 44-point buttons.
+  @override
+  Size get preferredSize => const Size.fromHeight(68);
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+        child: AppTopBar(
+          centerText: title,
+          centerIsTitle: true,
+          center: center,
+          onMenu: () => Scaffold.of(context).openDrawer(),
+          showTrailing: trailingIcon != null,
+          trailingIcon: trailingIcon,
+          trailingLabel: trailingLabel,
+          onTrailing: onTrailing,
+        ),
       ),
     );
   }

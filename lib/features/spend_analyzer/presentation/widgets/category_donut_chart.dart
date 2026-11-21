@@ -185,6 +185,11 @@ class _CategoryDonutChartState extends State<CategoryDonutChart> {
                       Expanded(
                         child: Text(
                           entry.label,
+                          // One line, cut with "…": a long name used to
+                          // break mid-word ("Subscriptio / ns").
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w600,

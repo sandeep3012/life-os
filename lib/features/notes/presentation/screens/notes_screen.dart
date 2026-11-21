@@ -6,6 +6,7 @@ import '../../../tags/application/tags_providers.dart';
 import '../../../../core/widgets/collection_layout.dart';
 import '../../../../core/widgets/inline_add_button.dart';
 import '../../../../app/router/app_sidebar.dart';
+import '../../../../core/widgets/app_top_bar.dart';
 import '../../application/notes_providers.dart';
 import '../widgets/note_card.dart';
 import 'note_editor_screen.dart';
@@ -70,9 +71,12 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
 
     return Scaffold(
       drawer: const AppSidebar(),
-      appBar: AppBar(
-        title: const Text('Notes'),
-        actions: const [CollectionLayoutButton(screen: CollectionScreen.notes)],
+      appBar: AppPageBar(
+        title: 'Notes',
+        trailingIcon: LucideIcons.slidersVertical,
+        trailingLabel: 'Layout settings',
+        onTrailing: () =>
+            showCollectionLayoutSheet(context, CollectionScreen.notes),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

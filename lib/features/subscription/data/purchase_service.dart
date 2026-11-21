@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../sync/application/sync_providers.dart';
+import 'revenuecat_config.dart';
+import 'revenuecat_purchases.dart';
+
 /// One way to pay for PersonalOS Plus, as the store describes it.
 class PlusOffer {
   const PlusOffer({
@@ -33,7 +37,8 @@ abstract class PurchaseService {
 
   Future<List<PlusOffer>> offers();
 
-  /// Starts the store's purchase sheet. True once the store confirms it.
+  /// Starts the store's purchase sheet. True once the store confirms it;
+  /// throws [PurchaseCancelled] when the person backs out.
   Future<bool> buy(PlusOffer offer);
 
   /// Re-attaches a subscription bought earlier with this store account.
@@ -43,8 +48,14 @@ abstract class PurchaseService {
   Future<void> manage();
 }
 
-/// Billing isn't connected yet: nothing can be bought, and nothing pretends
-/// otherwise.
+/// The person closed the store's sheet without buying. Not a failure:
+/// nothing needs saying.
+class PurchaseCancelled implements Exception {
+  const PurchaseCancelled();
+}
+
+/// Billing isn't connected in this build: nothing can be bought, and nothing
+/// pretends otherwise.
 class UnavailablePurchases implements PurchaseService {
   const UnavailablePurchases();
 
@@ -64,6 +75,15 @@ class UnavailablePurchases implements PurchaseService {
   Future<void> manage() async {}
 }
 
-final purchaseServiceProvider = Provider<PurchaseService>(
-  (ref) => const UnavailablePurchases(),
-);
+/// RevenueCat when this build has a key for the phone's store (see
+/// [RevenueCatConfig]); otherwise nothing is for sale.
+final purchaseServiceProvider = Provider<PurchaseService>((ref) {
+  final key = RevenueCatConfig.apiKey;
+  if (key == null) return const UnavailablePurchases();
+  return RevenueCatPurchases(
+    apiKey: key,
+    // A subscription belongs to the account, so it's bought under the
+    // account's id: that's how the server knows whose it is.
+    userId: () => ref.read(syncSessionProvider)?.userId,
+  );
+});

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../app/router/app_sidebar.dart';
+import '../../../../core/widgets/app_top_bar.dart';
 import '../../application/ai_analyser_providers.dart';
 import '../widgets/insight_card.dart';
 
@@ -34,20 +35,11 @@ class _AiAnalyserScreenState extends ConsumerState<AiAnalyserScreen> {
 
     return Scaffold(
       drawer: const AppSidebar(),
-      appBar: AppBar(
-        title: const Text('Insights'),
-        actions: [
-          IconButton(
-            icon: _refreshing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(LucideIcons.refreshCw),
-            onPressed: _refreshing ? null : _refresh,
-          ),
-        ],
+      appBar: AppPageBar(
+        title: 'Insights',
+        trailingIcon: LucideIcons.refreshCw,
+        trailingLabel: 'Refresh',
+        onTrailing: _refreshing ? null : _refresh,
       ),
       body: insights.isEmpty
           ? Center(

@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../../app/router/route_paths.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/router/app_sidebar.dart';
+import '../../../../core/widgets/app_top_bar.dart';
 import '../../../goals/presentation/screens/goal_detail_screen.dart';
 import '../../../notes/application/notes_providers.dart';
 import '../../../notes/presentation/screens/note_editor_screen.dart';
@@ -36,7 +37,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return Scaffold(
       drawer: const AppSidebar(),
-      appBar: AppBar(title: const Text('Search')),
+      appBar: const AppPageBar(title: 'Search'),
       body: Column(
         children: [
           Padding(

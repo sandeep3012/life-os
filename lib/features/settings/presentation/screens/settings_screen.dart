@@ -19,6 +19,7 @@ import '../../../../core/services/notification_service.dart';
 import '../../../../core/services/system_settings.dart';
 import '../../../../core/utils/currency_utils.dart';
 import '../../../../app/router/app_sidebar.dart';
+import '../../../../core/widgets/app_top_bar.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/motion.dart';
 import '../../../../app/theme/app_font_style.dart';
@@ -60,7 +61,7 @@ class SettingsScreen extends ConsumerWidget {
     final shownFont = ref.watch(effectiveFontStyleProvider);
     return Scaffold(
       drawer: const AppSidebar(),
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: const AppPageBar(title: 'Settings'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [

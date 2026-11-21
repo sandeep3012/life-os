@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,8 +7,20 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// The upload key for Google Play, per machine and out of the repo:
+// android/key.properties (gitignored; see key.properties.example) names a
+// keystore kept somewhere outside this folder. Without that file a release
+// build is signed with the debug key, which runs on a phone but Google Play
+// refuses.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+val hasReleaseKey = keystorePropertiesFile.exists()
+if (hasReleaseKey) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
 android {
-    namespace = "com.personalos.app"
+    namespace = "com.sandit.personalos"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +35,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.personalos.app"
+        applicationId = "com.sandit.personalos"
         // Release builds keep this identity. Debug builds override both the
         // application id and label below so they can live beside production.
         manifestPlaceholders["appLabel"] = "PersonalOS"
@@ -33,6 +47,17 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".dev"
@@ -40,9 +65,11 @@ android {
             manifestPlaceholders["appLabel"] = "PersonalOS Dev"
         }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // The upload key when this machine has one; otherwise the debug
+            // key, so `flutter run --release` still works.
+            signingConfig = signingConfigs.getByName(
+                if (hasReleaseKey) "release" else "debug",
+            )
         }
     }
 }

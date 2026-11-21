@@ -8,7 +8,10 @@ enum AppPlan { free, plus }
 /// What PersonalOS Plus adds — the things that cost money to run (sync, voice)
 /// and the extra looks.
 enum PlusFeature {
-  sync('Sync across your phones', 'Encrypted, with recovery if a phone is lost'),
+  sync(
+    'Sync across your phones',
+    'Encrypted, with recovery if a phone is lost',
+  ),
   voice('Voice entry', '300 a month — say it instead of typing it'),
   themes('Every colour theme', 'Ocean, Indigo, Plum and OLED Midnight'),
   fonts('Every font style', 'Six more looks for the whole app');

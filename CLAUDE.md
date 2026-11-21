@@ -12,7 +12,7 @@ complete; work is now bug-fix/iteration, not net-new module scaffolding.
 
 ## The app's name
 
-The app is **PersonalOS** (package id `com.personalos.app`, sign-in link
+The app is **PersonalOS** (package id `com.sandit.personalos`, sign-in link
 `personalos://auth-callback`, paid plan "PersonalOS Plus"). It was called
 LifeOS until November 2026, and the old name is still in places on purpose —
 **don't "finish the rename" in these**:
@@ -148,6 +148,8 @@ flutter test --plain-name "test name"    # single test by name (any file)
 dart run build_runner build --delete-conflicting-outputs   # regenerate Drift code after schema changes
 dart run flutter_launcher_icons          # regenerate app icons from assets/icon/
 dart run flutter_native_splash:create    # regenerate splash screens from assets/icon/
+flutter test tool/store_screenshots/store_screenshots_test.dart   # regenerate the store screenshots (store/google-play/screenshots/)
+python3 scripts/build_site.py            # rebuild the public site (docs/site/) from docs/privacy-policy.md
 ```
 
 Always run `flutter analyze` and `flutter test` after changes, before
@@ -297,9 +299,18 @@ own Scaffold and opens it with `AppTopBar(onMenu:)`; an inner Scaffold shadows
 the shell's, so a drawer declared only on the shell is unreachable. Segmented
 controls use `AppTabRail`, never Material's `SegmentedButton` — this design's
 segments are borderless and transparent, so `SegmentedButton` renders no track
-and disappears into the page. Habits, Health and Learn live in the `more` branch
-with the other drawer destinations; nesting them under `tasks-habits` made them
-render inside the Tasks screen.
+and disappears into the page.
+
+**Side-menu screens open on top of the current tab.** Notes, Goals, Documents,
+Insights, Search, Settings (and Habits overview, Health, Learn) are mounted
+under every bottom-nav tab by `_menuRoutes()` — `/home/more/notes`,
+`/finance/more/notes`, … Callers still use `RoutePaths.notes` (`/more/notes`);
+`offRouteRedirect` moves it under the tab that's showing (`MenuOrigin`, kept
+current by `AppShell`). So back slides the screen away and returns to where it
+was opened, like any other screen. Don't give them a branch of their own
+again: there they had nothing beneath them, and back could only jump to
+Home. The old "More" grid page is gone; `/more` redirects Home. They use
+`AppPageBar`, the same header as the tab screens.
 
 **Health, Learn and the side menu's "Extra" section are debug-only for now**
 (`previewFeaturesProvider` in `lib/app/preview_features.dart`, `kDebugMode`):
@@ -585,10 +596,27 @@ beyond the free taste, and every colour theme and font but Forest and Classic
   a month and 40 a day. `voice-parse` checks before asking the AI and counts
   the entry only on success; a 429 carries the allowance, which becomes
   `VoiceLimitReached`.
-- **Buying isn't connected yet.** `purchaseServiceProvider` is
-  `UnavailablePurchases`; the paywall says subscriptions aren't open and its
-  button is disabled — **do not make it fake a purchase.** The plan is Google
-  Play Billing through RevenueCat, whose webhook writes `entitlements`.
+- **Buying goes through RevenueCat** (`purchases_flutter`;
+  `RevenueCatPurchases`, keys in `RevenueCatConfig`). The app buys under the
+  account's id (`appUserID` = Supabase user id), RevenueCat calls the
+  `revenuecat-webhook` Edge Function, and that writes `entitlements`; the
+  paywall then polls `PlanController.refreshUntilPlus`. The store's "yes"
+  alone unlocks nothing — **do not make the app grant Plus itself.**
+  - Debug builds fall back to RevenueCat's **Test Store** key (`test_…`,
+    pretend purchases, no Play). A `test_` key in a release build makes
+    RevenueCat's SDK stop the app on purpose, so `RevenueCatConfig.keyFor`
+    never returns one outside `kDebugMode`. Release builds need
+    `--dart-define=REVENUECAT_ANDROID_KEY=goog_…`; without it the paywall
+    says subscriptions aren't open and the button is disabled — **do not
+    make it fake a purchase.**
+  - The webhook ignores sandbox events (Test Store, Play licence testers)
+    unless the `REVENUECAT_ALLOW_SANDBOX=true` secret is set — on while
+    testing, **off at launch**, or anyone with a debug build gets Plus free.
+    It never touches rows with `store` `owner` or `manual`, and replaces
+    `beta` ones.
+  - The entitlement identifier is `plus` in three places that must agree:
+    the RevenueCat dashboard, `RevenueCatConfig.entitlement` and the
+    webhook's `ENTITLEMENT`.
 - Tests override `planControllerProvider` with `FixedPlan.plus` / `.free`
   (`test/features/subscription/plan_fakes.dart`): with nobody signed in, a
   test that picks a Plus theme or font would otherwise get the free one.
@@ -625,8 +653,12 @@ account gets depends on its plan — see PersonalOS Plus above.
   records aren't duplicated. Planned: on sign-in, delete the account's device
   rows unseen for 30+ days; a "Your devices" list only if users need to see it.
 
-- Release signing (`android/key.properties` / keystore) is deliberately not
-  set up yet.
+- Release signing is wired but needs a key per machine:
+  `android/app/build.gradle.kts` signs release builds with the upload key
+  named in `android/key.properties` (gitignored; template in
+  `key.properties.example`), and with the debug key when that file is
+  absent. The keystore lives outside the repo — like the JDK, it's a
+  per-machine path, never committed.
 
 ## Git workflow rules
 

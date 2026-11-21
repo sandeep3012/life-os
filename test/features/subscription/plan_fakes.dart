@@ -24,6 +24,12 @@ class FixedPlan extends PlanController {
 
   @override
   Future<void> refresh() async {}
+
+  @override
+  Future<bool> refreshUntilPlus({
+    int tries = 10,
+    Duration every = const Duration(seconds: 2),
+  }) async => _state.isPlus;
 }
 
 /// The server's answer, settable; `offline` makes it unreachable.

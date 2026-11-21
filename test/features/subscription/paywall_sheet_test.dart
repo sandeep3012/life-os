@@ -26,9 +26,12 @@ class _OpenStore implements PurchaseService {
     PlusOffer(id: 'monthly', title: 'Monthly', price: '₹149'),
   ];
 
+  bool cancel = false;
+
   @override
   Future<bool> buy(PlusOffer offer) async {
     bought = offer;
+    if (cancel) throw const PurchaseCancelled();
     return succeed;
   }
 
@@ -128,6 +131,20 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Subscribe'));
     await tester.pumpAndSettle();
     expect(store.bought?.id, 'monthly');
+    // The store said yes, but Plus is the server's to give: until it
+    // agrees, the sheet says so instead of pretending.
+    expect(find.textContaining('Your purchase went through'), findsOneWidget);
+    expect(find.text('Subscribe'), findsNothing);
+    await dispose(tester);
+  });
+
+  testWidgets('backing out of the store sheet says nothing', (tester) async {
+    final store = _OpenStore()..cancel = true;
+    await pump(tester, plan: FixedPlan.free, store: store);
+    await tester.tap(find.widgetWithText(FilledButton, 'Subscribe'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("haven't been charged"), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Subscribe'), findsOneWidget);
     await dispose(tester);
   });
 
